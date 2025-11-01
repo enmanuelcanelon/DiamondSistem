@@ -1,0 +1,116 @@
+/**
+ * Rutas de Paquetes
+ */
+
+const express = require('express');
+const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
+const { optionalAuth } = require('../middleware/auth');
+const { NotFoundError } = require('../middleware/errorHandler');
+
+const prisma = new PrismaClient();
+
+/**
+ * @route   GET /api/paquetes
+ * @desc    Listar todos los paquetes activos
+ * @access  Public
+ */
+router.get('/', optionalAuth, async (req, res, next) => {
+  try {
+    const paquetes = await prisma.paquetes.findMany({
+      where: { activo: true },
+      orderBy: { precio_base: 'asc' }
+    });
+
+    res.json({
+      success: true,
+      count: paquetes.length,
+      paquetes
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/paquetes/:id
+ * @desc    Obtener paquete por ID
+ * @access  Public
+ */
+router.get('/:id', optionalAuth, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const paquete = await prisma.paquetes.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        paquetes_servicios: {
+          include: {
+            servicios: true
+          }
+        }
+      }
+    });
+
+    if (!paquete) {
+      throw new NotFoundError('Paquete no encontrado');
+    }
+
+    res.json({
+      success: true,
+      paquete
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/paquetes/:id/servicios
+ * @desc    Obtener servicios incluidos en un paquete
+ * @access  Public
+ */
+router.get('/:id/servicios', optionalAuth, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar que el paquete existe
+    const paquete = await prisma.paquetes.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!paquete) {
+      throw new NotFoundError('Paquete no encontrado');
+    }
+
+    // Obtener servicios del paquete
+    const servicios = await prisma.paquetes_servicios.findMany({
+      where: { paquete_id: parseInt(id) },
+      include: {
+        servicios: true
+      }
+    });
+
+    res.json({
+      success: true,
+      paquete: {
+        id: paquete.id,
+        nombre: paquete.nombre,
+        precio_base: paquete.precio_base
+      },
+      servicios: servicios.map(ps => ({
+        ...ps.servicios,
+        cantidad: ps.cantidad,
+        incluido_gratis: ps.incluido_gratis,
+        notas: ps.notas
+      }))
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+module.exports = router;
