@@ -286,3 +286,11 @@ INSERT INTO vendedores (nombre_completo, codigo_vendedor, email, telefono, passw
 -- Fin de Seeds
 -- ============================================
 
+
+
+
+
+
+
+
+

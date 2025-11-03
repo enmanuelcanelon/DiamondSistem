@@ -223,3 +223,5 @@ function ModalConfirmacionPago({ isOpen, onClose, datosPago, contrato, onConfirm
 
 export default ModalConfirmacionPago;
 
+
+

@@ -209,3 +209,5 @@ function ModalAnularPago({ isOpen, onClose, pago, contrato, onConfirm, loading }
 
 export default ModalAnularPago;
 
+
+

@@ -19,6 +19,7 @@ import {
   X,
   Eye,
   EyeOff,
+  Mail,
 } from 'lucide-react';
 import api from '../config/api';
 import { formatearHora } from '../utils/formatters';
@@ -61,6 +62,15 @@ function DetalleContrato() {
     queryFn: async () => {
       const response = await api.get(`/pagos/contrato/${id}`);
       return response.data.pagos;
+    },
+  });
+
+  // Query para obtener las versiones del contrato
+  const { data: versionesData } = useQuery({
+    queryKey: ['versiones-contrato', id],
+    queryFn: async () => {
+      const response = await api.get(`/contratos/${id}/versiones`);
+      return response.data;
     },
   });
 
@@ -191,6 +201,59 @@ function DetalleContrato() {
     }
   };
 
+  const handleDescargarVersion = async (versionNumero) => {
+    try {
+      const response = await api.get(`/contratos/${id}/versiones/${versionNumero}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Contrato-${contrato?.codigo_contrato}-v${versionNumero}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('Error al descargar la versión del contrato');
+      console.error(error);
+    }
+  };
+
+  const handleEnviarContratoPorEmail = async () => {
+    const confirmacion = window.confirm(
+      `¿Enviar contrato por email a ${contrato?.clientes?.email}?`
+    );
+    
+    if (!confirmacion) return;
+
+    try {
+      await api.post(`/emails/contrato/${id}`);
+      alert(`✅ Contrato enviado exitosamente a ${contrato?.clientes?.email}`);
+    } catch (error) {
+      console.error('Error al enviar contrato:', error);
+      alert('❌ Error al enviar el contrato por email: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleEnviarRecordatorioPago = async () => {
+    const confirmacion = window.confirm(
+      `¿Enviar recordatorio de pago a ${contrato?.clientes?.email}?\n\nSaldo pendiente: $${parseFloat(contrato?.saldo_pendiente || 0).toLocaleString()}`
+    );
+    
+    if (!confirmacion) return;
+
+    try {
+      await api.post(`/emails/recordatorio-pago/${id}`);
+      alert(`✅ Recordatorio enviado exitosamente a ${contrato?.clientes?.email}`);
+    } catch (error) {
+      console.error('Error al enviar recordatorio:', error);
+      alert('❌ Error al enviar el recordatorio: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -204,7 +267,10 @@ function DetalleContrato() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to="/contratos" className="p-2 hover:bg-gray-100 rounded-lg transition">
+        <Link 
+          to={showPagoForm ? `/contratos/${id}` : "/contratos"} 
+          className="p-2 hover:bg-gray-100 rounded-lg transition"
+        >
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div className="flex items-center gap-3 flex-1">
@@ -221,28 +287,126 @@ function DetalleContrato() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-            contrato?.estado === 'activo' ? 'bg-green-100 text-green-800' :
-            contrato?.estado === 'completado' ? 'bg-blue-100 text-blue-800' :
-            'bg-red-100 text-red-800'
-          }`}>
-            {contrato?.estado}
-          </span>
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-            contrato?.estado_pago === 'pagado' ? 'bg-green-100 text-green-800' :
-            contrato?.estado_pago === 'parcial' ? 'bg-blue-100 text-blue-800' :
-            'bg-yellow-100 text-yellow-800'
-          }`}>
-            {contrato?.estado_pago === 'pagado' ? 'Pagado Completo' :
-             contrato?.estado_pago === 'parcial' ? 'Pago Parcial' :
-             'Pendiente de Pago'}
-          </span>
-        </div>
+        {!showPagoForm && (
+          <div className="flex gap-2">
+            <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+              contrato?.estado === 'activo' ? 'bg-green-100 text-green-800' :
+              contrato?.estado === 'completado' ? 'bg-blue-100 text-blue-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              {contrato?.estado}
+            </span>
+            <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+              contrato?.estado_pago === 'pagado' ? 'bg-green-100 text-green-800' :
+              contrato?.estado_pago === 'parcial' ? 'bg-blue-100 text-blue-800' :
+              'bg-yellow-100 text-yellow-800'
+            }`}>
+              {contrato?.estado_pago === 'pagado' ? 'Pagado Completo' :
+               contrato?.estado_pago === 'parcial' ? 'Pago Parcial' :
+               'Pendiente de Pago'}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Botones de Descarga de PDFs y Acciones */}
-      <div className="bg-white rounded-xl shadow-sm border p-4">
+      {/* Formulario de Pago (Solo cuando showPagoForm es true) */}
+      {showPagoForm && contrato?.estado_pago !== 'pagado' && (
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Registrar Pago</h2>
+          <form onSubmit={handlePagoSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Monto *
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  name="monto"
+                  value={formPago.monto}
+                  onChange={handlePagoChange}
+                  step="0.01"
+                  min="0.01"
+                  max={parseFloat(contrato?.saldo_pendiente || 0)}
+                  required
+                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Saldo pendiente: ${parseFloat(contrato?.saldo_pendiente || 0).toLocaleString()}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Método de Pago *
+              </label>
+              <select
+                name="metodo_pago"
+                value={formPago.metodo_pago}
+                onChange={handlePagoChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              >
+                <option value="efectivo">💵 Efectivo</option>
+                <option value="transferencia">🏦 Transferencia</option>
+                <option value="tarjeta">💳 Tarjeta</option>
+                <option value="cheque">📝 Cheque</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Número de Referencia
+              </label>
+              <input
+                type="text"
+                name="numero_referencia"
+                value={formPago.numero_referencia}
+                onChange={handlePagoChange}
+                placeholder="Ej: TRF-20250103-001"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Notas
+              </label>
+              <textarea
+                name="notas"
+                value={formPago.notas}
+                onChange={handlePagoChange}
+                rows="3"
+                placeholder="Información adicional sobre el pago..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Link
+                to={`/contratos/${id}`}
+                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-center"
+              >
+                Cancelar
+              </Link>
+              <button
+                type="submit"
+                disabled={mutationPago.isLoading}
+                className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {mutationPago.isLoading ? 'Registrando...' : 'Registrar Pago'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Todo el resto del contenido (Solo cuando NO estás en modo pago) */}
+      {!showPagoForm && (
+        <>
+          {/* Botones de Descarga de PDFs y Acciones */}
+          <div className="bg-white rounded-xl shadow-sm border p-4">
         <div className="flex flex-wrap gap-3">
           <Link
             to={`/contratos/${id}/mesas`}
@@ -277,8 +441,24 @@ function DetalleContrato() {
             className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
           >
             <Download className="w-5 h-5" />
-            Descargar Contrato PDF
+            Descargar PDF
           </button>
+          <button
+            onClick={handleEnviarContratoPorEmail}
+            className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+          >
+            <Mail className="w-5 h-5" />
+            Enviar por Email
+          </button>
+          {parseFloat(contrato?.saldo_pendiente || 0) > 0 && (
+            <button
+              onClick={handleEnviarRecordatorioPago}
+              className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium"
+            >
+              <Mail className="w-5 h-5" />
+              Recordatorio de Pago
+            </button>
+          )}
         </div>
       </div>
 
@@ -441,6 +621,109 @@ function DetalleContrato() {
               </div>
             )}
           </div>
+
+          {/* Versiones del Contrato */}
+          {versionesData && versionesData.versiones && versionesData.versiones.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                📄 Versiones del Contrato
+              </h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Historial de todas las versiones generadas del contrato
+              </p>
+              <div className="space-y-3">
+                {versionesData.versiones.map((version, index) => {
+                  const esUltimaVersion = index === 0;
+                  const versionAnterior = versionesData.versiones[index + 1];
+                  const diferenciaTotal = versionAnterior 
+                    ? parseFloat(version.total_contrato) - parseFloat(versionAnterior.total_contrato)
+                    : 0;
+
+                  return (
+                    <div 
+                      key={version.id}
+                      className={`p-4 rounded-lg border-2 ${
+                        esUltimaVersion 
+                          ? 'border-purple-300 bg-purple-50' 
+                          : 'border-gray-200 bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                              v{version.version_numero}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">
+                                Versión {version.version_numero}
+                                {esUltimaVersion && (
+                                  <span className="ml-2 text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                                    Actual
+                                  </span>
+                                )}
+                              </h3>
+                              <p className="text-xs text-gray-500">
+                                {new Date(version.fecha_generacion).toLocaleDateString('es-ES', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </div>
+                          </div>
+
+                          {version.motivo_cambio && (
+                            <p className="text-sm text-gray-700 mb-2">
+                              {version.motivo_cambio}
+                            </p>
+                          )}
+
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-gray-600">
+                              Total: <strong className="text-gray-900">
+                                ${parseFloat(version.total_contrato).toLocaleString()}
+                              </strong>
+                            </span>
+                            {version.cantidad_invitados && (
+                              <span className="text-gray-600">
+                                Invitados: <strong className="text-gray-900">
+                                  {version.cantidad_invitados}
+                                </strong>
+                              </span>
+                            )}
+                          </div>
+
+                          {versionAnterior && diferenciaTotal !== 0 && (
+                            <p className={`text-xs mt-2 ${
+                              diferenciaTotal > 0 ? 'text-red-600' : 'text-green-600'
+                            }`}>
+                              {diferenciaTotal > 0 ? '↗' : '↘'} 
+                              {diferenciaTotal > 0 ? '+' : ''}
+                              ${Math.abs(diferenciaTotal).toLocaleString()} vs v{version.version_numero - 1}
+                            </p>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => handleDescargarVersion(version.version_numero)}
+                          className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          PDF
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500 text-center mt-4">
+                {versionesData.total} {versionesData.total === 1 ? 'versión' : 'versiones'} disponibles
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Panel Lateral */}
@@ -493,116 +776,6 @@ function DetalleContrato() {
               </div>
             </div>
           </div>
-
-          {/* Formulario de Pago */}
-          {showPagoForm && contrato?.estado_pago !== 'pagado' && (
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Registrar Pago</h2>
-              <form onSubmit={handlePagoSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Monto *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      name="monto"
-                      value={formPago.monto}
-                      onChange={handlePagoChange}
-                      step="0.01"
-                      min="0.01"
-                      max={parseFloat(contrato?.saldo_pendiente || 0)}
-                      required
-                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Máximo: ${parseFloat(contrato?.saldo_pendiente || 0).toLocaleString()}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Método de Pago *
-                  </label>
-                  <select
-                    name="metodo_pago"
-                    value={formPago.metodo_pago}
-                    onChange={handlePagoChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  >
-                    {metodosPago.map((metodo) => (
-                      <option key={metodo.value} value={metodo.value}>
-                        {metodo.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Número de Referencia
-                  </label>
-                  <input
-                    type="text"
-                    name="numero_referencia"
-                    value={formPago.numero_referencia}
-                    onChange={handlePagoChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notas
-                  </label>
-                  <textarea
-                    name="notas"
-                    value={formPago.notas}
-                    onChange={handlePagoChange}
-                    rows="3"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  />
-                </div>
-
-                {mutationPago.isError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-800 text-sm">
-                      {mutationPago.error.response?.data?.message || 'Error al registrar pago'}
-                    </p>
-                  </div>
-                )}
-
-                {mutationPago.isSuccess && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800 text-sm">
-                      ¡Pago registrado exitosamente!
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={mutationPago.isPending}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {mutationPago.isPending ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Registrando...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="w-5 h-5" />
-                      Registrar Pago
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          )}
 
           {/* Información del Contrato */}
           <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -659,27 +832,12 @@ function DetalleContrato() {
               )}
             </div>
           </div>
-
-          {/* Acciones */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones</h2>
-            <div className="space-y-2">
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-                <Download className="w-4 h-4" />
-                Descargar PDF
-              </button>
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
-                <FileText className="w-4 h-4" />
-                Enviar por Email
-              </button>
-            </div>
-          </div>
         </div>
       </div>
+        </>
+      )}
 
-      {/* Modales */}
-      <Toaster position="top-right" />
-      
+      {/* Modales (siempre disponibles) */}
       <ModalConfirmacionPago
         isOpen={modalConfirmacionOpen}
         onClose={() => setModalConfirmacionOpen(false)}
@@ -700,6 +858,8 @@ function DetalleContrato() {
         onConfirm={handleConfirmarAnulacion}
         loading={mutationAnularPago.isPending}
       />
+
+      <Toaster position="top-right" />
     </div>
   );
 }

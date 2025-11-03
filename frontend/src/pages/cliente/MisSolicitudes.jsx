@@ -271,3 +271,5 @@ function SolicitudCard({ solicitud }) {
 
 export default MisSolicitudes;
 
+
+

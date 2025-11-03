@@ -26,6 +26,7 @@ const mesasRoutes = require('./routes/mesas.routes');
 const invitadosRoutes = require('./routes/invitados.routes');
 const playlistRoutes = require('./routes/playlist.routes');
 const ajustesRoutes = require('./routes/ajustes.routes');
+const emailsRoutes = require('./routes/emails.routes');
 const authRoutes = require('./routes/auth.routes');
 
 // Middleware personalizado
@@ -128,6 +129,7 @@ app.use('/api/mesas', mesasRoutes);
 app.use('/api/invitados', invitadosRoutes);
 app.use('/api/playlist', playlistRoutes);
 app.use('/api/ajustes', ajustesRoutes);
+app.use('/api/emails', emailsRoutes);
 
 // Ruta 404 - Debe ir al final de todas las rutas
 app.use((req, res) => {

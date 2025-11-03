@@ -346,3 +346,5 @@ LEFT JOIN eventos e ON c.id = e.contrato_id
 WHERE e.id IS NULL
 AND c.estado = 'activo';
 
+
+

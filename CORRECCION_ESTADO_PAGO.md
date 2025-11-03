@@ -238,3 +238,5 @@ WHERE
 **Estado:** ✅ **LISTO PARA APLICAR**  
 **Acción requerida:** Ejecutar `fix_estado_pago.sql` en la base de datos
 
+
+

@@ -47,3 +47,5 @@ CREATE TRIGGER trigger_fecha_mensaje
 COMMENT ON COLUMN mensajes.leido IS 'Indica si el mensaje ha sido leido por el destinatario';
 COMMENT ON COLUMN mensajes.tipo_remitente IS 'Tipo de usuario que envio el mensaje: vendedor o cliente';
 
+
+

@@ -141,3 +141,5 @@ export function getEventoEmoji(contrato) {
   return '🎉';
 }
 
+
+

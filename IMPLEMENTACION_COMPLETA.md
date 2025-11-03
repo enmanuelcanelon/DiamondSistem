@@ -423,3 +423,5 @@ El sistema DiamondSistem está **listo para uso real** con:
 
 Consulta `GUIA_PRUEBAS_SISTEMA.md` para comenzar las pruebas exhaustivas.
 
+
+

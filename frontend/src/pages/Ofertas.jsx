@@ -4,6 +4,7 @@ import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Filter, 
 import { Link } from 'react-router-dom';
 import api from '../config/api';
 import { formatearHora } from '../utils/formatters';
+import ModalPlanPago from '../components/ModalPlanPago';
 
 function Ofertas() {
   const queryClient = useQueryClient();
@@ -11,6 +12,8 @@ function Ofertas() {
   const [estadoFiltro, setEstadoFiltro] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [modalPlanPagoOpen, setModalPlanPagoOpen] = useState(false);
+  const [ofertaSeleccionada, setOfertaSeleccionada] = useState(null);
   
   const { data: ofertas, isLoading } = useQuery({
     queryKey: ['ofertas'],
@@ -39,12 +42,15 @@ function Ofertas() {
 
   // Mutation para aceptar oferta
   const aceptarMutation = useMutation({
-    mutationFn: async (ofertaId) => {
-      const response = await api.put(`/ofertas/${ofertaId}/aceptar`);
-      return response.data;
+    mutationFn: async (oferta) => {
+      const response = await api.put(`/ofertas/${oferta.id}/aceptar`);
+      return { ...response.data, oferta };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries(['ofertas']);
+      // Abrir automáticamente el modal de plan de pago
+      setOfertaSeleccionada(data.oferta);
+      setModalPlanPagoOpen(true);
     },
   });
 
@@ -61,11 +67,13 @@ function Ofertas() {
 
   // Mutation para crear contrato
   const crearContratoMutation = useMutation({
-    mutationFn: async (ofertaId) => {
+    mutationFn: async ({ ofertaId, planPago }) => {
       const response = await api.post('/contratos', { 
         oferta_id: ofertaId,
-        tipo_pago: 'unico',
-        meses_financiamiento: 1,
+        tipo_pago: planPago.tipo_pago,
+        numero_plazos: planPago.numero_plazos,
+        plan_pagos: planPago.plan_pagos,
+        meses_financiamiento: planPago.tipo_pago === 'plazos' ? planPago.numero_plazos : 1,
         nombre_evento: 'Evento'
       });
       return response.data;
@@ -73,6 +81,8 @@ function Ofertas() {
     onSuccess: () => {
       queryClient.invalidateQueries(['ofertas']);
       queryClient.invalidateQueries(['contratos']);
+      setModalPlanPagoOpen(false);
+      setOfertaSeleccionada(null);
       alert('¡Contrato creado exitosamente!');
     },
     onError: (error) => {
@@ -80,9 +90,9 @@ function Ofertas() {
     },
   });
 
-  const handleAceptar = (ofertaId) => {
-    if (window.confirm('¿Estás seguro de aceptar esta oferta?')) {
-      aceptarMutation.mutate(ofertaId);
+  const handleAceptar = (oferta) => {
+    if (window.confirm('¿Estás seguro de aceptar esta oferta? Se abrirá el modal para configurar el plan de pago.')) {
+      aceptarMutation.mutate(oferta);
     }
   };
 
@@ -92,10 +102,16 @@ function Ofertas() {
     }
   };
 
-  const handleCrearContrato = (ofertaId) => {
-    if (window.confirm('¿Crear contrato desde esta oferta?')) {
-      crearContratoMutation.mutate(ofertaId);
-    }
+  const handleCrearContrato = (oferta) => {
+    setOfertaSeleccionada(oferta);
+    setModalPlanPagoOpen(true);
+  };
+
+  const handleConfirmarPlanPago = (planPago) => {
+    crearContratoMutation.mutate({ 
+      ofertaId: ofertaSeleccionada.id, 
+      planPago 
+    });
   };
 
   const handleDescargarPDF = async (ofertaId, codigoOferta) => {
@@ -320,7 +336,7 @@ function Ofertas() {
                   </Link>
                   <div className="flex gap-3">
                     <button 
-                      onClick={() => handleAceptar(oferta.id)}
+                      onClick={() => handleAceptar(oferta)}
                       disabled={aceptarMutation.isPending}
                       className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium disabled:opacity-50"
                     >
@@ -339,13 +355,20 @@ function Ofertas() {
 
               {oferta.estado === 'aceptada' && !oferta.contratos?.length && (
                 <div className="mt-4 pt-4 border-t">
-                  <button
-                    onClick={() => handleCrearContrato(oferta.id)}
-                    disabled={crearContratoMutation.isPending}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium disabled:opacity-50"
-                  >
-                    {crearContratoMutation.isPending ? 'Creando contrato...' : 'Crear Contrato →'}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-sm text-green-800">
+                        ✅ Oferta aceptada. Configura el plan de pago para crear el contrato.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCrearContrato(oferta)}
+                      disabled={crearContratoMutation.isPending}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {crearContratoMutation.isPending ? 'Creando...' : 'Plan de Pago →'}
+                    </button>
+                  </div>
                 </div>
               )}
               
@@ -361,6 +384,17 @@ function Ofertas() {
           ))}
         </div>
       )}
+
+      {/* Modal de Plan de Pago */}
+      <ModalPlanPago
+        isOpen={modalPlanPagoOpen}
+        onClose={() => {
+          setModalPlanPagoOpen(false);
+          setOfertaSeleccionada(null);
+        }}
+        onConfirm={handleConfirmarPlanPago}
+        totalContrato={ofertaSeleccionada?.total_final || 0}
+      />
     </div>
   );
 }

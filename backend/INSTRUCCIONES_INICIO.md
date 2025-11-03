@@ -224,3 +224,5 @@ Deberías recibir un token JWT y los datos del vendedor.
 
 **¡El backend está 100% listo para usar!** 🎉
 
+
+

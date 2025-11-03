@@ -11,10 +11,12 @@ import {
   CreditCard,
   CheckCircle,
   AlertCircle,
+  FileText,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import useAuthStore from '../../store/useAuthStore';
 import EventCountdown from '../../components/EventCountdown';
+import RecordatorioEvento from '../../components/RecordatorioEvento';
 import api from '../../config/api';
 import { formatearHora } from '../../utils/formatters';
 import { generarNombreEventoCorto } from '../../utils/eventNames';
@@ -22,6 +24,32 @@ import { generarNombreEventoCorto } from '../../utils/eventNames';
 function DashboardCliente() {
   const { user } = useAuthStore();
   const contratoId = user?.contrato_id;
+
+  // Función para formatear nombre de servicio con cantidad
+  const formatearServicioConCantidad = (servicio, cantidad) => {
+    const nombre = servicio?.nombre || '';
+    const precio = servicio?.precio_base || 0;
+
+    // Si la cantidad es 1 o menos, solo mostrar el nombre
+    if (cantidad <= 1) {
+      return nombre;
+    }
+
+    // Reglas especiales según el tipo de servicio
+    if (nombre.toLowerCase().includes('personal') || nombre.toLowerCase().includes('bartender') || nombre.toLowerCase().includes('mesero')) {
+      // Personal de Servicio (4)
+      return `${nombre} (${cantidad})`;
+    } else if (nombre.toLowerCase().includes('champagne') || nombre.toLowerCase().includes('champaña') || nombre.toLowerCase().includes('sidra') || nombre.toLowerCase().includes('vino')) {
+      // Champaña (10 Botellas)
+      return `${nombre} (${cantidad} Botellas)`;
+    } else if (nombre.toLowerCase().includes('dulce') || nombre.toLowerCase().includes('postre')) {
+      // Mini Dulces (6/u)
+      return `${nombre} (${cantidad}/u)`;
+    } else {
+      // Formato genérico (N unidades)
+      return `${nombre} (${cantidad})`;
+    }
+  };
 
   // Query para obtener el contrato completo
   const { data: contrato, isLoading } = useQuery({
@@ -38,6 +66,16 @@ function DashboardCliente() {
     queryKey: ['historial-contrato', contratoId],
     queryFn: async () => {
       const response = await api.get(`/contratos/${contratoId}/historial`);
+      return response.data;
+    },
+    enabled: !!contratoId,
+  });
+
+  // Obtener historial de pagos
+  const { data: pagosData } = useQuery({
+    queryKey: ['pagos-contrato', contratoId],
+    queryFn: async () => {
+      const response = await api.get(`/contratos/${contratoId}/pagos`);
       return response.data;
     },
     enabled: !!contratoId,
@@ -68,6 +106,16 @@ function DashboardCliente() {
     queryKey: ['invitados-stats', contratoId],
     queryFn: async () => {
       const response = await api.get(`/invitados/contrato/${contratoId}`);
+      return response.data;
+    },
+    enabled: !!contratoId,
+  });
+
+  // Query para obtener ajustes del evento
+  const { data: ajustesData } = useQuery({
+    queryKey: ['ajustes-evento', contratoId],
+    queryFn: async () => {
+      const response = await api.get(`/ajustes-evento/contrato/${contratoId}`);
       return response.data;
     },
     enabled: !!contratoId,
@@ -104,6 +152,14 @@ function DashboardCliente() {
           nombreEvento={generarNombreEventoCorto(contrato)}
         />
       )}
+
+      {/* Recordatorio de pendientes */}
+      <RecordatorioEvento 
+        contrato={contrato}
+        playlistData={playlistData}
+        mesasData={mesasData}
+        ajustesData={ajustesData}
+      />
 
       {/* Event Info Card */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -216,7 +272,7 @@ function DashboardCliente() {
       </div>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Playlist Stats */}
         <Link
           to={`/cliente/playlist/${contratoId}`}
@@ -259,6 +315,27 @@ function DashboardCliente() {
                   {invitadosData.con_mesa || 0}/{invitadosData.total || 0} invitados asignados
                 </p>
               )}
+            </div>
+          </div>
+        </Link>
+
+        {/* Versiones del Contrato */}
+        <Link
+          to="/cliente/versiones"
+          className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
+              <FileText className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Versiones del Contrato</p>
+              <p className="text-2xl font-bold text-gray-900">
+                Ver PDFs
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Historial completo
+              </p>
             </div>
           </div>
         </Link>
@@ -324,10 +401,11 @@ function DashboardCliente() {
               <li key={cs.id} className="flex items-center justify-between border-b pb-2 last:border-b-0">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-purple-600" />
-                  <span className="text-gray-700">{cs.servicios?.nombre}</span>
+                  <span className="text-gray-700">
+                    {formatearServicioConCantidad(cs.servicios, cs.cantidad)}
+                  </span>
                 </div>
                 <span className="font-medium text-gray-900">
-                  {cs.cantidad > 1 && `${cs.cantidad} x `}
                   ${parseFloat(cs.precio_unitario).toLocaleString()}
                 </span>
               </li>
@@ -395,27 +473,103 @@ function DashboardCliente() {
         </div>
       )}
 
-      {/* Contact Card */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white">
-        <div className="flex items-start gap-4">
-          <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
-          <div>
-            <h3 className="font-semibold mb-1">¿Necesitas ayuda?</h3>
-            <p className="text-sm text-indigo-100 mb-3">
-              Si tienes alguna pregunta o necesitas hacer cambios, contacta a tu asesor de eventos.
-            </p>
-            {contrato?.vendedores && (
-              <div className="bg-white/20 rounded-lg p-3 backdrop-blur-sm">
-                <p className="text-sm font-medium">{contrato.vendedores.nombre_completo}</p>
-                <p className="text-sm text-indigo-100">{contrato.vendedores.email}</p>
-                {contrato.vendedores.telefono && (
-                  <p className="text-sm text-indigo-100">{contrato.vendedores.telefono}</p>
-                )}
+      {/* Historial de Pagos */}
+      {pagosData && pagosData.pagos && pagosData.pagos.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border">
+          <div className="p-6 border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Historial de Pagos</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Todos los pagos realizados
+                </p>
               </div>
-            )}
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Total de pagos:</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {pagosData.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="divide-y">
+            {pagosData.pagos.map((pago) => (
+              <div 
+                key={pago.id} 
+                className={`p-6 hover:bg-gray-50 transition ${
+                  pago.estado === 'anulado' ? 'bg-red-50' : ''
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CreditCard className={`w-5 h-5 ${
+                        pago.estado === 'anulado' ? 'text-red-600' : 'text-green-600'
+                      }`} />
+                      <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        pago.estado === 'anulado'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {pago.estado === 'anulado' ? '❌ ANULADO' : '✓ Completado'}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(pago.fecha_pago).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Método:</span>{' '}
+                        {pago.metodo_pago === 'efectivo' && '💵 Efectivo'}
+                        {pago.metodo_pago === 'transferencia' && '🏦 Transferencia'}
+                        {pago.metodo_pago === 'tarjeta' && `💳 Tarjeta ${pago.tipo_tarjeta || ''}`}
+                        {pago.metodo_pago === 'cheque' && '📝 Cheque'}
+                      </p>
+                      {pago.numero_referencia && (
+                        <p className="text-xs text-gray-600">
+                          Ref: {pago.numero_referencia}
+                        </p>
+                      )}
+                      {pago.notas && (
+                        <p className="text-xs text-gray-600 italic">
+                          {pago.notas}
+                        </p>
+                      )}
+                      {pago.vendedores && (
+                        <p className="text-xs text-gray-500">
+                          Registrado por: {pago.vendedores.nombre_completo}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="ml-4 text-right">
+                    <p className="text-xs text-gray-500 mb-1">Monto:</p>
+                    <p className={`text-2xl font-bold ${
+                      pago.estado === 'anulado' ? 'text-red-600 line-through' : 'text-green-600'
+                    }`}>
+                      ${parseFloat(pago.monto || 0).toLocaleString()}
+                    </p>
+                    {pago.recargo_tarjeta > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        + ${parseFloat(pago.recargo_tarjeta).toFixed(2)} recargo
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-700 font-medium mt-1">
+                      Total: ${parseFloat(pago.monto_total || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

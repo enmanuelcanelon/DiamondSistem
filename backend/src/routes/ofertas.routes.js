@@ -411,22 +411,24 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
 
     // Verificar que la oferta existe y está pendiente
     const ofertaExistente = await prisma.ofertas.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        contratos: true
-      }
+      where: { id: parseInt(id) }
     });
 
     if (!ofertaExistente) {
       throw new NotFoundError('Oferta no encontrada');
     }
 
-    // Solo se puede editar si está pendiente y no tiene contrato
+    // Solo se puede editar si está pendiente
     if (ofertaExistente.estado !== 'pendiente') {
       throw new ValidationError('Solo se pueden editar ofertas en estado pendiente');
     }
 
-    if (ofertaExistente.contratos) {
+    // Verificar si ya tiene un contrato asociado
+    const contratoExistente = await prisma.contratos.findFirst({
+      where: { oferta_id: parseInt(id) }
+    });
+
+    if (contratoExistente) {
       throw new ValidationError('No se puede editar una oferta que ya tiene un contrato asociado');
     }
 

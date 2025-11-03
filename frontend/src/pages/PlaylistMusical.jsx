@@ -10,12 +10,19 @@ import {
   Ban,
   Lightbulb,
   Search,
+  Eye,
 } from 'lucide-react';
 import api from '../config/api';
+import useAuthStore from '../store/useAuthStore';
 
 function PlaylistMusical() {
   const { id: contratoId } = useParams();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  
+  // Determinar si el usuario actual puede editar (solo clientes)
+  const puedeEditar = user?.rol === 'cliente';
+  const esVendedor = user?.rol === 'vendedor';
   
   const [nuevaCancion, setNuevaCancion] = useState({
     titulo: '',
@@ -149,6 +156,12 @@ function PlaylistMusical() {
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Music className="w-8 h-8 text-indigo-600" />
             Playlist Musical
+            {esVendedor && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
+                <Eye className="w-4 h-4" />
+                Solo lectura
+              </span>
+            )}
           </h1>
           <p className="text-gray-600 mt-1">
             {contrato?.codigo_contrato} - {contrato?.clientes?.nombre_completo}
@@ -218,18 +231,20 @@ function PlaylistMusical() {
             <option value="prohibida">Prohibidas</option>
             <option value="sugerida">Sugeridas</option>
           </select>
-          <button
-            onClick={() => setMostrarForm(!mostrarForm)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition whitespace-nowrap"
-          >
-            <Plus className="w-5 h-5" />
-            Agregar Canción
-          </button>
+          {puedeEditar && (
+            <button
+              onClick={() => setMostrarForm(!mostrarForm)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition whitespace-nowrap"
+            >
+              <Plus className="w-5 h-5" />
+              Agregar Canción
+            </button>
+          )}
         </div>
       </div>
 
       {/* Formulario para agregar canción */}
-      {mostrarForm && (
+      {puedeEditar && mostrarForm && (
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Nueva Canción</h3>
           <form onSubmit={handleCrearCancion} className="space-y-4">
@@ -341,13 +356,15 @@ function PlaylistMusical() {
             <p className="text-gray-600 mb-4">
               {busqueda || filtroCategoria ? 'No se encontraron canciones' : 'La playlist está vacía'}
             </p>
-            <button
-              onClick={() => setMostrarForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-            >
-              <Plus className="w-5 h-5" />
-              Agregar Primera Canción
-            </button>
+            {puedeEditar && (
+              <button
+                onClick={() => setMostrarForm(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              >
+                <Plus className="w-5 h-5" />
+                Agregar Primera Canción
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -385,14 +402,16 @@ function PlaylistMusical() {
                       </p>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleEliminarCancion(cancion.id, cancion.titulo)}
-                    disabled={eliminarCancionMutation.isPending}
-                    className="p-2 rounded text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
-                    title="Eliminar canción"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {puedeEditar && (
+                    <button
+                      onClick={() => handleEliminarCancion(cancion.id, cancion.titulo)}
+                      disabled={eliminarCancionMutation.isPending}
+                      className="p-2 rounded text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
+                      title="Eliminar canción"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

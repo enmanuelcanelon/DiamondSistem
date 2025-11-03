@@ -230,3 +230,5 @@ router.delete('/contrato/:contratoId', authenticate, async (req, res, next) => {
 
 module.exports = router;
 
+
+

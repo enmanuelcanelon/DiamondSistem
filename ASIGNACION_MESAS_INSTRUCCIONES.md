@@ -232,3 +232,5 @@ Si tienes problemas o dudas, revisa:
 
 **¡Sistema de Asignación de Mesas listo para usar! 🎉**
 
+
+

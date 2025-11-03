@@ -30,6 +30,7 @@ model vendedores {
   pagos                pagos[]
   solicitudes_cliente  solicitudes_cliente[]
   historial_cambios_precios historial_cambios_precios[]
+  versiones_contratos_pdf versiones_contratos_pdf[]
 }
 
 model clientes {
@@ -182,6 +183,7 @@ model contratos {
   tipo_pago               String    @db.VarChar(50)
   meses_financiamiento    Int       @default(1)
   pago_mensual            Decimal?  @db.Decimal(10, 2)
+  plan_pagos              Json?
   total_pagado            Decimal   @default(0.00) @db.Decimal(10, 2)
   saldo_pendiente         Decimal   @db.Decimal(10, 2)
   estado_pago             String    @default("pendiente") @db.VarChar(50)
@@ -203,6 +205,7 @@ model contratos {
   solicitudes_cliente     solicitudes_cliente[]
   mensajes                mensajes[]
   historial_cambios_precios historial_cambios_precios[]
+  versiones_contratos_pdf versiones_contratos_pdf[]
   mesas                   mesas[]
   invitados               invitados[]
   playlist_canciones      playlist_canciones[]
@@ -326,6 +329,24 @@ model historial_cambios_precios {
   ofertas           ofertas? @relation(fields: [oferta_id], references: [id])
   contratos         contratos? @relation(fields: [contrato_id], references: [id])
   vendedores        vendedores? @relation(fields: [modificado_por], references: [id])
+}
+
+model versiones_contratos_pdf {
+  id                  Int       @id @default(autoincrement())
+  contrato_id         Int
+  version_numero      Int
+  total_contrato      Decimal   @db.Decimal(10, 2)
+  cantidad_invitados  Int?
+  motivo_cambio       String?   @db.Text
+  cambios_detalle     Json?
+  pdf_contenido       Bytes?
+  generado_por        Int?
+  fecha_generacion    DateTime  @default(now())
+
+  contratos           contratos @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+  vendedores          vendedores? @relation(fields: [generado_por], references: [id])
+
+  @@unique([contrato_id, version_numero])
 }
 
 model mesas {

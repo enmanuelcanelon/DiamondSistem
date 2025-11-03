@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import ModalCrearCliente from '../components/ModalCrearCliente';
 
 function CrearOferta() {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ function CrearOferta() {
   const [mostrarAjusteTemporada, setMostrarAjusteTemporada] = useState(false);
   const [mostrarAjustePrecioBase, setMostrarAjustePrecioBase] = useState(false);
   const [mostrarAjusteServicios, setMostrarAjusteServicios] = useState(false);
+  const [modalClienteOpen, setModalClienteOpen] = useState(false);
 
   // Queries
   const { data: clientes } = useQuery({
@@ -349,20 +351,31 @@ function CrearOferta() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Cliente *
                 </label>
-                <select
-                  name="cliente_id"
-                  value={formData.cliente_id}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                >
-                  <option value="">Seleccionar cliente...</option>
-                  {clientes?.map((cliente) => (
-                    <option key={cliente.id} value={cliente.id}>
-                      {cliente.nombre_completo} - {cliente.email}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    name="cliente_id"
+                    value={formData.cliente_id}
+                    onChange={handleChange}
+                    required
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">Seleccionar cliente...</option>
+                    {clientes?.map((cliente) => (
+                      <option key={cliente.id} value={cliente.id}>
+                        {cliente.nombre_completo} - {cliente.email}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setModalClienteOpen(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
+                    title="Crear nuevo cliente"
+                  >
+                    <UserPlus className="w-5 h-5" />
+                    Nuevo Cliente
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -829,17 +842,30 @@ function CrearOferta() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descuento (%)
+                  Descuento ($)
                 </label>
                 <input
                   type="number"
                   name="descuento_porcentaje"
                   value={formData.descuento_porcentaje}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const valor = parseFloat(e.target.value) || 0;
+                    const subtotal = precioCalculado?.desglose?.subtotalBase || 0;
+                    const porcentajeDescuento = subtotal > 0 ? (valor / subtotal) * 100 : 0;
+                    
+                    if (porcentajeDescuento > 22) {
+                      const mensaje = `⚠️ DESCUENTO ALTO\n\nDescuento: $${valor.toLocaleString()}\nSubtotal: $${subtotal.toLocaleString()}\nPorcentaje: ${porcentajeDescuento.toFixed(1)}%\n\n¿Estás seguro de continuar?`;
+                      if (window.confirm(mensaje)) {
+                        handleChange(e);
+                      }
+                    } else {
+                      handleChange(e);
+                    }
+                  }}
                   min="0"
-                  max="100"
                   step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  placeholder="0.00"
                 />
               </div>
 
@@ -1006,6 +1032,19 @@ function CrearOferta() {
           </div>
         </div>
       </form>
+
+      {/* Modal para crear cliente */}
+      <ModalCrearCliente
+        isOpen={modalClienteOpen}
+        onClose={() => setModalClienteOpen(false)}
+        onClienteCreado={(nuevoCliente) => {
+          // Seleccionar automáticamente el nuevo cliente
+          setFormData({
+            ...formData,
+            cliente_id: nuevoCliente.id.toString()
+          });
+        }}
+      />
     </div>
   );
 }

@@ -26,12 +26,31 @@ DiamondSistem es un sistema integral que conecta 3 aplicaciones para gestionar e
   - Reversión automática de montos
   - Auditoría completa
 - ✅ **Contador de días para eventos** ⏰
+- ✅ **Recordatorio inteligente para clientes** 🔔
+  - Alerta automática 30 días antes del evento
+  - Verifica playlist, mesas y ajustes pendientes
+  - Barra de progreso visual
+  - Links directos a cada sección
 - ✅ **Panel completo de ajustes del evento** (6 secciones) 🎨
-- ✅ Sistema de playlist musical 🎵
+- ✅ **Sistema de playlist musical** 🎵
+  - Cliente: Acceso completo (agregar, editar, eliminar)
+  - Vendedor: Solo lectura (puede ver preferencias del cliente)
+  - Categorías: Favoritas, Prohibidas, Sugerencias
+  - Estadísticas en tiempo real
+  - Badge visual de "Solo lectura" para vendedores
 - ✅ Gestión de mesas e invitados 🪑
 - ✅ Chat cliente-vendedor 💬
+- ✅ **Versionamiento de contratos** 📋
+  - Historial completo de cambios
+  - PDFs de cada versión
+  - Comparación de precios entre versiones
+  - Disponible para cliente y vendedor
 - ✅ Generación de PDFs (ofertas y contratos) 📄
 - ✅ Búsqueda y filtros avanzados 🔍
+- ✅ **Normalización de fechas** 📅
+  - Formato YYYY-MM-DD en base de datos
+  - Utilidades de conversión automática
+  - Prevención de bugs por formatos inconsistentes
 
 ### 📚 Documentación Completa
 - ✅ Guía de pruebas exhaustiva (90+ tests)

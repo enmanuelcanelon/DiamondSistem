@@ -17,9 +17,11 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
       console.log('🔄 Obteniendo mensajes del contrato:', contratoId);
       const response = await api.get(`/mensajes/contrato/${contratoId}`);
       console.log('📨 Mensajes recibidos:', response.data.count, 'mensajes');
+      console.log('👤 Usuario actual:', user?.tipo, user?.id);
       return response.data;
     },
-    refetchInterval: 5000, // Refetch cada 5 segundos
+    refetchInterval: 3000, // Refetch cada 3 segundos (más frecuente)
+    refetchOnWindowFocus: true, // Refetch cuando se enfoca la ventana
     enabled: !!contratoId,
   });
 
@@ -31,27 +33,31 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
         mensaje,
         destinatario_tipo: destinatarioTipo,
         destinatario_id: destinatarioId,
-        user_tipo: user?.tipo,
-        user_id: user?.id
+        remitente_tipo: user?.tipo,
+        remitente_id: user?.id
       });
       
       const response = await api.post('/mensajes', {
-        contrato_id: contratoId,
+        contrato_id: parseInt(contratoId),
         mensaje,
         destinatario_tipo: destinatarioTipo,
-        destinatario_id: destinatarioId,
+        destinatario_id: parseInt(destinatarioId),
       });
       
       console.log('✅ Respuesta del servidor:', response.data);
+      console.log('✅ Mensaje creado con remitente:', response.data.mensaje?.remitente_tipo, response.data.mensaje?.remitente_id);
       return response.data;
     },
-    onSuccess: () => {
-      console.log('✅ Mensaje enviado, invalidando queries...');
+    onSuccess: (data) => {
+      console.log('✅ Mensaje enviado, refrescando inmediatamente...');
+      // Refrescar inmediatamente
       queryClient.invalidateQueries(['mensajes', contratoId]);
+      queryClient.refetchQueries(['mensajes', contratoId]);
       setNuevoMensaje('');
     },
     onError: (error) => {
       console.error('❌ Error al enviar mensaje:', error.response?.data || error.message);
+      alert('Error al enviar el mensaje: ' + (error.response?.data?.message || error.message));
     },
   });
 
@@ -105,31 +111,75 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
             {mensajes.map((mensaje) => {
               const esMio = mensaje.remitente_tipo === user?.tipo && mensaje.remitente_id === user?.id;
               
+              // Debug log mejorado
+              console.log('📋 Mensaje:', {
+                id: mensaje.id,
+                remitente_tipo: mensaje.remitente_tipo,
+                remitente_id: mensaje.remitente_id,
+                user_tipo: user?.tipo,
+                user_id: user?.id,
+                esMio,
+                mensaje: mensaje.mensaje.substring(0, 20)
+              });
+              
+              // Determinar etiqueta y estilo según quién lo envió
+              let etiqueta, colorFondo, colorTexto, colorBorde;
+              
+              if (esMio) {
+                // Mensaje que YO envié
+                etiqueta = user?.tipo === 'vendedor' ? '📤 Tú (Vendedor)' : '📤 Tú (Cliente)';
+                colorFondo = 'bg-gradient-to-r from-purple-600 to-pink-600';
+                colorTexto = 'text-white';
+                colorBorde = '';
+              } else if (mensaje.remitente_tipo === 'vendedor') {
+                // Mensaje del VENDEDOR (lo ve el cliente)
+                etiqueta = '👔 Asesor de Eventos';
+                colorFondo = 'bg-blue-50';
+                colorTexto = 'text-gray-900';
+                colorBorde = 'border-2 border-blue-400';
+              } else {
+                // Mensaje del CLIENTE (lo ve el vendedor)
+                etiqueta = '👤 Cliente';
+                colorFondo = 'bg-green-50';
+                colorTexto = 'text-gray-900';
+                colorBorde = 'border-2 border-green-400';
+              }
+              
               return (
                 <div
                   key={mensaje.id}
-                  className={`flex ${esMio ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${esMio ? 'justify-end' : 'justify-start'} mb-3`}
                 >
-                  <div
-                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                      esMio
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                        : 'bg-white border border-gray-200 text-gray-900'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap break-words">
+                  <div className={`max-w-[70%] rounded-xl px-4 py-3 shadow-sm ${colorFondo} ${colorBorde}`}>
+                    {/* SIEMPRE mostrar la etiqueta de quién envió */}
+                    <p className={`text-xs font-bold mb-2 ${
+                      esMio 
+                        ? 'text-purple-100' 
+                        : mensaje.remitente_tipo === 'vendedor'
+                          ? 'text-blue-700'
+                          : 'text-green-700'
+                    }`}>
+                      {etiqueta}
+                    </p>
+                    
+                    {/* Mensaje */}
+                    <p className={`text-sm whitespace-pre-wrap break-words ${colorTexto}`}>
                       {mensaje.mensaje}
                     </p>
-                    <p
-                      className={`text-xs mt-1 ${
-                        esMio ? 'text-purple-100' : 'text-gray-500'
-                      }`}
-                    >
+                    
+                    {/* Hora */}
+                    <p className={`text-xs mt-2 ${
+                      esMio 
+                        ? 'text-purple-200' 
+                        : mensaje.remitente_tipo === 'vendedor'
+                          ? 'text-blue-600'
+                          : 'text-green-600'
+                    }`}>
                       {new Date(mensaje.fecha_envio).toLocaleTimeString('es-ES', {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
-                      {esMio && mensaje.leido && ' · Leído'}
+                      {esMio && mensaje.leido && ' · ✓✓'}
                     </p>
                   </div>
                 </div>

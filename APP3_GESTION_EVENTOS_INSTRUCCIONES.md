@@ -425,3 +425,5 @@ WHERE contratos.vendedor_id = req.user.id
 **Documentación creada: Noviembre 2025**
 **Versión: 1.0**
 
+
+

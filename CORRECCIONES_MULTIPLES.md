@@ -279,3 +279,5 @@ const costoTotal = servicioSeleccionado.tipo_cobro === 'por_persona'
 **Estado:** ✅ **COMPLETADO Y LISTO PARA USAR**  
 **Próximo:** Aplicar corrección de estado de pago (SQL script pendiente)
 
+
+

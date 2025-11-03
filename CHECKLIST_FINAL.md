@@ -327,3 +327,5 @@ npx prisma generate
 _Fecha de este checklist: Noviembre 2025_
 _Versión: 1.0_
 
+
+

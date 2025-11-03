@@ -46,3 +46,5 @@ COMMENT ON COLUMN playlist_canciones.orden IS 'Orden de reproducción para canci
 COMMENT ON COLUMN playlist_canciones.reproducida IS 'Indica si la canción ya fue reproducida durante el evento';
 COMMENT ON COLUMN playlist_canciones.agregado_por IS 'Quien agregó la canción: cliente o vendedor';
 
+
+

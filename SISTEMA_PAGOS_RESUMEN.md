@@ -328,3 +328,5 @@ Si tienes dudas sobre el sistema:
 **Estado:** ✅ **COMPLETADO Y PROBADO**  
 **Versión:** 1.0.0
 
+
+

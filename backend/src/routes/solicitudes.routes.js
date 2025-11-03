@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { generarPDFContrato } = require('../utils/pdfContrato');
 
 const prisma = new PrismaClient();
 
@@ -297,6 +298,34 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
       });
     }
 
+    // ✅ VALIDACIÓN: Verificar que haya cambios reales
+    let hayCambiosReales = false;
+    
+    if (solicitud.tipo_solicitud === 'invitados') {
+      const invitadosAdicionales = solicitud.invitados_adicionales || 0;
+      hayCambiosReales = invitadosAdicionales > 0;
+    } else if (solicitud.tipo_solicitud === 'servicio') {
+      const costoAdicional = parseFloat(solicitud.costo_adicional) || 0;
+      hayCambiosReales = costoAdicional > 0;
+    }
+
+    // Si no hay cambios reales, rechazar la solicitud automáticamente
+    if (!hayCambiosReales) {
+      await prisma.solicitudes_cliente.update({
+        where: { id: parseInt(id) },
+        data: {
+          estado: 'rechazada',
+          respondido_por: req.user.id,
+          fecha_respuesta: new Date(),
+        },
+      });
+
+      return res.status(400).json({
+        message: 'No se puede aprobar: la solicitud no contiene cambios reales',
+        error: 'No hay modificaciones válidas en la solicitud'
+      });
+    }
+
     // Iniciar transacción
     const resultado = await prisma.$transaction(async (tx) => {
       // 1. Actualizar la solicitud
@@ -315,7 +344,7 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
       if (solicitud.tipo_solicitud === 'invitados') {
         // Agregar invitados al contrato
         const cantidadAnterior = solicitud.contratos.cantidad_invitados;
-        const cantidadNueva = cantidadAnterior + solicitud.invitados_adicionales;
+        const cantidadNueva = cantidadAnterior + (solicitud.invitados_adicionales || 0);
         
         await tx.contratos.update({
           where: { id: solicitud.contrato_id },
@@ -372,6 +401,76 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
               ? parseFloat(solicitud.contratos.total_contrato) + parseFloat(solicitud.costo_adicional)
               : parseFloat(solicitud.contratos.total_contrato),
             motivo: descripcionCambio,
+          },
+        });
+
+        // 3.5. Crear una nueva versión del contrato PDF
+        // Obtener el contrato actualizado con todas las relaciones
+        const contratoActualizado = await tx.contratos.findUnique({
+          where: { id: solicitud.contrato_id },
+          include: {
+            clientes: true,
+            vendedores: true,
+            paquetes: true,
+            ofertas: {
+              include: {
+                temporadas: true,
+              },
+            },
+            contratos_servicios: {
+              include: {
+                servicios: true,
+              },
+            },
+          },
+        });
+
+        // Obtener el próximo número de versión
+        const ultimaVersion = await tx.versiones_contratos_pdf.findFirst({
+          where: { contrato_id: solicitud.contrato_id },
+          orderBy: { version_numero: 'desc' },
+        });
+
+        const nuevoNumeroVersion = ultimaVersion ? ultimaVersion.version_numero + 1 : 1;
+
+        // Generar el PDF (se ejecuta fuera de la transacción)
+        let pdfBuffer = null;
+        try {
+          const doc = generarPDFContrato(contratoActualizado);
+          const chunks = [];
+          
+          doc.on('data', (chunk) => chunks.push(chunk));
+          
+          await new Promise((resolve, reject) => {
+            doc.on('end', resolve);
+            doc.on('error', reject);
+            doc.end();
+          });
+
+          pdfBuffer = Buffer.concat(chunks);
+        } catch (pdfError) {
+          console.error('Error generando PDF:', pdfError);
+          // No fallar la transacción si el PDF falla
+        }
+
+        // Guardar la versión
+        await tx.versiones_contratos_pdf.create({
+          data: {
+            contrato_id: solicitud.contrato_id,
+            version_numero: nuevoNumeroVersion,
+            total_contrato: contratoActualizado.total_contrato,
+            cantidad_invitados: contratoActualizado.cantidad_invitados,
+            motivo_cambio: descripcionCambio,
+            cambios_detalle: {
+              tipo_solicitud: solicitud.tipo_solicitud,
+              solicitud_id: solicitud.id,
+              invitados_adicionales: solicitud.invitados_adicionales,
+              servicio_id: solicitud.servicio_id,
+              cantidad_servicio: solicitud.cantidad_servicio,
+              costo_adicional: solicitud.costo_adicional,
+            },
+            pdf_contenido: pdfBuffer,
+            generado_por: req.user.id,
           },
         });
 

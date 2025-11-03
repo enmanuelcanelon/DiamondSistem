@@ -16,3 +16,5 @@ UPDATE servicios SET nombre = 'Máquina de Chispas' WHERE id = 18;
 -- Verificar los cambios
 SELECT id, nombre, categoria FROM servicios WHERE id IN (7, 11, 13, 17, 18);
 
+
+

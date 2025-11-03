@@ -179,3 +179,5 @@ DELETE /api/clientes/:id
 **Última Actualización:** 01 de Noviembre 2025, 2:00 AM
 **Estado:** 🟢 En Progreso Activo
 
+
+

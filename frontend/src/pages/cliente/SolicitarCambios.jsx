@@ -136,7 +136,12 @@ function SolicitarCambios() {
   // Mutation para crear solicitud
   const crearSolicitudMutation = useMutation({
     mutationFn: async (datos) => {
-      const response = await api.post('/solicitudes', datos);
+      // Determinar la ruta según el tipo de solicitud
+      const ruta = datos.tipo_solicitud === 'invitados' 
+        ? '/solicitudes/invitados' 
+        : '/solicitudes/servicio';
+      
+      const response = await api.post(ruta, datos);
       return response.data;
     },
     onSuccess: () => {
@@ -154,8 +159,15 @@ function SolicitarCambios() {
   });
 
   const handleSubmitInvitados = () => {
-    if (cantidadInvitados < 1) {
-      toast.error('Ingresa una cantidad válida de invitados');
+    const cantidad = parseInt(cantidadInvitados) || 0;
+    
+    if (cantidad < 1) {
+      toast.error('⚠️ Debes agregar al menos 1 invitado adicional');
+      return;
+    }
+
+    if (cantidad > 500) {
+      toast.error('⚠️ La cantidad de invitados no puede exceder 500');
       return;
     }
 
@@ -163,27 +175,39 @@ function SolicitarCambios() {
       contrato_id: contratoId,
       cliente_id: user.id,
       tipo_solicitud: 'invitados',
-      invitados_adicionales: parseInt(cantidadInvitados),
+      invitados_adicionales: cantidad,
       detalles_solicitud: detalles || null,
     });
   };
 
   const handleSubmitServicio = () => {
     if (!servicioSeleccionado) {
-      toast.error('Selecciona un servicio');
+      toast.error('⚠️ Selecciona un servicio');
+      return;
+    }
+
+    const cantidad = parseInt(cantidadServicio) || 0;
+    
+    if (cantidad < 1) {
+      toast.error('⚠️ La cantidad del servicio debe ser al menos 1');
       return;
     }
 
     const costoTotal = servicioSeleccionado.tipo_cobro === 'por_persona'
-      ? parseFloat(servicioSeleccionado.precio_base) * contrato.cantidad_invitados * cantidadServicio
-      : parseFloat(servicioSeleccionado.precio_base) * cantidadServicio;
+      ? parseFloat(servicioSeleccionado.precio_base) * contrato.cantidad_invitados * cantidad
+      : parseFloat(servicioSeleccionado.precio_base) * cantidad;
+
+    if (costoTotal <= 0) {
+      toast.error('⚠️ El costo calculado debe ser mayor a $0');
+      return;
+    }
 
     crearSolicitudMutation.mutate({
       contrato_id: contratoId,
       cliente_id: user.id,
       tipo_solicitud: 'servicio',
       servicio_id: servicioSeleccionado.id,
-      cantidad_servicio: cantidadServicio,
+      cantidad_servicio: cantidad,
       costo_adicional: costoTotal,
       detalles_solicitud: detalles || null,
     });

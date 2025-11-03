@@ -230,14 +230,65 @@ function generarPDFContrato(contrato) {
     .fillColor(colorTexto)
     .font('Helvetica');
 
-  doc.text(`Tipo de Pago: ${contrato.tipo_pago === 'contado' ? 'Contado' : 'Financiado'}`, { indent: 20 });
+  // Verificar si hay nuevo espacio para contenido
+  if (doc.y > 650) {
+    doc.addPage();
+  }
 
-  if (contrato.tipo_pago === 'financiado' && contrato.meses_financiamiento) {
-    const cuotaMensual = totalContrato / contrato.meses_financiamiento;
-    doc.text(`Plazo: ${contrato.meses_financiamiento} meses`, { indent: 20 });
-    doc.text(`Cuota Mensual Aproximada: $${cuotaMensual.toFixed(2)}`, { indent: 20 });
+  if (contrato.tipo_pago === 'unico') {
+    doc.text('Tipo de Pago: Pago Único', { indent: 20 });
+    doc.text('El pago total debe realizarse de una sola vez.', { indent: 20 });
+  } else if (contrato.plan_pagos && (contrato.tipo_pago === 'plazos' || contrato.tipo_pago === 'financiado')) {
+    // Plan de pagos personalizado
+    const plan = contrato.plan_pagos;
+    
+    doc.text(`Tipo de Pago: Pago en Plazos (${contrato.meses_financiamiento} meses)`, { indent: 20 });
+    doc.moveDown(0.5);
+    
+    // Pagos iniciales obligatorios
+    doc.font('Helvetica-Bold')
+      .text('Pagos Iniciales Obligatorios:', { indent: 20 });
+    doc.font('Helvetica');
+    
+    doc.text(`   • Depósito de Reserva (No reembolsable): $${plan.depositoReserva.toLocaleString()}`, { indent: 30 });
+    doc.text(`   • Pago Inicial (Dentro de 10 días): $${plan.pagoInicial.toLocaleString()}`, { indent: 30 });
+    doc.moveDown(0.5);
+    
+    // Pagos mensuales
+    if (plan.pagos && plan.pagos.length > 0) {
+      doc.font('Helvetica-Bold')
+        .text('Pagos Mensuales:', { indent: 20 });
+      doc.font('Helvetica');
+      
+      plan.pagos.forEach((pago, index) => {
+        doc.text(`   • ${pago.descripcion}: $${pago.monto.toLocaleString()}`, { indent: 30 });
+        
+        // Salto de página si es necesario
+        if (doc.y > 700 && index < plan.pagos.length - 1) {
+          doc.addPage();
+        }
+      });
+    }
+    
+    doc.moveDown(0.5);
+    
+    // Recordatorio importante
+    doc.font('Helvetica-Bold')
+      .fillColor('#DC2626')
+      .text('⚠ IMPORTANTE:', { indent: 20 });
+    doc.font('Helvetica')
+      .fillColor(colorTexto)
+      .text('El pago completo debe estar completado al menos 15 días hábiles antes del evento.', { indent: 30 });
   } else {
-    doc.text('Pago completo al contado', { indent: 20 });
+    // Fallback para contratos antiguos
+    doc.text(`Tipo de Pago: ${contrato.tipo_pago === 'contado' ? 'Contado' : 'Financiado'}`, { indent: 20 });
+    if (contrato.meses_financiamiento && contrato.meses_financiamiento > 1) {
+      const cuotaMensual = totalContrato / contrato.meses_financiamiento;
+      doc.text(`Plazo: ${contrato.meses_financiamiento} meses`, { indent: 20 });
+      doc.text(`Cuota Mensual Aproximada: $${cuotaMensual.toFixed(2)}`, { indent: 20 });
+    } else {
+      doc.text('Pago completo al contado', { indent: 20 });
+    }
   }
 
   doc.moveDown(1);
@@ -273,44 +324,44 @@ function generarPDFContrato(contrato) {
 
   const terminos = [
     {
-      titulo: '6.1 OBJETO DEL CONTRATO',
-      contenido: 'El presente contrato tiene por objeto la prestación de servicios de organización y ejecución de eventos, según el paquete y servicios adicionales detallados en las secciones anteriores.'
+      titulo: '6.1 RESERVATION, DEPOSIT, AND PAYMENT TERMS',
+      contenido: 'A non-refundable deposit of $500 is required to reserve the event date. A payment of $1,000 must be completed within ten (10) days after the reservation. Monthly payments of at least $500 are required thereafter until the total balance is paid. The full payment must be completed at least fifteen (15) business days before the event. Visa and MasterCard payments are accepted only up to 30 days prior to the event date with a 3.8% fee. American Express is not accepted. All payments are non-refundable.'
     },
     {
-      titulo: '6.2 OBLIGACIONES DEL PRESTADOR',
-      contenido: 'DiamondSistem se compromete a: (a) Proveer todos los servicios contratados con la calidad especificada; (b) Respetar los horarios acordados; (c) Contar con el personal capacitado necesario; (d) Mantener comunicación constante con el cliente.'
+      titulo: '6.2 EVENT CANCELLATION POLICY',
+      contenido: 'All cancellations must be submitted in writing via email. The Client forfeits all payments made and agrees not to dispute or reverse any payment. No refunds will be issued under any circumstances.'
     },
     {
-      titulo: '6.3 OBLIGACIONES DEL CLIENTE',
-      contenido: 'El cliente se compromete a: (a) Realizar los pagos según el plan acordado; (b) Proporcionar información veraz y completa; (c) Confirmar detalles finales con 15 días de anticipación; (d) Permitir el acceso al lugar del evento con la debida anticipación.'
+      titulo: '6.3 THIRD-PARTY SERVICES',
+      contenido: 'The Company is not responsible for failures or delays of services subcontracted to third-party vendors such as limousines, photographers, videographers, dancers, or entertainers. All additional services must be arranged through the Company\'s approved vendors.'
     },
     {
-      titulo: '6.4 CONDICIONES DE PAGO',
-      contenido: `Se requiere un anticipo del 50% del valor total para confirmar la reserva. El saldo restante debe pagarse ${contrato.tipo_pago === 'contado' ? 'antes del evento' : `en ${contrato.meses_financiamiento} cuotas mensuales`}. Los pagos pueden realizarse mediante transferencia bancaria, tarjeta de crédito/débito o efectivo.`
+      titulo: '6.4 CLIENT RESPONSIBILITY FOR DAMAGES',
+      contenido: 'The Client assumes full responsibility for any damage to the property, furniture, or infrastructure caused by guests, family members, or external vendors. Repair costs will be invoiced to the Client and must be paid promptly.'
     },
     {
-      titulo: '6.5 POLÍTICA DE CANCELACIÓN',
-      contenido: 'Cancelaciones con más de 60 días de anticipación: reembolso del 80%. Entre 30-60 días: reembolso del 50%. Menos de 30 días: no hay reembolso del anticipo. DiamondSistem se reserva el derecho de cancelar por causas de fuerza mayor, ofreciendo reprogramación o reembolso completo.'
+      titulo: '6.5 DECORATION AND SUPPLIES POLICY',
+      contenido: 'All decorations or materials brought by the Client require prior approval. Delivery is only allowed on Wednesdays between 2:00 PM and 5:00 PM. The Company is not responsible for lost or damaged personal items. Staff time for setup or removal may be charged to the Client.'
     },
     {
-      titulo: '6.6 MODIFICACIONES AL CONTRATO',
-      contenido: 'Cualquier modificación a los servicios contratados debe solicitarse por escrito con al menos 30 días de anticipación. Los cambios pueden estar sujetos a cargos adicionales según disponibilidad y naturaleza de la modificación.'
+      titulo: '6.6 EVENT SCHEDULE AND ACCESS',
+      contenido: 'Client and guests may only enter the venue at the time stated in the event contract. Changes to event details are allowed only up to ten (10) days before the event. External entertainers or vendors not approved by the Company are prohibited for insurance reasons.'
     },
     {
-      titulo: '6.7 RESPONSABILIDADES',
-      contenido: 'DiamondSistem no se hace responsable por: (a) Daños causados por terceros o invitados; (b) Objetos personales perdidos durante el evento; (c) Retrasos causados por el cliente o el lugar del evento; (d) Condiciones climáticas adversas en eventos al aire libre.'
+      titulo: '6.7 MEDIA RELEASE AUTHORIZATION',
+      contenido: 'The Client authorizes the Company to take photos and videos of the event and use them for promotional purposes on social media, websites, or other marketing materials.'
     },
     {
-      titulo: '6.8 GARANTÍA DE SERVICIO',
-      contenido: 'Garantizamos la calidad de nuestros servicios y equipos. En caso de fallas técnicas, proporcionaremos reemplazo inmediato sin costo adicional. Si no es posible, se aplicará un descuento proporcional.'
+      titulo: '6.8 FORCE MAJEURE',
+      contenido: 'The Company is not liable for non-performance caused by events beyond its control, including natural disasters, power outages, pandemics, or government restrictions.'
     },
     {
-      titulo: '6.9 PROTECCIÓN DE DATOS',
-      contenido: 'Los datos personales proporcionados serán tratados con confidencialidad y utilizados únicamente para la gestión del evento y comunicaciones relacionadas, cumpliendo con la legislación vigente de protección de datos.'
+      titulo: '6.9 LIMITATION OF LIABILITY',
+      contenido: 'The Company\'s total liability shall not exceed the total amount paid by the Client. The Company shall not be liable for indirect or consequential damages.'
     },
     {
-      titulo: '6.10 RESOLUCIÓN DE CONFLICTOS',
-      contenido: 'Cualquier disputa derivada de este contrato se resolverá de manera amigable. En caso de no llegar a un acuerdo, ambas partes se someterán a arbitraje o a la jurisdicción de los tribunales competentes.'
+      titulo: '6.10 GOVERNING LAW',
+      contenido: 'This Agreement shall be governed by the laws of the State of Florida. Any disputes shall be resolved in Miami-Dade County courts.'
     }
   ];
 
@@ -376,4 +427,6 @@ function generarPDFContrato(contrato) {
 }
 
 module.exports = { generarPDFContrato };
+
+
 

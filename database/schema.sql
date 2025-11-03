@@ -436,3 +436,11 @@ CREATE TRIGGER trigger_comision_vendedor
     WHEN (NEW.estado_pago = 'completado')
     EXECUTE FUNCTION calcular_comision_vendedor();
 
+
+
+
+
+
+
+
+

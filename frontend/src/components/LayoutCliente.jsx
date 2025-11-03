@@ -8,7 +8,9 @@ import {
   DollarSign,
   Settings,
   MessageCircle,
-  FileEdit
+  FileEdit,
+  FileText,
+  User
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import useAuthStore from '../store/useAuthStore';
@@ -72,6 +74,12 @@ function LayoutCliente() {
       label: 'Chat',
       description: 'Habla con tu asesor'
     },
+    { 
+      path: '/cliente/contratos', 
+      icon: FileText, 
+      label: 'Mis Contratos',
+      description: 'Ver documentos'
+    },
   ];
 
   const isActiveLink = (path) => {
@@ -93,14 +101,14 @@ function LayoutCliente() {
                 <h1 className="text-lg font-bold text-gray-900">
                   {contrato ? generarNombreEventoCorto(contrato) : 'Mi Evento'}
                 </h1>
-                <p className="text-xs text-gray-500 font-mono">
-                  {user?.codigo_contrato || 'Portal del Cliente'}
+                <p className="text-xs text-gray-500">
+                  Portal del Cliente
                 </p>
               </div>
             </div>
 
-            {/* User Info & Logout */}
-            <div className="flex items-center gap-4">
+            {/* User Info & Actions */}
+            <div className="flex items-center gap-2">
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium text-gray-900">
                   {user?.nombre_completo}
@@ -109,12 +117,19 @@ function LayoutCliente() {
                   {user?.email}
                 </p>
               </div>
+              <Link
+                to="/cliente/perfil"
+                className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+              >
+                <User className="w-5 h-5" />
+                <span className="hidden md:inline text-sm">Perfil</span>
+              </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="hidden sm:inline">Salir</span>
+                <span className="hidden md:inline text-sm">Salir</span>
               </button>
             </div>
           </div>
@@ -166,9 +181,6 @@ function LayoutCliente() {
                 </div>
                 <p className="text-sm font-bold text-purple-900">
                   {contrato ? generarNombreEventoCorto(contrato) : 'Mi Evento'}
-                </p>
-                <p className="text-xs text-purple-700 font-mono mt-1">
-                  {user?.codigo_contrato}
                 </p>
               </div>
             </div>

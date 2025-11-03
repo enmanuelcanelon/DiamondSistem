@@ -160,7 +160,9 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       oferta_id,
       tipo_pago,
       meses_financiamiento,
-      nombre_evento
+      nombre_evento,
+      numero_plazos,
+      plan_pagos
     } = req.body;
 
     // Validaciones
@@ -168,11 +170,11 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       throw new ValidationError('El ID de la oferta es requerido');
     }
 
-    if (!tipo_pago || !['unico', 'financiado'].includes(tipo_pago)) {
+    if (!tipo_pago || !['unico', 'financiado', 'plazos'].includes(tipo_pago)) {
       throw new ValidationError('Tipo de pago inválido');
     }
 
-    if (tipo_pago === 'financiado' && (!meses_financiamiento || meses_financiamiento < 1)) {
+    if ((tipo_pago === 'financiado' || tipo_pago === 'plazos') && (!meses_financiamiento || meses_financiamiento < 1)) {
       throw new ValidationError('Los meses de financiamiento son requeridos');
     }
 
@@ -250,8 +252,9 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           cantidad_invitados: oferta.cantidad_invitados,
           total_contrato: parseFloat(oferta.total_final),
           tipo_pago,
-          meses_financiamiento: tipo_pago === 'financiado' ? parseInt(meses_financiamiento) : 1,
+          meses_financiamiento: (tipo_pago === 'financiado' || tipo_pago === 'plazos') ? parseInt(meses_financiamiento) : 1,
           pago_mensual,
+          plan_pagos: plan_pagos || null,
           saldo_pendiente: parseFloat(oferta.total_final),
           codigo_acceso_cliente: codigo_acceso_temp,
           comision_calculada: comision.comision
@@ -631,6 +634,256 @@ router.get('/:id/historial', authenticate, async (req, res, next) => {
       historial,
       total: historial.length,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/contratos/:id/versiones
+ * @desc    Obtener todas las versiones de un contrato
+ * @access  Private (Vendedor o Cliente del contrato)
+ */
+router.get('/:id/versiones', authenticate, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar que el contrato existe
+    const contrato = await prisma.contratos.findUnique({
+      where: { id: parseInt(id) },
+      select: {
+        id: true,
+        vendedor_id: true,
+        cliente_id: true,
+        codigo_contrato: true,
+      },
+    });
+
+    if (!contrato) {
+      throw new NotFoundError('Contrato no encontrado');
+    }
+
+    // Verificar permisos
+    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
+      throw new ValidationError('No tienes acceso a este contrato');
+    }
+
+    if (req.user.tipo === 'cliente' && contrato.cliente_id !== req.user.id) {
+      throw new ValidationError('No tienes acceso a este contrato');
+    }
+
+    // Obtener todas las versiones
+    const versiones = await prisma.versiones_contratos_pdf.findMany({
+      where: {
+        contrato_id: parseInt(id),
+      },
+      include: {
+        vendedores: {
+          select: {
+            nombre_completo: true,
+            codigo_vendedor: true,
+          },
+        },
+      },
+      orderBy: {
+        version_numero: 'desc', // Más recientes primero
+      },
+    });
+
+    res.json({
+      success: true,
+      contrato: {
+        id: contrato.id,
+        codigo: contrato.codigo_contrato,
+      },
+      versiones,
+      total: versiones.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/contratos/:id/versiones
+ * @desc    Crear una nueva versión del contrato
+ * @access  Private (Vendedor)
+ */
+router.post('/:id/versiones', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { motivo_cambio, cambios_detalle } = req.body;
+
+    // Verificar que el contrato existe
+    const contrato = await prisma.contratos.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        clientes: true,
+        vendedores: true,
+        paquetes: true,
+        ofertas: {
+          include: {
+            temporadas: true,
+          },
+        },
+        contratos_servicios: {
+          include: {
+            servicios: true,
+          },
+        },
+      },
+    });
+
+    if (!contrato) {
+      throw new NotFoundError('Contrato no encontrado');
+    }
+
+    // Verificar permisos
+    if (contrato.vendedor_id !== req.user.id) {
+      throw new ValidationError('No tienes acceso a este contrato');
+    }
+
+    // Obtener el próximo número de versión
+    const ultimaVersion = await prisma.versiones_contratos_pdf.findFirst({
+      where: { contrato_id: parseInt(id) },
+      orderBy: { version_numero: 'desc' },
+    });
+
+    const nuevoNumeroVersion = ultimaVersion ? ultimaVersion.version_numero + 1 : 1;
+
+    // Generar el PDF del contrato
+    const doc = generarPDFContrato(contrato);
+    
+    // Convertir el stream del PDF a buffer
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    
+    await new Promise((resolve, reject) => {
+      doc.on('end', resolve);
+      doc.on('error', reject);
+      doc.end();
+    });
+
+    const pdfBuffer = Buffer.concat(chunks);
+
+    // Crear la nueva versión
+    const nuevaVersion = await prisma.versiones_contratos_pdf.create({
+      data: {
+        contrato_id: parseInt(id),
+        version_numero: nuevoNumeroVersion,
+        total_contrato: contrato.total_contrato,
+        cantidad_invitados: contrato.cantidad_invitados,
+        motivo_cambio: motivo_cambio || 'Actualización del contrato',
+        cambios_detalle: cambios_detalle || {},
+        pdf_contenido: pdfBuffer,
+        generado_por: req.user.id,
+      },
+      include: {
+        vendedores: {
+          select: {
+            nombre_completo: true,
+            codigo_vendedor: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Versión ${nuevoNumeroVersion} creada exitosamente`,
+      version: nuevaVersion,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/contratos/:id/versiones/:version_numero/pdf
+ * @desc    Descargar PDF de una versión específica del contrato
+ * @access  Private (Vendedor o Cliente del contrato)
+ */
+router.get('/:id/versiones/:version_numero/pdf', authenticate, async (req, res, next) => {
+  try {
+    const { id, version_numero } = req.params;
+
+    // Verificar que el contrato existe
+    const contrato = await prisma.contratos.findUnique({
+      where: { id: parseInt(id) },
+      select: {
+        id: true,
+        vendedor_id: true,
+        cliente_id: true,
+        codigo_contrato: true,
+      },
+    });
+
+    if (!contrato) {
+      throw new NotFoundError('Contrato no encontrado');
+    }
+
+    // Verificar permisos
+    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
+      throw new ValidationError('No tienes acceso a este contrato');
+    }
+
+    if (req.user.tipo === 'cliente' && contrato.cliente_id !== req.user.id) {
+      throw new ValidationError('No tienes acceso a este contrato');
+    }
+
+    // Obtener la versión específica
+    const version = await prisma.versiones_contratos_pdf.findFirst({
+      where: {
+        contrato_id: parseInt(id),
+        version_numero: parseInt(version_numero),
+      },
+    });
+
+    if (!version) {
+      throw new NotFoundError(`Versión ${version_numero} no encontrada`);
+    }
+
+    // Si existe el PDF guardado, enviarlo
+    if (version.pdf_contenido) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=Contrato-${contrato.codigo_contrato}-v${version_numero}.pdf`
+      );
+      return res.send(version.pdf_contenido);
+    }
+
+    // Si NO existe PDF, generarlo en tiempo real con los datos actuales del contrato
+    const contratoCompleto = await prisma.contratos.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        clientes: true,
+        vendedores: true,
+        paquetes: true,
+        ofertas: {
+          include: {
+            temporadas: true,
+          },
+        },
+        contratos_servicios: {
+          include: {
+            servicios: true,
+          },
+        },
+      },
+    });
+
+    // Generar PDF con los datos del contrato (snapshot histórico)
+    const doc = generarPDFContrato(contratoCompleto);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Contrato-${contrato.codigo_contrato}-v${version_numero}.pdf`
+    );
+
+    doc.pipe(res);
+    doc.end();
   } catch (error) {
     next(error);
   }

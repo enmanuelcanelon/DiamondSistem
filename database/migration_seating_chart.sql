@@ -79,3 +79,5 @@ COMMENT ON COLUMN invitados.tipo IS 'Tipo de invitado: adulto, niño, bebe';
 COMMENT ON COLUMN invitados.confirmado IS 'Indica si el invitado ha confirmado su asistencia';
 COMMENT ON COLUMN invitados.asistira IS 'Indica si el invitado asistirá (NULL = sin respuesta)';
 
+
+

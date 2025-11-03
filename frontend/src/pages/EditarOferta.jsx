@@ -907,17 +907,30 @@ function EditarOferta() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descuento (%)
+                  Descuento ($)
                 </label>
                 <input
                   type="number"
                   name="descuento_porcentaje"
                   value={formData.descuento_porcentaje}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const valor = parseFloat(e.target.value) || 0;
+                    const subtotal = precioCalculado?.desglose?.subtotalBase || 0;
+                    const porcentajeDescuento = subtotal > 0 ? (valor / subtotal) * 100 : 0;
+                    
+                    if (porcentajeDescuento > 22) {
+                      const mensaje = `⚠️ DESCUENTO ALTO\n\nDescuento: $${valor.toLocaleString()}\nSubtotal: $${subtotal.toLocaleString()}\nPorcentaje: ${porcentajeDescuento.toFixed(1)}%\n\n¿Estás seguro de continuar?`;
+                      if (window.confirm(mensaje)) {
+                        handleChange(e);
+                      }
+                    } else {
+                      handleChange(e);
+                    }
+                  }}
                   min="0"
-                  max="100"
                   step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  placeholder="0.00"
                 />
               </div>
 
