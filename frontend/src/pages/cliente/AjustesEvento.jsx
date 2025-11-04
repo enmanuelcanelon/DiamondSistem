@@ -6,16 +6,20 @@ import {
   Sparkles,
   UtensilsCrossed,
   Music2,
-  Camera,
   Settings,
   Save,
   Loader2,
   CheckCircle2,
   AlertTriangle,
   Lock,
+  Wine,
+  Construction,
+  Car,
+  Clock,
 } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import api from '../../config/api';
+import SeccionDecoracion from '../../components/SeccionDecoracion';
 
 function AjustesEvento() {
   const { user } = useAuthStore();
@@ -25,7 +29,7 @@ function AjustesEvento() {
   const [tabActivo, setTabActivo] = useState('torta');
   const [guardando, setGuardando] = useState(false);
 
-  // Query para obtener el contrato (para la fecha del evento)
+  // Query para obtener el contrato (para la fecha del evento y servicios)
   const { data: contrato } = useQuery({
     queryKey: ['contrato-cliente-ajustes', contratoId],
     queryFn: async () => {
@@ -93,12 +97,17 @@ function AjustesEvento() {
     actualizarMutation.mutate(datos);
   };
 
+  // Verificar si tiene limosina contratada
+  const tieneLimosina = contrato?.contratos_servicios?.some(
+    cs => cs.servicios?.nombre?.toLowerCase().includes('limosina')
+  );
+
   const tabs = [
     { id: 'torta', label: 'Torta', icon: Cake, color: 'pink' },
     { id: 'decoracion', label: 'Decoración', icon: Sparkles, color: 'purple' },
     { id: 'menu', label: 'Menú', icon: UtensilsCrossed, color: 'orange' },
     { id: 'entretenimiento', label: 'Entretenimiento', icon: Music2, color: 'blue' },
-    { id: 'fotografia', label: 'Fotografía', icon: Camera, color: 'green' },
+    { id: 'bar', label: 'Bar', icon: Wine, color: 'indigo' },
     { id: 'otros', label: 'Otros', icon: Settings, color: 'gray' },
   ];
 
@@ -213,22 +222,46 @@ function AjustesEvento() {
       {/* Content */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
         {tabActivo === 'torta' && (
-          <SeccionTorta ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
+          <SeccionTorta 
+            ajustes={ajustes} 
+            onGuardar={handleGuardar} 
+            guardando={guardando} 
+            estaBloqueado={estaBloqueado}
+            contrato={contrato}
+          />
         )}
         {tabActivo === 'decoracion' && (
-          <SeccionDecoracion ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
+          <SeccionDecoracion 
+            ajustes={ajustes} 
+            onGuardar={handleGuardar} 
+            guardando={guardando} 
+            estaBloqueado={estaBloqueado}
+            contrato={contrato}
+          />
         )}
         {tabActivo === 'menu' && (
-          <SeccionMenu ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
+          <SeccionMenu 
+            ajustes={ajustes} 
+            onGuardar={handleGuardar} 
+            guardando={guardando} 
+            estaBloqueado={estaBloqueado}
+            contrato={contrato}
+          />
         )}
         {tabActivo === 'entretenimiento' && (
           <SeccionEntretenimiento ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
         )}
-        {tabActivo === 'fotografia' && (
-          <SeccionFotografia ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
+        {tabActivo === 'bar' && (
+          <SeccionBar ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
         )}
         {tabActivo === 'otros' && (
-          <SeccionOtros ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
+          <SeccionOtros 
+            ajustes={ajustes} 
+            onGuardar={handleGuardar} 
+            guardando={guardando} 
+            estaBloqueado={estaBloqueado}
+            tieneLimosina={tieneLimosina}
+          />
         )}
       </div>
     </div>
@@ -236,18 +269,32 @@ function AjustesEvento() {
 }
 
 // ===== SECCIÓN TORTA =====
-function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado }) {
+function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }) {
+  // Determinar número de pisos automáticamente según el salón
+  const pisosPorSalon = {
+    'Diamond': 3,
+    'Kendall': 2,
+    'Doral': 2
+  };
+  
+  const nombreSalon = contrato?.lugar_salon || contrato?.salones?.nombre || 'Diamond';
+  const pisosAutomaticos = pisosPorSalon[nombreSalon] || 3;
+
   const [datos, setDatos] = useState({
     sabor_torta: ajustes?.sabor_torta || '',
-    tamano_torta: ajustes?.tamano_torta || '',
-    tipo_relleno: ajustes?.tipo_relleno || '',
+    sabor_otro: ajustes?.sabor_otro || '',
     diseno_torta: ajustes?.diseno_torta || '',
+    diseno_otro: ajustes?.diseno_otro || '',
+    pisos_torta: pisosAutomaticos,
     notas_torta: ajustes?.notas_torta || '',
   });
 
+  const [mostrarSaborOtro, setMostrarSaborOtro] = useState(ajustes?.sabor_torta === 'Otro');
+  const [mostrarDisenoOtro, setMostrarDisenoOtro] = useState(ajustes?.diseno_torta === 'Otro');
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onGuardar('torta', datos);
+    onGuardar('torta', { ...datos, pisos_torta: pisosAutomaticos });
   };
 
   return (
@@ -257,68 +304,82 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado }) {
         <h2 className="text-2xl font-bold text-gray-900">Detalles de la Torta</h2>
       </div>
 
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Sabor: Vainilla, Marmoleado, u Otro */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Sabor Principal *
+            Sabor *
           </label>
           <select
             value={datos.sabor_torta}
-            onChange={(e) => setDatos({ ...datos, sabor_torta: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
+            onChange={(e) => {
+              setDatos({ ...datos, sabor_torta: e.target.value, sabor_otro: e.target.value !== 'Otro' ? '' : datos.sabor_otro });
+              setMostrarSaborOtro(e.target.value === 'Otro');
+            }}
+            disabled={estaBloqueado}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none disabled:bg-gray-100"
           >
             <option value="">Seleccionar...</option>
             <option value="Vainilla">Vainilla</option>
-            <option value="Chocolate">Chocolate</option>
-            <option value="Red Velvet">Red Velvet</option>
-            <option value="Zanahoria">Zanahoria</option>
-            <option value="Limón">Limón</option>
-            <option value="Fresa">Fresa</option>
             <option value="Marmoleado">Marmoleado</option>
             <option value="Otro">Otro</option>
           </select>
+          {mostrarSaborOtro && (
+            <input
+              type="text"
+              value={datos.sabor_otro}
+              onChange={(e) => setDatos({ ...datos, sabor_otro: e.target.value })}
+              disabled={estaBloqueado}
+              placeholder="Especificar sabor..."
+              className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none disabled:bg-gray-100"
+            />
+          )}
         </div>
 
+        {/* Diseño: Channel, Delux, Blanco, Desnudo, u Otro */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tamaño
+            Diseño *
           </label>
           <select
-            value={datos.tamano_torta}
-            onChange={(e) => setDatos({ ...datos, tamano_torta: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
+            value={datos.diseno_torta}
+            onChange={(e) => {
+              setDatos({ ...datos, diseno_torta: e.target.value, diseno_otro: e.target.value !== 'Otro' ? '' : datos.diseno_otro });
+              setMostrarDisenoOtro(e.target.value === 'Otro');
+            }}
+            disabled={estaBloqueado}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none disabled:bg-gray-100"
           >
             <option value="">Seleccionar...</option>
-            <option value="1 piso">1 piso</option>
-            <option value="2 pisos">2 pisos</option>
-            <option value="3 pisos">3 pisos</option>
-            <option value="4+ pisos">4+ pisos</option>
+            <option value="Channel">Channel</option>
+            <option value="Delux">Delux</option>
+            <option value="Blanco">Blanco</option>
+            <option value="Desnudo">Desnudo</option>
+            <option value="Otro">Otro</option>
           </select>
+          {mostrarDisenoOtro && (
+            <input
+              type="text"
+              value={datos.diseno_otro}
+              onChange={(e) => setDatos({ ...datos, diseno_otro: e.target.value })}
+              disabled={estaBloqueado}
+              placeholder="Especificar diseño..."
+              className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none disabled:bg-gray-100"
+            />
+          )}
         </div>
 
-        <div>
+        {/* Pisos (solo lectura) */}
+        <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tipo de Relleno
+            Número de Pisos (automático)
           </label>
           <input
             type="text"
-            value={datos.tipo_relleno}
-            onChange={(e) => setDatos({ ...datos, tipo_relleno: e.target.value })}
-            placeholder="Ej: Crema de mantequilla, Mermelada de fresa"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Diseño/Decoración
-          </label>
-          <input
-            type="text"
-            value={datos.diseno_torta}
-            onChange={(e) => setDatos({ ...datos, diseno_torta: e.target.value })}
-            placeholder="Ej: Flores naturales, Fondant, Minimalista"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
+            value={`${pisosAutomaticos} ${pisosAutomaticos === 1 ? 'piso' : 'pisos'}`}
+            disabled
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
           />
         </div>
       </div>
@@ -362,141 +423,33 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado }) {
   );
 }
 
-// ===== SECCIÓN DECORACIÓN =====
-function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado }) {
-  const [datos, setDatos] = useState({
-    estilo_decoracion: ajustes?.estilo_decoracion || '',
-    colores_principales: ajustes?.colores_principales || '',
-    flores_preferidas: ajustes?.flores_preferidas || '',
-    tematica: ajustes?.tematica || '',
-    notas_decoracion: ajustes?.notas_decoracion || '',
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onGuardar('decoracion', datos);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <Sparkles className="w-6 h-6 text-purple-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Decoración del Evento</h2>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Estilo de Decoración
-          </label>
-          <select
-            value={datos.estilo_decoracion}
-            onChange={(e) => setDatos({ ...datos, estilo_decoracion: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-          >
-            <option value="">Seleccionar...</option>
-            <option value="Clásico">Clásico</option>
-            <option value="Moderno">Moderno</option>
-            <option value="Rústico">Rústico</option>
-            <option value="Elegante">Elegante</option>
-            <option value="Vintage">Vintage</option>
-            <option value="Bohemio">Bohemio</option>
-            <option value="Minimalista">Minimalista</option>
-            <option value="Romántico">Romántico</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Temática
-          </label>
-          <input
-            type="text"
-            value={datos.tematica}
-            onChange={(e) => setDatos({ ...datos, tematica: e.target.value })}
-            placeholder="Ej: Jardín, Playa, Cuento de Hadas"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Colores Principales
-          </label>
-          <input
-            type="text"
-            value={datos.colores_principales}
-            onChange={(e) => setDatos({ ...datos, colores_principales: e.target.value })}
-            placeholder="Ej: Blanco y dorado, Rosa y verde menta"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Flores Preferidas
-          </label>
-          <input
-            type="text"
-            value={datos.flores_preferidas}
-            onChange={(e) => setDatos({ ...datos, flores_preferidas: e.target.value })}
-            placeholder="Ej: Rosas, Peonías, Hortensias"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Notas Adicionales
-        </label>
-        <textarea
-          value={datos.notas_decoracion}
-          onChange={(e) => setDatos({ ...datos, notas_decoracion: e.target.value })}
-          rows="3"
-          placeholder="Cualquier detalle especial sobre la decoración..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-        ></textarea>
-      </div>
-
-      <button
-        type="submit"
-        disabled={guardando || estaBloqueado}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition font-medium disabled:opacity-50"
-      >
-        {guardando ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Guardando...
-          </>
-        ) : (
-          <>
-            <Save className="w-5 h-5" />
-            Guardar Cambios
-          </>
-        )}
-      </button>
-    </form>
-  );
-}
-
 // ===== SECCIÓN MENÚ =====
-function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado }) {
+function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato }) {
   const [datos, setDatos] = useState({
-    tipo_servicio: ajustes?.tipo_servicio || '',
-    entrada: ajustes?.entrada || '',
+    entrada: 'Ensalada César', // Valor fijo por defecto
     plato_principal: ajustes?.plato_principal || '',
     acompanamientos: ajustes?.acompanamientos || '',
-    opciones_vegetarianas: ajustes?.opciones_vegetarianas || '',
-    opciones_veganas: ajustes?.opciones_veganas || '',
+    hay_teenagers: ajustes?.hay_teenagers || false,
+    cantidad_teenagers: ajustes?.cantidad_teenagers || 0,
     restricciones_alimentarias: ajustes?.restricciones_alimentarias || '',
-    bebidas_incluidas: ajustes?.bebidas_incluidas || '',
     notas_menu: ajustes?.notas_menu || '',
   });
 
+  const totalInvitados = contrato?.cantidad_invitados || 0;
+  const invitadosAdultos = totalInvitados - (datos.cantidad_teenagers || 0);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onGuardar('menu', datos);
+    // Enviar solo los campos que Prisma reconoce
+    onGuardar('menu', {
+      entrada: datos.entrada, // Siempre será "Ensalada César"
+      plato_principal: datos.plato_principal,
+      acompanamientos: datos.acompanamientos,
+      hay_teenagers: datos.hay_teenagers,
+      cantidad_teenagers: datos.hay_teenagers ? parseInt(datos.cantidad_teenagers) : 0,
+      restricciones_alimentarias: datos.restricciones_alimentarias,
+      notas_menu: datos.notas_menu,
+    });
   };
 
   return (
@@ -506,112 +459,157 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado }) {
         <h2 className="text-2xl font-bold text-gray-900">Servicio de Comida</h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tipo de Servicio
-          </label>
-          <select
-            value={datos.tipo_servicio}
-            onChange={(e) => setDatos({ ...datos, tipo_servicio: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-          >
-            <option value="">Seleccionar...</option>
-            <option value="Buffet">Buffet</option>
-            <option value="Emplatado">Emplatado</option>
-            <option value="Estaciones">Estaciones</option>
-            <option value="Cocktail">Cocktail</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Entrada
-          </label>
-          <input
-            type="text"
-            value={datos.entrada}
-            onChange={(e) => setDatos({ ...datos, entrada: e.target.value })}
-            placeholder="Ej: Ensalada César"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Plato Principal
-          </label>
-          <input
-            type="text"
-            value={datos.plato_principal}
-            onChange={(e) => setDatos({ ...datos, plato_principal: e.target.value })}
-            placeholder="Ej: Lomo a la parrilla"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Acompañamientos
-          </label>
-          <input
-            type="text"
-            value={datos.acompanamientos}
-            onChange={(e) => setDatos({ ...datos, acompanamientos: e.target.value })}
-            placeholder="Ej: Papas gratinadas, vegetales"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-          />
+      {/* Información de distribución */}
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+        <p className="text-sm font-medium text-blue-900">
+          📊 Total de invitados: {totalInvitados}
+        </p>
+        {datos.hay_teenagers && (
+          <p className="text-sm text-blue-700 mt-1">
+            👥 Adultos: {invitadosAdultos} | 👶 Teens/Kids: {datos.cantidad_teenagers || 0}
+          </p>
+        )}
+      </div>
+
+      {/* Selección de Menú para Adultos */}
+      <div className="border-2 border-orange-200 rounded-xl p-6 bg-orange-50">
+        <h3 className="text-lg font-bold text-orange-900 mb-4 flex items-center gap-2">
+          <span>🍽️</span> Menú para Adultos ({invitadosAdultos} platos)
+        </h3>
+        
+        <div className="space-y-4">
+          {/* Ensalada - Solo lectura */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Ensalada * <span className="text-xs text-gray-500">(incluida por defecto)</span>
+            </label>
+            <div className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg bg-gray-50 text-gray-700 font-medium">
+              🥗 {datos.entrada}
+            </div>
+          </div>
+
+          {/* Plato Principal */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Plato Principal (Main Entrée) *
+            </label>
+            <select
+              value={datos.plato_principal}
+              onChange={(e) => setDatos({ ...datos, plato_principal: e.target.value })}
+              disabled={estaBloqueado}
+              className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none bg-white disabled:bg-gray-100"
+            >
+              <option value="">Seleccionar...</option>
+              <option value="Pollo Strogonoff con una salsa cremosa y champiñones">
+                Pollo Strogonoff con una salsa cremosa y champiñones
+              </option>
+              <option value="Pollo Piccata">Pollo Piccata</option>
+              <option value="Bistec (Palomilla o Boliche) en salsa de vino">
+                Bistec (Palomilla o Boliche) en salsa de vino
+              </option>
+              <option value="Solomillo de Cerdo Marinado">
+                Solomillo de Cerdo Marinado
+              </option>
+            </select>
+          </div>
+
+          {/* Acompañamiento */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Acompañamiento (Side) *
+            </label>
+            <select
+              value={datos.acompanamientos}
+              onChange={(e) => setDatos({ ...datos, acompanamientos: e.target.value })}
+              disabled={estaBloqueado}
+              className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none bg-white disabled:bg-gray-100"
+            >
+              <option value="">Seleccionar...</option>
+              <option value="Arroz Blanco o Amarillo">Arroz Blanco o Amarillo</option>
+              <option value="Puré de Patatas o Patatas al Romero">
+                Puré de Patatas o Patatas al Romero
+              </option>
+              <option value="Verduras al Vapor">Verduras al Vapor</option>
+              <option value="Plátano Maduro">Plátano Maduro</option>
+              <option value="Pan y Mantequilla">Pan y Mantequilla</option>
+            </select>
+          </div>
         </div>
       </div>
 
+      {/* Teenagers/Kids */}
+      <div className="border-2 border-purple-200 rounded-xl p-6 bg-purple-50">
+        <div className="flex items-center gap-3 mb-4">
+          <input
+            type="checkbox"
+            id="hay_teenagers"
+            checked={datos.hay_teenagers}
+            onChange={(e) => setDatos({ ...datos, hay_teenagers: e.target.checked, cantidad_teenagers: e.target.checked ? datos.cantidad_teenagers : 0 })}
+            disabled={estaBloqueado}
+            className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:opacity-50"
+          />
+          <label htmlFor="hay_teenagers" className="text-lg font-bold text-purple-900 cursor-pointer">
+            ¿Habrá Teenagers/Kids en el evento?
+          </label>
+        </div>
+
+        {datos.hay_teenagers && (
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Cantidad de Teens/Kids *
+              </label>
+              <input
+                type="number"
+                min="0"
+                max={totalInvitados}
+                value={datos.cantidad_teenagers}
+                onChange={(e) => {
+                  const valor = parseInt(e.target.value) || 0;
+                  if (valor <= totalInvitados) {
+                    setDatos({ ...datos, cantidad_teenagers: valor });
+                  }
+                }}
+                disabled={estaBloqueado}
+                className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white disabled:bg-gray-100"
+              />
+              <p className="text-xs text-purple-700 mt-1">
+                💡 Los teens/kids recibirán: <strong>Pasta con pollo</strong>
+              </p>
+            </div>
+
+            {datos.cantidad_teenagers > 0 && (
+              <div className="bg-purple-100 border border-purple-300 rounded-lg p-4">
+                <p className="text-sm font-medium text-purple-900">
+                  📋 Resumen de platos:
+                </p>
+                <ul className="text-sm text-purple-800 mt-2 space-y-1">
+                  <li>• {invitadosAdultos} platos según selección de menú (adultos)</li>
+                  <li>• {datos.cantidad_teenagers} pasta(s) con pollo (teens/kids)</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Restricciones y Alergias */}
       <div className="border-t pt-6">
         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <span>🌱</span> Opciones Especiales
+          <span>🌱</span> Restricciones y Detalles Especiales
         </h3>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Opciones Vegetarianas
-            </label>
-            <textarea
-              value={datos.opciones_vegetarianas}
-              onChange={(e) => setDatos({ ...datos, opciones_vegetarianas: e.target.value })}
-              rows={2}
-              placeholder="Describe las opciones vegetarianas disponibles"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Opciones Veganas
-            </label>
-            <textarea
-              value={datos.opciones_veganas}
-              onChange={(e) => setDatos({ ...datos, opciones_veganas: e.target.value })}
-              rows={2}
-              placeholder="Describe las opciones veganas disponibles"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Restricciones Alimentarias
+              Restricciones Alimentarias / Alergias / Vegetarianos
             </label>
             <textarea
               value={datos.restricciones_alimentarias}
               onChange={(e) => setDatos({ ...datos, restricciones_alimentarias: e.target.value })}
-              rows={2}
-              placeholder="Alergias, intolerancias, o restricciones especiales"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bebidas Incluidas
-            </label>
-            <textarea
-              value={datos.bebidas_incluidas}
-              onChange={(e) => setDatos({ ...datos, bebidas_incluidas: e.target.value })}
-              rows={2}
-              placeholder="Lista de bebidas disponibles"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+              disabled={estaBloqueado}
+              rows={3}
+              placeholder="Ej: 2 personas vegetarianas, 1 alergia a frutos secos, 1 intolerancia a lactosa..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none disabled:bg-gray-100"
             />
           </div>
           <div>
@@ -621,9 +619,10 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado }) {
             <textarea
               value={datos.notas_menu}
               onChange={(e) => setDatos({ ...datos, notas_menu: e.target.value })}
+              disabled={estaBloqueado}
               rows={3}
-              placeholder="Cualquier comentario o solicitud especial sobre el menú"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+              placeholder="Cualquier comentario o solicitud especial sobre el menú..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none disabled:bg-gray-100"
             />
           </div>
         </div>
@@ -784,109 +783,39 @@ function SeccionEntretenimiento({ ajustes, onGuardar, guardando, estaBloqueado }
   );
 }
 
-// ===== SECCIÓN FOTOGRAFÍA =====
-function SeccionFotografia({ ajustes, onGuardar, guardando, estaBloqueado }) {
-  const [datos, setDatos] = useState({
-    momentos_especiales: ajustes?.momentos_especiales || '',
-    poses_especificas: ajustes?.poses_especificas || '',
-    ubicaciones_fotos: ajustes?.ubicaciones_fotos || '',
-    notas_fotografia: ajustes?.notas_fotografia || '',
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onGuardar('fotografia', datos);
-  };
-
+// ===== SECCIÓN BAR =====
+function SeccionBar({ ajustes, onGuardar, guardando, estaBloqueado }) {
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
-        <Camera className="w-6 h-6 text-green-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Fotografía y Video</h2>
+        <Wine className="w-6 h-6 text-indigo-600" />
+        <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Momentos Especiales a Capturar
-          </label>
-          <textarea
-            value={datos.momentos_especiales}
-            onChange={(e) => setDatos({ ...datos, momentos_especiales: e.target.value })}
-            rows={3}
-            placeholder="Ej: Preparación de novia, llegada de invitados, intercambio de votos, primer baile..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Poses o Fotos Específicas Deseadas
-          </label>
-          <textarea
-            value={datos.poses_especificas}
-            onChange={(e) => setDatos({ ...datos, poses_especificas: e.target.value })}
-            rows={3}
-            placeholder="Ej: Foto con toda la familia, fotos espontáneas, retratos formales..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Ubicaciones para Sesión de Fotos
-          </label>
-          <textarea
-            value={datos.ubicaciones_fotos}
-            onChange={(e) => setDatos({ ...datos, ubicaciones_fotos: e.target.value })}
-            rows={2}
-            placeholder="Ej: Jardín exterior, escaleras, frente al lago..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Notas Adicionales
-          </label>
-          <textarea
-            value={datos.notas_fotografia}
-            onChange={(e) => setDatos({ ...datos, notas_fotografia: e.target.value })}
-            rows={3}
-            placeholder="Cualquier detalle especial sobre fotografía/video..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-          />
+      {/* Banner de En Construcción */}
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-12 text-center border-2 border-indigo-200">
+        <Construction className="w-16 h-16 text-indigo-400 mx-auto mb-4" />
+        <h3 className="text-2xl font-bold text-indigo-900 mb-2">Sección en Construcción</h3>
+        <p className="text-indigo-700 mb-4">
+          Estamos preparando esta sección para que puedas personalizar los cócteles, bebidas y detalles del bar de tu evento.
+        </p>
+        <div className="flex items-center justify-center gap-2 text-sm text-indigo-600">
+          <Wine className="w-4 h-4" />
+          <span>Próximamente disponible</span>
         </div>
       </div>
-
-      <button
-        type="submit"
-        disabled={guardando || estaBloqueado}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition font-medium disabled:opacity-50"
-      >
-        {guardando ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Guardando...
-          </>
-        ) : (
-          <>
-            <Save className="w-5 h-5" />
-            Guardar Cambios
-          </>
-        )}
-      </button>
-    </form>
+    </div>
   );
 }
 
 // ===== SECCIÓN OTROS =====
-function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado }) {
+function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimosina }) {
   const [datos, setDatos] = useState({
     invitado_honor: ajustes?.invitado_honor || '',
     brindis_especial: ajustes?.brindis_especial || '',
     sorpresas_planeadas: ajustes?.sorpresas_planeadas || '',
     solicitudes_especiales: ajustes?.solicitudes_especiales || '',
+    hora_limosina: ajustes?.hora_limosina || '18:00', // Hora genérica por defecto
   });
 
   const handleSubmit = (e) => {
@@ -902,6 +831,32 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado }) {
       </div>
 
       <div className="space-y-4">
+        {/* Limosina (solo si está contratada) */}
+        {tieneLimosina && (
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Car className="w-5 h-5 text-blue-600" />
+              <h3 className="font-bold text-blue-900">Servicio de Limosina</h3>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Hora de Recogida
+              </label>
+              <input
+                type="time"
+                value={datos.hora_limosina}
+                onChange={(e) => setDatos({ ...datos, hora_limosina: e.target.value })}
+                disabled={estaBloqueado}
+                className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white disabled:bg-gray-100"
+              />
+              <p className="text-xs text-blue-700 mt-2">
+                💡 Esta hora puede ser ajustada por tu asesor según las necesidades del evento
+              </p>
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Invitado(s) de Honor
@@ -977,4 +932,3 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado }) {
 }
 
 export default AjustesEvento;
-

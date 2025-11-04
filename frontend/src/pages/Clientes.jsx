@@ -147,9 +147,13 @@ function Clientes() {
 
               <div className="mt-4 pt-4 border-t">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs text-gray-500">
-                    {cliente._count?.contratos || 0} contratos
-                  </span>
+                  <Link
+                    to={`/contratos?cliente_id=${cliente.id}`}
+                    className="text-xs text-gray-500 hover:text-indigo-600 hover:underline transition cursor-pointer"
+                    title={`Ver contratos de ${cliente.nombre_completo}`}
+                  >
+                    {cliente._count?.contratos || 0} contrato{(cliente._count?.contratos || 0) !== 1 ? 's' : ''}
+                  </Link>
                   <Link
                     to={`/ofertas/nueva?cliente_id=${cliente.id}`}
                     className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"

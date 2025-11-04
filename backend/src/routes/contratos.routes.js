@@ -72,6 +72,12 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
             nombre_evento: true,
             estado: true
           }
+        },
+        salones: {
+          select: {
+            id: true,
+            nombre: true
+          }
         }
       },
       orderBy: { fecha_firma: 'desc' }
@@ -250,6 +256,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           hora_inicio: oferta.hora_inicio,
           hora_fin: oferta.hora_fin,
           cantidad_invitados: oferta.cantidad_invitados,
+          homenajeado: oferta.homenajeado,
           total_contrato: parseFloat(oferta.total_final),
           tipo_pago,
           meses_financiamiento: (tipo_pago === 'financiado' || tipo_pago === 'plazos') ? parseInt(meses_financiamiento) : 1,
@@ -884,6 +891,44 @@ router.get('/:id/versiones/:version_numero/pdf', authenticate, async (req, res, 
 
     doc.pipe(res);
     doc.end();
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   PUT /api/contratos/:id/notas
+ * @desc    Actualizar notas internas del contrato
+ * @access  Private (Vendedor)
+ */
+router.put('/:id/notas', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { notas_vendedor } = req.body;
+
+    // Verificar que el contrato existe
+    const contrato = await prisma.contratos.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!contrato) {
+      throw new NotFoundError('Contrato no encontrado');
+    }
+
+    // Actualizar notas
+    const contratoActualizado = await prisma.contratos.update({
+      where: { id: parseInt(id) },
+      data: {
+        notas_vendedor: notas_vendedor || null
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Notas actualizadas exitosamente',
+      contrato: contratoActualizado
+    });
+
   } catch (error) {
     next(error);
   }

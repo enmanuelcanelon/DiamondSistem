@@ -12,12 +12,21 @@ import {
   Save,
   X,
   Table,
+  Eye,
 } from 'lucide-react';
 import api from '../config/api';
+import useAuthStore from '../store/useAuthStore';
 
 function AsignacionMesas() {
   const { id: contratoId } = useParams();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  
+  // Determinar si el usuario es vendedor (solo lectura) o cliente (puede editar)
+  // Usar window.location.pathname para detectar si es área de vendedor
+  const esAreaVendedor = window.location.pathname.startsWith('/contratos/');
+  const esVendedor = user?.rol === 'vendedor' || esAreaVendedor;
+  const puedeEditar = !esVendedor;
   
   const [nuevaMesa, setNuevaMesa] = useState({
     numero_mesa: '',
@@ -200,12 +209,37 @@ function AsignacionMesas() {
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900">Asignación de Mesas</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">Asignación de Mesas</h1>
+            {esVendedor && (
+              <span className="px-3 py-1 text-xs font-medium bg-amber-100 text-amber-800 rounded-full flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                Solo Lectura
+              </span>
+            )}
+          </div>
           <p className="text-gray-600 mt-1">
             {contrato?.codigo_contrato} - {contrato?.clientes?.nombre_completo}
           </p>
         </div>
       </div>
+
+      {/* Banner informativo para vendedor */}
+      {esVendedor && (
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+          <div className="flex items-start gap-3">
+            <Eye className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900">
+                Vista de Solo Lectura
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                Como vendedor, puedes ver la asignación de mesas pero no puedes editarla. Solo el cliente puede realizar cambios en esta sección.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Panel Izquierdo: Invitados Sin Asignar */}
@@ -216,17 +250,19 @@ function AsignacionMesas() {
                 <Users className="w-5 h-5 text-indigo-600" />
                 Invitados Sin Mesa ({invitadosSinMesa.length})
               </h2>
-              <button
-                onClick={() => setMostrarFormInvitado(!mostrarFormInvitado)}
-                className="p-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
-                title="Agregar Invitado"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
+              {puedeEditar && (
+                <button
+                  onClick={() => setMostrarFormInvitado(!mostrarFormInvitado)}
+                  className="p-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                  title="Agregar Invitado"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              )}
             </div>
 
             {/* Formulario para agregar invitado */}
-            {mostrarFormInvitado && (
+            {mostrarFormInvitado && puedeEditar && (
               <form onSubmit={handleCrearInvitado} className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
                 <input
                   type="text"
@@ -297,17 +333,19 @@ function AsignacionMesas() {
                         <p className="font-medium text-gray-900 text-sm">{invitado.nombre_completo}</p>
                         <p className="text-xs text-gray-500">{invitado.tipo}</p>
                       </div>
-                      <button
-                        onClick={() => handleEliminarInvitado(invitado.id)}
-                        className="p-1 rounded text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
-                        title="Eliminar invitado"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {puedeEditar && (
+                        <button
+                          onClick={() => handleEliminarInvitado(invitado.id)}
+                          className="p-1 rounded text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
+                          title="Eliminar invitado"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                     
                     {/* Dropdown para asignar a mesa */}
-                    {mesas && mesas.length > 0 && (
+                    {mesas && mesas.length > 0 && puedeEditar && (
                       <select
                         onChange={(e) => handleAsignarInvitado(invitado.id, parseInt(e.target.value))}
                         className="w-full mt-2 px-2 py-1 border rounded text-xs"
@@ -341,17 +379,19 @@ function AsignacionMesas() {
                 <Table className="w-5 h-5 text-indigo-600" />
                 Mesas ({mesas?.length || 0})
               </h2>
-              <button
-                onClick={() => setMostrarFormMesa(!mostrarFormMesa)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Nueva Mesa
-              </button>
+              {puedeEditar && (
+                <button
+                  onClick={() => setMostrarFormMesa(!mostrarFormMesa)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nueva Mesa
+                </button>
+              )}
             </div>
 
             {/* Formulario para crear mesa */}
-            {mostrarFormMesa && (
+            {mostrarFormMesa && puedeEditar && (
               <form onSubmit={handleCrearMesa} className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <input
@@ -444,14 +484,16 @@ function AsignacionMesas() {
                           Capacidad: {mesa.invitados.length}/{mesa.capacidad} | Forma: {mesa.forma}
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleEliminarMesa(mesa.id)}
-                        disabled={eliminarMesaMutation.isPending}
-                        className="p-2 rounded text-red-600 hover:bg-red-50 transition"
-                        title="Eliminar mesa"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {puedeEditar && (
+                        <button
+                          onClick={() => handleEliminarMesa(mesa.id)}
+                          disabled={eliminarMesaMutation.isPending}
+                          className="p-2 rounded text-red-600 hover:bg-red-50 transition"
+                          title="Eliminar mesa"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
 
                     {/* Invitados en la mesa */}
@@ -468,14 +510,16 @@ function AsignacionMesas() {
                               <p className="text-sm font-medium text-gray-900">{invitado.nombre_completo}</p>
                               <p className="text-xs text-gray-500">{invitado.tipo}</p>
                             </div>
-                            <button
-                              onClick={() => handleDesasignarInvitado(invitado.id)}
-                              disabled={asignarInvitadoMutation.isPending}
-                              className="p-1 rounded text-orange-600 hover:bg-orange-50 opacity-0 group-hover:opacity-100 transition"
-                              title="Desasignar de esta mesa"
-                            >
-                              <UserMinus className="w-4 h-4" />
-                            </button>
+                            {puedeEditar && (
+                              <button
+                                onClick={() => handleDesasignarInvitado(invitado.id)}
+                                disabled={asignarInvitadoMutation.isPending}
+                                className="p-1 rounded text-orange-600 hover:bg-orange-50 opacity-0 group-hover:opacity-100 transition"
+                                title="Desasignar de esta mesa"
+                              >
+                                <UserMinus className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>

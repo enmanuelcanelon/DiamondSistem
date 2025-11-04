@@ -27,6 +27,7 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
   try {
     const {
       paquete_id,
+      salon_id = null,
       fecha_evento,
       cantidad_invitados,
       servicios_adicionales = [],
@@ -49,7 +50,28 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
       throw new NotFoundError('Paquete no encontrado');
     }
 
-    // Si se proporcionó un precio base ajustado, usarlo
+    // Si hay salon_id, obtener el precio del paquete para ese salón
+    if (salon_id) {
+      const paqueteSalon = await prisma.paquetes_salones.findFirst({
+        where: {
+          paquete_id: parseInt(paquete_id),
+          salon_id: parseInt(salon_id)
+        }
+      });
+
+      if (paqueteSalon && paqueteSalon.disponible) {
+        // Usar el precio del salón en lugar del precio base del paquete
+        paquete = {
+          ...paquete,
+          precio_base: parseFloat(paqueteSalon.precio_base),
+          invitados_minimo: paqueteSalon.invitados_minimo
+        };
+      } else if (paqueteSalon && !paqueteSalon.disponible) {
+        throw new ValidationError('Este paquete no está disponible en el salón seleccionado');
+      }
+    }
+
+    // Si se proporcionó un precio base ajustado manualmente, usarlo (tiene prioridad)
     if (precio_base_ajustado && parseFloat(precio_base_ajustado) > 0) {
       paquete = {
         ...paquete,
@@ -184,6 +206,12 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
             codigo_contrato: true,
             estado: true
           }
+        },
+        salones: {
+          select: {
+            id: true,
+            nombre: true
+          }
         }
       },
       orderBy: { fecha_creacion: 'desc' }
@@ -258,12 +286,33 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     validarDatosOferta(datos);
 
     // Obtener paquete
-    const paquete = await prisma.paquetes.findUnique({
+    let paquete = await prisma.paquetes.findUnique({
       where: { id: parseInt(datos.paquete_id) }
     });
 
     if (!paquete) {
       throw new NotFoundError('Paquete no encontrado');
+    }
+
+    // Si hay salon_id, obtener el precio del paquete para ese salón
+    if (datos.salon_id) {
+      const paqueteSalon = await prisma.paquetes_salones.findFirst({
+        where: {
+          paquete_id: parseInt(datos.paquete_id),
+          salon_id: parseInt(datos.salon_id)
+        }
+      });
+
+      if (paqueteSalon && paqueteSalon.disponible) {
+        // Usar el precio del salón en lugar del precio base del paquete
+        paquete = {
+          ...paquete,
+          precio_base: parseFloat(paqueteSalon.precio_base),
+          invitados_minimo: paqueteSalon.invitados_minimo
+        };
+      } else if (paqueteSalon && !paqueteSalon.disponible) {
+        throw new ValidationError('Este paquete no está disponible en el salón seleccionado');
+      }
     }
 
     // Obtener temporadas y determinar la temporada
@@ -332,11 +381,14 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
            cliente_id: parseInt(datos.cliente_id),
            vendedor_id: parseInt(datos.vendedor_id || req.user.id),
            paquete_id: parseInt(datos.paquete_id),
+           salon_id: datos.salon_id ? parseInt(datos.salon_id) : null,
            fecha_evento: new Date(datos.fecha_evento),
            hora_inicio: new Date(`1970-01-01T${datos.hora_inicio || '18:00'}:00Z`),
            hora_fin: new Date(`1970-01-01T${datos.hora_fin || '23:00'}:00Z`),
            cantidad_invitados: parseInt(datos.cantidad_invitados),
            lugar_evento: datos.lugar_evento || null,
+           lugar_salon: datos.lugar_evento || null,
+           homenajeado: datos.homenajeado || null,
            temporada_id: temporada.id,
           precio_paquete_base: parseFloat(calculo.desglose.paquete.precioBase),
           ajuste_temporada: parseFloat(calculo.desglose.paquete.ajusteTemporada),
@@ -524,6 +576,7 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
           hora_fin: new Date(`1970-01-01T${datos.hora_fin || '23:00'}:00Z`),
           cantidad_invitados: parseInt(datos.cantidad_invitados),
           lugar_evento: datos.lugar_evento || null,
+          homenajeado: datos.homenajeado || null,
           temporada_id: temporada.id,
           precio_paquete_base: parseFloat(calculo.desglose.paquete.precioBase),
           ajuste_temporada: parseFloat(calculo.desglose.paquete.ajusteTemporada),

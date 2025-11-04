@@ -229,15 +229,6 @@ router.get('/contrato/:contrato_id', authenticate, requireVendedor, async (req, 
 
     const pagos = await prisma.pagos.findMany({
       where: { contrato_id: parseInt(contrato_id) },
-      include: {
-        vendedores: {
-          select: {
-            id: true,
-            nombre_completo: true,
-            codigo_vendedor: true
-          }
-        }
-      },
       orderBy: { fecha_pago: 'desc' }
     });
 

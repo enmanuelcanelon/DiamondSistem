@@ -195,7 +195,6 @@ function SeccionTorta({ ajustes }) {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Campo label="Sabor de la Torta" valor={ajustes?.sabor_torta} />
-        <Campo label="Número de Pisos" valor={ajustes?.pisos_torta} />
         <Campo label="Relleno" valor={ajustes?.relleno_torta} />
         <Campo label="Decoración de la Torta" valor={ajustes?.decoracion_torta} />
         <div className="md:col-span-2">
@@ -208,24 +207,156 @@ function SeccionTorta({ ajustes }) {
 
 // Sección Decoración
 function SeccionDecoracion({ ajustes }) {
+  // Formatear servilletas si existen
+  const formatearServilletas = () => {
+    if (!ajustes?.servilletas || !Array.isArray(ajustes.servilletas)) return null;
+    
+    return ajustes.servilletas.map((s, i) => (
+      <span key={i} className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm mr-2 mb-2 capitalize">
+        {s.color}: {s.cantidad}
+      </span>
+    ));
+  };
+
   return (
     <div id="decoracion" className="bg-white rounded-xl shadow-sm border p-6">
       <div className="flex items-center gap-3 mb-6 pb-4 border-b">
         <Sparkles className="w-6 h-6 text-purple-600" />
         <h2 className="text-2xl font-bold text-gray-900">Decoración</h2>
+        {ajustes?.tipo_decoracion && (
+          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+            ajustes.tipo_decoracion === 'premium' 
+              ? 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700' 
+              : 'bg-blue-100 text-blue-700'
+          }`}>
+            {ajustes.tipo_decoracion === 'premium' ? '⭐ Premium' : '📦 Básica'}
+          </span>
+        )}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Campo label="Tema de Decoración" valor={ajustes?.tema_decoracion} />
-        <Campo label="Color Principal" valor={ajustes?.color_principal} />
-        <Campo label="Color Secundario" valor={ajustes?.color_secundario} />
-        <Campo label="Estilo" valor={ajustes?.estilo_decoracion} />
-        <div className="md:col-span-2">
-          <Campo label="Elementos Especiales" valor={ajustes?.elementos_decoracion} />
-        </div>
-        <div className="md:col-span-2">
-          <Campo label="Notas Adicionales" valor={ajustes?.notas_decoracion} />
+
+      {/* Preferencias Generales */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <span>🎨</span> Preferencias Generales
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Campo label="Estilo General" valor={ajustes?.estilo_decoracion} />
+          {ajustes?.estilo_decoracion === 'Otro' && ajustes?.estilo_decoracion_otro && (
+            <Campo label="Estilo Personalizado" valor={ajustes?.estilo_decoracion_otro} />
+          )}
+          <Campo label="Temática" valor={ajustes?.tematica} />
+          <Campo label="Colores Principales" valor={ajustes?.colores_principales} />
+          <div className="md:col-span-2">
+            <Campo label="Notas Adicionales" valor={ajustes?.notas_decoracion} />
+          </div>
         </div>
       </div>
+
+      {/* Decoración Detallada (Solo si está configurada) */}
+      {ajustes?.tipo_decoracion && (
+        <>
+          <div className="border-t pt-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <span>✨</span> Detalles Específicos de Decoración
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Cojines */}
+              {ajustes?.cojines_color && (
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Cojines</p>
+                  <p className="text-gray-900 capitalize font-medium">{ajustes.cojines_color}</p>
+                </div>
+              )}
+
+              {/* Centro de Mesa */}
+              {ajustes?.centro_mesa_1 && (
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Centro de Mesa</p>
+                  <p className="text-gray-900 capitalize font-medium">{ajustes.centro_mesa_1}</p>
+                  {ajustes.centro_mesa_1 === 'cilindro' && (
+                    <p className="text-xs text-gray-600 mt-1">💡 Incluye 3 cilindros</p>
+                  )}
+                </div>
+              )}
+
+              {/* Base */}
+              {ajustes?.base_color && (
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Base</p>
+                  <p className="text-gray-900 capitalize font-medium">{ajustes.base_color}</p>
+                </div>
+              )}
+
+              {/* Challer */}
+              {ajustes?.challer_color && (
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Challer (Cargador de Plato)</p>
+                  <p className="text-gray-900 capitalize font-medium">{ajustes.challer_color}</p>
+                </div>
+              )}
+
+              {/* Aros */}
+              {ajustes?.aros_color && (
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Aros (Anillos para Servilleta)</p>
+                  <p className="text-gray-900 capitalize font-medium">{ajustes.aros_color}</p>
+                  {ajustes.aros_color === 'otro' && ajustes.aros_nota && (
+                    <p className="text-sm text-gray-700 mt-1">📝 {ajustes.aros_nota}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Runner */}
+              {ajustes?.runner_tipo && (
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Runner (Camino de Mesa)</p>
+                  <p className="text-gray-900 capitalize font-medium">{ajustes.runner_tipo}</p>
+                  {ajustes.runner_tipo === 'otros' && ajustes.runner_nota && (
+                    <p className="text-sm text-gray-700 mt-1">📝 {ajustes.runner_nota}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Stage */}
+              {ajustes?.stage_tipo && (
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Stage (Escenario)</p>
+                  <p className="text-gray-900 capitalize font-medium">{ajustes.stage_tipo}</p>
+                  {ajustes.stage_tipo === 'globos' && ajustes.stage_color_globos && (
+                    <p className="text-sm text-gray-700 mt-1">🎈 Color: {ajustes.stage_color_globos}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Servilletas */}
+          {ajustes?.servilletas && ajustes.servilletas.length > 0 && (
+            <div className="border-t pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <span>🧻</span> Servilletas
+              </h3>
+              <div className="bg-purple-50 rounded-lg p-4">
+                <div className="flex flex-wrap gap-2">
+                  {formatearServilletas()}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Detalles Premium */}
+          {ajustes?.tipo_decoracion === 'premium' && ajustes?.decoracion_premium_detalles && (
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <span>⭐</span> Detalles Especiales Premium
+              </h3>
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200">
+                <p className="text-gray-900 whitespace-pre-wrap">{ajustes.decoracion_premium_detalles}</p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

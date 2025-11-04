@@ -37,6 +37,7 @@ function DetalleContrato() {
   const [formPago, setFormPago] = useState({
     monto: '',
     metodo_pago: 'efectivo',
+    tipo_tarjeta: '',
     numero_referencia: '',
     notas: '',
   });
@@ -46,6 +47,10 @@ function DetalleContrato() {
   const [modalAnularOpen, setModalAnularOpen] = useState(false);
   const [pagoAAnular, setPagoAAnular] = useState(null);
   const [mostrarCodigoAcceso, setMostrarCodigoAcceso] = useState(false);
+  
+  // Estado para notas internas
+  const [notasInternas, setNotasInternas] = useState('');
+  const [editandoNotas, setEditandoNotas] = useState(false);
 
   // Query para obtener el contrato
   const { data: contrato, isLoading } = useQuery({
@@ -53,6 +58,10 @@ function DetalleContrato() {
     queryFn: async () => {
       const response = await api.get(`/contratos/${id}`);
       return response.data.contrato;
+    },
+    onSuccess: (data) => {
+      // Inicializar notas internas cuando se carga el contrato
+      setNotasInternas(data?.notas_vendedor || '');
     },
   });
 
@@ -91,6 +100,7 @@ function DetalleContrato() {
       setFormPago({
         monto: '',
         metodo_pago: 'efectivo',
+        tipo_tarjeta: '',
         numero_referencia: '',
         notas: '',
       });
@@ -130,6 +140,27 @@ function DetalleContrato() {
       const errorMsg = error.response?.data?.message || 'Error al anular pago';
       toast.error(errorMsg, { duration: 4000 });
       setModalAnularOpen(false);
+    },
+  });
+
+  // Mutation para actualizar notas internas
+  const mutationNotasInternas = useMutation({
+    mutationFn: async (notas) => {
+      const response = await api.put(`/contratos/${id}/notas`, { notas_vendedor: notas });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['contrato', id]);
+      setEditandoNotas(false);
+      toast.success('✅ Notas guardadas exitosamente', {
+        duration: 3000,
+        icon: '📝',
+      });
+    },
+    onError: (error) => {
+      console.error('Error al guardar notas:', error);
+      const errorMsg = error.response?.data?.message || 'Error al guardar notas';
+      toast.error(errorMsg, { duration: 4000 });
     },
   });
 
@@ -254,6 +285,14 @@ function DetalleContrato() {
     }
   };
 
+  const handleGuardarNotas = () => {
+    mutationNotasInternas.mutate(notasInternas);
+  };
+
+  const handleCancelarNotas = () => {
+    setNotasInternas(contrato?.notas_vendedor || '');
+    setEditandoNotas(false);
+  };
 
   if (isLoading) {
     return (
@@ -354,6 +393,25 @@ function DetalleContrato() {
                 <option value="cheque">📝 Cheque</option>
               </select>
             </div>
+
+            {formPago.metodo_pago === 'tarjeta' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Tarjeta *
+                </label>
+                <select
+                  name="tipo_tarjeta"
+                  value={formPago.tipo_tarjeta}
+                  onChange={handlePagoChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                >
+                  <option value="">Seleccione tipo de tarjeta</option>
+                  <option value="Débito">Débito</option>
+                  <option value="Crédito">Crédito</option>
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -501,6 +559,18 @@ function DetalleContrato() {
                 </div>
               </div>
 
+              {contrato?.homenajeado && (
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 text-gray-400 mt-0.5 flex items-center justify-center">
+                    🎉
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Homenajeado/a</p>
+                    <p className="font-medium">{contrato.homenajeado}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-start gap-3">
                 <Users className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
@@ -541,10 +611,75 @@ function DetalleContrato() {
                   </ul>
                 </div>
               )}
+              </div>
             </div>
-          </div>
+ 
+            {/* Notas Internas del Vendedor */}
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-amber-600" />
+                  Notas Internas
+                </h2>
+                {!editandoNotas ? (
+                  <button
+                    onClick={() => setEditandoNotas(true)}
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition text-sm font-medium"
+                  >
+                    {contrato?.notas_vendedor ? 'Editar Notas' : 'Agregar Notas'}
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCancelarNotas}
+                      disabled={mutationNotasInternas.isLoading}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm font-medium"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleGuardarNotas}
+                      disabled={mutationNotasInternas.isLoading}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium flex items-center gap-2"
+                    >
+                      {mutationNotasInternas.isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Guardando...
+                        </>
+                      ) : (
+                        'Guardar'
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
 
-          {/* Historial de Pagos */}
+              {editandoNotas ? (
+                <div>
+                  <textarea
+                    value={notasInternas}
+                    onChange={(e) => setNotasInternas(e.target.value)}
+                    rows="6"
+                    placeholder="Escribe tus notas internas aquí... (Solo visibles para vendedores)"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none resize-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 Estas notas solo son visibles para vendedores y no aparecen en documentos del cliente.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  {contrato?.notas_vendedor ? (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{contrato.notas_vendedor}</p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No hay notas registradas aún.</p>
+                  )}
+                </div>
+              )}
+            </div>
+  
+            {/* Historial de Pagos */}
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Historial de Pagos</h2>
             {pagos?.length === 0 ? (

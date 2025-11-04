@@ -1,194 +1,178 @@
--- ==================================================
--- SCRIPT: LIMPIAR DATOS DE PRUEBA
--- ==================================================
+-- ============================================
+-- SCRIPT PARA LIMPIAR DATOS DE PRUEBA
+-- ============================================
 -- Este script elimina todos los clientes, ofertas y contratos
--- manteniendo intactos los datos del catálogo (paquetes, servicios, temporadas)
-
--- IMPORTANTE: Ejecutar con precaución, esto eliminará datos permanentemente
+-- manteniendo intacta la estructura de la base de datos
+-- ============================================
 
 BEGIN;
 
--- Mostrar estadísticas ANTES de la limpieza
-SELECT '=== ESTADÍSTICAS ANTES DE LA LIMPIEZA ===' as info;
+-- ============================================
+-- 1. VERIFICACIÓN INICIAL
+-- ============================================
+SELECT 'DATOS ANTES DE LA LIMPIEZA' AS info;
 
 SELECT 
-    'Clientes' as tabla, 
-    COUNT(*) as total 
+    'Clientes' AS tabla, 
+    COUNT(*) AS total 
 FROM clientes
 UNION ALL
-SELECT 'Ofertas', COUNT(*) FROM ofertas
+SELECT 
+    'Ofertas' AS tabla, 
+    COUNT(*) AS total 
+FROM ofertas
 UNION ALL
-SELECT 'Contratos', COUNT(*) FROM contratos
+SELECT 
+    'Contratos' AS tabla, 
+    COUNT(*) AS total 
+FROM contratos
 UNION ALL
-SELECT 'Pagos', COUNT(*) FROM pagos
-UNION ALL
-SELECT 'Eventos', COUNT(*) FROM eventos
-UNION ALL
-SELECT 'Solicitudes', COUNT(*) FROM solicitudes_cliente
-UNION ALL
-SELECT 'Mensajes', COUNT(*) FROM mensajes
-UNION ALL
-SELECT 'Mesas', COUNT(*) FROM mesas
-UNION ALL
-SELECT 'Invitados', COUNT(*) FROM invitados
-UNION ALL
-SELECT 'Playlist', COUNT(*) FROM playlist_canciones
-UNION ALL
-SELECT 'Ajustes Evento', COUNT(*) FROM ajustes_evento
-UNION ALL
-SELECT 'Historial Cambios', COUNT(*) FROM historial_cambios_precios
-UNION ALL
-SELECT 'Versiones PDF', COUNT(*) FROM versiones_contratos_pdf;
+SELECT 
+    'Pagos' AS tabla, 
+    COUNT(*) AS total 
+FROM pagos;
 
--- ==================================================
--- ELIMINACIÓN EN ORDEN (de dependientes a principales)
--- ==================================================
+-- ============================================
+-- 2. ELIMINAR DATOS EN ORDEN CORRECTO
+-- (Respetando dependencias de claves foráneas)
+-- ============================================
 
--- 1. Eliminar versiones de contratos PDF (nueva tabla)
+-- 2.1 Versiones de contratos PDF
 DELETE FROM versiones_contratos_pdf;
-SELECT 'Versiones PDF eliminadas' as paso;
+SELECT 'Versiones de contratos eliminadas' AS paso;
 
--- 2. Eliminar ajustes de eventos
+-- 2.2 Eventos (si existe)
+DELETE FROM eventos WHERE id IS NOT NULL;
+SELECT 'Eventos eliminados' AS paso;
+
+-- 2.3 Ajustes de eventos
 DELETE FROM ajustes_evento;
-SELECT 'Ajustes de evento eliminados' as paso;
+SELECT 'Ajustes de eventos eliminados' AS paso;
 
--- 3. Eliminar playlist
+-- 2.4 Playlist musical
 DELETE FROM playlist_canciones;
-SELECT 'Playlist eliminada' as paso;
+SELECT 'Playlist eliminadas' AS paso;
 
--- 4. Eliminar invitados
+-- 2.5 Invitados
 DELETE FROM invitados;
-SELECT 'Invitados eliminados' as paso;
+SELECT 'Invitados eliminados' AS paso;
 
--- 5. Eliminar mesas
-DELETE FROM mesas;
-SELECT 'Mesas eliminadas' as paso;
+-- 2.6 Mesas (si existe - sistema de seating eliminado)
+DELETE FROM mesas WHERE id IS NOT NULL;
+SELECT 'Mesas eliminadas (si existía)' AS paso;
 
--- 6. Eliminar mensajes
-DELETE FROM mensajes;
-SELECT 'Mensajes eliminados' as paso;
-
--- 7. Eliminar solicitudes de clientes
+-- 2.7 Solicitudes de clientes
 DELETE FROM solicitudes_cliente;
-SELECT 'Solicitudes eliminadas' as paso;
+SELECT 'Solicitudes de clientes eliminadas' AS paso;
 
--- 8. Eliminar historial de cambios de precios
-DELETE FROM historial_cambios_precios;
-SELECT 'Historial de cambios eliminado' as paso;
+-- 2.8 Mensajes
+DELETE FROM mensajes;
+SELECT 'Mensajes eliminados' AS paso;
 
--- 9. Eliminar eventos
-DELETE FROM eventos;
-SELECT 'Eventos eliminados' as paso;
-
--- 10. Eliminar pagos
+-- 2.9 Pagos de contratos
 DELETE FROM pagos;
-SELECT 'Pagos eliminados' as paso;
+SELECT 'Pagos eliminados' AS paso;
 
--- 11. Eliminar servicios de contratos
+-- 2.10 Servicios de contratos
 DELETE FROM contratos_servicios;
-SELECT 'Servicios de contratos eliminados' as paso;
+SELECT 'Servicios de contratos eliminados' AS paso;
 
--- 12. Eliminar contratos
+-- 2.11 Contratos
 DELETE FROM contratos;
-SELECT 'Contratos eliminados' as paso;
+SELECT 'Contratos eliminados' AS paso;
 
--- 13. Eliminar servicios adicionales de ofertas
+-- 2.12 Servicios de ofertas
 DELETE FROM ofertas_servicios_adicionales;
-SELECT 'Servicios adicionales de ofertas eliminados' as paso;
+SELECT 'Servicios de ofertas eliminados' AS paso;
 
--- 14. Eliminar ofertas
+-- 2.13 Ofertas
 DELETE FROM ofertas;
-SELECT 'Ofertas eliminadas' as paso;
+SELECT 'Ofertas eliminadas' AS paso;
 
--- 15. Eliminar clientes
+-- 2.14 Clientes (finalmente)
 DELETE FROM clientes;
-SELECT 'Clientes eliminados' as paso;
+SELECT 'Clientes eliminados' AS paso;
 
--- ==================================================
--- REINICIAR SECUENCIAS (para que los IDs vuelvan a 1)
--- ==================================================
+-- ============================================
+-- 3. REINICIAR SECUENCIAS (CONTADORES)
+-- ============================================
+-- Esto reinicia los IDs auto-incrementales
 
 ALTER SEQUENCE clientes_id_seq RESTART WITH 1;
 ALTER SEQUENCE ofertas_id_seq RESTART WITH 1;
 ALTER SEQUENCE contratos_id_seq RESTART WITH 1;
 ALTER SEQUENCE pagos_id_seq RESTART WITH 1;
-ALTER SEQUENCE eventos_id_seq RESTART WITH 1;
-ALTER SEQUENCE solicitudes_cliente_id_seq RESTART WITH 1;
 ALTER SEQUENCE mensajes_id_seq RESTART WITH 1;
-ALTER SEQUENCE mesas_id_seq RESTART WITH 1;
-ALTER SEQUENCE invitados_id_seq RESTART WITH 1;
-ALTER SEQUENCE playlist_canciones_id_seq RESTART WITH 1;
+ALTER SEQUENCE solicitudes_cliente_id_seq RESTART WITH 1;
 ALTER SEQUENCE ajustes_evento_id_seq RESTART WITH 1;
-ALTER SEQUENCE historial_cambios_precios_id_seq RESTART WITH 1;
+ALTER SEQUENCE playlist_canciones_id_seq RESTART WITH 1;
+ALTER SEQUENCE invitados_id_seq RESTART WITH 1;
 ALTER SEQUENCE versiones_contratos_pdf_id_seq RESTART WITH 1;
-ALTER SEQUENCE contratos_servicios_id_seq RESTART WITH 1;
 ALTER SEQUENCE ofertas_servicios_adicionales_id_seq RESTART WITH 1;
+ALTER SEQUENCE contratos_servicios_id_seq RESTART WITH 1;
+ALTER SEQUENCE eventos_id_seq RESTART WITH 1;
 
-SELECT 'Secuencias reiniciadas' as paso;
+SELECT 'Secuencias reiniciadas' AS paso;
 
--- ==================================================
--- VERIFICACIÓN POST-LIMPIEZA
--- ==================================================
-
-SELECT '=== ESTADÍSTICAS DESPUÉS DE LA LIMPIEZA ===' as info;
+-- ============================================
+-- 4. VERIFICACIÓN FINAL
+-- ============================================
+SELECT 'DATOS DESPUÉS DE LA LIMPIEZA' AS info;
 
 SELECT 
-    'Clientes' as tabla, 
-    COUNT(*) as total 
+    'Clientes' AS tabla, 
+    COUNT(*) AS total 
 FROM clientes
 UNION ALL
-SELECT 'Ofertas', COUNT(*) FROM ofertas
+SELECT 
+    'Ofertas' AS tabla, 
+    COUNT(*) AS total 
+FROM ofertas
 UNION ALL
-SELECT 'Contratos', COUNT(*) FROM contratos
+SELECT 
+    'Contratos' AS tabla, 
+    COUNT(*) AS total 
+FROM contratos
 UNION ALL
-SELECT 'Pagos', COUNT(*) FROM pagos
+SELECT 
+    'Pagos' AS tabla, 
+    COUNT(*) AS total 
+FROM pagos
 UNION ALL
-SELECT 'Eventos', COUNT(*) FROM eventos
+SELECT 
+    'Mensajes' AS tabla, 
+    COUNT(*) AS total 
+FROM mensajes
 UNION ALL
-SELECT 'Solicitudes', COUNT(*) FROM solicitudes_cliente
-UNION ALL
-SELECT 'Mensajes', COUNT(*) FROM mensajes
-UNION ALL
-SELECT 'Mesas', COUNT(*) FROM mesas
-UNION ALL
-SELECT 'Invitados', COUNT(*) FROM invitados
-UNION ALL
-SELECT 'Playlist', COUNT(*) FROM playlist_canciones
-UNION ALL
-SELECT 'Ajustes Evento', COUNT(*) FROM ajustes_evento
-UNION ALL
-SELECT 'Historial Cambios', COUNT(*) FROM historial_cambios_precios
-UNION ALL
-SELECT 'Versiones PDF', COUNT(*) FROM versiones_contratos_pdf;
+SELECT 
+    'Solicitudes' AS tabla, 
+    COUNT(*) AS total 
+FROM solicitudes_cliente;
 
--- ==================================================
--- VERIFICAR QUE EL CATÁLOGO SIGUE INTACTO
--- ==================================================
+-- ============================================
+-- 5. VERIFICAR INTEGRIDAD
+-- ============================================
+SELECT 'VERIFICACIÓN DE INTEGRIDAD' AS info;
 
-SELECT '=== CATÁLOGO (NO ELIMINADO) ===' as info;
+-- Verificar que no hay huérfanos
+SELECT 
+    'Ofertas huérfanas' AS verificacion,
+    COUNT(*) AS cantidad
+FROM ofertas o
+LEFT JOIN clientes c ON o.cliente_id = c.id
+WHERE c.id IS NULL;
 
 SELECT 
-    'Vendedores' as tabla, 
-    COUNT(*) as total 
-FROM vendedores
-UNION ALL
-SELECT 'Paquetes', COUNT(*) FROM paquetes
-UNION ALL
-SELECT 'Servicios', COUNT(*) FROM servicios
-UNION ALL
-SELECT 'Temporadas', COUNT(*) FROM temporadas
-UNION ALL
-SELECT 'Paquetes-Servicios', COUNT(*) FROM paquetes_servicios
-UNION ALL
-SELECT 'Configuración', COUNT(*) FROM configuracion_sistema;
-
-SELECT '✅ LIMPIEZA COMPLETADA - Base de datos lista para nuevas pruebas' as resultado;
-
--- COMMIT para confirmar los cambios
--- Si algo salió mal, puedes hacer ROLLBACK en lugar de COMMIT
+    'Contratos huérfanos' AS verificacion,
+    COUNT(*) AS cantidad
+FROM contratos co
+LEFT JOIN clientes cl ON co.cliente_id = cl.id
+WHERE cl.id IS NULL;
 
 COMMIT;
 
--- Para DESHACER los cambios (ejecutar ANTES del COMMIT):
--- ROLLBACK;
-
+-- ============================================
+-- 6. RESUMEN
+-- ============================================
+SELECT '✅ LIMPIEZA COMPLETADA EXITOSAMENTE' AS resultado;
+SELECT 'La base de datos está lista para nuevas pruebas' AS mensaje;

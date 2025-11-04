@@ -181,7 +181,7 @@ router.post('/register/vendedor', async (req, res, next) => {
         email,
         telefono,
         password_hash,
-        comision_porcentaje: comision_porcentaje || 10.00,
+        comision_porcentaje: comision_porcentaje || 3.00,
         activo: true
       }
     });

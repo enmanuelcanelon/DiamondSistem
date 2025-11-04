@@ -309,7 +309,7 @@ const calcularRecargoTarjeta = (monto) => {
 /**
  * Calcular comisión del vendedor
  */
-const calcularComisionVendedor = (totalContrato, porcentajeComision = 10) => {
+const calcularComisionVendedor = (totalContrato, porcentajeComision = 3) => {
   const comision = (totalContrato * porcentajeComision) / 100;
   
   return {

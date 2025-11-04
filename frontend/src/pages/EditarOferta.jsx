@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 
@@ -12,12 +12,14 @@ function EditarOferta() {
   const [formData, setFormData] = useState({
     cliente_id: '',
     paquete_id: '',
+    salon_id: '',
     temporada_id: '',
     fecha_evento: '',
     hora_inicio: '',
     hora_fin: '',
     cantidad_invitados: '',
     lugar_evento: '',
+    homenajeado: '',
     servicios_adicionales: [],
     descuento_porcentaje: 0,
     notas_internas: '',
@@ -26,11 +28,54 @@ function EditarOferta() {
   const [precioCalculado, setPrecioCalculado] = useState(null);
   const [serviciosSeleccionados, setServiciosSeleccionados] = useState([]);
   const [paqueteSeleccionado, setPaqueteSeleccionado] = useState(null);
+  const [salonSeleccionado, setSalonSeleccionado] = useState(null);
+  const [lugarPersonalizado, setLugarPersonalizado] = useState('');
   const [precioBaseAjustado, setPrecioBaseAjustado] = useState('');
   const [ajusteTemporadaCustom, setAjusteTemporadaCustom] = useState('');
   const [mostrarAjusteTemporada, setMostrarAjusteTemporada] = useState(false);
   const [mostrarAjustePrecioBase, setMostrarAjustePrecioBase] = useState(false);
   const [mostrarAjusteServicios, setMostrarAjusteServicios] = useState(false);
+  const [errorFecha, setErrorFecha] = useState('');
+  const [errorHorario, setErrorHorario] = useState('');
+
+  // Obtener fecha mínima (hoy) en formato YYYY-MM-DD
+  const obtenerFechaMinima = () => {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Validar horarios del evento
+  const validarHorarios = (horaInicio, horaFin) => {
+    if (!horaInicio || !horaFin) return null;
+
+    const convertirAMinutos = (hora) => {
+      const [h, m] = hora.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const minutosInicio = convertirAMinutos(horaInicio);
+    const minutosFin = convertirAMinutos(horaFin);
+    
+    const HORA_MINIMA_INICIO = 10 * 60; // 10:00 AM
+    const HORA_MAXIMA_FIN_CON_EXTRA = 2 * 60; // 2:00 AM
+
+    if (minutosInicio < HORA_MINIMA_INICIO) {
+      return 'La hora de inicio debe ser a partir de las 10:00 AM';
+    }
+
+    const terminaDiaSiguiente = minutosFin < minutosInicio;
+
+    if (terminaDiaSiguiente) {
+      if (minutosFin > HORA_MAXIMA_FIN_CON_EXTRA) {
+        return 'La hora de fin no puede ser después de las 2:00 AM (máximo legal permitido con 1 hora extra)';
+      }
+    }
+
+    return null;
+  };
 
   // Cargar datos de la oferta existente
   const { data: ofertaExistente, isLoading: cargandoOferta } = useQuery({
@@ -51,12 +96,29 @@ function EditarOferta() {
     },
   });
 
-  const { data: paquetes } = useQuery({
-    queryKey: ['paquetes'],
+  // Query para obtener salones
+  const { data: salones } = useQuery({
+    queryKey: ['salones'],
     queryFn: async () => {
-      const response = await api.get('/paquetes');
+      const response = await api.get('/salones');
+      return response.data.salones;
+    },
+  });
+
+  // Query para obtener paquetes según el salón seleccionado
+  const { data: paquetes } = useQuery({
+    queryKey: ['paquetes-salon', formData.salon_id],
+    queryFn: async () => {
+      if (!formData.salon_id || formData.salon_id === 'otro') {
+        // Si no hay salón o es "otro", obtener todos los paquetes
+        const response = await api.get('/paquetes');
+        return response.data.paquetes;
+      }
+      // Si hay salón, obtener paquetes de ese salón con precios personalizados
+      const response = await api.get(`/salones/${formData.salon_id}/paquetes`);
       return response.data.paquetes;
     },
+    enabled: true,
   });
 
   const { data: temporadas } = useQuery({
@@ -105,15 +167,22 @@ function EditarOferta() {
       setFormData({
         cliente_id: ofertaExistente.cliente_id?.toString() || '',
         paquete_id: ofertaExistente.paquete_id?.toString() || '',
+        salon_id: ofertaExistente.salon_id?.toString() || '',
         temporada_id: ofertaExistente.temporada_id?.toString() || '',
         fecha_evento: ofertaExistente.fecha_evento?.split('T')[0] || '',
         hora_inicio: ofertaExistente.hora_inicio || '',
         hora_fin: ofertaExistente.hora_fin || '',
         cantidad_invitados: ofertaExistente.cantidad_invitados?.toString() || '',
         lugar_evento: ofertaExistente.lugar_evento || '',
+        homenajeado: ofertaExistente.homenajeado || '',
         descuento_porcentaje: ofertaExistente.descuento || 0,
         notas_internas: ofertaExistente.notas_vendedor || '',
       });
+      
+      // Si el salon_id es null, podría ser un lugar externo (otro)
+      if (!ofertaExistente.salon_id && ofertaExistente.lugar_evento) {
+        setLugarPersonalizado(ofertaExistente.lugar_evento);
+      }
 
       // Cargar servicios adicionales
       if (ofertaExistente.ofertas_servicios_adicionales && ofertaExistente.ofertas_servicios_adicionales.length > 0) {
@@ -183,6 +252,43 @@ function EditarOferta() {
     }
   }, [formData.fecha_evento, temporadas]);
 
+  // Actualizar información del salón cuando cambia
+  useEffect(() => {
+    if (formData.salon_id && salones) {
+      // Caso especial: "Otro" (sede externa)
+      if (formData.salon_id === 'otro') {
+        setSalonSeleccionado(null);
+        setFormData(prev => ({
+          ...prev,
+          lugar_evento: lugarPersonalizado || 'Sede Externa'
+        }));
+        
+        // Resetear paquete si hay uno seleccionado (para que no cargue precio de salón)
+        if (formData.paquete_id) {
+          setPrecioBaseAjustado('');
+        }
+      } else {
+        // Caso normal: salón de la empresa
+        const salon = salones.find(s => s.id === parseInt(formData.salon_id));
+        if (salon) {
+          setSalonSeleccionado(salon);
+          // Actualizar lugar_evento con el nombre del salón
+          if (formData.lugar_evento !== salon.nombre) {
+            setFormData(prev => ({
+              ...prev,
+              lugar_evento: salon.nombre
+            }));
+          }
+          
+          // Si hay paquete seleccionado, resetear para forzar recarga de precio
+          if (formData.paquete_id) {
+            setPrecioBaseAjustado('');
+          }
+        }
+      }
+    }
+  }, [formData.salon_id, salones, lugarPersonalizado]);
+
   // Actualizar servicios incluidos cuando cambia el paquete
   useEffect(() => {
     if (paqueteDetalle) {
@@ -219,6 +325,7 @@ function EditarOferta() {
     try {
       const response = await api.post('/ofertas/calcular', {
         paquete_id: parseInt(formData.paquete_id),
+        salon_id: formData.salon_id === 'otro' ? null : (formData.salon_id ? parseInt(formData.salon_id) : null),
         fecha_evento: formData.fecha_evento,
         cantidad_invitados: parseInt(formData.cantidad_invitados),
         precio_base_ajustado: precioBaseAjustado ? parseFloat(precioBaseAjustado) : null,
@@ -256,9 +363,34 @@ function EditarOferta() {
   ]);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    // Validación especial para fecha del evento
+    if (name === 'fecha_evento') {
+      const fechaSeleccionada = new Date(value);
+      const fechaHoy = new Date();
+      fechaHoy.setHours(0, 0, 0, 0); // Resetear horas para comparar solo fechas
+
+      if (fechaSeleccionada < fechaHoy) {
+        setErrorFecha('No se puede seleccionar una fecha pasada. Por favor, elige una fecha presente o futura.');
+        return; // No actualizar el estado si la fecha es inválida
+      } else {
+        setErrorFecha(''); // Limpiar error si la fecha es válida
+      }
+    }
+
+    // Validación para horarios
+    if (name === 'hora_inicio' || name === 'hora_fin') {
+      const horaInicio = name === 'hora_inicio' ? value : formData.hora_inicio;
+      const horaFin = name === 'hora_fin' ? value : formData.hora_fin;
+      
+      const error = validarHorarios(horaInicio, horaFin);
+      setErrorHorario(error || '');
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
   };
 
@@ -274,9 +406,79 @@ function EditarOferta() {
     'Photobooth Print': ['Photobooth 360']
   };
 
+  // Calcular horas extras necesarias para el evento
+  const calcularHorasExtras = () => {
+    if (!paqueteSeleccionado || !formData.hora_inicio || !formData.hora_fin) {
+      return { necesarias: 0, duracionEvento: 0, duracionTotal: 0 };
+    }
+
+    const [horaInicioH, horaInicioM] = formData.hora_inicio.split(':').map(Number);
+    const [horaFinH, horaFinM] = formData.hora_fin.split(':').map(Number);
+    
+    let duracionEvento = (horaFinH + (horaFinM / 60)) - (horaInicioH + (horaInicioM / 60));
+    
+    // Si la hora de fin es menor, el evento cruza la medianoche
+    if (duracionEvento < 0) {
+      duracionEvento += 24;
+    }
+
+    // La duración del paquete es solo la duración base (NO se suman horas extras incluidas)
+    const duracionTotal = paqueteSeleccionado.duracion_horas || 0;
+    
+    // Calcular horas extras adicionales necesarias
+    const horasExtrasNecesarias = Math.max(0, Math.ceil(duracionEvento - duracionTotal));
+
+    return { necesarias: horasExtrasNecesarias, duracionEvento, duracionTotal };
+  };
+
   const agregarServicio = (servicioId) => {
     const servicioExistente = serviciosSeleccionados.find(s => s.servicio_id === servicioId);
     const servicioData = servicios?.find(s => s.id === parseInt(servicioId));
+    
+    // ⚠️ VALIDACIÓN ESPECIAL PARA HORA EXTRA
+    if (servicioData?.nombre === 'Hora Extra') {
+      const { necesarias, duracionEvento, duracionTotal } = calcularHorasExtras();
+      const cantidadActual = servicioExistente?.cantidad || 0;
+      const nuevaCantidad = cantidadActual + 1;
+      
+      // Calcular hora de fin con las horas extras que se quieren agregar
+      if (formData.hora_inicio && formData.hora_fin) {
+        const [horaInicio, minInicio] = formData.hora_inicio.split(':').map(Number);
+        const duracionTotalConExtras = duracionTotal + nuevaCantidad;
+        
+        // Calcular hora de fin resultante
+        let horaFinResultante = horaInicio + Math.floor(duracionTotalConExtras);
+        const minFinResultante = minInicio + ((duracionTotalConExtras % 1) * 60);
+        
+        if (minFinResultante >= 60) {
+          horaFinResultante += 1;
+        }
+        
+        // Si la hora resultante excede las 2:00 AM (26:00 en formato 24h del día siguiente)
+        if (horaFinResultante > 26 || (horaFinResultante === 26 && minFinResultante > 0)) {
+          alert(
+            `⚠️ NO PUEDES AGREGAR MÁS HORAS EXTRAS\n\n` +
+            `Tu evento dura ${duracionEvento.toFixed(1)} horas.\n` +
+            `El paquete incluye ${duracionTotal} horas.\n` +
+            `Ya tienes ${cantidadActual} hora(s) extra agregada(s).\n\n` +
+            `🚫 Si agregas ${nuevaCantidad} hora(s) extra, tu evento terminaría después de las 2:00 AM, lo cual NO está permitido por restricciones legales.\n\n` +
+            `Máximo de horas extras permitidas: ${cantidadActual}`
+          );
+          return;
+        }
+        
+        // Validación adicional: no permitir más horas extras de las necesarias
+        if (nuevaCantidad > necesarias) {
+          alert(
+            `⚠️ NO NECESITAS MÁS HORAS EXTRAS\n\n` +
+            `Tu evento requiere exactamente ${necesarias} hora(s) extra.\n` +
+            `Ya tienes ${cantidadActual} hora(s) agregada(s).\n\n` +
+            `No es necesario agregar más.`
+          );
+          return;
+        }
+      }
+    }
     
     // Verificar si el servicio es excluyente con alguno ya seleccionado (adicionales o incluidos en el paquete)
     if (servicioData && serviciosExcluyentes[servicioData.nombre]) {
@@ -368,15 +570,40 @@ function EditarOferta() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // Validar que la fecha no sea pasada antes de enviar
+    if (formData.fecha_evento) {
+      const fechaSeleccionada = new Date(formData.fecha_evento);
+      const fechaHoy = new Date();
+      fechaHoy.setHours(0, 0, 0, 0);
+
+      if (fechaSeleccionada < fechaHoy) {
+        setErrorFecha('No se puede actualizar la oferta con fecha pasada. Por favor, selecciona una fecha presente o futura.');
+        // Hacer scroll al campo de fecha
+        document.querySelector('input[name="fecha_evento"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+
+    // Validar horarios antes de enviar
+    const errorHorarios = validarHorarios(formData.hora_inicio, formData.hora_fin);
+    if (errorHorarios) {
+      setErrorHorario(errorHorarios);
+      document.querySelector('input[name="hora_inicio"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    
     const dataToSubmit = {
       cliente_id: parseInt(formData.cliente_id),
       paquete_id: parseInt(formData.paquete_id),
+      // Manejar "Otro" como sede externa sin cobro de salón
+      salon_id: formData.salon_id === 'otro' ? null : (formData.salon_id ? parseInt(formData.salon_id) : null),
       temporada_id: formData.temporada_id ? parseInt(formData.temporada_id) : null,
       fecha_evento: formData.fecha_evento,
       hora_inicio: formData.hora_inicio,
       hora_fin: formData.hora_fin,
       cantidad_invitados: parseInt(formData.cantidad_invitados),
-      lugar_evento: formData.lugar_evento,
+      lugar_evento: formData.salon_id === 'otro' ? lugarPersonalizado : formData.lugar_evento,
+      homenajeado: formData.homenajeado || null,
       descuento: parseFloat(formData.descuento_porcentaje) || 0,
       notas_vendedor: formData.notas_internas || null,
       precio_base_ajustado: precioBaseAjustado ? parseFloat(precioBaseAjustado) : null,
@@ -448,6 +675,24 @@ function EditarOferta() {
           {/* Detalles del Evento */}
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Detalles del Evento</h2>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Homenajeado/a
+              </label>
+              <input
+                type="text"
+                name="homenajeado"
+                value={formData.homenajeado}
+                onChange={handleChange}
+                placeholder="Ej: María López, Juan Pérez"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Nombre de la persona homenajeada en el evento (opcional)
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -458,9 +703,18 @@ function EditarOferta() {
                   name="fecha_evento"
                   value={formData.fecha_evento}
                   onChange={handleChange}
+                  min={obtenerFechaMinima()}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${
+                    errorFecha ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 />
+                {errorFecha && (
+                  <p className="mt-1 text-sm text-red-600 flex items-start gap-1">
+                    <span className="text-red-500 font-bold">⚠</span>
+                    {errorFecha}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -487,9 +741,15 @@ function EditarOferta() {
                   name="hora_inicio"
                   value={formData.hora_inicio}
                   onChange={handleChange}
+                  min="10:00"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${
+                    errorHorario ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  ⏰ Horario permitido: desde las 10:00 AM
+                </p>
               </div>
 
               <div>
@@ -502,28 +762,71 @@ function EditarOferta() {
                   value={formData.hora_fin}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${
+                    errorHorario ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  ⏰ Máximo permitido: 2:00 AM por restricciones legales
+                </p>
               </div>
+
+              {errorHorario && (
+                <div className="md:col-span-2 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm text-red-600 flex items-start gap-2">
+                    <span className="text-red-500 font-bold text-lg">⚠</span>
+                    <span>
+                      <strong>Error de horario:</strong> {errorHorario}
+                      <br />
+                      <span className="text-xs mt-1 block">
+                        💡 Horario de inicio: desde 10:00 AM | Horario de fin: hasta 2:00 AM (restricción legal)
+                      </span>
+                    </span>
+                  </p>
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Lugar del Evento *
                 </label>
                 <select
-                  name="lugar_evento"
-                  value={formData.lugar_evento}
+                  name="salon_id"
+                  value={formData.salon_id}
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                 >
                   <option value="">Seleccione un lugar</option>
-                  <option value="Diamond">Diamond</option>
-                  <option value="Doral">Doral</option>
-                  <option value="Kendall">Kendall</option>
-                  <option value="Otro">Otro</option>
+                  {salones?.map((salon) => (
+                    <option key={salon.id} value={salon.id}>
+                      {salon.nombre} - Capacidad: {salon.capacidad_maxima} invitados
+                    </option>
+                  ))}
+                  <option value="otro">Otro (Sede Externa - Sin cargo de salón)</option>
                 </select>
+                {salonSeleccionado && formData.salon_id !== 'otro' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ℹ️ Capacidad máxima: {salonSeleccionado.capacidad_maxima} invitados
+                  </p>
+                )}
+                {formData.salon_id === 'otro' && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      value={lugarPersonalizado}
+                      onChange={(e) => setLugarPersonalizado(e.target.value)}
+                      placeholder="Especifica el lugar (ej: Universidad de Miami, Auditorio XYZ)"
+                      required
+                      className="w-full px-4 py-2 border border-amber-300 bg-amber-50 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                    />
+                    <p className="text-xs text-amber-600 mt-1">
+                      ⚠️ <strong>Importante:</strong> Al seleccionar una sede externa, no se cobrará el salón. Solo se cobrarán los servicios contratados.
+                    </p>
+                  </div>
+                )}
               </div>
+
             </div>
           </div>
 
@@ -540,15 +843,36 @@ function EditarOferta() {
                   value={formData.paquete_id}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  disabled={!formData.salon_id}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">Seleccionar paquete...</option>
-                  {paquetes?.map((paquete) => (
+                  <option value="">
+                    {!formData.salon_id ? 'Primero seleccione un salón' : 'Seleccionar paquete...'}
+                  </option>
+                  {paquetes?.filter(p => {
+                    // Si es sede externa (otro), solo mostrar paquete personalizado
+                    if (formData.salon_id === 'otro') {
+                      return p.nombre?.toLowerCase().includes('personalizado');
+                    }
+                    // Si es salón de la empresa, filtrar los disponibles
+                    return p.disponible_salon !== false;
+                  }).map((paquete) => (
                     <option key={paquete.id} value={paquete.id}>
-                      {paquete.nombre} - ${paquete.precio_base || paquete.precio_base_persona}
+                      {paquete.nombre} - ${paquete.precio_base_salon || paquete.precio_base} 
+                      {paquete.invitados_minimo_salon && ` (Mín: ${paquete.invitados_minimo_salon} inv.)`}
                     </option>
                   ))}
                 </select>
+                {!formData.salon_id && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠️ Debe seleccionar un salón primero para ver los paquetes disponibles
+                  </p>
+                )}
+                {formData.salon_id === 'otro' && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    ℹ️ Para sedes externas, solo está disponible el <strong>Paquete Personalizado</strong>
+                  </p>
+                )}
                 {paqueteSeleccionado && (
                   <div className="mt-2 space-y-2">
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -858,7 +1182,7 @@ function EditarOferta() {
                     
                     return (
                       <div key={servicio.servicio_id}>
-                        <div className="flex items-center justify-between p-3 bg-white border border-indigo-200 rounded-lg">
+                        <div className="flex items-center justify-between p-3 bg-white border border-indigo-200 rounded-lg group">
                           <div className="flex-1">
                             <p className="font-medium text-gray-900 text-sm">
                               {servicioData?.nombre}
@@ -867,6 +1191,14 @@ function EditarOferta() {
                               Cantidad: {servicio.cantidad} × ${parseFloat(precioActual).toLocaleString()} = <span className="font-medium">${subtotal.toLocaleString()}</span>
                             </p>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => setServiciosSeleccionados(serviciosSeleccionados.filter(s => s.servicio_id !== servicio.servicio_id))}
+                            className="p-2 rounded-lg text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
+                            title="Eliminar servicio"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
                         </div>
                         
                         {/* Campo de ajuste individual (solo visible si mostrarAjusteServicios está activo) */}
@@ -901,9 +1233,9 @@ function EditarOferta() {
             )}
           </div>
 
-          {/* Descuento y Notas */}
+          {/* Descuento */}
           <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Descuento y Notas</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Descuento</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -931,19 +1263,6 @@ function EditarOferta() {
                   step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                   placeholder="0.00"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notas Internas
-                </label>
-                <textarea
-                  name="notas_internas"
-                  value={formData.notas_internas}
-                  onChange={handleChange}
-                  rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                 />
               </div>
             </div>

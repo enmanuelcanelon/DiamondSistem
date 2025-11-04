@@ -126,7 +126,7 @@ const validarDatosPago = (datos) => {
     errors.push('El método de pago es requerido');
   }
 
-  const metodosValidos = ['Efectivo', 'Transferencia', 'Tarjeta'];
+  const metodosValidos = ['Efectivo', 'Transferencia', 'Tarjeta', 'Cheque'];
   if (datos.metodo_pago && !metodosValidos.includes(datos.metodo_pago)) {
     errors.push(`El método de pago debe ser uno de: ${metodosValidos.join(', ')}`);
   }

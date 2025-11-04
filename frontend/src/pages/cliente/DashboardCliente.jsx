@@ -204,6 +204,20 @@ function DashboardCliente() {
             </div>
           </div>
 
+          {contrato?.homenajeado && (
+            <div className="flex items-start gap-3">
+              <div className="w-5 h-5 text-purple-600 mt-0.5 flex items-center justify-center text-lg">
+                🎉
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Homenajeado/a</p>
+                <p className="font-semibold text-gray-900">
+                  {contrato.homenajeado}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-start gap-3">
             <Users className="w-5 h-5 text-purple-600 mt-0.5" />
             <div>

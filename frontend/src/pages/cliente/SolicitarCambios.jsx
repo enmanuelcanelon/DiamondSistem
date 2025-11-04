@@ -91,6 +91,11 @@ function SolicitarCambios() {
   // Filtrar servicios que NO estén en el paquete Y no sean mutuamente excluyentes
   const serviciosDisponibles = useMemo(() => {
     return todosLosServicios.filter(servicio => {
+      // EXCEPCIÓN: "Hora Extra" siempre debe estar disponible (se puede contratar múltiples veces)
+      if (servicio.nombre === 'Hora Extra') {
+        return true;
+      }
+      
       // 1. Excluir servicios que ya están en el paquete
       if (idsServiciosEnPaquete.has(servicio.id)) {
         return false;
@@ -191,6 +196,70 @@ function SolicitarCambios() {
     if (cantidad < 1) {
       toast.error('⚠️ La cantidad del servicio debe ser al menos 1');
       return;
+    }
+
+    // ⚠️ VALIDACIÓN ESPECIAL PARA HORA EXTRA
+    if (servicioSeleccionado.nombre === 'Hora Extra') {
+      if (contrato.hora_inicio && contrato.hora_fin && contrato.paquetes) {
+        // Calcular duración del evento
+        const [horaInicioH, horaInicioM] = contrato.hora_inicio.split(':').map(Number);
+        const [horaFinH, horaFinM] = contrato.hora_fin.split(':').map(Number);
+        
+        let duracionEvento = (horaFinH + (horaFinM / 60)) - (horaInicioH + (horaInicioM / 60));
+        if (duracionEvento < 0) {
+          duracionEvento += 24;
+        }
+
+        // Obtener duración base del paquete
+        const duracionBasePaquete = contrato.paquetes.duracion_horas || 0;
+
+        // Contar cuántas horas extras ya tiene el contrato
+        const horasExtrasContrato = contrato.contratos_servicios?.filter(
+          cs => cs.servicios?.nombre === 'Hora Extra'
+        ).reduce((sum, cs) => sum + (cs.cantidad || 0), 0) || 0;
+
+        // Total de horas extras que tendría después de esta solicitud
+        const totalHorasExtrasConSolicitud = horasExtrasContrato + cantidad;
+
+        // Calcular hora de fin con las horas extras solicitadas
+        const duracionTotalConExtras = duracionBasePaquete + totalHorasExtrasConSolicitud;
+        
+        let horaFinResultante = horaInicioH + Math.floor(duracionTotalConExtras);
+        const minFinResultante = horaInicioM + ((duracionTotalConExtras % 1) * 60);
+        
+        if (minFinResultante >= 60) {
+          horaFinResultante += 1;
+        }
+
+        // Si excede las 2:00 AM (26:00 en formato 24h del día siguiente)
+        if (horaFinResultante > 26 || (horaFinResultante === 26 && minFinResultante > 0)) {
+          toast.error(
+            `⚠️ NO PUEDES SOLICITAR MÁS HORAS EXTRAS\n\n` +
+            `Tu evento dura ${duracionEvento.toFixed(1)} horas.\n` +
+            `El paquete incluye ${duracionBasePaquete} horas.\n` +
+            `Ya tienes ${horasExtrasContrato} hora(s) extra en el contrato.\n\n` +
+            `🚫 Si solicitas ${cantidad} hora(s) extra adicional(es), tu evento terminaría después de las 2:00 AM, lo cual NO está permitido por restricciones legales.\n\n` +
+            `Máximo de horas extras permitidas: ${horasExtrasContrato}`,
+            { duration: 8000 }
+          );
+          return;
+        }
+
+        // Calcular cuántas horas extras son necesarias
+        const horasExtrasNecesarias = Math.max(0, Math.ceil(duracionEvento - duracionBasePaquete));
+        
+        // No permitir más horas extras de las necesarias
+        if (totalHorasExtrasConSolicitud > horasExtrasNecesarias) {
+          toast.error(
+            `⚠️ NO NECESITAS ${cantidad} HORA(S) EXTRA\n\n` +
+            `Tu evento requiere exactamente ${horasExtrasNecesarias} hora(s) extra.\n` +
+            `Ya tienes ${horasExtrasContrato} hora(s) en el contrato.\n\n` +
+            `Solo puedes solicitar ${Math.max(0, horasExtrasNecesarias - horasExtrasContrato)} hora(s) extra adicional(es).`,
+            { duration: 6000 }
+          );
+          return;
+        }
+      }
     }
 
     const costoTotal = servicioSeleccionado.tipo_cobro === 'por_persona'

@@ -42,7 +42,7 @@ function ChatVendedor() {
       {/* Header con botón de regreso */}
       <div className="flex items-center gap-4">
         <button
-          onClick={() => navigate('/eventos')}
+          onClick={() => navigate(`/contratos/${contratoId}`)}
           className="p-2 hover:bg-gray-100 rounded-lg transition"
         >
           <ArrowLeft className="w-6 h-6 text-gray-600" />

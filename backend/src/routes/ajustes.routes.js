@@ -97,7 +97,7 @@ router.patch('/contrato/:contratoId/:seccion', authenticate, async (req, res, ne
     const datos = req.body;
 
     // Validar sección
-    const seccionesValidas = ['torta', 'decoracion', 'menu', 'entretenimiento', 'fotografia', 'otros'];
+    const seccionesValidas = ['torta', 'decoracion', 'menu', 'entretenimiento', 'bar', 'otros'];
     if (!seccionesValidas.includes(seccion)) {
       return res.status(400).json({
         success: false,

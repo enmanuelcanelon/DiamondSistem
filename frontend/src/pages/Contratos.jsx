@@ -1,16 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, FileCheck, Calendar, DollarSign, Eye, Download, Filter } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, FileCheck, Calendar, Clock, DollarSign, Eye, Download, Filter, X } from 'lucide-react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
+import { formatearHora } from '../utils/formatters';
 
 function Contratos() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const clienteIdFromUrl = searchParams.get('cliente_id');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoPagoFiltro, setEstadoPagoFiltro] = useState('');
   const [estadoContratoFiltro, setEstadoContratoFiltro] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || '');
 
   const { data: contratos, isLoading } = useQuery({
     queryKey: ['contratos'],
@@ -19,6 +25,22 @@ function Contratos() {
       return response.data.contratos;
     },
   });
+
+  // Sincronizar filtro de cliente con URL
+  useEffect(() => {
+    if (clienteIdFromUrl) {
+      setClienteFiltro(clienteIdFromUrl);
+    }
+  }, [clienteIdFromUrl]);
+
+  // Obtener nombre del cliente para mostrar en el filtro
+  const clienteFiltrado = contratos?.find(c => c.cliente_id === parseInt(clienteFiltro))?.clientes;
+
+  // Limpiar filtro de cliente
+  const limpiarFiltroCliente = () => {
+    setClienteFiltro('');
+    navigate('/contratos');
+  };
 
   // Filtrar contratos
   const contratosFiltrados = contratos?.filter(contrato => {
@@ -30,12 +52,15 @@ function Contratos() {
     const matchEstadoPago = !estadoPagoFiltro || contrato.estado_pago === estadoPagoFiltro;
     const matchEstadoContrato = !estadoContratoFiltro || contrato.estado === estadoContratoFiltro;
     
-    // Filtro por fecha de creación del contrato (fecha_firma)
-    const fechaCreacion = new Date(contrato.fecha_firma);
-    const matchFechaDesde = !fechaDesde || fechaCreacion >= new Date(fechaDesde);
-    const matchFechaHasta = !fechaHasta || fechaCreacion <= new Date(fechaHasta);
+    // Filtro por fecha del evento (no por fecha de creación)
+    const fechaEvento = new Date(contrato.fecha_evento);
+    const matchFechaDesde = !fechaDesde || fechaEvento >= new Date(fechaDesde);
+    const matchFechaHasta = !fechaHasta || fechaEvento <= new Date(fechaHasta);
     
-    return matchSearch && matchEstadoPago && matchEstadoContrato && matchFechaDesde && matchFechaHasta;
+    // Filtro por cliente
+    const matchCliente = !clienteFiltro || contrato.cliente_id === parseInt(clienteFiltro);
+    
+    return matchSearch && matchEstadoPago && matchEstadoContrato && matchFechaDesde && matchFechaHasta && matchCliente;
   });
 
   const handleDescargarContrato = async (contratoId, codigoContrato) => {
@@ -93,6 +118,34 @@ function Contratos() {
         <p className="text-gray-600 mt-1">Gestiona tus contratos y pagos</p>
       </div>
 
+      {/* Banner de filtro por cliente */}
+      {clienteFiltro && clienteFiltrado && (
+        <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+              <span className="text-indigo-600 font-semibold text-sm">
+                {clienteFiltrado.nombre_completo.charAt(0)}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-indigo-900">
+                Filtrando contratos de: <strong>{clienteFiltrado.nombre_completo}</strong>
+              </p>
+              <p className="text-xs text-indigo-700">
+                Mostrando {contratosFiltrados?.length || 0} contrato{(contratosFiltrados?.length || 0) !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={limpiarFiltroCliente}
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-100 transition text-sm font-medium"
+          >
+            <X className="w-4 h-4" />
+            Limpiar filtro
+          </button>
+        </div>
+      )}
+
       {/* Búsqueda y filtros */}
       <div className="bg-white rounded-lg shadow-sm border p-4">
         <div className="space-y-3">
@@ -128,10 +181,10 @@ function Contratos() {
               <option value="cancelado">Cancelado</option>
             </select>
           </div>
-          {/* Filtros de fecha de creación */}
+          {/* Filtros de fecha del evento */}
           <div className="flex gap-4 items-center">
             <Calendar className="w-5 h-5 text-gray-400" />
-            <span className="text-sm text-gray-700 font-medium">Fecha de creación:</span>
+            <span className="text-sm text-gray-700 font-medium">Fecha del Evento:</span>
             <div className="flex gap-2 items-center">
               <label className="text-sm text-gray-600">Desde:</label>
               <input
@@ -225,11 +278,16 @@ function Contratos() {
                     </span>
                   </div>
 
-                  <p className="text-gray-600 mb-3 ml-11">
+                  <p className="text-gray-600 mb-1 ml-11">
                     Cliente: <span className="font-medium">{contrato.clientes?.nombre_completo || 'Sin cliente'}</span>
+                    {contrato.homenajeado && (
+                      <span className="ml-2 text-purple-600 font-medium">
+                        🎉 {contrato.homenajeado}
+                      </span>
+                    )}
                   </p>
 
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-2">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       {contrato.fecha_evento ? new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
@@ -238,9 +296,44 @@ function Contratos() {
                         year: 'numeric'
                       }) : 'Fecha no disponible'}
                     </div>
+                    {contrato.hora_inicio && contrato.hora_fin && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        {formatearHora(contrato.hora_inicio)} - {formatearHora(contrato.hora_fin)}
+                        {(() => {
+                          try {
+                            // Extraer solo HH:mm si viene en formato TIME completo
+                            const horaInicioStr = typeof contrato.hora_inicio === 'string' 
+                              ? contrato.hora_inicio.slice(0, 5) 
+                              : contrato.hora_inicio;
+                            const horaFinStr = typeof contrato.hora_fin === 'string' 
+                              ? contrato.hora_fin.slice(0, 5) 
+                              : contrato.hora_fin;
+                            
+                            const inicio = new Date(`1970-01-01T${horaInicioStr}`);
+                            const fin = new Date(`1970-01-01T${horaFinStr}`);
+                            
+                            if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) return '';
+                            
+                            let horas = (fin - inicio) / (1000 * 60 * 60);
+                            if (horas < 0) horas += 24;
+                            return ` (${horas.toFixed(1)}h)`;
+                          } catch (e) {
+                            return '';
+                          }
+                        })()}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{contrato.cantidad_invitados || 0} invitados</span>
                     </div>
+                    {(contrato.lugar_salon || contrato.salones?.nombre) && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-indigo-600 font-medium">
+                          📍 {contrato.lugar_salon || contrato.salones?.nombre}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

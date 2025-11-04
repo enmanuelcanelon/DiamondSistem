@@ -279,10 +279,15 @@ function Ofertas() {
                       {oferta.estado.charAt(0).toUpperCase() + oferta.estado.slice(1)}
                     </span>
                   </div>
-                  <p className="text-gray-600 mb-3">
+                  <p className="text-gray-600 mb-1">
                     Cliente: <span className="font-medium">{oferta.clientes?.nombre_completo}</span>
+                    {oferta.homenajeado && (
+                      <span className="ml-2 text-purple-600 font-medium">
+                        🎉 {oferta.homenajeado}
+                      </span>
+                    )}
                   </p>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-2">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       {new Date(oferta.fecha_evento).toLocaleDateString('es-ES', {
@@ -294,10 +299,41 @@ function Ofertas() {
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       {formatearHora(oferta.hora_inicio)} - {formatearHora(oferta.hora_fin)}
+                      {(() => {
+                        try {
+                          if (!oferta.hora_inicio || !oferta.hora_fin) return '';
+                          
+                          // Extraer solo HH:mm si viene en formato TIME completo
+                          const horaInicioStr = typeof oferta.hora_inicio === 'string' 
+                            ? oferta.hora_inicio.slice(0, 5) 
+                            : oferta.hora_inicio;
+                          const horaFinStr = typeof oferta.hora_fin === 'string' 
+                            ? oferta.hora_fin.slice(0, 5) 
+                            : oferta.hora_fin;
+                          
+                          const inicio = new Date(`1970-01-01T${horaInicioStr}`);
+                          const fin = new Date(`1970-01-01T${horaFinStr}`);
+                          
+                          if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) return '';
+                          
+                          let horas = (fin - inicio) / (1000 * 60 * 60);
+                          if (horas < 0) horas += 24;
+                          return ` (${horas.toFixed(1)}h)`;
+                        } catch (e) {
+                          return '';
+                        }
+                      })()}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{oferta.cantidad_invitados} invitados</span>
                     </div>
+                    {(oferta.lugar_salon || oferta.salones?.nombre) && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-indigo-600 font-medium">
+                          📍 {oferta.lugar_salon || oferta.salones?.nombre}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
