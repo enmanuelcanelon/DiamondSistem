@@ -31,15 +31,25 @@ import SolicitarCambios from './pages/cliente/SolicitarCambios';
 import MisContratos from './pages/cliente/MisContratos';
 import MiPerfil from './pages/cliente/MiPerfil';
 
-// Pages - Manager
-import LoginManager from './pages/manager/LoginManager';
-import ChecklistManager from './pages/manager/ChecklistManager';
-import ResumenManager from './pages/manager/ResumenManager';
+// Pages - Manager (TEMPORALMENTE DESACTIVADO)
+// import LoginManager from './pages/manager/LoginManager';
+// import ChecklistManager from './pages/manager/ChecklistManager';
+// import ResumenManager from './pages/manager/ResumenManager';
+
+// Pages - Gerente (TEMPORALMENTE DESACTIVADO)
+// import LoginGerente from './pages/gerente/LoginGerente';
+// import DashboardGerente from './pages/gerente/DashboardGerente';
+// import VendedoresGerente from './pages/gerente/VendedoresGerente';
+// import ContratosGerente from './pages/gerente/ContratosGerente';
+// import OfertasGerente from './pages/gerente/OfertasGerente';
+// import PagosGerente from './pages/gerente/PagosGerente';
+// import CalendarioGerente from './pages/gerente/CalendarioGerente';
 
 // Layout
 import Layout from './components/Layout';
 import LayoutCliente from './components/LayoutCliente';
-import LayoutManager from './components/LayoutManager';
+// import LayoutManager from './components/LayoutManager';
+// import LayoutGerente from './components/LayoutGerente';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -81,20 +91,35 @@ const ProtectedRouteCliente = ({ children }) => {
   return children;
 };
 
-// Protected Route Component (Managers)
-const ProtectedRouteManager = ({ children }) => {
-  const { isAuthenticated, user } = useAuthStore();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/manager/login" replace />;
-  }
-  
-  if (user?.tipo !== 'manager') {
-    return <Navigate to="/manager/login" replace />;
-  }
-  
-  return children;
-};
+// Protected Route Component (Managers) - TEMPORALMENTE DESACTIVADO
+// const ProtectedRouteManager = ({ children }) => {
+//   const { isAuthenticated, user } = useAuthStore();
+//   
+//   if (!isAuthenticated) {
+//     return <Navigate to="/manager/login" replace />;
+//   }
+//   
+//   if (user?.tipo !== 'manager') {
+//     return <Navigate to="/manager/login" replace />;
+//   }
+//   
+//   return children;
+// };
+
+// Protected Route Component (Gerentes) - TEMPORALMENTE DESACTIVADO
+// const ProtectedRouteGerente = ({ children }) => {
+//   const { isAuthenticated, user } = useAuthStore();
+//   
+//   if (!isAuthenticated) {
+//     return <Navigate to="/gerente/login" replace />;
+//   }
+//   
+//   if (user?.tipo !== 'gerente') {
+//     return <Navigate to="/gerente/login" replace />;
+//   }
+//   
+//   return children;
+// };
 
 function App() {
   return (
@@ -153,8 +178,8 @@ function App() {
             <Route path="perfil" element={<MiPerfil />} />
           </Route>
 
-          {/* Manager Routes */}
-          <Route path="/manager/login" element={<LoginManager />} />
+          {/* Manager Routes - TEMPORALMENTE DESACTIVADO */}
+          {/* <Route path="/manager/login" element={<LoginManager />} />
           
           <Route
             path="/manager"
@@ -166,7 +191,26 @@ function App() {
           >
             <Route index element={<ChecklistManager />} />
             <Route path="resumen" element={<ResumenManager />} />
-          </Route>
+          </Route> */}
+
+          {/* Gerente Routes - TEMPORALMENTE DESACTIVADO */}
+          {/* <Route path="/gerente/login" element={<LoginGerente />} />
+          
+          <Route
+            path="/gerente"
+            element={
+              <ProtectedRouteGerente>
+                <LayoutGerente />
+              </ProtectedRouteGerente>
+            }
+          >
+            <Route index element={<DashboardGerente />} />
+            <Route path="vendedores" element={<VendedoresGerente />} />
+            <Route path="contratos" element={<ContratosGerente />} />
+            <Route path="ofertas" element={<OfertasGerente />} />
+            <Route path="pagos" element={<PagosGerente />} />
+            <Route path="calendario" element={<CalendarioGerente />} />
+          </Route> */}
         </Routes>
       </Router>
     </QueryClientProvider>

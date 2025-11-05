@@ -37,6 +37,7 @@ const salonesRoutes = require('./routes/salones.routes');
 const authRoutes = require('./routes/auth.routes');
 const fotosRoutes = require('./routes/fotos.routes');
 const managersRoutes = require('./routes/managers.routes');
+const gerentesRoutes = require('./routes/gerentes.routes');
 
 // Middleware personalizado
 const { errorHandler } = require('./middleware/errorHandler');
@@ -236,6 +237,7 @@ app.use('/api/emails', emailsRoutes);
 app.use('/api/salones', salonesRoutes);
 app.use('/api/fotos', fotosRoutes);
 app.use('/api/managers', managersRoutes);
+app.use('/api/gerentes', gerentesRoutes);
 
 // Ruta 404 - Debe ir al final de todas las rutas
 app.use((req, res) => {

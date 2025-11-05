@@ -112,6 +112,16 @@ const requireManager = (req, res, next) => {
 };
 
 /**
+ * Verificar que el usuario sea gerente
+ */
+const requireGerente = (req, res, next) => {
+  if (req.user.tipo !== 'gerente') {
+    return next(new UnauthorizedError('Acceso solo para gerentes'));
+  }
+  next();
+};
+
+/**
  * Verificar que el usuario sea el propietario del recurso o vendedor
  */
 const requireOwnerOrVendedor = (paramName = 'id') => {
@@ -164,6 +174,7 @@ module.exports = {
   requireVendedor,
   requireCliente,
   requireManager,
+  requireGerente,
   requireOwnerOrVendedor,
   optionalAuth
 };

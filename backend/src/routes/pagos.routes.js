@@ -361,8 +361,8 @@ router.get('/contrato/:contrato_id', authenticate, async (req, res, next) => {
       if (contrato.cliente_id !== req.user.id) {
         throw new ValidationError('No tienes permiso para ver los pagos de este contrato');
       }
-    } else if (req.user.tipo !== 'vendedor') {
-      throw new ValidationError('Solo vendedores y clientes pueden ver los pagos');
+    } else if (req.user.tipo !== 'vendedor' && req.user.tipo !== 'gerente') {
+      throw new ValidationError('Solo vendedores, clientes y gerentes pueden ver los pagos');
     }
 
     const pagos = await prisma.pagos.findMany({

@@ -6,8 +6,8 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
-const { generateVendedorToken, generateClienteToken, generateManagerToken } = require('../utils/jwt');
-const { authenticate, requireVendedor, requireManager } = require('../middleware/auth');
+const { generateVendedorToken, generateClienteToken, generateManagerToken, generateGerenteToken } = require('../utils/jwt');
+const { authenticate, requireVendedor, requireManager, requireGerente } = require('../middleware/auth');
 const { UnauthorizedError, ValidationError, NotFoundError } = require('../middleware/errorHandler');
 
 const prisma = new PrismaClient();
@@ -199,6 +199,59 @@ router.post('/login/manager', async (req, res, next) => {
 });
 
 /**
+ * @route   POST /api/auth/login/gerente
+ * @desc    Login de gerente
+ * @access  Public
+ */
+router.post('/login/gerente', async (req, res, next) => {
+  try {
+    const { codigo_gerente, password } = req.body;
+
+    // Validar datos
+    if (!codigo_gerente || !password) {
+      throw new ValidationError('Código de gerente y contraseña son requeridos');
+    }
+
+    // Buscar gerente
+    const gerente = await prisma.gerentes.findUnique({
+      where: { codigo_gerente }
+    });
+
+    if (!gerente) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    // Verificar si está activo
+    if (!gerente.activo) {
+      throw new UnauthorizedError('Cuenta de gerente desactivada');
+    }
+
+    // Verificar password
+    const isValidPassword = await comparePassword(password, gerente.password_hash);
+    
+    if (!isValidPassword) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    // Generar token
+    const token = generateGerenteToken(gerente);
+
+    // Remover password del response
+    const { password_hash, ...gerenteData } = gerente;
+
+    res.json({
+      success: true,
+      message: 'Login exitoso',
+      token,
+      user: gerenteData
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * @route   POST /api/auth/register/vendedor
  * @desc    Registrar nuevo vendedor (solo admin/vendedor autenticado)
  * @access  Private (Vendedor autenticado)
@@ -360,6 +413,31 @@ router.get('/me', authenticate, async (req, res, next) => {
         user: {
           ...manager,
           tipo: 'manager'
+        }
+      });
+    } else if (req.user.tipo === 'gerente') {
+      const gerente = await prisma.gerentes.findUnique({
+        where: { id: req.user.id },
+        select: {
+          id: true,
+          nombre_completo: true,
+          codigo_gerente: true,
+          email: true,
+          telefono: true,
+          activo: true,
+          fecha_registro: true
+        }
+      });
+
+      if (!gerente) {
+        throw new NotFoundError('Gerente no encontrado');
+      }
+
+      res.json({
+        success: true,
+        user: {
+          ...gerente,
+          tipo: 'gerente'
         }
       });
     }

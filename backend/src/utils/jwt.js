@@ -72,27 +72,24 @@ const generateManagerToken = (manager) => {
   });
 };
 
+/**
+ * Generar token para gerente
+ */
+const generateGerenteToken = (gerente) => {
+  return generateToken({
+    id: gerente.id,
+    tipo: 'gerente',
+    codigoGerente: gerente.codigo_gerente,
+    email: gerente.email
+  });
+};
+
 module.exports = {
   generateToken,
   verifyToken,
   decodeToken,
   generateVendedorToken,
   generateClienteToken,
-  generateManagerToken
+  generateManagerToken,
+  generateGerenteToken
 };
-
-
-
-
-
-module.exports = {
-  generateToken,
-  verifyToken,
-  decodeToken,
-  generateVendedorToken,
-  generateClienteToken,
-  generateManagerToken
-};
-
-
-
