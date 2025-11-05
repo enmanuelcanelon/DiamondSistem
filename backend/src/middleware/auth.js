@@ -102,6 +102,16 @@ const requireCliente = (req, res, next) => {
 };
 
 /**
+ * Verificar que el usuario sea manager
+ */
+const requireManager = (req, res, next) => {
+  if (req.user.tipo !== 'manager') {
+    return next(new UnauthorizedError('Acceso solo para managers'));
+  }
+  next();
+};
+
+/**
  * Verificar que el usuario sea el propietario del recurso o vendedor
  */
 const requireOwnerOrVendedor = (paramName = 'id') => {
@@ -153,9 +163,8 @@ module.exports = {
   authenticate,
   requireVendedor,
   requireCliente,
+  requireManager,
   requireOwnerOrVendedor,
   optionalAuth
 };
-
-
 

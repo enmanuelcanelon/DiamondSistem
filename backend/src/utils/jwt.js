@@ -60,12 +60,38 @@ const generateClienteToken = (cliente, contrato) => {
   });
 };
 
+/**
+ * Generar token para manager
+ */
+const generateManagerToken = (manager) => {
+  return generateToken({
+    id: manager.id,
+    tipo: 'manager',
+    codigoManager: manager.codigo_manager,
+    email: manager.email
+  });
+};
+
 module.exports = {
   generateToken,
   verifyToken,
   decodeToken,
   generateVendedorToken,
-  generateClienteToken
+  generateClienteToken,
+  generateManagerToken
+};
+
+
+
+
+
+module.exports = {
+  generateToken,
+  verifyToken,
+  decodeToken,
+  generateVendedorToken,
+  generateClienteToken,
+  generateManagerToken
 };
 
 

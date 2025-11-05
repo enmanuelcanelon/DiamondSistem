@@ -9,6 +9,7 @@ import {
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import GaleriaFotos from './GaleriaFotos';
 
 /**
  * Opciones de colores disponibles para servilletas con sus cantidades límite
@@ -176,182 +177,8 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
   const esBasica = datos.tipo_decoracion === 'basica';
   const esPremium = datos.tipo_decoracion === 'premium';
 
-  if (!datos.tipo_decoracion) {
-    return (
-      <div className="text-center py-12">
-        <Sparkles className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600">
-          No se detectó un servicio de decoración en tu contrato.
-        </p>
-        <p className="text-sm text-gray-500 mt-2">
-          Contacta a tu asesor si crees que esto es un error.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Sparkles className="w-6 h-6 text-purple-600" />
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Decoración del Evento</h2>
-            <p className="text-sm text-gray-600">
-              Tipo de decoración: <span className="font-semibold capitalize">{datos.tipo_decoracion}</span>
-            </p>
-          </div>
-        </div>
-        {esPremium && (
-          <span className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-semibold">
-            ⭐ Premium
-          </span>
-        )}
-      </div>
-
-      {/* ===== DECORACIÓN PREMIUM ===== */}
-      {esPremium && (
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
-          <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5" />
-            Detalles Especiales Premium
-          </h3>
-          <p className="text-sm text-purple-700 mb-4">
-            La decoración premium incluye toda la decoración básica más elementos especiales como:
-            animales de peluche, estructuras aéreas, columpio, arcos florales, etc.
-          </p>
-          
-          <div className="space-y-4">
-            {/* Incluir todos los campos de decoración básica también */}
-            {renderDecoracionBasicaFields()}
-            
-            {/* Detalles Premium Adicionales */}
-            <div>
-              <label className="block text-sm font-medium text-purple-900 mb-2">
-                Detalles Especiales Premium
-              </label>
-              <textarea
-                value={datos.decoracion_premium_detalles}
-                onChange={(e) => setDatos({ ...datos, decoracion_premium_detalles: e.target.value })}
-                rows={4}
-                placeholder="Describe los elementos especiales que deseas: animales de peluche, estructura de columpio, arcos florales, instalaciones aéreas, etc."
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white"
-              />
-              <p className="text-xs text-purple-600 mt-2">
-                💡 Sé específico con colores, tamaños y ubicación de los elementos especiales
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== DECORACIÓN BÁSICA ===== */}
-      {esBasica && renderDecoracionBasicaFields()}
-
-      {/* ===== CAMPOS GENERALES (PARA AMBOS TIPOS) ===== */}
-      <div className="border-t pt-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Preferencias Generales</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Estilo General
-            </label>
-            <select
-              value={datos.estilo_decoracion}
-              onChange={(e) => setDatos({ ...datos, estilo_decoracion: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-            >
-              <option value="">Seleccionar...</option>
-              <option value="Clásico">Clásico</option>
-              <option value="Moderno">Moderno</option>
-              <option value="Rústico">Rústico</option>
-              <option value="Elegante">Elegante</option>
-              <option value="Vintage">Vintage</option>
-              <option value="Bohemio">Bohemio</option>
-              <option value="Minimalista">Minimalista</option>
-              <option value="Romántico">Romántico</option>
-              <option value="Otro">Otro</option>
-            </select>
-            {datos.estilo_decoracion === 'Otro' && (
-              <input
-                type="text"
-                value={datos.estilo_decoracion_otro}
-                onChange={(e) => setDatos({ ...datos, estilo_decoracion_otro: e.target.value })}
-                placeholder="Especifica el estilo..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none mt-2"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Temática
-            </label>
-            <input
-              type="text"
-              value={datos.tematica}
-              onChange={(e) => setDatos({ ...datos, tematica: e.target.value })}
-              placeholder="Ej: Jardín, Playa, Cuento de Hadas"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Colores Principales
-            </label>
-            <input
-              type="text"
-              value={datos.colores_principales}
-              onChange={(e) => setDatos({ ...datos, colores_principales: e.target.value })}
-              placeholder="Ej: Blanco y dorado, Rosa y verde menta"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Notas Adicionales
-          </label>
-          <textarea
-            value={datos.notas_decoracion}
-            onChange={(e) => setDatos({ ...datos, notas_decoracion: e.target.value })}
-            rows="3"
-            placeholder="Cualquier detalle especial sobre la decoración..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-          ></textarea>
-        </div>
-      </div>
-
-      {/* Botón Guardar */}
-      <button
-        type="submit"
-        disabled={guardando || estaBloqueado}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {guardando ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Guardando...
-          </>
-        ) : estaBloqueado ? (
-          <>
-            <Lock className="w-5 h-5" />
-            Bloqueado
-          </>
-        ) : (
-          <>
-            <Save className="w-5 h-5" />
-            Guardar Cambios
-          </>
-        )}
-      </button>
-    </form>
-  );
-
   // ===== FUNCIÓN AUXILIAR PARA RENDERIZAR CAMPOS DE DECORACIÓN BÁSICA =====
-  function renderDecoracionBasicaFields() {
+  const renderDecoracionBasicaFields = () => {
     return (
       <div className="space-y-6">
         {/* Cojines */}
@@ -646,8 +473,204 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
         </div>
       </div>
     );
+  };
+
+  if (!datos.tipo_decoracion) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Sparkles className="w-6 h-6 text-purple-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Decoración</h2>
+        </div>
+
+        {/* Galería de Fotos */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
+          <GaleriaFotos tipoServicio="decoracion" titulo="decoraciones" />
+        </div>
+
+        <div className="text-center py-12">
+          <Sparkles className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">
+            No se detectó un servicio de decoración en tu contrato.
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Contacta a tu asesor si crees que esto es un error.
+          </p>
+        </div>
+      </div>
+    );
   }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-6 h-6 text-purple-600" />
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Decoración del Evento</h2>
+            <p className="text-sm text-gray-600">
+              Tipo de decoración: <span className="font-semibold capitalize">{datos.tipo_decoracion}</span>
+            </p>
+          </div>
+        </div>
+        {esPremium && (
+          <span className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-semibold">
+            ⭐ Premium
+          </span>
+        )}
+      </div>
+
+      {/* Galería de Fotos */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
+        <GaleriaFotos tipoServicio="decoracion" titulo="decoraciones" />
+      </div>
+
+      {/* ===== DECORACIÓN PREMIUM ===== */}
+      {esPremium && (
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+          <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            Detalles Especiales Premium
+          </h3>
+          <p className="text-sm text-purple-700 mb-4">
+            La decoración premium incluye toda la decoración básica más elementos especiales como:
+            animales de peluche, estructuras aéreas, columpio, arcos florales, etc.
+          </p>
+          
+          <div className="space-y-4">
+            {/* Incluir todos los campos de decoración básica también */}
+            {renderDecoracionBasicaFields()}
+            
+            {/* Detalles Premium Adicionales */}
+            <div>
+              <label className="block text-sm font-medium text-purple-900 mb-2">
+                Detalles Especiales Premium
+              </label>
+              <textarea
+                value={datos.decoracion_premium_detalles}
+                onChange={(e) => setDatos({ ...datos, decoracion_premium_detalles: e.target.value })}
+                rows={4}
+                placeholder="Describe los elementos especiales que deseas: animales de peluche, estructura de columpio, arcos florales, instalaciones aéreas, etc."
+                className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white"
+              />
+              <p className="text-xs text-purple-600 mt-2">
+                💡 Sé específico con colores, tamaños y ubicación de los elementos especiales
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== DECORACIÓN BÁSICA ===== */}
+      {esBasica && (
+        <>
+          {renderDecoracionBasicaFields()}
+        </>
+      )}
+
+      {/* ===== CAMPOS GENERALES (PARA AMBOS TIPOS) ===== */}
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Preferencias Generales</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Estilo General
+            </label>
+            <select
+              value={datos.estilo_decoracion}
+              onChange={(e) => setDatos({ ...datos, estilo_decoracion: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+            >
+              <option value="">Seleccionar...</option>
+              <option value="Clásico">Clásico</option>
+              <option value="Moderno">Moderno</option>
+              <option value="Rústico">Rústico</option>
+              <option value="Elegante">Elegante</option>
+              <option value="Vintage">Vintage</option>
+              <option value="Bohemio">Bohemio</option>
+              <option value="Minimalista">Minimalista</option>
+              <option value="Romántico">Romántico</option>
+              <option value="Otro">Otro</option>
+            </select>
+            {datos.estilo_decoracion === 'Otro' && (
+              <input
+                type="text"
+                value={datos.estilo_decoracion_otro}
+                onChange={(e) => setDatos({ ...datos, estilo_decoracion_otro: e.target.value })}
+                placeholder="Especifica el estilo..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none mt-2"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Temática
+            </label>
+            <input
+              type="text"
+              value={datos.tematica}
+              onChange={(e) => setDatos({ ...datos, tematica: e.target.value })}
+              placeholder="Ej: Jardín, Playa, Cuento de Hadas"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Colores Principales
+            </label>
+            <input
+              type="text"
+              value={datos.colores_principales}
+              onChange={(e) => setDatos({ ...datos, colores_principales: e.target.value })}
+              placeholder="Ej: Blanco y dorado, Rosa y verde menta"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notas Adicionales
+          </label>
+          <textarea
+            value={datos.notas_decoracion}
+            onChange={(e) => setDatos({ ...datos, notas_decoracion: e.target.value })}
+            rows="3"
+            placeholder="Cualquier detalle especial sobre la decoración..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+          ></textarea>
+        </div>
+      </div>
+
+      {/* Botón Guardar */}
+      <button
+        type="submit"
+        disabled={guardando || estaBloqueado}
+        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {guardando ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Guardando...
+          </>
+        ) : estaBloqueado ? (
+          <>
+            <Lock className="w-5 h-5" />
+            Bloqueado
+          </>
+        ) : (
+          <>
+            <Save className="w-5 h-5" />
+            Guardar Cambios
+          </>
+        )}
+      </button>
+    </form>
+  );
 }
 
 export default SeccionDecoracion;
-

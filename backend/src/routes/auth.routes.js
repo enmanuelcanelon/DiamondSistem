@@ -6,8 +6,8 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
-const { generateVendedorToken, generateClienteToken } = require('../utils/jwt');
-const { authenticate, requireVendedor } = require('../middleware/auth');
+const { generateVendedorToken, generateClienteToken, generateManagerToken } = require('../utils/jwt');
+const { authenticate, requireVendedor, requireManager } = require('../middleware/auth');
 const { UnauthorizedError, ValidationError, NotFoundError } = require('../middleware/errorHandler');
 
 const prisma = new PrismaClient();
@@ -138,6 +138,59 @@ router.post('/login/cliente', async (req, res, next) => {
         estado_pago: contrato.estado_pago
       },
       evento: contrato.eventos || null
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/auth/login/manager
+ * @desc    Login de manager
+ * @access  Public
+ */
+router.post('/login/manager', async (req, res, next) => {
+  try {
+    const { codigo_manager, password } = req.body;
+
+    // Validar datos
+    if (!codigo_manager || !password) {
+      throw new ValidationError('Código de manager y contraseña son requeridos');
+    }
+
+    // Buscar manager
+    const manager = await prisma.managers.findUnique({
+      where: { codigo_manager }
+    });
+
+    if (!manager) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    // Verificar si está activo
+    if (!manager.activo) {
+      throw new UnauthorizedError('Cuenta de manager desactivada');
+    }
+
+    // Verificar password
+    const isValidPassword = await comparePassword(password, manager.password_hash);
+    
+    if (!isValidPassword) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    // Generar token
+    const token = generateManagerToken(manager);
+
+    // Remover password del response
+    const { password_hash, ...managerData } = manager;
+
+    res.json({
+      success: true,
+      message: 'Login exitoso',
+      token,
+      user: managerData
     });
 
   } catch (error) {
@@ -283,6 +336,31 @@ router.get('/me', authenticate, async (req, res, next) => {
           estado_pago: contrato.estado_pago
         },
         evento: contrato.eventos || null
+      });
+    } else if (req.user.tipo === 'manager') {
+      const manager = await prisma.managers.findUnique({
+        where: { id: req.user.id },
+        select: {
+          id: true,
+          nombre_completo: true,
+          codigo_manager: true,
+          email: true,
+          telefono: true,
+          activo: true,
+          fecha_registro: true
+        }
+      });
+
+      if (!manager) {
+        throw new NotFoundError('Manager no encontrado');
+      }
+
+      res.json({
+        success: true,
+        user: {
+          ...manager,
+          tipo: 'manager'
+        }
       });
     }
 

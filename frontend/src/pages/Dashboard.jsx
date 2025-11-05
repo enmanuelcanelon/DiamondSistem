@@ -1,19 +1,65 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FileText, FileCheck, DollarSign, TrendingUp } from 'lucide-react';
+import { Users, FileText, FileCheck, DollarSign, TrendingUp, Calendar, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
 
 function Dashboard() {
   const { user } = useAuthStore();
+  
+  // Estado para el mes y año seleccionado
+  const fechaActual = new Date();
+  const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
+  const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
+  const [usarFiltroMensual, setUsarFiltroMensual] = useState(false);
 
-  // Obtener estadísticas del vendedor
+  // Obtener estadísticas del vendedor (totales o mensuales)
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['vendedor-stats', user?.id],
+    queryKey: ['vendedor-stats', user?.id, usarFiltroMensual ? mesSeleccionado : null, usarFiltroMensual ? añoSeleccionado : null],
     queryFn: async () => {
-      const response = await api.get(`/vendedores/${user.id}/stats`);
-      return response.data;
+      if (usarFiltroMensual) {
+        const response = await api.get(`/vendedores/${user.id}/stats/mes`, {
+          params: { mes: mesSeleccionado, año: añoSeleccionado }
+        });
+        return response.data;
+      } else {
+        const response = await api.get(`/vendedores/${user.id}/stats`);
+        return response.data;
+      }
     },
+    enabled: !!user?.id,
   });
+
+  // Nombres de los meses
+  const nombresMeses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  // Cambiar mes
+  const cambiarMes = (direccion) => {
+    if (direccion === 'anterior') {
+      if (mesSeleccionado === 1) {
+        setMesSeleccionado(12);
+        setAñoSeleccionado(añoSeleccionado - 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado - 1);
+      }
+    } else {
+      if (mesSeleccionado === 12) {
+        setMesSeleccionado(1);
+        setAñoSeleccionado(añoSeleccionado + 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado + 1);
+      }
+    }
+  };
+
+  // Volver al mes actual
+  const resetearMes = () => {
+    setMesSeleccionado(fechaActual.getMonth() + 1);
+    setAñoSeleccionado(fechaActual.getFullYear());
+  };
 
   const statCards = [
     {
@@ -45,13 +91,123 @@ function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          ¡Bienvenido, {user?.nombre_completo}!
-        </h1>
-        <p className="text-gray-600 mt-1">
-          Aquí está el resumen de tu actividad
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            ¡Bienvenido, {user?.nombre_completo}!
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {usarFiltroMensual 
+              ? `Resumen de ${nombresMeses[mesSeleccionado - 1]} ${añoSeleccionado}`
+              : 'Resumen general de tu actividad'
+            }
+          </p>
+        </div>
+
+        {/* Selector de Filtro Mensual */}
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={usarFiltroMensual}
+              onChange={(e) => {
+                setUsarFiltroMensual(e.target.checked);
+                if (!e.target.checked) {
+                  resetearMes();
+                }
+              }}
+              className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+            />
+            <span className="text-sm font-medium text-gray-700">Filtrar por mes</span>
+          </label>
+
+          {usarFiltroMensual && (
+            <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-indigo-200 p-2">
+              <button
+                onClick={() => cambiarMes('anterior')}
+                className="p-1 hover:bg-indigo-50 rounded transition"
+                title="Mes anterior"
+              >
+                <ChevronLeft className="w-5 h-5 text-indigo-600" />
+              </button>
+              
+              <div className="flex items-center gap-2 px-3">
+                <Calendar className="w-4 h-4 text-indigo-600" />
+                <select
+                  value={mesSeleccionado}
+                  onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
+                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {nombresMeses.map((mes, index) => (
+                    <option key={index} value={index + 1}>{mes}</option>
+                  ))}
+                </select>
+                <select
+                  value={añoSeleccionado}
+                  onChange={(e) => setAñoSeleccionado(parseInt(e.target.value))}
+                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                    <option key={año} value={año}>{año}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={() => cambiarMes('siguiente')}
+                className="p-1 hover:bg-indigo-50 rounded transition"
+                title="Mes siguiente"
+              >
+                <ChevronRight className="w-5 h-5 text-indigo-600" />
+              </button>
+
+              {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+                <button
+                  onClick={resetearMes}
+                  className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded transition"
+                  title="Volver al mes actual"
+                >
+                  Hoy
+                </button>
+              )}
+
+              {/* Botón de descarga de reporte */}
+              {usarFiltroMensual && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await api.get(`/vendedores/${user.id}/reporte-mensual/${mesSeleccionado}/${añoSeleccionado}`, {
+                        responseType: 'blob'
+                      });
+                      
+                      const blob = new Blob([response.data], { type: 'application/pdf' });
+                      const url = window.URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      const nombresMeses = [
+                        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                      ];
+                      link.download = `Reporte-Mensual-${nombresMeses[mesSeleccionado - 1]}-${añoSeleccionado}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      window.URL.revokeObjectURL(url);
+                    } catch (error) {
+                      console.error('Error al descargar reporte:', error);
+                      alert('Error al descargar el reporte');
+                    }
+                  }}
+                  className="ml-2 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
+                  title="Descargar reporte mensual en PDF"
+                >
+                  <Download className="w-4 h-4" />
+                  Descargar Reporte
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tarjetas de estadísticas */}
@@ -174,6 +330,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-
-
-

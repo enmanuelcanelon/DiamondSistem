@@ -19,6 +19,7 @@ import GestionEventos from './pages/GestionEventos';
 import DetalleSolicitud from './pages/DetalleSolicitud';
 import ChatVendedor from './pages/ChatVendedor';
 import AjustesEventoVendedor from './pages/AjustesEventoVendedor';
+import CalendarioMensual from './pages/CalendarioMensual';
 
 // Pages - Cliente
 import LoginCliente from './pages/cliente/LoginCliente';
@@ -30,9 +31,15 @@ import SolicitarCambios from './pages/cliente/SolicitarCambios';
 import MisContratos from './pages/cliente/MisContratos';
 import MiPerfil from './pages/cliente/MiPerfil';
 
+// Pages - Manager
+import LoginManager from './pages/manager/LoginManager';
+import ChecklistManager from './pages/manager/ChecklistManager';
+import ResumenManager from './pages/manager/ResumenManager';
+
 // Layout
 import Layout from './components/Layout';
 import LayoutCliente from './components/LayoutCliente';
+import LayoutManager from './components/LayoutManager';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -74,6 +81,21 @@ const ProtectedRouteCliente = ({ children }) => {
   return children;
 };
 
+// Protected Route Component (Managers)
+const ProtectedRouteManager = ({ children }) => {
+  const { isAuthenticated, user } = useAuthStore();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/manager/login" replace />;
+  }
+  
+  if (user?.tipo !== 'manager') {
+    return <Navigate to="/manager/login" replace />;
+  }
+  
+  return children;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -102,6 +124,7 @@ function App() {
             <Route path="contratos/:id/mesas" element={<AsignacionMesas />} />
             <Route path="contratos/:id/playlist" element={<PlaylistMusical />} />
             <Route path="eventos" element={<GestionEventos />} />
+            <Route path="calendario" element={<CalendarioMensual />} />
             <Route path="solicitudes/:id" element={<DetalleSolicitud />} />
             <Route path="chat/:contratoId" element={<ChatVendedor />} />
             <Route path="ajustes/:contratoId" element={<AjustesEventoVendedor />} />
@@ -128,6 +151,21 @@ function App() {
             <Route path="chat" element={<ChatCliente />} />
             <Route path="contratos" element={<MisContratos />} />
             <Route path="perfil" element={<MiPerfil />} />
+          </Route>
+
+          {/* Manager Routes */}
+          <Route path="/manager/login" element={<LoginManager />} />
+          
+          <Route
+            path="/manager"
+            element={
+              <ProtectedRouteManager>
+                <LayoutManager />
+              </ProtectedRouteManager>
+            }
+          >
+            <Route index element={<ChecklistManager />} />
+            <Route path="resumen" element={<ResumenManager />} />
           </Route>
         </Routes>
       </Router>

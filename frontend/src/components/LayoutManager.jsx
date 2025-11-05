@@ -1,19 +1,17 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Diamond, 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  FileCheck,
+  ClipboardCheck, 
   LogOut,
   Menu,
   X,
-  Calendar
+  Calendar,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '../store/useAuthStore';
 
-function Layout() {
+function LayoutManager() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -21,21 +19,17 @@ function Layout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/manager/login');
   };
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Clientes', href: '/clientes', icon: Users },
-    { name: 'Ofertas', href: '/ofertas', icon: FileText },
-    { name: 'Contratos', href: '/contratos', icon: FileCheck },
-    { name: 'Calendario', href: '/calendario', icon: Calendar },
-    { name: 'Gestión de Eventos', href: '/eventos', icon: Calendar },
+    { name: 'Checklist de Servicios', href: '/manager', icon: ClipboardCheck },
+    { name: 'Resumen', href: '/manager/resumen', icon: CheckCircle2 },
   ];
 
   const isActive = (path) => {
-    if (path === '/') {
-      return location.pathname === '/';
+    if (path === '/manager') {
+      return location.pathname === '/manager';
     }
     return location.pathname.startsWith(path);
   };
@@ -49,8 +43,8 @@ function Layout() {
           <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white">
             <div className="flex h-16 items-center justify-between px-4 border-b">
               <div className="flex items-center gap-2">
-                <Diamond className="w-8 h-8 text-indigo-600" />
-                <span className="text-xl font-bold text-gray-900">DiamondSistem</span>
+                <ClipboardCheck className="w-8 h-8 text-emerald-600" />
+                <span className="text-xl font-bold text-gray-900">Manager</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
                 <X className="w-5 h-5" />
@@ -67,7 +61,7 @@ function Layout() {
                     onClick={() => setSidebarOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
                       active
-                        ? 'bg-indigo-50 text-indigo-600'
+                        ? 'bg-emerald-50 text-emerald-600'
                         : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
@@ -77,18 +71,27 @@ function Layout() {
                 );
               })}
             </nav>
+            <div className="border-t border-gray-200 p-4">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 w-full px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="font-medium">Cerrar Sesión</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Sidebar para desktop */}
+      {/* Sidebar Desktop */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-1 border-r bg-white">
-          <div className="flex h-16 items-center px-4 border-b">
-            <Diamond className="w-8 h-8 text-indigo-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900">DiamondSistem</span>
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
+          <div className="flex items-center h-16 px-4 border-b border-gray-200">
+            <ClipboardCheck className="w-8 h-8 text-emerald-600" />
+            <span className="ml-2 text-xl font-bold text-gray-900">Manager</span>
           </div>
-          <nav className="flex-1 space-y-1 px-3 py-4">
+          <nav className="flex-1 px-3 py-4 space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
@@ -98,7 +101,7 @@ function Layout() {
                   to={item.href}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
                     active
-                      ? 'bg-indigo-50 text-indigo-600'
+                      ? 'bg-emerald-50 text-emerald-600'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -108,46 +111,45 @@ function Layout() {
               );
             })}
           </nav>
-          <div className="border-t p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                <span className="text-indigo-600 font-semibold">
-                  {user?.nombre_completo?.charAt(0) || 'U'}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user?.nombre_completo}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.codigo_vendedor}</p>
-              </div>
+          <div className="border-t border-gray-200 p-4">
+            <div className="mb-3 px-3 py-2">
+              <p className="text-sm font-medium text-gray-900">{user?.nombre_completo}</p>
+              <p className="text-xs text-gray-500">{user?.codigo_manager}</p>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+              className="flex items-center gap-3 w-full px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition"
             >
-              <LogOut className="w-4 h-4" />
-              Cerrar Sesión
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Cerrar Sesión</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Contenido principal */}
+      {/* Contenido Principal */}
       <div className="lg:pl-64">
-        {/* Header móvil */}
-        <div className="sticky top-0 z-10 flex h-16 items-center gap-x-4 border-b bg-white px-4 shadow-sm lg:hidden">
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex h-16 bg-white border-b border-gray-200 lg:static">
           <button
+            type="button"
+            className="px-4 text-gray-500 lg:hidden"
             onClick={() => setSidebarOpen(true)}
-            className="p-2 text-gray-700"
           >
             <Menu className="w-6 h-6" />
           </button>
-          <div className="flex-1 text-center">
-            <span className="text-lg font-semibold text-gray-900">DiamondSistem</span>
+          <div className="flex flex-1 justify-between px-4 items-center">
+            <h1 className="text-lg font-semibold text-gray-900">Checklist de Servicios Externos</h1>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:block text-sm text-gray-600">
+                {user?.nombre_completo}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Contenido de la página */}
-        <main className="py-6 px-4 sm:px-6 lg:px-8">
+        {/* Contenido */}
+        <main className="p-6">
           <Outlet />
         </main>
       </div>
@@ -155,6 +157,5 @@ function Layout() {
   );
 }
 
-export default Layout;
-
+export default LayoutManager;
 

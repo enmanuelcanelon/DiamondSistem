@@ -22,6 +22,7 @@ import {
 import useAuthStore from '../../store/useAuthStore';
 import api from '../../config/api';
 import SeccionDecoracion from '../../components/SeccionDecoracion';
+import GaleriaFotos from '../../components/GaleriaFotos';
 
 function AjustesEvento() {
   const { user } = useAuthStore();
@@ -315,6 +316,11 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
         <h2 className="text-2xl font-bold text-gray-900">Detalles de la Torta</h2>
       </div>
 
+      {/* Galería de Fotos */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
+        <GaleriaFotos tipoServicio="torta" titulo="tortas" />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Sabor: Vainilla, Marmoleado, u Otro */}
@@ -472,6 +478,12 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
       <div className="flex items-center gap-3 mb-6">
         <UtensilsCrossed className="w-6 h-6 text-orange-600" />
         <h2 className="text-2xl font-bold text-gray-900">Servicio de Comida</h2>
+      </div>
+
+      {/* Galería de Fotos */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
+        <GaleriaFotos tipoServicio="menu" titulo="platos del menú" />
       </div>
 
       {/* Información de distribución */}
@@ -1040,13 +1052,20 @@ function SeccionBar({ ajustes, contrato }) {
     ...licorBasico // Premium incluye todo lo del básico
   ];
 
-  if (!tipoLicor) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Wine className="w-6 h-6 text-indigo-600" />
-          <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
-        </div>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-6">
+        <Wine className="w-6 h-6 text-indigo-600" />
+        <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
+      </div>
+
+      {/* Galería de Fotos */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
+        <GaleriaFotos tipoServicio="bar" titulo="bar y bebidas" />
+      </div>
+
+      {!tipoLicor ? (
         <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
           <Wine className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-yellow-900 mb-2">Servicio de Bar no Contratado</h3>
@@ -1054,28 +1073,22 @@ function SeccionBar({ ajustes, contrato }) {
             No tienes contratado ningún servicio de licor (Básico o Premium) en tu evento.
           </p>
         </div>
-      </div>
-    );
-  }
+      ) : (
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            {tipoLicor === 'premium' && (
+              <span className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-medium">
+                ⭐ Premium
+              </span>
+            )}
+            {tipoLicor === 'basico' && (
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                📦 Básico
+              </span>
+            )}
+          </div>
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <Wine className="w-6 h-6 text-indigo-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
-        {tipoLicor === 'premium' && (
-          <span className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-medium">
-            ⭐ Premium
-          </span>
-        )}
-        {tipoLicor === 'basico' && (
-          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-            📦 Básico
-          </span>
-        )}
-      </div>
-
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
         <p className="text-sm text-blue-800">
           <strong>Información del Bar:</strong> Esta es la lista completa de bebidas incluidas en tu servicio de {tipoLicor === 'premium' ? 'Licor Premium' : 'Licor Básico'}.
         </p>
@@ -1215,6 +1228,8 @@ function SeccionBar({ ajustes, contrato }) {
           </div>
         </div>
       </div>
+      </div>
+      )}
     </div>
   );
 }

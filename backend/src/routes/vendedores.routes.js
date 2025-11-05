@@ -270,4 +270,615 @@ router.get('/:id/contratos', authenticate, requireVendedor, async (req, res, nex
   }
 });
 
+/**
+ * @route   GET /api/vendedores/:id/stats/mes
+ * @desc    Obtener estadísticas del vendedor filtradas por mes
+ * @access  Private (Vendedor)
+ * @query   mes, año (opcional, si no se envía usa el mes/año actual)
+ */
+router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { mes, año } = req.query;
+
+    // Validar que el vendedor existe
+    const vendedor = await prisma.vendedores.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!vendedor) {
+      throw new NotFoundError('Vendedor no encontrado');
+    }
+
+    // CRÍTICO: Verificar que el vendedor solo vea sus propias estadísticas
+    if (parseInt(id) !== req.user.id) {
+      throw new ValidationError('No tienes permiso para ver estadísticas de otro vendedor');
+    }
+
+    // Obtener mes y año (si no se proporcionan, usar el actual)
+    const fechaActual = new Date();
+    const mesFiltro = mes ? parseInt(mes) : fechaActual.getMonth() + 1; // 1-12
+    const añoFiltro = año ? parseInt(año) : fechaActual.getFullYear();
+
+    // Validar mes y año
+    if (mesFiltro < 1 || mesFiltro > 12) {
+      throw new ValidationError('Mes inválido. Debe estar entre 1 y 12');
+    }
+    if (añoFiltro < 2020 || añoFiltro > 2100) {
+      throw new ValidationError('Año inválido');
+    }
+
+    // Fechas de inicio y fin del mes
+    const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
+    const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
+
+    // Estadísticas del mes
+    const [
+      clientesMes,
+      ofertasMes,
+      ofertasAceptadasMes,
+      ofertasPendientesMes,
+      ofertasRechazadasMes,
+      contratosMes,
+      contratosActivosMes,
+      contratosPagadosMes,
+      contratosVendedorMes
+    ] = await Promise.all([
+      // Clientes creados en el mes
+      prisma.clientes.count({
+        where: {
+          vendedor_id: parseInt(id),
+          fecha_registro: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      // Ofertas creadas en el mes
+      prisma.ofertas.count({
+        where: {
+          vendedor_id: parseInt(id),
+          fecha_creacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.ofertas.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado: 'aceptada',
+          fecha_creacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.ofertas.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado: 'pendiente',
+          fecha_creacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.ofertas.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado: 'rechazada',
+          fecha_creacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      // Contratos creados en el mes
+      prisma.contratos.count({
+        where: {
+          vendedor_id: parseInt(id),
+          fecha_actualizacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.contratos.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado: 'activo',
+          fecha_actualizacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.contratos.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado_pago: 'completado',
+          fecha_actualizacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      // Contratos con eventos en el mes (para calcular ventas)
+      prisma.contratos.findMany({
+        where: {
+          vendedor_id: parseInt(id),
+          fecha_evento: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        },
+        select: {
+          total_contrato: true
+        }
+      })
+    ]);
+
+    // Calcular ventas del mes (contratos con eventos en el mes)
+    const totalVentasMes = contratosVendedorMes.reduce((sum, contrato) => {
+      return sum + parseFloat(contrato.total_contrato || 0);
+    }, 0);
+
+    // Calcular comisiones del mes
+    const comisionPorcentaje = parseFloat(vendedor.comision_porcentaje || 3.0);
+    const totalComisionesMes = totalVentasMes * (comisionPorcentaje / 100);
+
+    // Tasa de conversión del mes
+    const tasaConversion = ofertasMes > 0
+      ? ((ofertasAceptadasMes / ofertasMes) * 100).toFixed(2)
+      : 0;
+
+    res.json({
+      success: true,
+      periodo: {
+        mes: mesFiltro,
+        año: añoFiltro,
+        fecha_inicio: fechaInicio.toISOString(),
+        fecha_fin: fechaFin.toISOString()
+      },
+      estadisticas: {
+        clientes: {
+          total: clientesMes
+        },
+        ofertas: {
+          total: ofertasMes,
+          aceptadas: ofertasAceptadasMes,
+          pendientes: ofertasPendientesMes,
+          rechazadas: ofertasRechazadasMes,
+          tasa_conversion: `${tasaConversion}%`
+        },
+        contratos: {
+          total: contratosMes,
+          activos: contratosActivosMes,
+          pagados_completo: contratosPagadosMes
+        },
+        finanzas: {
+          total_ventas: parseFloat(totalVentasMes.toFixed(2)),
+          total_comisiones: parseFloat(totalComisionesMes.toFixed(2)),
+          comision_porcentaje: comisionPorcentaje
+        }
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/vendedores/:id/contratos/mes/:mes/:año
+ * @desc    Obtener contratos del vendedor filtrados por mes
+ * @access  Private (Vendedor)
+ */
+router.get('/:id/contratos/mes/:mes/:año', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { id, mes, año } = req.params;
+
+    // CRÍTICO: Verificar autorización
+    if (parseInt(id) !== req.user.id) {
+      throw new ValidationError('No tienes permiso para ver contratos de otro vendedor');
+    }
+
+    const mesFiltro = parseInt(mes);
+    const añoFiltro = parseInt(año);
+
+    if (mesFiltro < 1 || mesFiltro > 12) {
+      throw new ValidationError('Mes inválido');
+    }
+
+    const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
+    const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
+
+    const contratos = await prisma.contratos.findMany({
+      where: {
+        vendedor_id: parseInt(id),
+        fecha_evento: {
+          gte: fechaInicio,
+          lte: fechaFin
+        }
+      },
+      include: {
+        clientes: {
+          select: {
+            id: true,
+            nombre_completo: true,
+            email: true,
+            telefono: true
+          }
+        },
+        paquetes: {
+          select: {
+            id: true,
+            nombre: true
+          }
+        },
+        salones: {
+          select: {
+            id: true,
+            nombre: true
+          }
+        }
+      },
+      orderBy: {
+        fecha_evento: 'asc'
+      }
+    });
+
+    res.json({
+      success: true,
+      periodo: {
+        mes: mesFiltro,
+        año: añoFiltro
+      },
+      count: contratos.length,
+      contratos
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/vendedores/:id/calendario/mes/:mes/:año
+ * @desc    Obtener calendario de eventos del vendedor por mes
+ * @access  Private (Vendedor)
+ */
+router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { id, mes, año } = req.params;
+
+    // CRÍTICO: Verificar autorización
+    if (parseInt(id) !== req.user.id) {
+      throw new ValidationError('No tienes permiso para ver calendario de otro vendedor');
+    }
+
+    const mesFiltro = parseInt(mes);
+    const añoFiltro = parseInt(año);
+
+    if (mesFiltro < 1 || mesFiltro > 12) {
+      throw new ValidationError('Mes inválido');
+    }
+
+    const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
+    const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
+
+    const eventos = await prisma.contratos.findMany({
+      where: {
+        vendedor_id: parseInt(id),
+        fecha_evento: {
+          gte: fechaInicio,
+          lte: fechaFin
+        }
+      },
+      select: {
+        id: true,
+        codigo_contrato: true,
+        fecha_evento: true,
+        hora_inicio: true,
+        hora_fin: true,
+        cantidad_invitados: true,
+        estado_pago: true,
+        clientes: {
+          select: {
+            nombre_completo: true,
+            email: true,
+            telefono: true
+          }
+        },
+        salones: {
+          select: {
+            nombre: true
+          }
+        },
+        eventos: {
+          select: {
+            nombre_evento: true,
+            estado: true
+          }
+        }
+      },
+      orderBy: {
+        fecha_evento: 'asc'
+      }
+    });
+
+    // Agrupar eventos por día
+    const eventosPorDia = {};
+    eventos.forEach(evento => {
+      const fecha = new Date(evento.fecha_evento);
+      const dia = fecha.getDate();
+      if (!eventosPorDia[dia]) {
+        eventosPorDia[dia] = [];
+      }
+      eventosPorDia[dia].push(evento);
+    });
+
+    res.json({
+      success: true,
+      periodo: {
+        mes: mesFiltro,
+        año: añoFiltro,
+        fecha_inicio: fechaInicio.toISOString(),
+        fecha_fin: fechaFin.toISOString()
+      },
+      total_eventos: eventos.length,
+      eventos_por_dia: eventosPorDia,
+      eventos: eventos
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/vendedores/:id/reporte-mensual/:mes/:año
+ * @desc    Descargar reporte mensual en PDF
+ * @access  Private (Vendedor)
+ */
+router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { id, mes, año } = req.params;
+
+    // CRÍTICO: Verificar autorización
+    if (parseInt(id) !== req.user.id) {
+      throw new ValidationError('No tienes permiso para ver reportes de otro vendedor');
+    }
+
+    const mesFiltro = parseInt(mes);
+    const añoFiltro = parseInt(año);
+
+    if (mesFiltro < 1 || mesFiltro > 12) {
+      throw new ValidationError('Mes inválido');
+    }
+
+    // Obtener vendedor
+    const vendedor = await prisma.vendedores.findUnique({
+      where: { id: parseInt(id) },
+      select: {
+        id: true,
+        nombre_completo: true,
+        codigo_vendedor: true,
+        email: true,
+        telefono: true,
+        comision_porcentaje: true
+      }
+    });
+
+    if (!vendedor) {
+      throw new NotFoundError('Vendedor no encontrado');
+    }
+
+    // Obtener estadísticas del mes (reutilizar lógica del endpoint de stats)
+    const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
+    const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
+
+    // Calcular estadísticas del mes (similar al endpoint de stats/mes)
+    const [
+      clientesMes,
+      ofertasMes,
+      ofertasAceptadasMes,
+      ofertasPendientesMes,
+      ofertasRechazadasMes,
+      contratosMes,
+      contratosActivosMes,
+      contratosPagadosMes,
+      contratosVendedorMes
+    ] = await Promise.all([
+      prisma.clientes.count({
+        where: {
+          vendedor_id: parseInt(id),
+          fecha_registro: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.ofertas.count({
+        where: {
+          vendedor_id: parseInt(id),
+          fecha_creacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.ofertas.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado: 'aceptada',
+          fecha_creacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.ofertas.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado: 'pendiente',
+          fecha_creacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.ofertas.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado: 'rechazada',
+          fecha_creacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.contratos.count({
+        where: {
+          vendedor_id: parseInt(id),
+          fecha_evento: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.contratos.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado: 'activo',
+          fecha_evento: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.contratos.count({
+        where: {
+          vendedor_id: parseInt(id),
+          estado_pago: 'completado',
+          fecha_actualizacion: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        }
+      }),
+      prisma.contratos.findMany({
+        where: {
+          vendedor_id: parseInt(id),
+          fecha_evento: {
+            gte: fechaInicio,
+            lte: fechaFin
+          }
+        },
+        select: {
+          total_contrato: true
+        }
+      })
+    ]);
+
+    // Calcular ventas y comisiones
+    const totalVentasMes = contratosVendedorMes.reduce((sum, contrato) => {
+      return sum + parseFloat(contrato.total_contrato || 0);
+    }, 0);
+
+    const comisionPorcentaje = parseFloat(vendedor.comision_porcentaje || 3.0);
+    const totalComisionesMes = totalVentasMes * (comisionPorcentaje / 100);
+
+    // Preparar datos de estadísticas
+    const statsData = {
+      estadisticas: {
+        clientes: { total: clientesMes },
+        ofertas: {
+          total: ofertasMes,
+          aceptadas: ofertasAceptadasMes,
+          pendientes: ofertasPendientesMes,
+          rechazadas: ofertasRechazadasMes
+        },
+        contratos: {
+          total: contratosMes,
+          activos: contratosActivosMes,
+          pagados: contratosPagadosMes
+        },
+        finanzas: {
+          total_ventas: totalVentasMes,
+          total_comisiones: totalComisionesMes,
+          comision_porcentaje: comisionPorcentaje
+        }
+      }
+    };
+
+    // Obtener contratos del mes
+    const contratos = await prisma.contratos.findMany({
+      where: {
+        vendedor_id: parseInt(id),
+        fecha_evento: {
+          gte: fechaInicio,
+          lte: fechaFin
+        }
+      },
+      include: {
+        clientes: {
+          select: {
+            id: true,
+            nombre_completo: true,
+            email: true,
+            telefono: true
+          }
+        },
+        paquetes: {
+          select: {
+            id: true,
+            nombre: true
+          }
+        },
+        salones: {
+          select: {
+            id: true,
+            nombre: true
+          }
+        }
+      },
+      orderBy: {
+        fecha_evento: 'asc'
+      }
+    });
+
+    // Preparar datos para el PDF
+    const datosReporte = {
+      estadisticas: statsData.estadisticas || {},
+      contratos: contratos
+    };
+
+    // Generar PDF
+    const { generarReporteMensual } = require('../utils/pdfReporteMensual');
+    const doc = generarReporteMensual(datosReporte, vendedor, mesFiltro, añoFiltro);
+
+    // Configurar headers para descarga
+    const nombresMeses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    const mesNombre = nombresMeses[mesFiltro - 1];
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Reporte-Mensual-${mesNombre}-${añoFiltro}.pdf`
+    );
+
+    // Enviar el PDF
+    doc.pipe(res);
+    doc.end();
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

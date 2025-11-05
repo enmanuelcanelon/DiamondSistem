@@ -35,6 +35,8 @@ const ajustesRoutes = require('./routes/ajustes.routes');
 const emailsRoutes = require('./routes/emails.routes');
 const salonesRoutes = require('./routes/salones.routes');
 const authRoutes = require('./routes/auth.routes');
+const fotosRoutes = require('./routes/fotos.routes');
+const managersRoutes = require('./routes/managers.routes');
 
 // Middleware personalizado
 const { errorHandler } = require('./middleware/errorHandler');
@@ -131,6 +133,9 @@ app.use(cors(corsOptions));
 
 // Rate limiting general
 app.use(generalLimiter);
+
+// Servir archivos estáticos (fotos, etc.)
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Body parser con límites de tamaño
 app.use(express.json({ limit: '10mb' }));
@@ -229,6 +234,8 @@ app.use('/api/ajustes', ajustesRoutes);
 app.use('/api/ajustes-evento', ajustesRoutes); // Alias para compatibilidad
 app.use('/api/emails', emailsRoutes);
 app.use('/api/salones', salonesRoutes);
+app.use('/api/fotos', fotosRoutes);
+app.use('/api/managers', managersRoutes);
 
 // Ruta 404 - Debe ir al final de todas las rutas
 app.use((req, res) => {
@@ -319,4 +326,11 @@ process.on('uncaughtException', (error) => {
 startServer();
 
 module.exports = app;
+
+// Iniciar servidor
+startServer();
+
+module.exports = app;
+
+
 

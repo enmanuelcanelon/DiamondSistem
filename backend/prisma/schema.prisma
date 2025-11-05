@@ -236,21 +236,22 @@ model contratos {
   notas_vendedor        String?
 
   // Relaciones
-  ofertas                 ofertas?                  @relation(fields: [oferta_id], references: [id])
-  clientes                clientes?                 @relation(fields: [cliente_id], references: [id])
-  vendedores              vendedores?               @relation(fields: [vendedor_id], references: [id])
-  paquetes                paquetes?                 @relation(fields: [paquete_id], references: [id])
-  salones                 salones?                  @relation(fields: [salon_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  contratos_servicios     contratos_servicios[]
-  pagos                   pagos[]
-  eventos                 eventos?
-  solicitudes_cliente     solicitudes_cliente[]
-  ajustes_evento          ajustes_evento?
-  versiones_contratos_pdf versiones_contratos_pdf[]
-  invitados               invitados[]
-  mesas                   mesas[]
-  playlist_canciones      playlist_canciones[]
-  mensajes                mensajes[]
+  ofertas                      ofertas?                       @relation(fields: [oferta_id], references: [id])
+  clientes                     clientes?                      @relation(fields: [cliente_id], references: [id])
+  vendedores                   vendedores?                    @relation(fields: [vendedor_id], references: [id])
+  paquetes                     paquetes?                      @relation(fields: [paquete_id], references: [id])
+  salones                      salones?                       @relation(fields: [salon_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  contratos_servicios          contratos_servicios[]
+  pagos                        pagos[]
+  eventos                      eventos?
+  solicitudes_cliente          solicitudes_cliente[]
+  ajustes_evento               ajustes_evento?
+  versiones_contratos_pdf      versiones_contratos_pdf[]
+  invitados                    invitados[]
+  mesas                        mesas[]
+  playlist_canciones           playlist_canciones[]
+  mensajes                     mensajes[]
+  checklist_servicios_externos checklist_servicios_externos[]
 
   @@index([salon_id], map: "idx_contratos_salon")
   @@index([tipo_pago], map: "idx_contratos_tipo_pago")
@@ -286,25 +287,25 @@ model pagos {
 }
 
 model eventos {
-  id                             Int         @id @default(autoincrement())
-  contrato_id                    Int?        @unique
+  id                             Int        @id @default(autoincrement())
+  contrato_id                    Int?       @unique
   cliente_id                     Int?
-  nombre_evento                  String      @db.VarChar(255)
-  fecha_evento                   DateTime    @db.Date
-  hora_inicio                    DateTime    @db.Time(6)
-  hora_fin                       DateTime    @db.Time(6)
+  nombre_evento                  String     @db.VarChar(255)
+  fecha_evento                   DateTime   @db.Date
+  hora_inicio                    DateTime   @db.Time(6)
+  hora_fin                       DateTime   @db.Time(6)
   cantidad_invitados_confirmados Int?
-  estado                         String?     @default("en_proceso") @db.VarChar(50)
+  estado                         String?    @default("en_proceso") @db.VarChar(50)
   detalles_comida                String?
   detalles_bebidas               String?
   detalles_decoracion            String?
   detalles_musica                String?
   seating_chart                  String?
   instrucciones_especiales       String?
-  fecha_creacion                 DateTime?   @default(now()) @db.Timestamp(6)
-  fecha_actualizacion            DateTime?   @default(now()) @db.Timestamp(6)
-  fecha_finalizacion             DateTime?   @db.Timestamp(6)
-  contratos                      contratos?  @relation(fields: [contrato_id], references: [id])
+  fecha_creacion                 DateTime?  @default(now()) @db.Timestamp(6)
+  fecha_actualizacion            DateTime?  @default(now()) @db.Timestamp(6)
+  fecha_finalizacion             DateTime?  @db.Timestamp(6)
+  contratos                      contratos? @relation(fields: [contrato_id], references: [id])
 }
 
 model solicitudes_cliente {
@@ -389,18 +390,18 @@ model versiones_contratos_pdf {
 }
 
 model mesas {
-  id            Int        @id @default(autoincrement())
-  contrato_id   Int
-  numero_mesa   Int
-  capacidad     Int        @default(10)
-  nombre_mesa   String?    @db.VarChar(100)
-  notas         String?
+  id             Int       @id @default(autoincrement())
+  contrato_id    Int
+  numero_mesa    Int
+  capacidad      Int       @default(10)
+  nombre_mesa    String?   @db.VarChar(100)
+  notas          String?
   fecha_creacion DateTime? @default(now()) @db.Timestamp(6)
-  
+
   // Relaciones
-  contratos     contratos  @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
-  invitados     invitados[]
-  
+  contratos contratos   @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+  invitados invitados[]
+
   @@unique([contrato_id, numero_mesa])
 }
 
@@ -439,77 +440,140 @@ model playlist_canciones {
 }
 
 model ajustes_evento {
-  id                          Int         @id @default(autoincrement())
-  contrato_id                 Int         @unique
-  sabor_torta                 String?     @db.VarChar(100)
-  tamano_torta                String?     @db.VarChar(50)
-  tipo_relleno                String?     @db.VarChar(100)
+  id                          Int        @id @default(autoincrement())
+  contrato_id                 Int        @unique
+  sabor_torta                 String?    @db.VarChar(100)
+  tamano_torta                String?    @db.VarChar(50)
+  tipo_relleno                String?    @db.VarChar(100)
   diseno_torta                String?
   notas_torta                 String?
-  estilo_decoracion           String?     @db.VarChar(100)
+  estilo_decoracion           String?    @db.VarChar(100)
   colores_principales         String?
-  flores_preferidas           String?     @db.VarChar(255)
-  tematica                    String?     @db.VarChar(100)
+  flores_preferidas           String?    @db.VarChar(255)
+  tematica                    String?    @db.VarChar(100)
   notas_decoracion            String?
-  tipo_servicio               String?     @db.VarChar(50)
-  entrada                     String?     @db.VarChar(255)
-  plato_principal             String?     @db.VarChar(255)
+  tipo_servicio               String?    @db.VarChar(50)
+  entrada                     String?    @db.VarChar(255)
+  plato_principal             String?    @db.VarChar(255)
   acompanamientos             String?
   opciones_vegetarianas       String?
   opciones_veganas            String?
   restricciones_alimentarias  String?
   bebidas_incluidas           String?
   notas_menu                  String?
-  musica_ceremonial           String?     @db.VarChar(255)
-  primer_baile                String?     @db.VarChar(255)
-  baile_padre_hija            String?     @db.VarChar(255)
-  baile_madre_hijo            String?     @db.VarChar(255)
-  hora_show                   String?     @db.VarChar(50)
+  musica_ceremonial           String?    @db.VarChar(255)
+  primer_baile                String?    @db.VarChar(255)
+  baile_padre_hija            String?    @db.VarChar(255)
+  baile_madre_hijo            String?    @db.VarChar(255)
+  hora_show                   String?    @db.VarChar(50)
   actividades_especiales      String?
-  bailes_adicionales          String?     // JSON string para almacenar array de bailes
-  cancion_sorpresa            String?     @db.VarChar(255)
+  bailes_adicionales          String? // JSON string para almacenar array de bailes
+  cancion_sorpresa            String?    @db.VarChar(255)
   notas_entretenimiento       String?
   momentos_especiales         String?
   poses_especificas           String?
   ubicaciones_fotos           String?
   notas_fotografia            String?
-  invitado_honor              String?     @db.VarChar(255)
-  brindis_especial            String?     @db.VarChar(255)
+  invitado_honor              String?    @db.VarChar(255)
+  brindis_especial            String?    @db.VarChar(255)
   sorpresas_planeadas         String?
   solicitudes_especiales      String?
-  vestido_nina                String?     @db.VarChar(500)
+  vestido_nina                String?    @db.VarChar(500)
   observaciones_adicionales   String?
   items_especiales            String?
-  protocolo                  String?
-  porcentaje_completado       Int         @default(0)
-  fecha_creacion              DateTime    @default(now())
-  fecha_actualizacion         DateTime    @default(now())
-  tipo_decoracion             String?     @db.VarChar(50)
-  cojines_color               String?     @db.VarChar(50)
-  centro_mesa_1               String?     @db.VarChar(50)
-  centro_mesa_2               String?     @db.VarChar(50)
-  centro_mesa_3               String?     @db.VarChar(50)
-  base_color                  String?     @db.VarChar(50)
-  challer_color               String?     @db.VarChar(50)
+  protocolo                   String?
+  porcentaje_completado       Int        @default(0)
+  fecha_creacion              DateTime   @default(now())
+  fecha_actualizacion         DateTime   @default(now())
+  tipo_decoracion             String?    @db.VarChar(50)
+  cojines_color               String?    @db.VarChar(50)
+  centro_mesa_1               String?    @db.VarChar(50)
+  centro_mesa_2               String?    @db.VarChar(50)
+  centro_mesa_3               String?    @db.VarChar(50)
+  base_color                  String?    @db.VarChar(50)
+  challer_color               String?    @db.VarChar(50)
   servilletas                 Json?
-  aros_color                  String?     @db.VarChar(50)
+  aros_color                  String?    @db.VarChar(50)
   aros_nota                   String?
-  runner_tipo                 String?     @db.VarChar(50)
+  runner_tipo                 String?    @db.VarChar(50)
   runner_nota                 String?
-  stage_tipo                  String?     @db.VarChar(50)
-  stage_color_globos          String?     @db.VarChar(100)
+  stage_tipo                  String?    @db.VarChar(50)
+  stage_color_globos          String?    @db.VarChar(100)
   decoracion_premium_detalles String?
-  decoracion_completada       Boolean?    @default(false)
+  decoracion_completada       Boolean?   @default(false)
   estilo_decoracion_otro      String?
-  hora_limosina               DateTime?   @db.Time(6)
+  hora_limosina               DateTime?  @db.Time(6)
   pisos_torta                 Int?
-  sabor_otro                  String?     @db.VarChar(100)
-  diseno_otro                 String?     @db.VarChar(100)
-  hay_teenagers               Boolean?    @default(false)
-  cantidad_teenagers          Int?        @default(0)
-  teenagers_tipo_comida       String?     @db.VarChar(50)
-  teenagers_tipo_pasta        String?     @db.VarChar(50)
-  contratos                   contratos?  @relation(fields: [contrato_id], references: [id])
+  sabor_otro                  String?    @db.VarChar(100)
+  diseno_otro                 String?    @db.VarChar(100)
+  hay_teenagers               Boolean?   @default(false)
+  cantidad_teenagers          Int?       @default(0)
+  teenagers_tipo_comida       String?    @db.VarChar(50)
+  teenagers_tipo_pasta        String?    @db.VarChar(50)
+  contratos                   contratos? @relation(fields: [contrato_id], references: [id])
 
   @@index([tipo_decoracion], map: "idx_ajustes_tipo_decoracion")
 }
+model fotos_servicios {
+  id             Int       @id @default(autoincrement())
+  tipo_servicio  String    @db.VarChar(50) // torta, decoracion, menu, bar
+  nombre         String    @db.VarChar(255)
+  descripcion    String?
+  url_imagen     String    @db.VarChar(500)
+  orden          Int?      @default(0)
+  activo         Boolean?  @default(true)
+  fecha_creacion DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([tipo_servicio], map: "idx_fotos_tipo_servicio")
+  @@index([activo], map: "idx_fotos_activo")
+}
+
+model gerentes {
+  id                  Int       @id @default(autoincrement())
+  nombre_completo     String    @db.VarChar(255)
+  codigo_gerente      String    @unique @db.VarChar(50)
+  email               String    @unique @db.VarChar(255)
+  telefono            String?   @db.VarChar(20)
+  password_hash       String    @db.VarChar(255)
+  activo              Boolean?  @default(true)
+  fecha_registro      DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model managers {
+  id                  Int       @id @default(autoincrement())
+  nombre_completo     String    @db.VarChar(255)
+  codigo_manager      String    @unique @db.VarChar(50)
+  email               String    @unique @db.VarChar(255)
+  telefono            String?   @db.VarChar(20)
+  password_hash       String    @db.VarChar(255)
+  activo              Boolean?  @default(true)
+  fecha_registro      DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  checklist_servicios_externos checklist_servicios_externos[]
+}
+
+model checklist_servicios_externos {
+  id                  Int       @id @default(autoincrement())
+  contrato_id         Int
+  servicio_tipo       String    @db.VarChar(50) // limosina, hora_loca, animador, chef
+  contacto_realizado  Boolean?  @default(false)
+  fecha_contacto      DateTime? @db.Timestamp(6)
+  notas               String?
+  estado              String?   @default("pendiente") @db.VarChar(50) // pendiente, en_proceso, completado
+  manager_id          Int?
+  fecha_creacion      DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  contratos contratos? @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+  managers  managers?  @relation(fields: [manager_id], references: [id])
+
+  @@unique([contrato_id, servicio_tipo])
+  @@index([contrato_id], map: "idx_checklist_contrato")
+  @@index([estado], map: "idx_checklist_estado")
+  @@index([manager_id], map: "idx_checklist_manager")
+}
+

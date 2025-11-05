@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Filter, Edit2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -10,10 +10,37 @@ function Ofertas() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('');
+  const [filtroDias, setFiltroDias] = useState('30'); // Por defecto: últimos 30 días
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [modalPlanPagoOpen, setModalPlanPagoOpen] = useState(false);
   const [ofertaSeleccionada, setOfertaSeleccionada] = useState(null);
+
+  // Calcular fechas basadas en el filtro de días
+  const calcularFechasPorDias = (dias) => {
+    if (dias === 'todos') {
+      return { desde: '', hasta: '' };
+    }
+    const hoy = new Date();
+    const fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const fechaDesde = new Date(hoy);
+    fechaDesde.setDate(fechaDesde.getDate() - parseInt(dias));
+    
+    return {
+      desde: fechaDesde.toISOString().split('T')[0],
+      hasta: fechaHasta.toISOString().split('T')[0]
+    };
+  };
+
+  // Actualizar fechas cuando cambia el filtro de días
+  useEffect(() => {
+    if (filtroDias !== 'personalizado') {
+      const fechas = calcularFechasPorDias(filtroDias);
+      setFechaDesde(fechas.desde);
+      setFechaHasta(fechas.hasta);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtroDias]);
   
   const { data: ofertas, isLoading } = useQuery({
     queryKey: ['ofertas'],
@@ -32,10 +59,17 @@ function Ofertas() {
     
     const matchEstado = !estadoFiltro || oferta.estado === estadoFiltro;
     
-    // Filtro por fecha de creación de la oferta
-    const fechaCreacion = new Date(oferta.fecha_creacion || oferta.created_at);
-    const matchFechaDesde = !fechaDesde || fechaCreacion >= new Date(fechaDesde);
-    const matchFechaHasta = !fechaHasta || fechaCreacion <= new Date(fechaHasta);
+    // Filtro por fecha de creación de la oferta (NO por fecha del evento)
+    if (!oferta.fecha_creacion) {
+      // Si no hay fecha de creación, no filtrar por fecha (mostrar todas)
+      return matchSearch && matchEstado;
+    }
+    
+    const fechaCreacion = new Date(oferta.fecha_creacion);
+    // Comparar solo la fecha (sin hora) para el filtro
+    const fechaCreacionSolo = new Date(fechaCreacion.getFullYear(), fechaCreacion.getMonth(), fechaCreacion.getDate());
+    const matchFechaDesde = !fechaDesde || fechaCreacionSolo >= new Date(fechaDesde + 'T00:00:00');
+    const matchFechaHasta = !fechaHasta || fechaCreacionSolo <= new Date(fechaHasta + 'T23:59:59');
     
     return matchSearch && matchEstado && matchFechaDesde && matchFechaHasta;
   });
@@ -192,15 +226,44 @@ function Ofertas() {
             </select>
           </div>
           {/* Filtros de fecha de creación */}
-          <div className="flex gap-4 items-center">
-            <Calendar className="w-5 h-5 text-gray-400" />
-            <span className="text-sm text-gray-700 font-medium">Fecha de creación:</span>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-700 font-medium">Fecha de creación de la oferta:</span>
+            </div>
+            
+            {/* Selector rápido de días */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Mostrar:</label>
+              <select
+                value={filtroDias}
+                onChange={(e) => {
+                  setFiltroDias(e.target.value);
+                  if (e.target.value === 'todos') {
+                    setFechaDesde('');
+                    setFechaHasta('');
+                  }
+                }}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm bg-white"
+              >
+                <option value="7">Últimos 7 días</option>
+                <option value="30">Últimos 30 días</option>
+                <option value="60">Últimos 60 días</option>
+                <option value="90">Últimos 90 días</option>
+                <option value="todos">Todos</option>
+              </select>
+            </div>
+
+            {/* Filtros de fecha manuales */}
             <div className="flex gap-2 items-center">
               <label className="text-sm text-gray-600">Desde:</label>
               <input
                 type="date"
                 value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
+                onChange={(e) => {
+                  setFechaDesde(e.target.value);
+                  setFiltroDias('personalizado');
+                }}
                 className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
               />
             </div>
@@ -209,7 +272,10 @@ function Ofertas() {
               <input
                 type="date"
                 value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
+                onChange={(e) => {
+                  setFechaHasta(e.target.value);
+                  setFiltroDias('personalizado');
+                }}
                 className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
               />
             </div>
@@ -218,6 +284,7 @@ function Ofertas() {
                 onClick={() => {
                   setFechaDesde('');
                   setFechaHasta('');
+                  setFiltroDias('30'); // Volver al valor por defecto
                 }}
                 className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
               >
@@ -436,4 +503,3 @@ function Ofertas() {
 }
 
 export default Ofertas;
-
