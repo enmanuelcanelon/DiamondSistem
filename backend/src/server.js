@@ -47,7 +47,11 @@ const prisma = new PrismaClient();
 
 // CORS - Permitir peticiones desde el frontend
 const corsOptions = {
-  origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: process.env.CORS_ORIGINS 
+    ? process.env.CORS_ORIGINS.split(',') 
+    : process.env.NODE_ENV === 'production'
+      ? ['http://localhost:5173', 'http://localhost:3000']
+      : '*', // En desarrollo, permitir cualquier origen para pruebas multi-dispositivo
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -159,11 +163,29 @@ const startServer = async () => {
     console.log('✅ Conexión a la base de datos establecida');
 
     // Iniciar el servidor
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
+      // Obtener IP de red para acceso multi-dispositivo
+      const os = require('os');
+      const networkInterfaces = os.networkInterfaces();
+      let localIP = 'localhost';
+      
+      // Buscar IP local (no loopback)
+      for (const interfaceName in networkInterfaces) {
+        const interfaces = networkInterfaces[interfaceName];
+        for (const iface of interfaces) {
+          if (iface.family === 'IPv4' && !iface.internal) {
+            localIP = iface.address;
+            break;
+          }
+        }
+        if (localIP !== 'localhost') break;
+      }
+      
       console.log('\n🚀 ============================================');
       console.log(`   DiamondSistem API v${process.env.APP_VERSION || '1.0.0'}`);
       console.log('   ============================================');
-      console.log(`   🌐 Servidor corriendo en: http://localhost:${PORT}`);
+      console.log(`   🌐 Servidor local: http://localhost:${PORT}`);
+      console.log(`   🌐 Servidor red:   http://${localIP}:${PORT}`);
       console.log(`   📊 Health check: http://localhost:${PORT}/health`);
       console.log(`   📚 API Docs: http://localhost:${PORT}/`);
       console.log(`   🔧 Entorno: ${process.env.NODE_ENV || 'development'}`);
