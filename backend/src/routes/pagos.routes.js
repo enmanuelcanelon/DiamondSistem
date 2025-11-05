@@ -9,6 +9,7 @@ const { authenticate, requireVendedor } = require('../middleware/auth');
 const { validarDatosPago } = require('../utils/validators');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const { calcularRecargoTarjeta } = require('../utils/priceCalculator');
+const { generarPDFContrato } = require('../utils/pdfContrato');
 
 const prisma = new PrismaClient();
 
@@ -129,9 +130,9 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
 /**
  * @route   POST /api/pagos
  * @desc    Registrar nuevo pago
- * @access  Private (Vendedor)
+ * @access  Private (Vendedor o Cliente propietario del contrato)
  */
-router.post('/', authenticate, requireVendedor, async (req, res, next) => {
+router.post('/', authenticate, async (req, res, next) => {
   try {
     const datos = req.body;
 
@@ -140,11 +141,27 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
 
     // Verificar que el contrato existe
     const contrato = await prisma.contratos.findUnique({
-      where: { id: parseInt(datos.contrato_id) }
+      where: { id: parseInt(datos.contrato_id) },
+      include: {
+        clientes: {
+          select: {
+            id: true
+          }
+        }
+      }
     });
 
     if (!contrato) {
       throw new NotFoundError('Contrato no encontrado');
+    }
+
+    // Verificar permisos: vendedor o cliente propietario del contrato
+    if (req.user.tipo === 'cliente') {
+      if (contrato.cliente_id !== req.user.id) {
+        throw new ValidationError('No tienes permiso para registrar pagos en este contrato');
+      }
+    } else if (req.user.tipo !== 'vendedor') {
+      throw new ValidationError('Solo vendedores y clientes pueden registrar pagos');
     }
 
     // Verificar que el contrato no esté completado
@@ -175,41 +192,116 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       monto_total = calculo.montoTotal;
     }
 
-    // Registrar pago (el trigger se encarga de actualizar el contrato)
-    const pago = await prisma.pagos.create({
-      data: {
-        contrato_id: parseInt(datos.contrato_id),
-        monto: monto,
-        metodo_pago: datos.metodo_pago,
-        tipo_tarjeta: datos.tipo_tarjeta || null,
-        recargo_tarjeta: recargo_tarjeta,
-        monto_total: monto_total,
-        numero_referencia: datos.numero_referencia || null,
-        estado: 'completado',
-        notas: datos.notas || null,
-        registrado_por: req.user.id
-      },
-      include: {
-        contratos: {
-          select: {
-            id: true,
-            codigo_contrato: true,
-            total_pagado: true,
-            saldo_pendiente: true,
-            estado_pago: true
-          }
+    // Registrar pago y generar nueva versión del contrato
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Registrar pago (el trigger se encarga de actualizar el contrato)
+      const pago = await tx.pagos.create({
+        data: {
+          contrato_id: parseInt(datos.contrato_id),
+          monto: monto,
+          metodo_pago: datos.metodo_pago,
+          tipo_tarjeta: datos.tipo_tarjeta || null,
+          recargo_tarjeta: recargo_tarjeta,
+          monto_total: monto_total,
+          numero_referencia: datos.numero_referencia || null,
+          estado: 'completado',
+          notas: datos.notas || null,
+          registrado_por: req.user.tipo === 'vendedor' ? req.user.id : null
         }
+      });
+
+      // Obtener el contrato actualizado después del trigger
+      const contratoActualizado = await tx.contratos.findUnique({
+        where: { id: parseInt(datos.contrato_id) },
+        include: {
+          clientes: true,
+          vendedores: true,
+          paquetes: true,
+          ofertas: {
+            include: {
+              temporadas: true,
+            },
+          },
+          contratos_servicios: {
+            include: {
+              servicios: true,
+            },
+          },
+        },
+      });
+
+      // Obtener el próximo número de versión
+      const ultimaVersion = await tx.versiones_contratos_pdf.findFirst({
+        where: { contrato_id: parseInt(datos.contrato_id) },
+        orderBy: { version_numero: 'desc' },
+      });
+
+      const nuevoNumeroVersion = ultimaVersion ? ultimaVersion.version_numero + 1 : 1;
+
+      // Generar el PDF (se ejecuta fuera de la transacción)
+      let pdfBuffer = null;
+      try {
+        const doc = generarPDFContrato(contratoActualizado);
+        const chunks = [];
+        
+        doc.on('data', (chunk) => chunks.push(chunk));
+        
+        await new Promise((resolve, reject) => {
+          doc.on('end', resolve);
+          doc.on('error', reject);
+          doc.end();
+        });
+
+        pdfBuffer = Buffer.concat(chunks);
+      } catch (pdfError) {
+        console.error('Error generando PDF:', pdfError);
+        // No fallar la transacción si el PDF falla
       }
+
+      // Crear descripción del cambio
+      const descripcionCambio = `Pago registrado: $${monto_total.toFixed(2)} (${datos.metodo_pago}${datos.tipo_tarjeta ? ` - ${datos.tipo_tarjeta}` : ''}). Total pagado: $${parseFloat(contratoActualizado.total_pagado).toFixed(2)}, Saldo pendiente: $${parseFloat(contratoActualizado.saldo_pendiente).toFixed(2)}`;
+
+      // Guardar la nueva versión del contrato
+      await tx.versiones_contratos_pdf.create({
+        data: {
+          contrato_id: parseInt(datos.contrato_id),
+          version_numero: nuevoNumeroVersion,
+          total_contrato: contratoActualizado.total_contrato,
+          cantidad_invitados: contratoActualizado.cantidad_invitados,
+          motivo_cambio: descripcionCambio,
+          cambios_detalle: {
+            tipo_cambio: 'pago',
+            pago_id: pago.id,
+            monto: monto_total,
+            metodo_pago: datos.metodo_pago,
+            total_pagado: parseFloat(contratoActualizado.total_pagado),
+            saldo_pendiente: parseFloat(contratoActualizado.saldo_pendiente),
+            estado_pago: contratoActualizado.estado_pago,
+          },
+          pdf_contenido: pdfBuffer,
+          generado_por: req.user.tipo === 'vendedor' ? req.user.id : null,
+        },
+      });
+
+      return {
+        pago,
+        contrato: contratoActualizado,
+        version_numero: nuevoNumeroVersion
+      };
     });
 
     res.status(201).json({
       success: true,
-      message: 'Pago registrado exitosamente',
-      pago,
+      message: 'Pago registrado exitosamente. Nueva versión del contrato generada.',
+      pago: resultado.pago,
       contrato_actualizado: {
-        total_pagado: pago.contratos.total_pagado,
-        saldo_pendiente: pago.contratos.saldo_pendiente,
-        estado_pago: pago.contratos.estado_pago
+        total_pagado: parseFloat(resultado.contrato.total_pagado),
+        saldo_pendiente: parseFloat(resultado.contrato.saldo_pendiente),
+        estado_pago: resultado.contrato.estado_pago
+      },
+      version_contrato: {
+        numero: resultado.version_numero,
+        mensaje: `Versión ${resultado.version_numero} del contrato generada automáticamente`
       }
     });
 
@@ -221,21 +313,19 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
 /**
  * @route   GET /api/pagos/contrato/:contrato_id
  * @desc    Obtener pagos de un contrato específico
- * @access  Private (Vendedor)
+ * @access  Private (Vendedor o Cliente propietario del contrato)
  */
-router.get('/contrato/:contrato_id', authenticate, requireVendedor, async (req, res, next) => {
+router.get('/contrato/:contrato_id', authenticate, async (req, res, next) => {
   try {
     const { contrato_id } = req.params;
 
-    const pagos = await prisma.pagos.findMany({
-      where: { contrato_id: parseInt(contrato_id) },
-      orderBy: { fecha_pago: 'desc' }
-    });
-
-    // Obtener info del contrato
+    // Verificar que el contrato existe y obtener información de permisos
     const contrato = await prisma.contratos.findUnique({
       where: { id: parseInt(contrato_id) },
       select: {
+        id: true,
+        cliente_id: true,
+        vendedor_id: true,
         total_contrato: true,
         total_pagado: true,
         saldo_pendiente: true,
@@ -243,10 +333,33 @@ router.get('/contrato/:contrato_id', authenticate, requireVendedor, async (req, 
       }
     });
 
+    if (!contrato) {
+      throw new NotFoundError('Contrato no encontrado');
+    }
+
+    // Verificar permisos: vendedor o cliente propietario del contrato
+    if (req.user.tipo === 'cliente') {
+      if (contrato.cliente_id !== req.user.id) {
+        throw new ValidationError('No tienes permiso para ver los pagos de este contrato');
+      }
+    } else if (req.user.tipo !== 'vendedor') {
+      throw new ValidationError('Solo vendedores y clientes pueden ver los pagos');
+    }
+
+    const pagos = await prisma.pagos.findMany({
+      where: { contrato_id: parseInt(contrato_id) },
+      orderBy: { fecha_pago: 'desc' }
+    });
+
     res.json({
       success: true,
       count: pagos.length,
-      contrato,
+      contrato: {
+        total_contrato: contrato.total_contrato,
+        total_pagado: contrato.total_pagado,
+        saldo_pendiente: contrato.saldo_pendiente,
+        estado_pago: contrato.estado_pago
+      },
       pagos
     });
 

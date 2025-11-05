@@ -118,6 +118,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
           }
         },
         paquetes: true,
+        salones: true,
         ofertas: {
           include: {
             temporadas: true

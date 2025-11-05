@@ -16,7 +16,16 @@ const prisma = new PrismaClient();
  */
 router.post('/invitados', authenticate, async (req, res) => {
   try {
-    const { contrato_id, cantidad_invitados, detalles_solicitud } = req.body;
+    const { contrato_id, invitados_adicionales, cantidad_invitados, detalles_solicitud } = req.body;
+
+    // Aceptar tanto invitados_adicionales como cantidad_invitados (para compatibilidad)
+    const cantidadInvitados = invitados_adicionales || cantidad_invitados;
+
+    if (!cantidadInvitados || cantidadInvitados <= 0) {
+      return res.status(400).json({ 
+        message: 'La cantidad de invitados adicionales debe ser mayor a 0' 
+      });
+    }
 
     // Verificar que el contrato existe y pertenece al cliente autenticado
     const contrato = await prisma.contratos.findFirst({
@@ -26,11 +35,26 @@ router.post('/invitados', authenticate, async (req, res) => {
       },
       include: {
         clientes: true,
+        salones: true,
       },
     });
 
     if (!contrato) {
       return res.status(404).json({ message: 'Contrato no encontrado' });
+    }
+
+    // Validar capacidad máxima del salón si existe
+    if (contrato.salones?.capacidad_maxima) {
+      const capacidadMaxima = contrato.salones.capacidad_maxima;
+      const cantidadActual = contrato.cantidad_invitados || 0;
+      const cantidadTotal = cantidadActual + parseInt(cantidadInvitados);
+      
+      if (cantidadTotal > capacidadMaxima) {
+        return res.status(400).json({
+          message: `La capacidad máxima del salón es ${capacidadMaxima} invitados. No se puede crear esta solicitud.`,
+          error: 'Excede capacidad máxima del salón'
+        });
+      }
     }
 
     // Crear solicitud
@@ -39,7 +63,7 @@ router.post('/invitados', authenticate, async (req, res) => {
         contrato_id: parseInt(contrato_id),
         cliente_id: contrato.cliente_id,
         tipo_solicitud: 'invitados',
-        invitados_adicionales: parseInt(cantidad_invitados),
+        invitados_adicionales: parseInt(cantidadInvitados),
         detalles_solicitud,
         estado: 'pendiente',
       },
@@ -287,7 +311,11 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
         estado: 'pendiente',
       },
       include: {
-        contratos: true,
+        contratos: {
+          include: {
+            salones: true,
+          },
+        },
         servicios: true,
       },
     });
@@ -303,7 +331,32 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
     
     if (solicitud.tipo_solicitud === 'invitados') {
       const invitadosAdicionales = solicitud.invitados_adicionales || 0;
+      
+      // Contar invitados ya agregados directamente desde "Asignación de Mesas"
+      const invitadosAgregadosDirectamente = await prisma.invitados.count({
+        where: {
+          contrato_id: solicitud.contrato_id,
+        },
+      });
+      
+      // El número de invitados en el contrato debe ser igual o menor al número de invitados agregados directamente
+      // Si hay más invitados agregados directamente que en cantidad_invitados, la solicitud es válida
+      // Si cantidad_invitados ya incluye todos los invitados agregados, entonces invitados_adicionales > 0 es válido
       hayCambiosReales = invitadosAdicionales > 0;
+      
+      // Validación adicional: verificar capacidad del salón si existe
+      if (solicitud.contratos.salones?.capacidad_maxima) {
+        const capacidadMaxima = solicitud.contratos.salones.capacidad_maxima;
+        const cantidadActual = solicitud.contratos.cantidad_invitados || 0;
+        const cantidadTotal = cantidadActual + invitadosAdicionales;
+        
+        if (cantidadTotal > capacidadMaxima) {
+          return res.status(400).json({
+            message: `La capacidad máxima del salón es ${capacidadMaxima} invitados. No se puede aprobar esta solicitud.`,
+            error: 'Excede capacidad máxima del salón'
+          });
+        }
+      }
     } else if (solicitud.tipo_solicitud === 'servicio') {
       const costoAdicional = parseFloat(solicitud.costo_adicional) || 0;
       hayCambiosReales = costoAdicional > 0;
@@ -343,17 +396,37 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
       // 2. Actualizar el contrato según el tipo de solicitud
       if (solicitud.tipo_solicitud === 'invitados') {
         // Agregar invitados al contrato
-        const cantidadAnterior = solicitud.contratos.cantidad_invitados;
-        const cantidadNueva = cantidadAnterior + (solicitud.invitados_adicionales || 0);
+        const cantidadAnterior = solicitud.contratos.cantidad_invitados || 0;
+        const invitadosAdicionales = parseInt(solicitud.invitados_adicionales) || 0;
         
-        await tx.contratos.update({
+        if (invitadosAdicionales <= 0) {
+          throw new Error('La cantidad de invitados adicionales debe ser mayor a 0');
+        }
+        
+        const cantidadNueva = cantidadAnterior + invitadosAdicionales;
+        
+        console.log('🔍 Aprobando solicitud de invitados:', {
+          solicitudId: solicitud.id,
+          cantidadAnterior,
+          invitadosAdicionales,
+          cantidadNueva,
+          contratoId: solicitud.contrato_id
+        });
+        
+        // Actualizar cantidad_invitados en el contrato
+        const contratoActualizado = await tx.contratos.update({
           where: { id: solicitud.contrato_id },
           data: {
             cantidad_invitados: cantidadNueva,
           },
         });
 
-        descripcionCambio = `Se agregaron ${solicitud.invitados_adicionales} invitados adicionales. Antes: ${cantidadAnterior}, Ahora: ${cantidadNueva}`;
+        console.log('✅ Contrato actualizado:', {
+          contratoId: contratoActualizado.id,
+          cantidadInvitados: contratoActualizado.cantidad_invitados
+        });
+
+        descripcionCambio = `Se agregaron ${invitadosAdicionales} invitado(s) adicional(es). Antes: ${cantidadAnterior}, Ahora: ${cantidadNueva}`;
         
       } else if (solicitud.tipo_solicitud === 'servicio') {
         // Obtener el servicio completo

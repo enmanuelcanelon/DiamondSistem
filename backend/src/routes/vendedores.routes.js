@@ -110,7 +110,8 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
       ofertasRechazadas,
       totalContratos,
       contratosActivos,
-      contratosPagados
+      contratosPagados,
+      contratosVendedor
     ] = await Promise.all([
       prisma.clientes.count({ where: { vendedor_id: parseInt(id) } }),
       prisma.ofertas.count({ where: { vendedor_id: parseInt(id) } }),
@@ -119,8 +120,23 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
       prisma.ofertas.count({ where: { vendedor_id: parseInt(id), estado: 'rechazada' } }),
       prisma.contratos.count({ where: { vendedor_id: parseInt(id) } }),
       prisma.contratos.count({ where: { vendedor_id: parseInt(id), estado: 'activo' } }),
-      prisma.contratos.count({ where: { vendedor_id: parseInt(id), estado_pago: 'completado' } })
+      prisma.contratos.count({ where: { vendedor_id: parseInt(id), estado_pago: 'completado' } }),
+      prisma.contratos.findMany({
+        where: { vendedor_id: parseInt(id) },
+        select: {
+          total_contrato: true
+        }
+      })
     ]);
+
+    // Calcular total de ventas sumando todos los contratos
+    const totalVentas = contratosVendedor.reduce((sum, contrato) => {
+      return sum + parseFloat(contrato.total_contrato || 0);
+    }, 0);
+
+    // Calcular total de comisiones (3% del total de ventas)
+    const comisionPorcentaje = parseFloat(vendedor.comision_porcentaje || 3.0);
+    const totalComisiones = totalVentas * (comisionPorcentaje / 100);
 
     // Calcular tasa de conversión
     const tasaConversion = totalOfertas > 0 
@@ -151,9 +167,9 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
           pagados_completo: contratosPagados
         },
         finanzas: {
-          total_ventas: parseFloat(vendedor.total_ventas),
-          total_comisiones: parseFloat(vendedor.total_comisiones),
-          comision_porcentaje: parseFloat(vendedor.comision_porcentaje)
+          total_ventas: parseFloat(totalVentas.toFixed(2)),
+          total_comisiones: parseFloat(totalComisiones.toFixed(2)),
+          comision_porcentaje: comisionPorcentaje
         }
       }
     });
