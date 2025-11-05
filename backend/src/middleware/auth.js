@@ -3,7 +3,10 @@
  */
 
 const jwt = require('jsonwebtoken');
+const { PrismaClient } = require('@prisma/client');
 const { UnauthorizedError } = require('./errorHandler');
+
+const prisma = new PrismaClient();
 
 /**
  * Verificar token JWT
@@ -21,6 +24,42 @@ const authenticate = async (req, res, next) => {
 
     // Verificar token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Si es cliente, validar que el código de acceso no haya expirado
+    if (decoded.tipo === 'cliente' && decoded.codigoAcceso) {
+      const contrato = await prisma.contratos.findUnique({
+        where: { codigo_acceso_cliente: decoded.codigoAcceso },
+        select: {
+          estado: true,
+          fecha_evento: true
+        }
+      });
+
+      if (!contrato) {
+        throw new UnauthorizedError('Código de acceso inválido');
+      }
+
+      // Verificar que el contrato esté activo
+      if (contrato.estado !== 'activo') {
+        throw new UnauthorizedError('El contrato no está activo');
+      }
+
+      // Validar que el código no haya expirado (30 días después del evento)
+      if (contrato.fecha_evento) {
+        const fechaEvento = new Date(contrato.fecha_evento);
+        const fechaActual = new Date();
+        const diasDespuesEvento = 30;
+        
+        const fechaExpiracion = new Date(fechaEvento);
+        fechaExpiracion.setDate(fechaExpiracion.getDate() + diasDespuesEvento);
+        
+        if (fechaActual > fechaExpiracion) {
+          throw new UnauthorizedError(
+            `El código de acceso ha expirado. El evento fue el ${fechaEvento.toLocaleDateString('es-ES')} y el código expiró el ${fechaExpiracion.toLocaleDateString('es-ES')}. Por favor, contacta a tu vendedor para obtener un nuevo código.`
+          );
+        }
+      }
+    }
 
     // Agregar usuario al request
     req.user = {

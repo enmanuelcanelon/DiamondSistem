@@ -74,10 +74,16 @@ router.post('/invitados', authenticate, async (req, res) => {
       solicitud,
     });
   } catch (error) {
-    console.error('Error al crear solicitud de invitados:', error);
+    logger.error('Error al crear solicitud de invitados', {
+      error: error.message,
+      stack: error.stack,
+      contrato_id: req.body.contrato_id,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     res.status(500).json({
       message: 'Error al crear solicitud',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
     });
   }
 });
@@ -148,10 +154,16 @@ router.post('/servicio', authenticate, async (req, res) => {
       solicitud,
     });
   } catch (error) {
-    console.error('Error al crear solicitud de servicio:', error);
+    logger.error('Error al crear solicitud de servicio', {
+      error: error.message,
+      stack: error.stack,
+      contrato_id: req.body.contrato_id,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     res.status(500).json({
       message: 'Error al crear solicitud',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
     });
   }
 });
@@ -178,10 +190,16 @@ router.get('/contrato/:contratoId', authenticate, async (req, res) => {
 
     res.json({ solicitudes });
   } catch (error) {
-    console.error('Error al obtener solicitudes:', error);
+    logger.error('Error al obtener solicitudes', {
+      error: error.message,
+      stack: error.stack,
+      contrato_id: req.params.contratoId,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     res.status(500).json({
       message: 'Error al obtener solicitudes',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
     });
   }
 });
@@ -225,10 +243,15 @@ router.get('/vendedor/pendientes', authenticate, async (req, res) => {
       total: solicitudes.length,
     });
   } catch (error) {
-    console.error('Error al obtener solicitudes pendientes:', error);
+    logger.error('Error al obtener solicitudes pendientes', {
+      error: error.message,
+      stack: error.stack,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     res.status(500).json({
       message: 'Error al obtener solicitudes',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
     });
   }
 });
@@ -281,10 +304,15 @@ router.get('/vendedor/todas', authenticate, async (req, res) => {
       total: solicitudes.length,
     });
   } catch (error) {
-    console.error('Error al obtener solicitudes:', error);
+    logger.error('Error al obtener solicitudes', {
+      error: error.message,
+      stack: error.stack,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     res.status(500).json({
       message: 'Error al obtener solicitudes',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
     });
   }
 });
@@ -405,25 +433,12 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
         
         const cantidadNueva = cantidadAnterior + invitadosAdicionales;
         
-        console.log('🔍 Aprobando solicitud de invitados:', {
-          solicitudId: solicitud.id,
-          cantidadAnterior,
-          invitadosAdicionales,
-          cantidadNueva,
-          contratoId: solicitud.contrato_id
-        });
-        
         // Actualizar cantidad_invitados en el contrato
         const contratoActualizado = await tx.contratos.update({
           where: { id: solicitud.contrato_id },
           data: {
             cantidad_invitados: cantidadNueva,
           },
-        });
-
-        console.log('✅ Contrato actualizado:', {
-          contratoId: contratoActualizado.id,
-          cantidadInvitados: contratoActualizado.cantidad_invitados
         });
 
         descripcionCambio = `Se agregaron ${invitadosAdicionales} invitado(s) adicional(es). Antes: ${cantidadAnterior}, Ahora: ${cantidadNueva}`;
@@ -522,7 +537,12 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
 
           pdfBuffer = Buffer.concat(chunks);
         } catch (pdfError) {
-          console.error('Error generando PDF:', pdfError);
+          logger.error('Error generando PDF', {
+            error: pdfError.message,
+            stack: pdfError.stack,
+            contrato_id: solicitud.contrato_id,
+            solicitud_id: solicitud.id
+          });
           // No fallar la transacción si el PDF falla
         }
 
@@ -568,10 +588,16 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
       solicitud: resultado,
     });
   } catch (error) {
-    console.error('Error al aprobar solicitud:', error);
+    logger.error('Error al aprobar solicitud', {
+      error: error.message,
+      stack: error.stack,
+      solicitud_id: req.params.id,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     res.status(500).json({
       message: 'Error al aprobar solicitud',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
     });
   }
 });
@@ -645,10 +671,16 @@ router.put('/:id/rechazar', authenticate, async (req, res) => {
       solicitud: resultado,
     });
   } catch (error) {
-    console.error('Error al rechazar solicitud:', error);
+    logger.error('Error al rechazar solicitud', {
+      error: error.message,
+      stack: error.stack,
+      solicitud_id: req.params.id,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     res.status(500).json({
       message: 'Error al rechazar solicitud',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
     });
   }
 });
@@ -698,10 +730,15 @@ router.get('/vendedor/estadisticas', authenticate, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error al obtener estadísticas:', error);
+    logger.error('Error al obtener estadísticas', {
+      error: error.message,
+      stack: error.stack,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     res.status(500).json({
       message: 'Error al obtener estadísticas',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
     });
   }
 });

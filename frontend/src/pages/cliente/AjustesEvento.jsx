@@ -539,6 +539,11 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
             <div className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg bg-gray-50 text-gray-700 font-medium">
               🥗 {datos.entrada}
             </div>
+            {datos.entrada === 'Ensalada César' && (
+              <p className="text-xs text-gray-600 mt-2 italic">
+                💡 Incluye Pan y Mantequilla
+              </p>
+            )}
           </div>
 
           {/* Plato Principal */}
@@ -584,7 +589,6 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
               </option>
               <option value="Verduras al Vapor">Verduras al Vapor</option>
               <option value="Plátano Maduro">Plátano Maduro</option>
-              <option value="Pan y Mantequilla">Pan y Mantequilla</option>
             </select>
           </div>
         </div>

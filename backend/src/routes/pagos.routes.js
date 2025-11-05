@@ -22,9 +22,24 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const { contrato_id, metodo_pago, fecha_desde, fecha_hasta } = req.query;
 
-    const where = {};
+    // CRÍTICO: Filtrar pagos solo de contratos del vendedor autenticado
+    const where = {
+      contratos: {
+        vendedor_id: req.user.id // Solo pagos de contratos del vendedor
+      }
+    };
 
     if (contrato_id) {
+      // Verificar que el contrato pertenece al vendedor
+      const contrato = await prisma.contratos.findUnique({
+        where: { id: parseInt(contrato_id) },
+        select: { vendedor_id: true }
+      });
+
+      if (!contrato || contrato.vendedor_id !== req.user.id) {
+        throw new ValidationError('No tienes acceso a este contrato');
+      }
+
       where.contrato_id = parseInt(contrato_id);
     }
 
@@ -254,7 +269,11 @@ router.post('/', authenticate, async (req, res, next) => {
 
         pdfBuffer = Buffer.concat(chunks);
       } catch (pdfError) {
-        console.error('Error generando PDF:', pdfError);
+        logger.error('Error generando PDF', {
+          error: pdfError.message,
+          stack: pdfError.stack,
+          contrato_id: parseInt(datos.contrato_id)
+        });
         // No fallar la transacción si el PDF falla
       }
 

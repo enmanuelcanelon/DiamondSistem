@@ -393,112 +393,9 @@ function AsignacionMesas() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Panel Izquierdo: Invitados Sin Asignar - Solo para vendedores */}
-        {esVendedor && (
-          <div className="lg:col-span-1 space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-600" />
-                Invitados ({invitadosSinMesa.length})
-              </h2>
-              {puedeEditar && (
-                <button
-                  onClick={() => setMostrarFormInvitado(!mostrarFormInvitado)}
-                  className="p-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
-                  title="Agregar Invitado"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-
-            {/* Formulario para agregar invitado */}
-            {mostrarFormInvitado && puedeEditar && (
-              <form onSubmit={handleCrearInvitado} className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
-                <input
-                  type="text"
-                  placeholder="Nombre completo *"
-                  value={nuevoInvitado.nombre_completo}
-                  onChange={(e) => setNuevoInvitado({ ...nuevoInvitado, nombre_completo: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                  required
-                />
-                <select
-                  value={nuevoInvitado.tipo}
-                  onChange={(e) => setNuevoInvitado({ ...nuevoInvitado, tipo: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                >
-                  <option value="adulto">Adulto</option>
-                  <option value="niño">Niño</option>
-                  <option value="bebe">Bebé</option>
-                </select>
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={crearInvitadoMutation.isPending}
-                    className="flex-1 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm disabled:opacity-50"
-                  >
-                    {crearInvitadoMutation.isPending ? 'Guardando...' : 'Guardar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMostrarFormInvitado(false)}
-                    className="px-3 py-2 border rounded-lg hover:bg-gray-100 text-sm"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Lista de invitados sin mesa */}
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {loadingInvitados ? (
-                <p className="text-gray-500 text-sm text-center py-8">Cargando invitados...</p>
-              ) : invitadosSinMesa.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-8">
-                  Todos los invitados están asignados a mesas
-                </p>
-              ) : (
-                invitadosSinMesa.map((invitado) => (
-                  <div
-                    key={invitado.id}
-                    className="p-3 border rounded-lg hover:border-indigo-300 transition bg-white group"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 text-sm">{invitado.nombre_completo}</p>
-                        <p className="text-xs text-gray-500">{invitado.tipo}</p>
-                      </div>
-                      {puedeEditar && (
-                        <button
-                          onClick={() => handleEliminarInvitado(invitado.id)}
-                          className="p-1 rounded text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
-                          title="Eliminar invitado"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                    
-                    {/* Asignación se hace haciendo clic en las mesas del gráfico */}
-                    {puedeEditar && (
-                      <p className="text-xs text-gray-500 mt-2 italic">
-                        Haz clic en una mesa del gráfico para asignar
-                      </p>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-        )}
-
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         {/* Panel Central: Gráfico Visual de Distribución */}
-        <div className={esVendedor ? "lg:col-span-2 space-y-4" : "lg:col-span-3 space-y-4"}>
+        <div className="lg:col-span-1 space-y-4">
           {/* Vista Visual de Distribución - Mostrar si hay salón o si hay mesas */}
           {(salonNombre || salonId) && (
             <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -553,40 +450,6 @@ function AsignacionMesas() {
                     />
                   </div>
                   
-                  {/* Solo mostrar información si es vendedor, no para clientes */}
-                  {esVendedor && (
-                    <div className="p-4 bg-white border-t border-gray-200">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="font-semibold text-gray-700">Mesas Conteles:</span>
-                          <span className="ml-2 text-gray-600">
-                            {configSalon.mesasConteles ? 'Sí' : 'No'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="font-semibold text-gray-700">Mover Mesas:</span>
-                          <span className="ml-2 text-gray-600">
-                            {configSalon.moverMesas ? 'Sí' : 'No'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="font-semibold text-gray-700">Sillas por Mesa:</span>
-                          <span className="ml-2 text-gray-600">{configSalon.sillasPorMesa}</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold text-gray-700">Capacidad Total:</span>
-                          <span className="ml-2 text-gray-600">
-                            {mesas?.reduce((total, mesa) => total + mesa.capacidad, 0) || 0} invitados
-                          </span>
-                        </div>
-                      </div>
-                      {puedeEditar && invitadosSinMesa.length > 0 && (
-                        <p className="text-sm text-gray-600 mt-3 italic">
-                          💡 Haz clic en las mesas numeradas en el plano para asignar invitados
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
             </div>

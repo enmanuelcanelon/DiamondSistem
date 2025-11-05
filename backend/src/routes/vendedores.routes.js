@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticate, requireVendedor } = require('../middleware/auth');
-const { NotFoundError } = require('../middleware/errorHandler');
+const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 
 const prisma = new PrismaClient();
 
@@ -188,6 +188,11 @@ router.get('/:id/clientes', authenticate, requireVendedor, async (req, res, next
   try {
     const { id } = req.params;
 
+    // CRÍTICO: Verificar que el vendedor solo vea sus propios clientes
+    if (parseInt(id) !== req.user.id) {
+      throw new ValidationError('No tienes permiso para ver clientes de otro vendedor');
+    }
+
     const clientes = await prisma.clientes.findMany({
       where: { vendedor_id: parseInt(id) },
       include: {
@@ -220,6 +225,11 @@ router.get('/:id/clientes', authenticate, requireVendedor, async (req, res, next
 router.get('/:id/contratos', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // CRÍTICO: Verificar que el vendedor solo vea sus propios contratos
+    if (parseInt(id) !== req.user.id) {
+      throw new ValidationError('No tienes permiso para ver contratos de otro vendedor');
+    }
 
     const contratos = await prisma.contratos.findMany({
       where: { vendedor_id: parseInt(id) },

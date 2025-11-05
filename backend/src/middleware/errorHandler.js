@@ -2,13 +2,17 @@
  * Middleware para manejo centralizado de errores
  */
 
+const logger = require('../utils/logger');
+
 const errorHandler = (err, req, res, next) => {
-  // Log del error (en producción usar un servicio de logging profesional)
-  console.error('❌ Error:', {
+  // Log del error con logger estructurado
+  logger.error('Error en la aplicación', {
     message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    stack: err.stack,
     path: req.path,
     method: req.method,
+    ip: req.ip || req.connection.remoteAddress,
+    userAgent: req.get('user-agent'),
     timestamp: new Date().toISOString()
   });
 

@@ -18,14 +18,12 @@ const prisma = new PrismaClient();
  */
 router.get('/', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { vendedor_id, tipo_evento, search } = req.query;
+    const { tipo_evento, search } = req.query;
 
-    const where = {};
-    
-    // Filtro por vendedor
-    if (vendedor_id) {
-      where.vendedor_id = parseInt(vendedor_id);
-    }
+    // CRÍTICO: Forzar que el vendedor solo vea SUS clientes
+    const where = {
+      vendedor_id: req.user.id // Solo clientes del vendedor autenticado
+    };
 
     // Filtro por tipo de evento
     if (tipo_evento) {

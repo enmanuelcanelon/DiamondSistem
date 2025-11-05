@@ -181,14 +181,19 @@ const validarDatosSolicitud = (datos) => {
 };
 
 /**
- * Sanitizar string (prevenir XSS básico)
+ * Sanitizar string (prevenir XSS y SQL injection)
  */
 const sanitizarString = (str) => {
   if (typeof str !== 'string') return str;
   
   return str
     .trim()
+    // Eliminar caracteres peligrosos para XSS
     .replace(/[<>]/g, '') // Eliminar < y >
+    .replace(/javascript:/gi, '') // Eliminar javascript:
+    .replace(/on\w+=/gi, '') // Eliminar event handlers (onclick, onerror, etc.)
+    // Eliminar caracteres peligrosos para SQL (aunque Prisma lo previene, es buena práctica)
+    .replace(/['";\\]/g, '') // Eliminar comillas y punto y coma
     .substring(0, 5000); // Limitar longitud
 };
 

@@ -176,6 +176,25 @@ function SolicitarCambios() {
       return;
     }
 
+    // Validar capacidad máxima del salón
+    if (contrato?.salones?.capacidad_maxima) {
+      const capacidadMaxima = contrato.salones.capacidad_maxima;
+      const cantidadActual = contrato.cantidad_invitados || 0;
+      const cantidadTotal = cantidadActual + cantidad;
+      
+      if (cantidadTotal > capacidadMaxima) {
+        toast.error(
+          `⚠️ La capacidad máxima del salón es ${capacidadMaxima} invitados\n\n` +
+          `Invitados actuales: ${cantidadActual}\n` +
+          `Invitados solicitados: ${cantidad}\n` +
+          `Total: ${cantidadTotal}\n\n` +
+          `Solo puedes solicitar hasta ${capacidadMaxima - cantidadActual} invitado(s) adicional(es).`,
+          { duration: 8000 }
+        );
+        return;
+      }
+    }
+
     crearSolicitudMutation.mutate({
       contrato_id: contratoId,
       cliente_id: user.id,

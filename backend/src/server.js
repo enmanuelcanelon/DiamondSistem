@@ -8,7 +8,13 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const { PrismaClient } = require('@prisma/client');
+const path = require('path');
+const fs = require('fs');
+
+// Logger estructurado
+const logger = require('./utils/logger');
 
 // Importar rutas
 const vendedoresRoutes = require('./routes/vendedores.routes');
@@ -33,6 +39,13 @@ const authRoutes = require('./routes/auth.routes');
 // Middleware personalizado
 const { errorHandler } = require('./middleware/errorHandler');
 const { requestLogger } = require('./middleware/logger');
+const { generalLimiter, authLimiter } = require('./middleware/security');
+
+// Crear directorio de logs si no existe
+const logsDir = path.join(__dirname, '../logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
 // Inicializar Express
 const app = express();
@@ -42,28 +55,106 @@ const PORT = process.env.PORT || 5000;
 const prisma = new PrismaClient();
 
 // ============================================
-// MIDDLEWARE GLOBAL
+// MIDDLEWARE GLOBAL DE SEGURIDAD
 // ============================================
 
-// CORS - Permitir peticiones desde el frontend
+// Helmet - Headers de seguridad HTTP
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Permitir PDFs embebidos
+}));
+
+// CORS - Configuración segura
 const corsOptions = {
-  origin: process.env.CORS_ORIGINS 
-    ? process.env.CORS_ORIGINS.split(',') 
-    : process.env.NODE_ENV === 'production'
-      ? ['http://localhost:5173', 'http://localhost:3000']
-      : '*', // En desarrollo, permitir cualquier origen para pruebas multi-dispositivo
+  origin: (origin, callback) => {
+    // En desarrollo, permitir localhost y IPs locales para pruebas multi-dispositivo
+    if (process.env.NODE_ENV === 'development') {
+      const allowedOrigins = process.env.CORS_ORIGINS 
+        ? process.env.CORS_ORIGINS.split(',')
+        : [
+            'http://localhost:5173',
+            'http://localhost:3000',
+            'http://127.0.0.1:5173',
+            'http://127.0.0.1:3000',
+            // Permitir IPs locales (10.x.x.x, 192.168.x.x)
+            /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
+            /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
+          ];
+      
+      // Si no hay origin (misma origen, mobile apps, etc.), permitir
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Verificar si el origen está permitido
+      const isAllowed = allowedOrigins.some(allowed => {
+        if (allowed instanceof RegExp) {
+          return allowed.test(origin);
+        }
+        return allowed === origin;
+      });
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        logger.warn(`CORS bloqueado: ${origin}`);
+        callback(new Error('No permitido por CORS'));
+      }
+    } else {
+      // En producción, solo orígenes específicos
+      const allowedOrigins = process.env.CORS_ORIGINS 
+        ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+        : ['http://localhost:5173'];
+      
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        logger.warn(`CORS bloqueado en producción: ${origin}`);
+        callback(new Error('No permitido por CORS'));
+      }
+    }
+  },
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 };
+
 app.use(cors(corsOptions));
 
-// Body parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Rate limiting general
+app.use(generalLimiter);
 
-// Logger de requests (solo en desarrollo)
+// Body parser con límites de tamaño
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Logger de requests
 if (process.env.NODE_ENV === 'development') {
   app.use(requestLogger);
+} else {
+  // En producción, usar logger estructurado
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.http(`${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`, {
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        duration,
+        ip: req.ip || req.connection.remoteAddress,
+      });
+    });
+    next();
+  });
 }
 
 // ============================================
@@ -118,7 +209,8 @@ app.get('/health', async (req, res) => {
 });
 
 // Rutas de la API
-app.use('/api/auth', authRoutes);
+// Rate limiting estricto para autenticación
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/vendedores', vendedoresRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/paquetes', paquetesRoutes);
@@ -160,7 +252,7 @@ const startServer = async () => {
   try {
     // Verificar conexión a la base de datos
     await prisma.$connect();
-    console.log('✅ Conexión a la base de datos establecida');
+    logger.info('✅ Conexión a la base de datos establecida');
 
     // Iniciar el servidor
     app.listen(PORT, '0.0.0.0', () => {
@@ -181,35 +273,46 @@ const startServer = async () => {
         if (localIP !== 'localhost') break;
       }
       
-      console.log('\n🚀 ============================================');
-      console.log(`   DiamondSistem API v${process.env.APP_VERSION || '1.0.0'}`);
-      console.log('   ============================================');
-      console.log(`   🌐 Servidor local: http://localhost:${PORT}`);
-      console.log(`   🌐 Servidor red:   http://${localIP}:${PORT}`);
-      console.log(`   📊 Health check: http://localhost:${PORT}/health`);
-      console.log(`   📚 API Docs: http://localhost:${PORT}/`);
-      console.log(`   🔧 Entorno: ${process.env.NODE_ENV || 'development'}`);
-      console.log('   ============================================\n');
+      logger.info('\n🚀 ============================================');
+      logger.info(`   DiamondSistem API v${process.env.APP_VERSION || '1.0.0'}`);
+      logger.info('   ============================================');
+      logger.info(`   🌐 Servidor local: http://localhost:${PORT}`);
+      logger.info(`   🌐 Servidor red:   http://${localIP}:${PORT}`);
+      logger.info(`   📊 Health check: http://localhost:${PORT}/health`);
+      logger.info(`   📚 API Docs: http://localhost:${PORT}/`);
+      logger.info(`   🔧 Entorno: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`   🔒 Seguridad: Helmet + Rate Limiting activado`);
+      logger.info('   ============================================\n');
     });
   } catch (error) {
-    console.error('❌ Error al iniciar el servidor:', error);
+    logger.error('❌ Error al iniciar el servidor:', error);
     process.exit(1);
   }
 };
 
 // Manejo de cierre graceful
 process.on('SIGINT', async () => {
-  console.log('\n⚠️  Cerrando servidor...');
+  logger.info('\n⚠️  Cerrando servidor...');
   await prisma.$disconnect();
-  console.log('✅ Conexión a la base de datos cerrada');
+  logger.info('✅ Conexión a la base de datos cerrada');
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log('\n⚠️  Cerrando servidor...');
+  logger.info('\n⚠️  Cerrando servidor...');
   await prisma.$disconnect();
-  console.log('✅ Conexión a la base de datos cerrada');
+  logger.info('✅ Conexión a la base de datos cerrada');
   process.exit(0);
+});
+
+// Manejo de errores no capturados
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  process.exit(1);
 });
 
 // Iniciar servidor

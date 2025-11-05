@@ -93,10 +93,11 @@ function DetalleContrato() {
       });
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries(['contrato', id]);
       queryClient.invalidateQueries(['pagos-contrato', id]);
       queryClient.invalidateQueries(['contratos']);
+      queryClient.invalidateQueries(['versiones-contrato', id]);
       setFormPago({
         monto: '',
         metodo_pago: 'efectivo',
@@ -105,8 +106,14 @@ function DetalleContrato() {
         notas: '',
       });
       setModalConfirmacionOpen(false);
-      toast.success('✅ Pago registrado exitosamente', {
-        duration: 3000,
+      
+      // Mostrar mensaje con información de la nueva versión
+      const mensaje = data?.version_contrato 
+        ? `✅ Pago registrado exitosamente\n📄 ${data.version_contrato.mensaje}`
+        : '✅ Pago registrado exitosamente';
+      
+      toast.success(mensaje, {
+        duration: 5000,
         icon: '💰',
       });
     },
@@ -598,16 +605,53 @@ function DetalleContrato() {
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Servicios Adicionales:</h4>
                   <ul className="space-y-2">
-                    {contrato?.contratos_servicios?.map((cs) => (
-                      <li key={cs.id} className="flex justify-between text-sm">
-                        <span className="text-gray-700">
-                          {cs.servicios?.nombre || 'Servicio'}
-                        </span>
-                        <span className="font-medium">
-                          ${parseFloat(cs.subtotal || 0).toLocaleString()}
-                        </span>
-                      </li>
-                    ))}
+                    {(() => {
+                      // Filtrar servicios mutuamente excluyentes (solo mostrar un Photobooth)
+                      const serviciosFiltrados = [];
+                      let photoboothConPrecio = null;
+                      let photoboothSinPrecio = null;
+                      
+                      // Separar servicios normales y Photobooths
+                      for (const cs of contrato.contratos_servicios) {
+                        const nombreServicio = cs.servicios?.nombre || '';
+                        const subtotal = parseFloat(cs.subtotal || 0);
+                        const precioUnitario = parseFloat(cs.precio_unitario || 0);
+                        
+                        if (nombreServicio.includes('Photobooth')) {
+                          // Priorizar el que tiene precio/subtotal > 0 (el realmente seleccionado)
+                          if (subtotal > 0 || precioUnitario > 0) {
+                            photoboothConPrecio = cs;
+                          } else {
+                            // Guardar como respaldo si no hay uno con precio
+                            if (!photoboothSinPrecio) {
+                              photoboothSinPrecio = cs;
+                            }
+                          }
+                          continue;
+                        }
+                        
+                        // Para otros servicios, agregar normalmente
+                        serviciosFiltrados.push(cs);
+                      }
+                      
+                      // Agregar el Photobooth seleccionado (priorizar el que tiene precio)
+                      if (photoboothConPrecio) {
+                        serviciosFiltrados.push(photoboothConPrecio);
+                      } else if (photoboothSinPrecio) {
+                        serviciosFiltrados.push(photoboothSinPrecio);
+                      }
+                      
+                      return serviciosFiltrados.map((cs) => (
+                        <li key={cs.id} className="flex justify-between text-sm">
+                          <span className="text-gray-700">
+                            {cs.servicios?.nombre || 'Servicio'}
+                          </span>
+                          <span className="font-medium">
+                            ${parseFloat(cs.subtotal || 0).toLocaleString()}
+                          </span>
+                        </li>
+                      ));
+                    })()}
                   </ul>
                 </div>
               )}

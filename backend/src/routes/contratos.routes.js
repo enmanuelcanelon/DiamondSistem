@@ -21,14 +21,14 @@ const prisma = new PrismaClient();
  */
 router.get('/', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { vendedor_id, cliente_id, estado, estado_pago } = req.query;
+    const { cliente_id, estado, estado_pago } = req.query;
 
-    const where = {};
+    // CRÍTICO: Forzar que el vendedor solo vea SUS contratos
+    const where = {
+      vendedor_id: req.user.id // Solo contratos del vendedor autenticado
+    };
 
-    if (vendedor_id) {
-      where.vendedor_id = parseInt(vendedor_id);
-    }
-
+    // Permitir filtros adicionales
     if (cliente_id) {
       where.cliente_id = parseInt(cliente_id);
     }
@@ -140,9 +140,14 @@ router.get('/:id', authenticate, async (req, res, next) => {
       throw new NotFoundError('Contrato no encontrado');
     }
 
-    // Verificar acceso
+    // Verificar acceso - CRÍTICO: Validar autorización
     if (req.user.tipo === 'cliente') {
       if (contrato.cliente_id !== req.user.id) {
+        throw new ValidationError('No tienes acceso a este contrato');
+      }
+    } else if (req.user.tipo === 'vendedor') {
+      // CRÍTICO: Vendedor solo puede ver SUS contratos
+      if (contrato.vendedor_id !== req.user.id) {
         throw new ValidationError('No tienes acceso a este contrato');
       }
     }
@@ -466,6 +471,29 @@ router.get('/acceso/:codigo', async (req, res, next) => {
 
     if (!contrato) {
       throw new NotFoundError('Código de acceso inválido');
+    }
+
+    // Verificar que el contrato esté activo
+    if (contrato.estado !== 'activo') {
+      throw new ValidationError('El contrato no está activo');
+    }
+
+    // CRÍTICO: Validar que el código no haya expirado
+    // El código expira 30 días después de la fecha del evento
+    if (contrato.fecha_evento) {
+      const fechaEvento = new Date(contrato.fecha_evento);
+      const fechaActual = new Date();
+      const diasDespuesEvento = 30; // Días de gracia después del evento
+      
+      // Calcular fecha de expiración (30 días después del evento)
+      const fechaExpiracion = new Date(fechaEvento);
+      fechaExpiracion.setDate(fechaExpiracion.getDate() + diasDespuesEvento);
+      
+      if (fechaActual > fechaExpiracion) {
+        throw new ValidationError(
+          `El código de acceso ha expirado. El evento fue el ${fechaEvento.toLocaleDateString('es-ES')} y el código expiró el ${fechaExpiracion.toLocaleDateString('es-ES')}. Por favor, contacta a tu vendedor para obtener un nuevo código.`
+        );
+      }
     }
 
     res.json({

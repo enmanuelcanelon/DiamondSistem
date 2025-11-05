@@ -6,7 +6,6 @@ import {
   Sparkles, 
   UtensilsCrossed, 
   Music2, 
-  Camera, 
   Settings,
   Loader2,
   Calendar,
@@ -95,7 +94,7 @@ function AjustesEventoVendedor() {
 
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-0 divide-x">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-0 divide-x">
           <a
             href="#torta"
             className="px-4 py-3 text-center hover:bg-gray-50 transition flex flex-col items-center gap-1"
@@ -118,18 +117,18 @@ function AjustesEventoVendedor() {
             <span className="text-xs font-medium">Menú</span>
           </a>
           <a
-            href="#entretenimiento"
+            href="#musica"
             className="px-4 py-3 text-center hover:bg-gray-50 transition flex flex-col items-center gap-1"
           >
             <Music2 className="w-5 h-5 text-blue-600" />
-            <span className="text-xs font-medium">Entretenimiento</span>
+            <span className="text-xs font-medium">Música</span>
           </a>
           <a
-            href="#fotografia"
+            href="#bar"
             className="px-4 py-3 text-center hover:bg-gray-50 transition flex flex-col items-center gap-1"
           >
-            <Camera className="w-5 h-5 text-green-600" />
-            <span className="text-xs font-medium">Fotografía</span>
+            <Wine className="w-5 h-5 text-indigo-600" />
+            <span className="text-xs font-medium">Bar</span>
           </a>
           <a
             href="#otros"
@@ -151,18 +150,15 @@ function AjustesEventoVendedor() {
           <SeccionDecoracion ajustes={ajustes} />
           
           {/* Menú */}
-          <SeccionMenu ajustes={ajustes} />
+          <SeccionMenu ajustes={ajustes} contrato={contrato} />
           
-          {/* Entretenimiento */}
-          <SeccionEntretenimiento ajustes={ajustes} />
-          
-          {/* Fotografía */}
-          <SeccionFotografia ajustes={ajustes} />
+          {/* Música */}
+          <SeccionMusica ajustes={ajustes} />
           
           {/* Bar */}
           <SeccionBar ajustes={ajustes} contrato={contrato} />
           
-          {/* Otros */}
+          {/* Final */}
           <SeccionOtros ajustes={ajustes} contrato={contrato} />
         </div>
       ) : (
@@ -369,16 +365,63 @@ function SeccionDecoracion({ ajustes }) {
 }
 
 // Sección Menú
-function SeccionMenu({ ajustes }) {
+function SeccionMenu({ ajustes, contrato }) {
+  const mostrarTeenagers = ajustes?.hay_teenagers && ajustes?.cantidad_teenagers > 0;
+  
+  // Verificar si tiene pasapalos contratados
+  const tienePasapalos = contrato?.contratos_servicios?.some(
+    cs => cs.servicios?.nombre?.toLowerCase().includes('pasapalo')
+  ) || contrato?.paquetes?.paquetes_servicios?.some(
+    ps => ps.servicios?.nombre?.toLowerCase().includes('pasapalo')
+  );
+  
   return (
     <div id="menu" className="bg-white rounded-xl shadow-sm border p-6">
       <div className="flex items-center gap-3 mb-6 pb-4 border-b">
         <UtensilsCrossed className="w-6 h-6 text-orange-600" />
         <h2 className="text-2xl font-bold text-gray-900">Menú</h2>
       </div>
+      
+      {/* Sección de Pasapalos (Solo informativa) */}
+      {tienePasapalos && (
+        <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-2xl">🍤</span>
+            <h3 className="text-lg font-bold text-amber-900">
+              Pasapalos Incluidos
+            </h3>
+          </div>
+          <p className="text-sm text-amber-800 mb-2">
+            Tu evento incluye los siguientes pasapalos para deleitar a tus invitados:
+          </p>
+          <div className="bg-white rounded-lg p-3 border border-amber-300">
+            <ul className="text-sm text-amber-900 space-y-1">
+              <li>• Empanadas de Carne</li>
+              <li>• Empanadas de Pollo</li>
+              <li>• Tequeños</li>
+              <li>• Croquetas de Jamón</li>
+              <li>• Mini Pastelitos</li>
+            </ul>
+          </div>
+          <p className="text-xs text-amber-700 italic mt-2">
+            ℹ️ Los pasapalos se servirán durante el cóctel de bienvenida
+          </p>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Campo label="Tipo de Servicio" valor={ajustes?.tipo_servicio} />
-        <Campo label="Entrada" valor={ajustes?.entrada} />
+        {ajustes?.entrada && (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-sm font-medium text-gray-700 mb-1">Entrada</p>
+            <p className="text-gray-900 font-medium">🥗 {ajustes.entrada}</p>
+            {ajustes.entrada === 'Ensalada César' && (
+              <p className="text-xs text-gray-600 mt-2 italic">
+                💡 Incluye Pan y Mantequilla
+              </p>
+            )}
+          </div>
+        )}
         <Campo label="Plato Principal" valor={ajustes?.plato_principal} />
         <Campo label="Acompañamientos" valor={ajustes?.acompanamientos} />
         <div className="md:col-span-2">
@@ -387,6 +430,31 @@ function SeccionMenu({ ajustes }) {
         <div className="md:col-span-2">
           <Campo label="Opciones Veganas" valor={ajustes?.opciones_veganas} />
         </div>
+        
+        {/* Teenagers/Kids */}
+        {mostrarTeenagers && (
+          <div className="md:col-span-2 bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
+            <h3 className="text-lg font-bold text-purple-900 mb-3">👶 Teens/Kids</h3>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-700">
+                <span className="font-medium">Cantidad:</span> {ajustes.cantidad_teenagers}
+              </p>
+              <p className="text-sm text-gray-700">
+                <span className="font-medium">Tipo de comida:</span> {ajustes.teenagers_tipo_comida === 'pasta' ? 'Pasta' : 'Menú'}
+              </p>
+              {ajustes.teenagers_tipo_comida === 'pasta' && ajustes.teenagers_tipo_pasta && (
+                <p className="text-sm text-gray-700">
+                  <span className="font-medium">Tipo de pasta:</span> {
+                    ajustes.teenagers_tipo_pasta === 'napolitana' ? 'Pasta Napolitana' : 
+                    ajustes.teenagers_tipo_pasta === 'alfredo' ? 'Pasta Alfredo' : 
+                    ajustes.teenagers_tipo_pasta
+                  }
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="md:col-span-2">
           <Campo label="Restricciones Alimentarias" valor={ajustes?.restricciones_alimentarias} />
         </div>
@@ -401,48 +469,64 @@ function SeccionMenu({ ajustes }) {
   );
 }
 
-// Sección Entretenimiento
-function SeccionEntretenimiento({ ajustes }) {
+// Sección Música
+function SeccionMusica({ ajustes }) {
+  // Parsear bailes adicionales si existen
+  let bailesAdicionales = null;
+  if (ajustes?.bailes_adicionales) {
+    try {
+      const parsed = typeof ajustes.bailes_adicionales === 'string' 
+        ? JSON.parse(ajustes.bailes_adicionales)
+        : ajustes.bailes_adicionales;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        bailesAdicionales = parsed;
+      }
+    } catch (e) {
+      console.error('Error parsing bailes_adicionales:', e);
+    }
+  }
+
   return (
-    <div id="entretenimiento" className="bg-white rounded-xl shadow-sm border p-6">
+    <div id="musica" className="bg-white rounded-xl shadow-sm border p-6">
       <div className="flex items-center gap-3 mb-6 pb-4 border-b">
         <Music2 className="w-6 h-6 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Entretenimiento y Música</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Música</h2>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Campo label="Música Ceremonial / Entrada" valor={ajustes?.musica_ceremonial} />
+      <div className="space-y-4">
+        <Campo label="Música para Ceremonia / Entrada" valor={ajustes?.musica_ceremonial} />
         <Campo label="Primer Baile" valor={ajustes?.primer_baile} />
-        <Campo label="Baile Padre-Hija" valor={ajustes?.baile_padre_hija} />
-        <Campo label="Baile Madre-Hijo" valor={ajustes?.baile_madre_hijo} />
-        <Campo label="Hora del Show" valor={ajustes?.hora_show} />
-        <div className="md:col-span-2">
-          <Campo label="Actividades Especiales" valor={ajustes?.actividades_especiales} />
-        </div>
-        <div className="md:col-span-2">
-          <Campo label="Notas Adicionales" valor={ajustes?.notas_entretenimiento} />
-        </div>
+        
+        {/* Bailes Adicionales */}
+        {bailesAdicionales && bailesAdicionales.length > 0 && (
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+            <h3 className="text-lg font-bold text-blue-900 mb-4">Bailes Adicionales</h3>
+            <div className="space-y-3">
+              {bailesAdicionales.map((baile, index) => (
+                <div key={index} className="bg-white p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-900 mb-2">Baile {index + 1}</p>
+                  {baile.nombre && (
+                    <p className="text-sm text-gray-700 mb-1">
+                      <span className="font-medium">Canción:</span> {baile.nombre}
+                    </p>
+                  )}
+                  {baile.con_quien && (
+                    <p className="text-sm text-gray-700">
+                      <span className="font-medium">Con quién:</span> {baile.con_quien}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <Campo label="Canción Sorpresa" valor={ajustes?.cancion_sorpresa} />
+        <Campo label="Notas Adicionales" valor={ajustes?.notas_entretenimiento} />
       </div>
     </div>
   );
 }
 
-// Sección Fotografía
-function SeccionFotografia({ ajustes }) {
-  return (
-    <div id="fotografia" className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b">
-        <Camera className="w-6 h-6 text-green-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Fotografía y Video</h2>
-      </div>
-      <div className="space-y-4">
-        <Campo label="Momentos Especiales a Capturar" valor={ajustes?.momentos_especiales} />
-        <Campo label="Poses o Fotos Específicas" valor={ajustes?.poses_especificas} />
-        <Campo label="Ubicaciones para Sesión de Fotos" valor={ajustes?.ubicaciones_fotos} />
-        <Campo label="Notas Adicionales" valor={ajustes?.notas_fotografia} />
-      </div>
-    </div>
-  );
-}
 
 // Sección Bar
 function SeccionBar({ ajustes, contrato }) {
@@ -479,8 +563,13 @@ function SeccionBar({ ajustes, contrato }) {
 
   const otros = [
     'Granadina',
-    'Blue Curaçao',
-    'Piña Colada'
+    'Blue Curaçao'
+  ];
+
+  const cocteles = [
+    'Piña Colada',
+    'Daiquirí',
+    'Shirley Temple'
   ];
 
   const vinos = [
@@ -596,10 +685,26 @@ function SeccionBar({ ajustes, contrato }) {
               </div>
             </div>
           </div>
+
+          {/* Cócteles */}
+          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-purple-500">🍹</span> Cócteles
+            </h3>
+            <div className="space-y-1">
+              {cocteles.map((coctel, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">{coctel}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Refrescos, Jugos y Otros - Derecha */}
         <div className="space-y-4">
+
           {/* Refrescos */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -633,7 +738,7 @@ function SeccionBar({ ajustes, contrato }) {
           {/* Otros */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-purple-500">🍹</span> Otros
+              <span className="text-purple-500">✨</span> Otros
             </h3>
             <div className="space-y-1">
               {otros.map((otro, index) => (

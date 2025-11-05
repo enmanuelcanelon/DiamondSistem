@@ -7,6 +7,7 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
 
 const prisma = new PrismaClient();
 
@@ -18,8 +19,6 @@ const prisma = new PrismaClient();
 router.get('/contrato/:contrato_id', authenticate, async (req, res, next) => {
   try {
     const { contrato_id } = req.params;
-
-    console.log('📥 Obteniendo mensajes del contrato:', contrato_id, 'por usuario:', req.user.tipo, req.user.id);
 
     // Verificar acceso al contrato
     const contrato = await prisma.contratos.findUnique({
@@ -48,8 +47,6 @@ router.get('/contrato/:contrato_id', authenticate, async (req, res, next) => {
       orderBy: { fecha_envio: 'asc' }
     });
 
-    console.log(`📨 Encontrados ${mensajes.length} mensajes para el contrato ${contrato_id}`);
-
     // Marcar como leídos los mensajes del destinatario
     if (mensajes.length > 0) {
       const updated = await prisma.mensajes.updateMany({
@@ -66,7 +63,11 @@ router.get('/contrato/:contrato_id', authenticate, async (req, res, next) => {
       });
       
       if (updated.count > 0) {
-        console.log(`✅ Marcados ${updated.count} mensajes como leídos`);
+        logger.debug(`Marcados ${updated.count} mensajes como leídos`, {
+          contrato_id: parseInt(contrato_id),
+          user_id: req.user.id,
+          user_tipo: req.user.tipo
+        });
       }
     }
 
@@ -77,7 +78,13 @@ router.get('/contrato/:contrato_id', authenticate, async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener mensajes:', error.message);
+    logger.error('Error al obtener mensajes', {
+      error: error.message,
+      stack: error.stack,
+      contrato_id: req.params.contrato_id,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     next(error);
   }
 });
@@ -91,15 +98,7 @@ router.post('/', authenticate, async (req, res, next) => {
   try {
     const { contrato_id, mensaje, destinatario_tipo, destinatario_id } = req.body;
 
-    // Log para debug
-    console.log('📩 Enviando mensaje:', {
-      contrato_id,
-      mensaje,
-      destinatario_tipo,
-      destinatario_id,
-      remitente_tipo: req.user.tipo,
-      remitente_id: req.user.id
-    });
+    // Validar datos (logging se hace en logger)
 
     if (!contrato_id || !mensaje || !destinatario_tipo || !destinatario_id) {
       throw new ValidationError('Faltan datos requeridos');
@@ -140,7 +139,12 @@ router.post('/', authenticate, async (req, res, next) => {
       }
     });
 
-    console.log('✅ Mensaje creado exitosamente:', nuevoMensaje.id);
+    logger.debug('Mensaje creado exitosamente', {
+      mensaje_id: nuevoMensaje.id,
+      contrato_id: parseInt(contrato_id),
+      remitente_tipo: req.user.tipo,
+      remitente_id: req.user.id
+    });
 
     res.status(201).json({
       success: true,
@@ -149,7 +153,13 @@ router.post('/', authenticate, async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('❌ Error al enviar mensaje:', error.message);
+    logger.error('Error al enviar mensaje', {
+      error: error.message,
+      stack: error.stack,
+      contrato_id: req.body.contrato_id,
+      user_id: req.user?.id,
+      user_tipo: req.user?.tipo
+    });
     next(error);
   }
 });

@@ -15,6 +15,7 @@ const {
 } = require('../utils/priceCalculator');
 const { generarCodigoOferta } = require('../utils/codeGenerator');
 const { generarFacturaProforma } = require('../utils/pdfFactura');
+const logger = require('../utils/logger');
 
 const prisma = new PrismaClient();
 
@@ -159,14 +160,14 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
  */
 router.get('/', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { vendedor_id, cliente_id, estado } = req.query;
+    const { cliente_id, estado } = req.query;
 
-    const where = {};
+    // CRÍTICO: Forzar que el vendedor solo vea SUS ofertas
+    const where = {
+      vendedor_id: req.user.id // Solo ofertas del vendedor autenticado
+    };
 
-    if (vendedor_id) {
-      where.vendedor_id = parseInt(vendedor_id);
-    }
-
+    // Permitir filtros adicionales
     if (cliente_id) {
       where.cliente_id = parseInt(cliente_id);
     }
@@ -261,6 +262,11 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
 
     if (!oferta) {
       throw new NotFoundError('Oferta no encontrada');
+    }
+
+    // CRÍTICO: Verificar que el vendedor solo vea SUS ofertas
+    if (oferta.vendedor_id !== req.user.id) {
+      throw new ValidationError('No tienes acceso a esta oferta');
     }
 
     res.json({
@@ -708,7 +714,12 @@ router.put('/:id/rechazar', authenticate, requireVendedor, async (req, res, next
     });
 
   } catch (error) {
-    console.error('Error al rechazar oferta:', error);
+    logger.error('Error al rechazar oferta', {
+      error: error.message,
+      stack: error.stack,
+      oferta_id: req.params.id,
+      user_id: req.user?.id
+    });
     next(error);
   }
 });

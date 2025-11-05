@@ -7,7 +7,7 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
 const { generateVendedorToken, generateClienteToken } = require('../utils/jwt');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireVendedor } = require('../middleware/auth');
 const { UnauthorizedError, ValidationError, NotFoundError } = require('../middleware/errorHandler');
 
 const prisma = new PrismaClient();
@@ -97,6 +97,24 @@ router.post('/login/cliente', async (req, res, next) => {
       throw new UnauthorizedError('El contrato no está activo');
     }
 
+    // CRÍTICO: Validar que el código no haya expirado
+    // El código expira 30 días después de la fecha del evento
+    if (contrato.fecha_evento) {
+      const fechaEvento = new Date(contrato.fecha_evento);
+      const fechaActual = new Date();
+      const diasDespuesEvento = 30; // Días de gracia después del evento
+      
+      // Calcular fecha de expiración (30 días después del evento)
+      const fechaExpiracion = new Date(fechaEvento);
+      fechaExpiracion.setDate(fechaExpiracion.getDate() + diasDespuesEvento);
+      
+      if (fechaActual > fechaExpiracion) {
+        throw new UnauthorizedError(
+          `El código de acceso ha expirado. El evento fue el ${fechaEvento.toLocaleDateString('es-ES')} y el código expiró el ${fechaExpiracion.toLocaleDateString('es-ES')}. Por favor, contacta a tu vendedor para obtener un nuevo código.`
+        );
+      }
+    }
+
     // Generar token
     const token = generateClienteToken(contrato.clientes, contrato);
 
@@ -129,10 +147,10 @@ router.post('/login/cliente', async (req, res, next) => {
 
 /**
  * @route   POST /api/auth/register/vendedor
- * @desc    Registrar nuevo vendedor (solo admin)
- * @access  Private/Admin
+ * @desc    Registrar nuevo vendedor (solo admin/vendedor autenticado)
+ * @access  Private (Vendedor autenticado)
  */
-router.post('/register/vendedor', async (req, res, next) => {
+router.post('/register/vendedor', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const { 
       nombre_completo, 

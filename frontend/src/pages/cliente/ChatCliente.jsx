@@ -40,28 +40,38 @@ function ChatCliente() {
       </div>
 
       {/* Info Card */}
-      {contrato?.vendedores && (
+      {(contrato?.vendedores || contrato?.vendedor_id) && (
         <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-6 border border-purple-200">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white font-bold text-lg">
-                {contrato.vendedores.nombre_completo.charAt(0)}
+                {(() => {
+                  const nombreVendedor = contrato.vendedores?.nombre_completo || 'Vendedor ADMIN001';
+                  if (nombreVendedor === 'Administrador Sistema' || nombreVendedor.includes('Administrador')) {
+                    return 'A';
+                  }
+                  return nombreVendedor.charAt(0);
+                })()}
               </span>
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 text-lg">
-                {contrato.vendedores.nombre_completo}
+                {(() => {
+                  const nombreVendedor = contrato.vendedores?.nombre_completo;
+                  if (!nombreVendedor || nombreVendedor === 'Administrador Sistema' || nombreVendedor.includes('Administrador')) {
+                    return 'Vendedor ADMIN001';
+                  }
+                  return nombreVendedor;
+                })()}
               </h3>
               <p className="text-sm text-gray-700">Tu asesor de eventos</p>
               <div className="mt-2 space-y-1">
                 <p className="text-sm text-gray-600">
-                  📧 {contrato.vendedores.email}
+                  📧 {contrato.vendedores?.email || 'admin001@diamondsistem.com'}
                 </p>
-                {contrato.vendedores.telefono && (
-                  <p className="text-sm text-gray-600">
-                    📞 {contrato.vendedores.telefono}
-                  </p>
-                )}
+                <p className="text-sm text-gray-600">
+                  📞 {contrato.vendedores?.telefono || '+1-305-555-0100'}
+                </p>
               </div>
             </div>
           </div>
@@ -74,9 +84,15 @@ function ChatCliente() {
           contratoId={contratoId}
           destinatarioId={contrato.vendedor_id}
           destinatarioTipo="vendedor"
-          destinatarioNombre={contrato.vendedores?.nombre_completo}
-          destinatarioEmail={contrato.vendedores?.email}
-          destinatarioTelefono={contrato.vendedores?.telefono}
+          destinatarioNombre={(() => {
+            const nombreVendedor = contrato.vendedores?.nombre_completo;
+            if (!nombreVendedor || nombreVendedor === 'Administrador Sistema' || nombreVendedor.includes('Administrador')) {
+              return 'Vendedor ADMIN001';
+            }
+            return nombreVendedor;
+          })()}
+          destinatarioEmail={contrato.vendedores?.email || 'admin001@diamondsistem.com'}
+          destinatarioTelefono={contrato.vendedores?.telefono || '+1-305-555-0100'}
         />
       )}
     </div>

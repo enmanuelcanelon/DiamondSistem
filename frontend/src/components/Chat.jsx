@@ -133,12 +133,15 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
                 colorBorde = '';
               } else if (mensaje.remitente_tipo === 'vendedor') {
                 // Mensaje del VENDEDOR (lo ve el cliente)
-                if (destinatarioTipo === 'vendedor' && destinatarioNombre) {
-                  // Mostrar nombre del vendedor
-                  etiqueta = `👔 ${destinatarioNombre}`;
-                } else {
-                  etiqueta = '👔 Asesor de Eventos';
+                // Usar datos del vendedor si están disponibles, sino datos genéricos para ADMIN001
+                let nombreVendedor = destinatarioNombre;
+                
+                // Si no hay nombre o es "Administrador Sistema", usar datos genéricos para vendedor
+                if (!nombreVendedor || nombreVendedor === 'Administrador Sistema' || nombreVendedor.includes('Administrador')) {
+                  nombreVendedor = 'Vendedor ADMIN001';
                 }
+                
+                etiqueta = `👔 ${nombreVendedor}`;
                 colorFondo = 'bg-blue-50';
                 colorTexto = 'text-gray-900';
                 colorBorde = 'border-2 border-blue-400';
@@ -151,7 +154,20 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
               }
 
               // Verificar si hay info adicional del vendedor
-              const mostrarInfoVendedor = !esMio && mensaje.remitente_tipo === 'vendedor' && destinatarioTipo === 'vendedor' && (destinatarioEmail || destinatarioTelefono);
+              // Mostrar info del vendedor cuando el cliente ve mensajes del vendedor
+              const mostrarInfoVendedor = !esMio && mensaje.remitente_tipo === 'vendedor' && user?.tipo === 'cliente';
+              
+              // Datos del vendedor (o genéricos si no hay datos)
+              // Si no hay email/telefono del vendedor real, usar datos genéricos para ADMIN001
+              let emailVendedor = destinatarioEmail;
+              let telefonoVendedor = destinatarioTelefono;
+              
+              // Si no hay datos del vendedor o es "Administrador Sistema", usar datos genéricos
+              if ((!emailVendedor || !telefonoVendedor) && 
+                  (!destinatarioNombre || destinatarioNombre === 'Administrador Sistema' || destinatarioNombre.includes('Administrador'))) {
+                emailVendedor = emailVendedor || 'admin001@diamondsistem.com';
+                telefonoVendedor = telefonoVendedor || '+1-305-555-0100';
+              }
               
               return (
                 <div
@@ -173,11 +189,11 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
                       {/* Mostrar email y teléfono del vendedor si está disponible */}
                       {mostrarInfoVendedor && (
                         <div className="text-xs mt-1 space-y-0.5">
-                          {destinatarioEmail && (
-                            <p className="text-blue-600">📧 {destinatarioEmail}</p>
+                          {emailVendedor && (
+                            <p className="text-blue-600">📧 {emailVendedor}</p>
                           )}
-                          {destinatarioTelefono && (
-                            <p className="text-blue-600">📞 {destinatarioTelefono}</p>
+                          {telefonoVendedor && (
+                            <p className="text-blue-600">📞 {telefonoVendedor}</p>
                           )}
                         </div>
                       )}

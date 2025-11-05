@@ -411,19 +411,56 @@ function DashboardCliente() {
             Servicios Adicionales
           </h2>
           <ul className="space-y-3">
-            {contrato.contratos_servicios.map((cs) => (
-              <li key={cs.id} className="flex items-center justify-between border-b pb-2 last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-purple-600" />
-                  <span className="text-gray-700">
-                    {formatearServicioConCantidad(cs.servicios, cs.cantidad)}
+            {(() => {
+              // Filtrar servicios mutuamente excluyentes (solo mostrar un Photobooth)
+              const serviciosFiltrados = [];
+              let photoboothConPrecio = null;
+              let photoboothSinPrecio = null;
+              
+              // Separar servicios normales y Photobooths
+              for (const cs of contrato.contratos_servicios) {
+                const nombreServicio = cs.servicios?.nombre || '';
+                const precioUnitario = parseFloat(cs.precio_unitario || 0);
+                const subtotal = parseFloat(cs.subtotal || 0);
+                
+                if (nombreServicio.includes('Photobooth')) {
+                  // Priorizar el que tiene precio/subtotal > 0 (el realmente seleccionado)
+                  if (precioUnitario > 0 || subtotal > 0) {
+                    photoboothConPrecio = cs;
+                  } else {
+                    // Guardar como respaldo si no hay uno con precio
+                    if (!photoboothSinPrecio) {
+                      photoboothSinPrecio = cs;
+                    }
+                  }
+                  continue;
+                }
+                
+                // Para otros servicios, agregar normalmente
+                serviciosFiltrados.push(cs);
+              }
+              
+              // Agregar el Photobooth seleccionado (priorizar el que tiene precio)
+              if (photoboothConPrecio) {
+                serviciosFiltrados.push(photoboothConPrecio);
+              } else if (photoboothSinPrecio) {
+                serviciosFiltrados.push(photoboothSinPrecio);
+              }
+              
+              return serviciosFiltrados.map((cs) => (
+                <li key={cs.id} className="flex items-center justify-between border-b pb-2 last:border-b-0">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-purple-600" />
+                    <span className="text-gray-700">
+                      {formatearServicioConCantidad(cs.servicios, cs.cantidad)}
+                    </span>
+                  </div>
+                  <span className="font-medium text-gray-900">
+                    ${parseFloat(cs.precio_unitario).toLocaleString()}
                   </span>
-                </div>
-                <span className="font-medium text-gray-900">
-                  ${parseFloat(cs.precio_unitario).toLocaleString()}
-                </span>
-              </li>
-            ))}
+                </li>
+              ));
+            })()}
           </ul>
         </div>
       )}
