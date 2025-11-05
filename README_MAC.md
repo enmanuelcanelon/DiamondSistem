@@ -1,6 +1,36 @@
 # 🍎 DiamondSistem - Instrucciones Rápidas para Mac
 
-## Inicio Rápido
+## ⚡ Opción Rápida: Solo Frontend (Backend en Windows)
+
+Si el backend y la base de datos están corriendo en Windows en la misma red:
+
+1. **Clonar y configurar frontend:**
+   ```bash
+   cd ~/Desktop
+   git clone https://github.com/IamEac/DiamondSistem.git
+   cd DiamondSistem/frontend
+   npm install
+   ```
+
+2. **Configurar .env:**
+   Crea `frontend/.env` con:
+   ```env
+   VITE_API_URL=http://IP_DE_WINDOWS:5000/api
+   ```
+   (Obtén la IP de Windows con `ipconfig`)
+
+3. **Ejecutar:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Acceder:** `http://localhost:5173`
+
+**Ver guía completa:** `GUIA_MAC_SOLO_FRONTEND.md`
+
+---
+
+## Inicio Rápido (Completo - Backend + Frontend en Mac)
 
 ### 1. Clonar y Configurar
 ```bash
