@@ -327,10 +327,5 @@ startServer();
 
 module.exports = app;
 
-// Iniciar servidor
-startServer();
-
-module.exports = app;
-
 
 
