@@ -248,6 +248,7 @@ model contratos {
   ajustes_evento          ajustes_evento?
   versiones_contratos_pdf versiones_contratos_pdf[]
   invitados               invitados[]
+  mesas                   mesas[]
   playlist_canciones      playlist_canciones[]
   mensajes                mensajes[]
 
@@ -344,9 +345,6 @@ model mensajes {
 
   // Relaciones
   contratos contratos? @relation(fields: [contrato_id], references: [id])
-
-  // Nota: remitente_id puede referenciar tanto clientes como vendedores
-  // dependiendo de remitente_tipo, pero Prisma no soporta relaciones polimórficas
 }
 
 model configuracion_sistema {
@@ -390,6 +388,22 @@ model versiones_contratos_pdf {
   @@unique([contrato_id, version_numero])
 }
 
+model mesas {
+  id            Int        @id @default(autoincrement())
+  contrato_id   Int
+  numero_mesa   Int
+  capacidad     Int        @default(10)
+  nombre_mesa   String?    @db.VarChar(100)
+  notas         String?
+  fecha_creacion DateTime? @default(now()) @db.Timestamp(6)
+  
+  // Relaciones
+  contratos     contratos  @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+  invitados     invitados[]
+  
+  @@unique([contrato_id, numero_mesa])
+}
+
 model invitados {
   id                         Int        @id @default(autoincrement())
   contrato_id                Int
@@ -405,6 +419,7 @@ model invitados {
   fecha_creacion             DateTime?  @default(now()) @db.Timestamp(6)
   fecha_actualizacion        DateTime?  @default(now()) @db.Timestamp(6)
   contratos                  contratos? @relation(fields: [contrato_id], references: [id])
+  mesas                      mesas?     @relation(fields: [mesa_id], references: [id])
 }
 
 model playlist_canciones {
@@ -451,6 +466,8 @@ model ajustes_evento {
   baile_madre_hijo            String?     @db.VarChar(255)
   hora_show                   String?     @db.VarChar(50)
   actividades_especiales      String?
+  bailes_adicionales          String?     // JSON string para almacenar array de bailes
+  cancion_sorpresa            String?     @db.VarChar(255)
   notas_entretenimiento       String?
   momentos_especiales         String?
   poses_especificas           String?
@@ -460,6 +477,10 @@ model ajustes_evento {
   brindis_especial            String?     @db.VarChar(255)
   sorpresas_planeadas         String?
   solicitudes_especiales      String?
+  vestido_nina                String?     @db.VarChar(500)
+  observaciones_adicionales   String?
+  items_especiales            String?
+  protocolo                  String?
   porcentaje_completado       Int         @default(0)
   fecha_creacion              DateTime    @default(now())
   fecha_actualizacion         DateTime    @default(now())
@@ -486,6 +507,8 @@ model ajustes_evento {
   diseno_otro                 String?     @db.VarChar(100)
   hay_teenagers               Boolean?    @default(false)
   cantidad_teenagers          Int?        @default(0)
+  teenagers_tipo_comida       String?     @db.VarChar(50)
+  teenagers_tipo_pasta        String?     @db.VarChar(50)
   contratos                   contratos?  @relation(fields: [contrato_id], references: [id])
 
   @@index([tipo_decoracion], map: "idx_ajustes_tipo_decoracion")

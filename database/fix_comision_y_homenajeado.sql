@@ -67,3 +67,6 @@ LIMIT 10;
 --    - Backend: Verificar que incluya el campo en las queries
 --    - Datos: Crear ofertas nuevas con homenajeado para probar
 
+
+
+

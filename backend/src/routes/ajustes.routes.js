@@ -54,6 +54,33 @@ router.put('/contrato/:contratoId', authenticate, async (req, res, next) => {
       });
     }
 
+    // Preparar datos para actualizar
+    const datosParaGuardar = { ...datosAjustes };
+    
+    // Convertir hora_limosina de string "HH:MM" a formato Time si existe
+    if (datosParaGuardar.hora_limosina !== undefined) {
+      if (datosParaGuardar.hora_limosina === '' || datosParaGuardar.hora_limosina === null) {
+        datosParaGuardar.hora_limosina = null;
+      } else if (typeof datosParaGuardar.hora_limosina === 'string') {
+        // Si viene como "HH:MM", convertir a formato Time para PostgreSQL
+        const horaMatch = datosParaGuardar.hora_limosina.match(/^(\d{2}):(\d{2})$/);
+        if (horaMatch) {
+          // Para Prisma con @db.Time, necesitamos crear un Date válido
+          // Usar una fecha base y establecer solo la hora
+          const horas = parseInt(horaMatch[1]);
+          const minutos = parseInt(horaMatch[2]);
+          // Crear Date con formato ISO completo (necesario para Prisma)
+          const fechaHora = new Date();
+          fechaHora.setFullYear(1970, 0, 1); // 1970-01-01
+          fechaHora.setHours(horas, minutos, 0, 0);
+          datosParaGuardar.hora_limosina = fechaHora;
+        } else {
+          // Si no es formato válido, establecer como null
+          datosParaGuardar.hora_limosina = null;
+        }
+      }
+    }
+
     // Buscar o crear ajustes
     let ajustes = await prisma.ajustes_evento.findUnique({
       where: { contrato_id: parseInt(contratoId) }
@@ -64,7 +91,7 @@ router.put('/contrato/:contratoId', authenticate, async (req, res, next) => {
       ajustes = await prisma.ajustes_evento.update({
         where: { contrato_id: parseInt(contratoId) },
         data: {
-          ...datosAjustes,
+          ...datosParaGuardar,
           fecha_actualizacion: new Date()
         }
       });
@@ -73,7 +100,7 @@ router.put('/contrato/:contratoId', authenticate, async (req, res, next) => {
       ajustes = await prisma.ajustes_evento.create({
         data: {
           contrato_id: parseInt(contratoId),
-          ...datosAjustes
+          ...datosParaGuardar
         }
       });
     }
@@ -105,6 +132,33 @@ router.patch('/contrato/:contratoId/:seccion', authenticate, async (req, res, ne
       });
     }
 
+    // Preparar datos para actualizar
+    const datosParaGuardar = { ...datos };
+    
+    // Convertir hora_limosina de string "HH:MM" a formato Time si existe
+    if (datosParaGuardar.hora_limosina !== undefined) {
+      if (datosParaGuardar.hora_limosina === '' || datosParaGuardar.hora_limosina === null) {
+        datosParaGuardar.hora_limosina = null;
+      } else if (typeof datosParaGuardar.hora_limosina === 'string') {
+        // Si viene como "HH:MM", convertir a formato Time para PostgreSQL
+        const horaMatch = datosParaGuardar.hora_limosina.match(/^(\d{2}):(\d{2})$/);
+        if (horaMatch) {
+          // Para Prisma con @db.Time, necesitamos crear un Date válido
+          // Usar una fecha base y establecer solo la hora
+          const horas = parseInt(horaMatch[1]);
+          const minutos = parseInt(horaMatch[2]);
+          // Crear Date con formato ISO completo (necesario para Prisma)
+          const fechaHora = new Date();
+          fechaHora.setFullYear(1970, 0, 1); // 1970-01-01
+          fechaHora.setHours(horas, minutos, 0, 0);
+          datosParaGuardar.hora_limosina = fechaHora;
+        } else {
+          // Si no es formato válido, establecer como null
+          datosParaGuardar.hora_limosina = null;
+        }
+      }
+    }
+
     // Buscar o crear ajustes
     let ajustes = await prisma.ajustes_evento.findUnique({
       where: { contrato_id: parseInt(contratoId) }
@@ -114,14 +168,14 @@ router.patch('/contrato/:contratoId/:seccion', authenticate, async (req, res, ne
       ajustes = await prisma.ajustes_evento.create({
         data: {
           contrato_id: parseInt(contratoId),
-          ...datos
+          ...datosParaGuardar
         }
       });
     } else {
       ajustes = await prisma.ajustes_evento.update({
         where: { contrato_id: parseInt(contratoId) },
         data: {
-          ...datos,
+          ...datosParaGuardar,
           fecha_actualizacion: new Date()
         }
       });

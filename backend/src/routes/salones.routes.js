@@ -100,3 +100,6 @@ router.get('/:salonId/paquetes/:paqueteId/precio', authenticate, requireVendedor
 
 module.exports = router;
 
+
+
+

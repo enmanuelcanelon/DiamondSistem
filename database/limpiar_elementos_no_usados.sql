@@ -112,3 +112,6 @@ COMMIT;
 SELECT '✅ Limpieza de elementos no usados completada' AS resultado;
 SELECT 'Recuerda regenerar el Prisma Client si eliminaste columnas' AS recordatorio;
 
+
+
+

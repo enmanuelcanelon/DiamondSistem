@@ -123,3 +123,6 @@ LIMIT 5;
 \echo '   4. Verificar que aparece en preview y detalles'
 \echo ''
 
+
+
+

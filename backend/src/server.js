@@ -130,6 +130,7 @@ app.use('/api/mesas', mesasRoutes);
 app.use('/api/invitados', invitadosRoutes);
 app.use('/api/playlist', playlistRoutes);
 app.use('/api/ajustes', ajustesRoutes);
+app.use('/api/ajustes-evento', ajustesRoutes); // Alias para compatibilidad
 app.use('/api/emails', emailsRoutes);
 app.use('/api/salones', salonesRoutes);
 

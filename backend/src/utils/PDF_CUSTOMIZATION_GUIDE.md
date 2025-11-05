@@ -238,3 +238,6 @@ Si tienes un diseño específico que quieres aplicar:
 
 **Última actualización**: Noviembre 2025
 
+
+
+

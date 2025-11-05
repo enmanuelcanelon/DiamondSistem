@@ -112,3 +112,6 @@ npx prisma generate
 - ✅ Integrado en áreas de vendedor y cliente
 - ✅ Notas internas restauradas
 
+
+
+

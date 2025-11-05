@@ -253,7 +253,18 @@ function Contratos() {
         </div>
       ) : (
         <div className="space-y-4">
-          {contratosFiltrados?.map((contrato) => (
+          {contratosFiltrados?.map((contrato) => {
+            // Debug: verificar datos del salón
+            console.log('🔍 Contrato salón data:', {
+              id: contrato.id,
+              codigo: contrato.codigo_contrato,
+              lugar_salon: contrato.lugar_salon,
+              salones: contrato.salones,
+              salon_id: contrato.salon_id,
+              tieneLugarSalon: !!contrato.lugar_salon,
+              tieneSalonesNombre: !!contrato.salones?.nombre
+            });
+            return (
             <div
               key={contrato.id}
               className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition"
@@ -327,14 +338,19 @@ function Contratos() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{contrato.cantidad_invitados || 0} invitados</span>
                     </div>
-                    {(contrato.lugar_salon || contrato.salones?.nombre) && (
+                    {(contrato.lugar_salon || contrato.salones?.nombre) ? (
                       <div className="flex items-center gap-2">
                         <span className="text-indigo-600 font-medium">
-                          📍 {contrato.lugar_salon || contrato.salones?.nombre}
+                          📍 {contrato.lugar_salon || contrato.salones?.nombre || 'Sin salón'}
                         </span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
+                  {contrato.paquetes?.nombre && (
+                    <p className="text-xs text-gray-500 mt-2 ml-11">
+                      📦 Paquete: {contrato.paquetes.nombre}
+                    </p>
+                  )}
                 </div>
 
                 <div className="lg:text-right space-y-2">
@@ -416,7 +432,8 @@ function Contratos() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

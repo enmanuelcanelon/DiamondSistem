@@ -29,7 +29,7 @@ function MisContratos() {
 
   const handleDescargarContrato = async () => {
     try {
-      const response = await api.get(`/contratos/${user.contrato_id}/pdf`, {
+      const response = await api.get(`/contratos/${user.contrato_id}/pdf-contrato`, {
         responseType: 'blob',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -53,7 +53,7 @@ function MisContratos() {
 
   const handleDescargarVersion = async (versionId, numeroVersion) => {
     try {
-      const response = await api.get(`/contratos/${user.contrato_id}/versiones/${versionId}/pdf`, {
+      const response = await api.get(`/contratos/${user.contrato_id}/versiones/${numeroVersion}/pdf`, {
         responseType: 'blob',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -171,11 +171,11 @@ function MisContratos() {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-indigo-700 font-bold">V{version.numero_version}</span>
+                    <span className="text-indigo-700 font-bold">V{version.version_numero}</span>
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">
-                      Versión {version.numero_version}
+                      Versión {version.version_numero}
                       {index === 0 && <span className="ml-2 text-xs text-green-600 font-semibold">(Actual)</span>}
                     </p>
                     <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
@@ -200,7 +200,7 @@ function MisContratos() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDescargarVersion(version.id, version.numero_version)}
+                  onClick={() => handleDescargarVersion(version.id, version.version_numero)}
                   className="flex items-center gap-2 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition font-medium"
                 >
                   <Download className="w-4 h-4" />

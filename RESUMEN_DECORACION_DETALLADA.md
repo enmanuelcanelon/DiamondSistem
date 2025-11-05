@@ -258,3 +258,6 @@ Todos los requisitos han sido implementados exitosamente:
 
 **Siguiente paso**: Ejecutar la migración SQL y regenerar Prisma.
 
+
+
+

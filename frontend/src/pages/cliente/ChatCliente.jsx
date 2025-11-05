@@ -75,6 +75,8 @@ function ChatCliente() {
           destinatarioId={contrato.vendedor_id}
           destinatarioTipo="vendedor"
           destinatarioNombre={contrato.vendedores?.nombre_completo}
+          destinatarioEmail={contrato.vendedores?.email}
+          destinatarioTelefono={contrato.vendedores?.telefono}
         />
       )}
     </div>

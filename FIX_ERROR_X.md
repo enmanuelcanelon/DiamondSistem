@@ -55,3 +55,6 @@ Estos mensajes eran solo para debugging y no son necesarios en producción.
 **Estado:** ✅ Corregido  
 **Fecha:** Noviembre 2025
 
+
+
+

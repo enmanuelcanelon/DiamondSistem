@@ -18,3 +18,6 @@ FROM information_schema.columns
 WHERE table_name IN ('ofertas', 'contratos') 
 AND column_name = 'homenajeado';
 
+
+
+

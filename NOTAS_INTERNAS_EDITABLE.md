@@ -209,3 +209,6 @@ feat: área editable de notas internas en detalles de contrato
 - Loading state mientras se guarda
 ```
 
+
+
+

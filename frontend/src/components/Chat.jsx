@@ -4,7 +4,7 @@ import { Send, Loader2, MessageCircle } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import api from '../config/api';
 
-function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre }) {
+function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre, destinatarioEmail, destinatarioTelefono }) {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const messagesEndRef = useRef(null);
@@ -133,7 +133,12 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
                 colorBorde = '';
               } else if (mensaje.remitente_tipo === 'vendedor') {
                 // Mensaje del VENDEDOR (lo ve el cliente)
-                etiqueta = '👔 Asesor de Eventos';
+                if (destinatarioTipo === 'vendedor' && destinatarioNombre) {
+                  // Mostrar nombre del vendedor
+                  etiqueta = `👔 ${destinatarioNombre}`;
+                } else {
+                  etiqueta = '👔 Asesor de Eventos';
+                }
                 colorFondo = 'bg-blue-50';
                 colorTexto = 'text-gray-900';
                 colorBorde = 'border-2 border-blue-400';
@@ -144,6 +149,9 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
                 colorTexto = 'text-gray-900';
                 colorBorde = 'border-2 border-green-400';
               }
+
+              // Verificar si hay info adicional del vendedor
+              const mostrarInfoVendedor = !esMio && mensaje.remitente_tipo === 'vendedor' && destinatarioTipo === 'vendedor' && (destinatarioEmail || destinatarioTelefono);
               
               return (
                 <div
@@ -152,15 +160,28 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
                 >
                   <div className={`max-w-[70%] rounded-xl px-4 py-3 shadow-sm ${colorFondo} ${colorBorde}`}>
                     {/* SIEMPRE mostrar la etiqueta de quién envió */}
-                    <p className={`text-xs font-bold mb-2 ${
+                    <div className={`mb-2 ${
                       esMio 
                         ? 'text-purple-100' 
                         : mensaje.remitente_tipo === 'vendedor'
                           ? 'text-blue-700'
                           : 'text-green-700'
                     }`}>
-                      {etiqueta}
-                    </p>
+                      <p className="text-xs font-bold">
+                        {etiqueta}
+                      </p>
+                      {/* Mostrar email y teléfono del vendedor si está disponible */}
+                      {mostrarInfoVendedor && (
+                        <div className="text-xs mt-1 space-y-0.5">
+                          {destinatarioEmail && (
+                            <p className="text-blue-600">📧 {destinatarioEmail}</p>
+                          )}
+                          {destinatarioTelefono && (
+                            <p className="text-blue-600">📞 {destinatarioTelefono}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     
                     {/* Mensaje */}
                     <p className={`text-sm whitespace-pre-wrap break-words ${colorTexto}`}>

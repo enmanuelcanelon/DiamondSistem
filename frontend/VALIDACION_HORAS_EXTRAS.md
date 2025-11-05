@@ -314,3 +314,6 @@ Si la validación no funciona correctamente, verifica:
 **Autor:** Sistema DiamondSistem  
 **Versión:** 2.0
 
+
+
+

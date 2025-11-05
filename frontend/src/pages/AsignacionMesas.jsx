@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -32,19 +32,17 @@ function AsignacionMesas() {
     numero_mesa: '',
     nombre_mesa: '',
     capacidad: 10,
-    forma: 'redonda',
   });
   
   const [nuevoInvitado, setNuevoInvitado] = useState({
     nombre_completo: '',
-    email: '',
-    telefono: '',
     tipo: 'adulto',
   });
   
   const [editandoMesa, setEditandoMesa] = useState(null);
   const [mostrarFormMesa, setMostrarFormMesa] = useState(false);
   const [mostrarFormInvitado, setMostrarFormInvitado] = useState(false);
+  const [mesaSeleccionadaParaAsignar, setMesaSeleccionadaParaAsignar] = useState(null);
 
   // Query para obtener el contrato
   const { data: contrato } = useQuery({
@@ -84,7 +82,7 @@ function AsignacionMesas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['mesas', contratoId]);
-      setNuevaMesa({ numero_mesa: '', nombre_mesa: '', capacidad: 10, forma: 'redonda' });
+      setNuevaMesa({ numero_mesa: '', nombre_mesa: '', capacidad: 10 });
       setMostrarFormMesa(false);
       alert('Mesa creada exitosamente');
     },
@@ -119,7 +117,7 @@ function AsignacionMesas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['invitados', contratoId]);
-      setNuevoInvitado({ nombre_completo: '', email: '', telefono: '', tipo: 'adulto' });
+      setNuevoInvitado({ nombre_completo: '', tipo: 'adulto' });
       setMostrarFormInvitado(false);
       alert('Invitado agregado exitosamente');
     },
@@ -200,9 +198,163 @@ function AsignacionMesas() {
   };
 
   const invitadosSinMesa = invitadosData?.agrupado?.sin_mesa || [];
+  
+  // Obtener información del salón (múltiples fuentes posibles)
+  const salonNombreRaw = contrato?.salones?.nombre || contrato?.lugar_salon || contrato?.ofertas?.lugar_salon || '';
+  // Normalizar el nombre del salón (case-insensitive, trim)
+  const salonNombre = salonNombreRaw ? salonNombreRaw.trim() : '';
+  const salonId = contrato?.salon_id || contrato?.ofertas?.salon_id;
+  
+  // Configuración de salones según instrucciones
+  const configuracionSalones = {
+    'Diamond': {
+      moverMesas: true,
+      mesasConteles: true,
+      cantidadMesas: 2,
+      asientosPorMesa: 4,
+      sillasPorMesa: 12,
+      mesasAdicionales: 2,
+      imagen: '/distribucion_mesas/Diamond/diamond.png',
+      activo: true
+    },
+    'Kendall': {
+      moverMesas: false,
+      mesasConteles: true,
+      cantidadMesas: 3,
+      asientosPorMesa: 4,
+      sillasPorMesa: 10,
+      imagen: '/distribucion_mesas/Kendall/kendall.png',
+      activo: true
+    },
+    'Doral': {
+      moverMesas: false,
+      mesasConteles: true,
+      cantidadMesas: 3,
+      asientosPorMesa: 4,
+      sillasPorMesa: 10,
+      imagen: '/distribucion_mesas/Doral/doral.png',
+      activo: true
+    }
+  };
+  
+  // Buscar el salón de forma case-insensitive
+  const salonNombreKey = salonNombre 
+    ? Object.keys(configuracionSalones).find(key => 
+        key.toLowerCase() === salonNombre.toLowerCase()
+      ) || salonNombre
+    : null;
+  
+  const configSalon = salonNombreKey && salonNombreKey in configuracionSalones
+    ? configuracionSalones[salonNombreKey]
+    : null;
+  
+  const mostrarMantenimiento = configSalon && !configSalon.activo;
+  
+  // Crear mesas iniciales automáticamente si no existen y hay configuración de salón
+  useEffect(() => {
+    if (configSalon && configSalon.activo && mesas && mesas.length === 0 && contrato && puedeEditar && !loadingMesas) {
+      const crearMesasIniciales = async () => {
+        try {
+          const mesasACrear = [];
+          for (let i = 1; i <= configSalon.cantidadMesas; i++) {
+            mesasACrear.push({
+              contrato_id: parseInt(contratoId),
+              numero_mesa: i,
+              nombre_mesa: `Mesa ${i}`,
+              capacidad: configSalon.sillasPorMesa
+            });
+          }
+          
+          // Crear todas las mesas
+          for (const mesa of mesasACrear) {
+            await api.post('/mesas', mesa);
+          }
+          
+          // Invalidar queries para refrescar
+          queryClient.invalidateQueries(['mesas', contratoId]);
+        } catch (error) {
+          console.error('Error al crear mesas iniciales:', error);
+        }
+      };
+      
+      crearMesasIniciales();
+    }
+  }, [configSalon, mesas, contrato, contratoId, puedeEditar, queryClient, loadingMesas]);
+  
+  // Debug: mostrar información del salón en consola (siempre en desarrollo)
+  console.log('🔍 Debug Asignación Mesas:', {
+    contratoId,
+    salonNombreRaw,
+    salonNombre,
+    salonNombreKey,
+    salonId,
+    tieneSalon: !!contrato?.salones,
+    salonDesdeContrato: contrato?.salones?.nombre,
+    salonDesdeLugar: contrato?.lugar_salon,
+    salonDesdeOferta: contrato?.ofertas?.lugar_salon,
+    contrato: contrato ? {
+      salon_id: contrato.salon_id,
+      lugar_salon: contrato.lugar_salon,
+      tieneSalones: !!contrato.salones,
+      tieneOfertas: !!contrato.ofertas
+    } : null,
+    configSalon: !!configSalon
+  });
+
+  // Modal/Dropdown para seleccionar invitado a asignar
+  const handleAsignarInvitadoAMesa = (invitadoId) => {
+    if (mesaSeleccionadaParaAsignar) {
+      asignarInvitadoMutation.mutate({ 
+        invitadoId, 
+        mesaId: mesaSeleccionadaParaAsignar 
+      });
+      setMesaSeleccionadaParaAsignar(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Modal para seleccionar invitado */}
+      {mesaSeleccionadaParaAsignar && puedeEditar && invitadosSinMesa.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Seleccionar Invitado
+              </h3>
+              <button
+                onClick={() => setMesaSeleccionadaParaAsignar(null)}
+                className="p-1 rounded hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Selecciona un invitado para asignar a la mesa
+            </p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {invitadosSinMesa.map((invitado) => (
+                <button
+                  key={invitado.id}
+                  onClick={() => handleAsignarInvitadoAMesa(invitado.id)}
+                  disabled={asignarInvitadoMutation.isPending}
+                  className="w-full text-left p-3 border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition disabled:opacity-50"
+                >
+                  <p className="font-medium text-gray-900">{invitado.nombre_completo}</p>
+                  <p className="text-xs text-gray-500 capitalize">{invitado.tipo}</p>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setMesaSeleccionadaParaAsignar(null)}
+              className="mt-4 w-full px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link to={`/contratos/${contratoId}`} className="p-2 hover:bg-gray-100 rounded-lg transition">
@@ -242,13 +394,14 @@ function AsignacionMesas() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Panel Izquierdo: Invitados Sin Asignar */}
-        <div className="lg:col-span-1 space-y-4">
+        {/* Panel Izquierdo: Invitados Sin Asignar - Solo para vendedores */}
+        {esVendedor && (
+          <div className="lg:col-span-1 space-y-4">
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Users className="w-5 h-5 text-indigo-600" />
-                Invitados Sin Mesa ({invitadosSinMesa.length})
+                Invitados ({invitadosSinMesa.length})
               </h2>
               {puedeEditar && (
                 <button
@@ -271,20 +424,6 @@ function AsignacionMesas() {
                   onChange={(e) => setNuevoInvitado({ ...nuevoInvitado, nombre_completo: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg text-sm"
                   required
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={nuevoInvitado.email}
-                  onChange={(e) => setNuevoInvitado({ ...nuevoInvitado, email: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-                <input
-                  type="tel"
-                  placeholder="Teléfono"
-                  value={nuevoInvitado.telefono}
-                  onChange={(e) => setNuevoInvitado({ ...nuevoInvitado, telefono: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
                 />
                 <select
                   value={nuevoInvitado.tipo}
@@ -344,25 +483,11 @@ function AsignacionMesas() {
                       )}
                     </div>
                     
-                    {/* Dropdown para asignar a mesa */}
-                    {mesas && mesas.length > 0 && puedeEditar && (
-                      <select
-                        onChange={(e) => handleAsignarInvitado(invitado.id, parseInt(e.target.value))}
-                        className="w-full mt-2 px-2 py-1 border rounded text-xs"
-                        defaultValue=""
-                      >
-                        <option value="">Asignar a mesa...</option>
-                        {mesas.map((mesa) => (
-                          <option
-                            key={mesa.id}
-                            value={mesa.id}
-                            disabled={mesa.invitados.length >= mesa.capacidad}
-                          >
-                            Mesa {mesa.numero_mesa} {mesa.nombre_mesa ? `(${mesa.nombre_mesa})` : ''} - 
-                            {mesa.invitados.length}/{mesa.capacidad}
-                          </option>
-                        ))}
-                      </select>
+                    {/* Asignación se hace haciendo clic en las mesas del gráfico */}
+                    {puedeEditar && (
+                      <p className="text-xs text-gray-500 mt-2 italic">
+                        Haz clic en una mesa del gráfico para asignar
+                      </p>
                     )}
                   </div>
                 ))
@@ -370,181 +495,102 @@ function AsignacionMesas() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Panel Derecho: Mesas */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        {/* Panel Central: Gráfico Visual de Distribución */}
+        <div className={esVendedor ? "lg:col-span-2 space-y-4" : "lg:col-span-3 space-y-4"}>
+          {/* Vista Visual de Distribución - Mostrar si hay salón o si hay mesas */}
+          {(salonNombre || salonId) && (
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
                 <Table className="w-5 h-5 text-indigo-600" />
-                Mesas ({mesas?.length || 0})
+                Distribución Visual - {salonNombreKey || salonNombre || (salonId ? 'Salón ID: ' + salonId : 'Salón')}
               </h2>
-              {puedeEditar && (
-                <button
-                  onClick={() => setMostrarFormMesa(!mostrarFormMesa)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Nueva Mesa
-                </button>
-              )}
-            </div>
-
-            {/* Formulario para crear mesa */}
-            {mostrarFormMesa && puedeEditar && (
-              <form onSubmit={handleCrearMesa} className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="number"
-                    placeholder="Número de mesa *"
-                    value={nuevaMesa.numero_mesa}
-                    onChange={(e) => setNuevaMesa({ ...nuevaMesa, numero_mesa: e.target.value })}
-                    className="px-3 py-2 border rounded-lg text-sm"
-                    required
-                    min="1"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nombre (opcional)"
-                    value={nuevaMesa.nombre_mesa}
-                    onChange={(e) => setNuevaMesa({ ...nuevaMesa, nombre_mesa: e.target.value })}
-                    className="px-3 py-2 border rounded-lg text-sm"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="number"
-                    placeholder="Capacidad *"
-                    value={nuevaMesa.capacidad}
-                    onChange={(e) => setNuevaMesa({ ...nuevaMesa, capacidad: e.target.value })}
-                    className="px-3 py-2 border rounded-lg text-sm"
-                    required
-                    min="1"
-                  />
-                  <select
-                    value={nuevaMesa.forma}
-                    onChange={(e) => setNuevaMesa({ ...nuevaMesa, forma: e.target.value })}
-                    className="px-3 py-2 border rounded-lg text-sm"
-                  >
-                    <option value="redonda">Redonda</option>
-                    <option value="rectangular">Rectangular</option>
-                    <option value="cuadrada">Cuadrada</option>
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={crearMesaMutation.isPending}
-                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm disabled:opacity-50"
-                  >
-                    {crearMesaMutation.isPending ? 'Creando...' : 'Crear Mesa'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMostrarFormMesa(false)}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-100 text-sm"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Lista de mesas */}
-            <div className="space-y-4">
-              {loadingMesas ? (
-                <p className="text-gray-500 text-sm text-center py-8">Cargando mesas...</p>
-              ) : !mesas || mesas.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Table className="w-8 h-8 text-gray-400" />
+              
+              {!configSalon ? (
+                <div className="bg-gray-50 border-l-4 border-gray-400 p-6 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <Table className="w-8 h-8 text-gray-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                        Salón no configurado
+                      </h3>
+                      <p className="text-gray-700">
+                        El salón "{salonNombre}" aún no tiene una distribución visual configurada.
+                        Por favor, utiliza la lista de mesas a continuación para gestionar las asignaciones.
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-gray-600 mb-4">No hay mesas creadas</p>
-                  <button
-                    onClick={() => setMostrarFormMesa(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Crear Primera Mesa
-                  </button>
+                </div>
+              ) : mostrarMantenimiento ? (
+                <div className="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <Table className="w-8 h-8 text-amber-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-amber-900 mb-1">
+                        {configSalon.mensaje || 'En Mantenimiento'}
+                      </h3>
+                      <p className="text-amber-700">
+                        La distribución visual de mesas para el salón {salonNombreKey || salonNombre} está en desarrollo.
+                        Por favor, utiliza la lista de mesas a continuación para gestionar las asignaciones.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                mesas.map((mesa) => (
-                  <div
-                    key={mesa.id}
-                    className="border rounded-lg p-4 hover:border-indigo-300 transition bg-white"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          Mesa {mesa.numero_mesa}
-                          {mesa.nombre_mesa && <span className="text-gray-600 font-normal ml-2">({mesa.nombre_mesa})</span>}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Capacidad: {mesa.invitados.length}/{mesa.capacidad} | Forma: {mesa.forma}
-                        </p>
+                <div className="relative bg-white rounded-lg overflow-hidden border-2 border-gray-300">
+                  {/* Imagen del plano del salón */}
+                  <div className="relative w-full">
+                    <img 
+                      src={configSalon.imagen} 
+                      alt={`Plano del salón ${salonNombreKey || salonNombre}`}
+                      className="w-full h-auto object-contain"
+                      style={{ maxHeight: '800px' }}
+                    />
+                  </div>
+                  
+                  {/* Solo mostrar información si es vendedor, no para clientes */}
+                  {esVendedor && (
+                    <div className="p-4 bg-white border-t border-gray-200">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="font-semibold text-gray-700">Mesas Conteles:</span>
+                          <span className="ml-2 text-gray-600">
+                            {configSalon.mesasConteles ? 'Sí' : 'No'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-700">Mover Mesas:</span>
+                          <span className="ml-2 text-gray-600">
+                            {configSalon.moverMesas ? 'Sí' : 'No'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-700">Sillas por Mesa:</span>
+                          <span className="ml-2 text-gray-600">{configSalon.sillasPorMesa}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-700">Capacidad Total:</span>
+                          <span className="ml-2 text-gray-600">
+                            {mesas?.reduce((total, mesa) => total + mesa.capacidad, 0) || 0} invitados
+                          </span>
+                        </div>
                       </div>
-                      {puedeEditar && (
-                        <button
-                          onClick={() => handleEliminarMesa(mesa.id)}
-                          disabled={eliminarMesaMutation.isPending}
-                          className="p-2 rounded text-red-600 hover:bg-red-50 transition"
-                          title="Eliminar mesa"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      {puedeEditar && invitadosSinMesa.length > 0 && (
+                        <p className="text-sm text-gray-600 mt-3 italic">
+                          💡 Haz clic en las mesas numeradas en el plano para asignar invitados
+                        </p>
                       )}
                     </div>
-
-                    {/* Invitados en la mesa */}
-                    {mesa.invitados.length === 0 ? (
-                      <p className="text-sm text-gray-500 italic">Sin invitados asignados</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {mesa.invitados.map((invitado) => (
-                          <div
-                            key={invitado.id}
-                            className="flex items-center justify-between p-2 bg-gray-50 rounded group"
-                          >
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{invitado.nombre_completo}</p>
-                              <p className="text-xs text-gray-500">{invitado.tipo}</p>
-                            </div>
-                            {puedeEditar && (
-                              <button
-                                onClick={() => handleDesasignarInvitado(invitado.id)}
-                                disabled={asignarInvitadoMutation.isPending}
-                                className="p-1 rounded text-orange-600 hover:bg-orange-50 opacity-0 group-hover:opacity-100 transition"
-                                title="Desasignar de esta mesa"
-                              >
-                                <UserMinus className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Progress bar */}
-                    <div className="mt-3">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${
-                            mesa.invitados.length >= mesa.capacidad
-                              ? 'bg-red-500'
-                              : mesa.invitados.length > mesa.capacidad * 0.7
-                              ? 'bg-yellow-500'
-                              : 'bg-green-500'
-                          }`}
-                          style={{ width: `${Math.min((mesa.invitados.length / mesa.capacidad) * 100, 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                ))
+                  )}
+                </div>
               )}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

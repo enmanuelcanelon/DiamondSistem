@@ -214,3 +214,6 @@ Si ya había datos con los campos antiguos:
 
 ¡Listo! 🎉 Ahora ejecuta los 3 comandos y todo funcionará correctamente.
 
+
+
+

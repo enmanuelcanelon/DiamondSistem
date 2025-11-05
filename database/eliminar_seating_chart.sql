@@ -161,3 +161,6 @@ SELECT '  2. npx prisma db pull' AS paso_2;
 SELECT '  3. npx prisma generate' AS paso_3;
 SELECT '  4. npm run dev' AS paso_4;
 
+
+
+

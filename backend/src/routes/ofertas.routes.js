@@ -379,7 +379,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
          data: {
            codigo_oferta,
            cliente_id: parseInt(datos.cliente_id),
-           vendedor_id: parseInt(datos.vendedor_id || req.user.id),
+           vendedor_id: req.user.id, // SIEMPRE usar el vendedor logueado
            paquete_id: parseInt(datos.paquete_id),
            salon_id: datos.salon_id ? parseInt(datos.salon_id) : null,
            fecha_evento: new Date(datos.fecha_evento),

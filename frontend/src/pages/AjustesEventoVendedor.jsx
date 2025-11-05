@@ -9,7 +9,11 @@ import {
   Camera, 
   Settings,
   Loader2,
-  Calendar
+  Calendar,
+  Clock,
+  Car,
+  Wine,
+  CheckCircle2
 } from 'lucide-react';
 import api from '../config/api';
 
@@ -91,7 +95,7 @@ function AjustesEventoVendedor() {
 
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-0 divide-x">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-0 divide-x">
           <a
             href="#torta"
             className="px-4 py-3 text-center hover:bg-gray-50 transition flex flex-col items-center gap-1"
@@ -132,7 +136,7 @@ function AjustesEventoVendedor() {
             className="px-4 py-3 text-center hover:bg-gray-50 transition flex flex-col items-center gap-1"
           >
             <Settings className="w-5 h-5 text-gray-600" />
-            <span className="text-xs font-medium">Otros</span>
+            <span className="text-xs font-medium">Final</span>
           </a>
         </div>
       </div>
@@ -155,8 +159,11 @@ function AjustesEventoVendedor() {
           {/* Fotografía */}
           <SeccionFotografia ajustes={ajustes} />
           
+          {/* Bar */}
+          <SeccionBar ajustes={ajustes} contrato={contrato} />
+          
           {/* Otros */}
-          <SeccionOtros ajustes={ajustes} />
+          <SeccionOtros ajustes={ajustes} contrato={contrato} />
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
@@ -437,19 +444,431 @@ function SeccionFotografia({ ajustes }) {
   );
 }
 
-// Sección Otros
-function SeccionOtros({ ajustes }) {
+// Sección Bar
+function SeccionBar({ ajustes, contrato }) {
+  // Detectar tipo de licor contratado
+  const todosServicios = [
+    ...(contrato?.contratos_servicios || []).map(cs => cs.servicios?.nombre),
+    ...(contrato?.paquetes?.paquetes_servicios || []).map(ps => ps.servicios?.nombre)
+  ].filter(Boolean);
+
+  const tieneLicorBasico = todosServicios.some(nombre => 
+    nombre?.toLowerCase().includes('licor básico') || nombre?.toLowerCase().includes('licor basico')
+  );
+  const tieneLicorPremium = todosServicios.some(nombre => 
+    nombre?.toLowerCase().includes('licor premium')
+  );
+
+  const tipoLicor = tieneLicorPremium ? 'premium' : tieneLicorBasico ? 'basico' : null;
+
+  // Productos comunes (iguales para ambos)
+  const refrescos = [
+    'Club Soda',
+    'Agua Tónica',
+    'Coca Cola',
+    'Coca Cola Diet',
+    'Sprite',
+    'Sprite Diet',
+    'Fanta Naranja'
+  ];
+
+  const jugos = [
+    'Naranja',
+    'Cranberry'
+  ];
+
+  const otros = [
+    'Granadina',
+    'Blue Curaçao',
+    'Piña Colada'
+  ];
+
+  const vinos = [
+    'Vino Blanco',
+    'Vino Tinto',
+    'Vino Chardonnay'
+  ];
+
+  if (!tipoLicor) {
+    return (
+      <div id="bar" className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+          <Wine className="w-6 h-6 text-indigo-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
+        </div>
+        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
+          <Wine className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-yellow-900 mb-2">Servicio de Bar no Contratado</h3>
+          <p className="text-yellow-800">
+            El cliente no tiene contratado ningún servicio de licor (Básico o Premium) en su evento.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div id="bar" className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+        <Wine className="w-6 h-6 text-indigo-600" />
+        <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
+        {tipoLicor === 'premium' && (
+          <span className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-medium">
+            ⭐ Premium
+          </span>
+        )}
+        {tipoLicor === 'basico' && (
+          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+            📦 Básico
+          </span>
+        )}
+      </div>
+
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6">
+        <p className="text-sm text-blue-800">
+          <strong>Información del Bar:</strong> Lista completa de bebidas incluidas en el servicio de {tipoLicor === 'premium' ? 'Licor Premium' : 'Licor Básico'}.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Alcohol - Izquierda */}
+        <div className="space-y-4">
+          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <div className="flex items-center gap-2 mb-4">
+              <Wine className="w-6 h-6 text-red-600" />
+              <h3 className="text-xl font-bold text-gray-900">Licores y Alcohol</h3>
+            </div>
+            
+            {/* Vinos */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <span className="text-red-500">🍷</span> Vinos
+              </h4>
+              <div className="space-y-1">
+                {vinos.map((vino, index) => (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-900 text-sm">{vino}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Ron */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <span className="text-amber-600">🍸</span> Ron
+              </h4>
+              <div className="space-y-1">
+                {(tipoLicor === 'premium' ? ['Ron Bacardi Blanco', 'Ron Bacardi Gold'] : ['Ron Spice', 'Ron Blanco']).map((ron, index) => (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-900 text-sm">{ron}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Whisky */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <span className="text-amber-700">🥃</span> Whisky
+              </h4>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">
+                    {tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Vodka y Tequila */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className="text-gray-900 text-sm">Vodka</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className="text-gray-900 text-sm">Tequila</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Refrescos, Jugos y Otros - Derecha */}
+        <div className="space-y-4">
+          {/* Refrescos */}
+          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-blue-500">🥤</span> Refrescos
+            </h3>
+            <div className="space-y-1">
+              {refrescos.map((refresco, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">{refresco}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Jugos */}
+          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-orange-500">🧃</span> Jugos
+            </h3>
+            <div className="space-y-1">
+              {jugos.map((jugo, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">{jugo}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Otros */}
+          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-purple-500">🍹</span> Otros
+            </h3>
+            <div className="space-y-1">
+              {otros.map((otro, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">{otro}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Sección Otros (Final)
+function SeccionOtros({ ajustes, contrato }) {
+  // Parsear protocolo si existe
+  let protocolo = null;
+  if (ajustes?.protocolo) {
+    try {
+      protocolo = typeof ajustes.protocolo === 'string' 
+        ? JSON.parse(ajustes.protocolo)
+        : ajustes.protocolo;
+    } catch (e) {
+      console.error('Error parsing protocolo:', e);
+    }
+  }
+
+  // Determinar si es quinceañera
+  const nombreEvento = contrato?.eventos?.nombre_evento?.toLowerCase() || '';
+  const homenajeado = contrato?.homenajeado?.toLowerCase() || '';
+  const esQuinceanera = nombreEvento.includes('15') || nombreEvento.includes('quince') || 
+                        nombreEvento.includes('quinceañera') || homenajeado.includes('quince');
+
+  // Formatear hora de limosina
+  const formatearHoraLimosina = (hora) => {
+    if (!hora) return null;
+    if (typeof hora === 'string') {
+      // Si ya es string "HH:MM"
+      return hora;
+    }
+    // Si es Date object
+    const date = new Date(hora);
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  };
+
   return (
     <div id="otros" className="bg-white rounded-xl shadow-sm border p-6">
       <div className="flex items-center gap-3 mb-6 pb-4 border-b">
         <Settings className="w-6 h-6 text-gray-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Otros Detalles</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Final</h2>
       </div>
-      <div className="space-y-4">
-        <Campo label="Invitado(s) de Honor" valor={ajustes?.invitado_honor} />
-        <Campo label="Brindis Especial" valor={ajustes?.brindis_especial} />
+      <div className="space-y-6">
+        {/* Limosina */}
+        {ajustes?.hora_limosina && (
+          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Car className="w-5 h-5 text-blue-600" />
+              <p className="text-sm font-semibold text-gray-700">Servicio de Limosina</p>
+            </div>
+            <p className="text-gray-900">
+              <span className="font-medium">Hora de Recogida:</span> {formatearHoraLimosina(ajustes.hora_limosina)}
+            </p>
+          </div>
+        )}
+
+        {/* Vestido de la niña (solo si es quinceañera) */}
+        {esQuinceanera && ajustes?.vestido_nina && (
+          <Campo label="Vestido de la niña" valor={ajustes.vestido_nina} />
+        )}
+
+        {/* Observaciones adicionales */}
+        <Campo label="Observaciones Adicionales" valor={ajustes?.observaciones_adicionales} />
+
+        {/* Items especiales */}
+        <Campo label="Items Especiales que Traerá" valor={ajustes?.items_especiales} />
+
+        {/* Sorpresas planeadas */}
         <Campo label="Sorpresas Planeadas" valor={ajustes?.sorpresas_planeadas} />
-        <Campo label="Solicitudes Especiales" valor={ajustes?.solicitudes_especiales} />
+
+        {/* Protocolo */}
+        {protocolo && (
+          <div className="border-t-2 border-gray-200 pt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Clock className="w-6 h-6 text-purple-600" />
+              <h3 className="text-xl font-bold text-gray-900">Protocolo del Evento</h3>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+              {protocolo.hora_apertura && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">🕐 Apertura del Salón para Invitados</p>
+                  <p className="text-gray-900">{protocolo.hora_apertura}</p>
+                </div>
+              )}
+
+              {protocolo.hora_anuncio_padres && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">👨‍👩‍👧 Anuncio de Padres</p>
+                  <p className="text-gray-900">{protocolo.hora_anuncio_padres}</p>
+                  {protocolo.nombres_padres && (
+                    <p className="text-gray-700 text-sm mt-1">Padres: {protocolo.nombres_padres}</p>
+                  )}
+                </div>
+              )}
+
+              {protocolo.hora_anuncio_homenajeado && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">⭐ Anuncio del Homenajeado</p>
+                  <p className="text-gray-900">{protocolo.hora_anuncio_homenajeado}</p>
+                  {protocolo.nombre_homenajeado && (
+                    <p className="text-gray-700 text-sm mt-1">Nombre: {protocolo.nombre_homenajeado}</p>
+                  )}
+                  {protocolo.acompanantes && (
+                    <p className="text-gray-700 text-sm mt-1">Acompañado de: {protocolo.acompanantes}</p>
+                  )}
+                </div>
+              )}
+
+              {protocolo.cambio_zapatilla !== undefined && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">👠 Cambio de Zapatilla</p>
+                  <p className="text-gray-900">{protocolo.cambio_zapatilla ? 'Sí' : 'No'}</p>
+                  {protocolo.cambio_zapatilla && protocolo.cambio_zapatilla_a_cargo && (
+                    <p className="text-gray-700 text-sm mt-1">A cargo de: {protocolo.cambio_zapatilla_a_cargo}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {protocolo.baile_papa !== undefined && (
+                  <div className="bg-white rounded-lg p-3 border border-gray-200">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">💃 Baile con Papá</p>
+                    <p className="text-gray-900">{protocolo.baile_papa ? 'Sí' : 'No'}</p>
+                    {protocolo.baile_papa && protocolo.nombre_papa && (
+                      <p className="text-gray-700 text-sm mt-1">Nombre: {protocolo.nombre_papa}</p>
+                    )}
+                  </div>
+                )}
+
+                {protocolo.baile_mama !== undefined && (
+                  <div className="bg-white rounded-lg p-3 border border-gray-200">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">💃 Baile con Mamá</p>
+                    <p className="text-gray-900">{protocolo.baile_mama ? 'Sí' : 'No'}</p>
+                    {protocolo.baile_mama && protocolo.nombre_mama && (
+                      <p className="text-gray-700 text-sm mt-1">Nombre: {protocolo.nombre_mama}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {protocolo.bailes_adicionales && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">💃 Bailes Adicionales</p>
+                  <p className="text-gray-900 whitespace-pre-wrap">{protocolo.bailes_adicionales}</p>
+                </div>
+              )}
+
+              {protocolo.ceremonia_velas !== undefined && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">🕯️ Ceremonia de las 15 Velas</p>
+                  <p className="text-gray-900">{protocolo.ceremonia_velas ? 'Sí' : 'No'}</p>
+                </div>
+              )}
+
+              {protocolo.brindis !== undefined && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">🥂 Palabras / Brindis</p>
+                  <p className="text-gray-900">{protocolo.brindis ? 'Sí' : 'No'}</p>
+                  {protocolo.brindis && protocolo.brindis_a_cargo && (
+                    <p className="text-gray-700 text-sm mt-1">A cargo de: {protocolo.brindis_a_cargo}</p>
+                  )}
+                </div>
+              )}
+
+              {protocolo.momento_social_fotos !== undefined && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">📸 Momento Social / Fotos</p>
+                  <p className="text-gray-900">{protocolo.momento_social_fotos ? 'Sí' : 'No'}</p>
+                  {protocolo.hora_fotos && (
+                    <p className="text-gray-700 text-sm mt-1">Hora: {protocolo.hora_fotos}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {protocolo.hora_cena && (
+                  <div className="bg-white rounded-lg p-3 border border-gray-200">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">🍽️ Cena</p>
+                    <p className="text-gray-900">{protocolo.hora_cena}</p>
+                    {protocolo.proyectar_video !== undefined && (
+                      <p className="text-gray-700 text-sm mt-1">
+                        Proyectar Video: {protocolo.proyectar_video ? 'Sí' : 'No'}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {protocolo.hora_photobooth && (
+                  <div className="bg-white rounded-lg p-3 border border-gray-200">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">📸 Photobooth</p>
+                    <p className="text-gray-900">{protocolo.hora_photobooth}</p>
+                  </div>
+                )}
+
+                {protocolo.hora_loca && (
+                  <div className="bg-white rounded-lg p-3 border border-gray-200">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">🎉 Hora Loca</p>
+                    <p className="text-gray-900">{protocolo.hora_loca}</p>
+                  </div>
+                )}
+
+                {protocolo.hora_happy_birthday && (
+                  <div className="bg-white rounded-lg p-3 border border-gray-200">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">🎂 Happy Birthday</p>
+                    <p className="text-gray-900">{protocolo.hora_happy_birthday}</p>
+                    {protocolo.happy_birthday !== undefined && (
+                      <p className="text-gray-700 text-sm mt-1">
+                        Incluido: {protocolo.happy_birthday ? 'Sí' : 'No'}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {protocolo.hora_fin && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">⏰ Fin del Evento</p>
+                  <p className="text-gray-900">{protocolo.hora_fin}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

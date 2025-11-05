@@ -310,3 +310,6 @@ npx prisma generate
 
 **Última actualización:** 4 de noviembre de 2025
 
+
+
+

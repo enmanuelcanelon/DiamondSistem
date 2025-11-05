@@ -319,3 +319,6 @@ npm run dev
 **Estado:** ✅ Corregido (Hora + Comisión) | ⚠️ Verificar DB (Homenajeado)  
 **Versión:** 1.0
 
+
+
+

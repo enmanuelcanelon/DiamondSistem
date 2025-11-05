@@ -59,6 +59,13 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
             precio_base: true
           }
         },
+        salones: {
+          select: {
+            id: true,
+            nombre: true,
+            capacidad_maxima: true
+          }
+        },
         vendedores: {
           select: {
             id: true,
@@ -71,12 +78,6 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
             id: true,
             nombre_evento: true,
             estado: true
-          }
-        },
-        salones: {
-          select: {
-            id: true,
-            nombre: true
           }
         }
       },
@@ -191,6 +192,12 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         clientes: true,
         vendedores: true,
         paquetes: true,
+        salones: {
+          select: {
+            id: true,
+            nombre: true
+          }
+        },
         ofertas_servicios_adicionales: {
           include: {
             servicios: true
@@ -252,11 +259,12 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           cliente_id: oferta.cliente_id,
           vendedor_id: oferta.vendedor_id,
           paquete_id: oferta.paquete_id,
+          salon_id: oferta.salon_id || null,
+          lugar_salon: oferta.lugar_salon || null,
           fecha_evento: oferta.fecha_evento,
           hora_inicio: oferta.hora_inicio,
           hora_fin: oferta.hora_fin,
           cantidad_invitados: oferta.cantidad_invitados,
-          homenajeado: oferta.homenajeado,
           total_contrato: parseFloat(oferta.total_final),
           tipo_pago,
           meses_financiamiento: (tipo_pago === 'financiado' || tipo_pago === 'plazos') ? parseInt(meses_financiamiento) : 1,
@@ -264,7 +272,8 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           plan_pagos: plan_pagos || null,
           saldo_pendiente: parseFloat(oferta.total_final),
           codigo_acceso_cliente: codigo_acceso_temp,
-          comision_calculada: comision.comision
+          comision_calculada: comision.comision,
+          homenajeado: oferta.homenajeado || null
         }
       });
 
@@ -370,22 +379,31 @@ router.get('/:id/pagos', authenticate, async (req, res, next) => {
 
     const pagos = await prisma.pagos.findMany({
       where: { contrato_id: parseInt(id) },
-      include: {
-        vendedores: {
-          select: {
-            id: true,
-            nombre_completo: true,
-            codigo_vendedor: true
-          }
-        }
-      },
       orderBy: { fecha_pago: 'desc' }
     });
 
+    // Obtener información de vendedores si hay registrado_por
+    const pagosConVendedor = await Promise.all(
+      pagos.map(async (pago) => {
+        if (pago.registrado_por) {
+          const vendedor = await prisma.vendedores.findUnique({
+            where: { id: pago.registrado_por },
+            select: {
+              id: true,
+              nombre_completo: true,
+              codigo_vendedor: true
+            }
+          });
+          return { ...pago, vendedor };
+        }
+        return { ...pago, vendedor: null };
+      })
+    );
+
     res.json({
       success: true,
-      count: pagos.length,
-      pagos
+      count: pagosConVendedor.length,
+      pagos: pagosConVendedor
     });
 
   } catch (error) {
@@ -624,22 +642,31 @@ router.get('/:id/historial', authenticate, async (req, res, next) => {
       where: {
         contrato_id: parseInt(id),
       },
-      include: {
-        vendedores: {
-          select: {
-            nombre_completo: true,
-            codigo_vendedor: true,
-          },
-        },
-      },
       orderBy: {
         fecha_cambio: 'desc', // Más recientes primero
       },
     });
 
+    // Obtener información de vendedores si hay modificado_por
+    const historialConVendedor = await Promise.all(
+      historial.map(async (item) => {
+        if (item.modificado_por) {
+          const vendedor = await prisma.vendedores.findUnique({
+            where: { id: item.modificado_por },
+            select: {
+              nombre_completo: true,
+              codigo_vendedor: true,
+            }
+          });
+          return { ...item, vendedor };
+        }
+        return { ...item, vendedor: null };
+      })
+    );
+
     res.json({
-      historial,
-      total: historial.length,
+      historial: historialConVendedor,
+      total: historialConVendedor.length,
     });
   } catch (error) {
     next(error);
@@ -896,42 +923,5 @@ router.get('/:id/versiones/:version_numero/pdf', authenticate, async (req, res, 
   }
 });
 
-/**
- * @route   PUT /api/contratos/:id/notas
- * @desc    Actualizar notas internas del contrato
- * @access  Private (Vendedor)
- */
-router.put('/:id/notas', authenticate, requireVendedor, async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { notas_vendedor } = req.body;
-
-    // Verificar que el contrato existe
-    const contrato = await prisma.contratos.findUnique({
-      where: { id: parseInt(id) }
-    });
-
-    if (!contrato) {
-      throw new NotFoundError('Contrato no encontrado');
-    }
-
-    // Actualizar notas
-    const contratoActualizado = await prisma.contratos.update({
-      where: { id: parseInt(id) },
-      data: {
-        notas_vendedor: notas_vendedor || null
-      }
-    });
-
-    res.json({
-      success: true,
-      message: 'Notas actualizadas exitosamente',
-      contrato: contratoActualizado
-    });
-
-  } catch (error) {
-    next(error);
-  }
-});
-
 module.exports = router;
+

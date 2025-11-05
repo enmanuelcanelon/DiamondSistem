@@ -16,6 +16,8 @@ import {
   Construction,
   Car,
   Clock,
+  Plus,
+  X,
 } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import api from '../../config/api';
@@ -102,13 +104,20 @@ function AjustesEvento() {
     cs => cs.servicios?.nombre?.toLowerCase().includes('limosina')
   );
 
+  // Verificar si tiene pasapalos contratados
+  const tienePasapalos = contrato?.contratos_servicios?.some(
+    cs => cs.servicios?.nombre?.toLowerCase().includes('pasapalo')
+  ) || contrato?.paquetes?.paquetes_servicios?.some(
+    ps => ps.servicios?.nombre?.toLowerCase().includes('pasapalo')
+  );
+
   const tabs = [
     { id: 'torta', label: 'Torta', icon: Cake, color: 'pink' },
     { id: 'decoracion', label: 'Decoración', icon: Sparkles, color: 'purple' },
     { id: 'menu', label: 'Menú', icon: UtensilsCrossed, color: 'orange' },
-    { id: 'entretenimiento', label: 'Entretenimiento', icon: Music2, color: 'blue' },
+    { id: 'entretenimiento', label: 'Música', icon: Music2, color: 'blue' },
     { id: 'bar', label: 'Bar', icon: Wine, color: 'indigo' },
-    { id: 'otros', label: 'Otros', icon: Settings, color: 'gray' },
+    { id: 'otros', label: 'Final', icon: Settings, color: 'gray' },
   ];
 
   const TabButton = ({ tab }) => {
@@ -246,13 +255,14 @@ function AjustesEvento() {
             guardando={guardando} 
             estaBloqueado={estaBloqueado}
             contrato={contrato}
+            tienePasapalos={tienePasapalos}
           />
         )}
         {tabActivo === 'entretenimiento' && (
           <SeccionEntretenimiento ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
         )}
         {tabActivo === 'bar' && (
-          <SeccionBar ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
+          <SeccionBar ajustes={ajustes} contrato={contrato} />
         )}
         {tabActivo === 'otros' && (
           <SeccionOtros 
@@ -261,6 +271,7 @@ function AjustesEvento() {
             guardando={guardando} 
             estaBloqueado={estaBloqueado}
             tieneLimosina={tieneLimosina}
+            contrato={contrato}
           />
         )}
       </div>
@@ -424,13 +435,15 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
 }
 
 // ===== SECCIÓN MENÚ =====
-function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato }) {
+function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, tienePasapalos }) {
   const [datos, setDatos] = useState({
     entrada: 'Ensalada César', // Valor fijo por defecto
     plato_principal: ajustes?.plato_principal || '',
     acompanamientos: ajustes?.acompanamientos || '',
     hay_teenagers: ajustes?.hay_teenagers || false,
     cantidad_teenagers: ajustes?.cantidad_teenagers || 0,
+    teenagers_tipo_comida: ajustes?.teenagers_tipo_comida || 'pasta', // 'pasta' o 'menu'
+    teenagers_tipo_pasta: ajustes?.teenagers_tipo_pasta || '', // 'napolitana' o 'alfredo'
     restricciones_alimentarias: ajustes?.restricciones_alimentarias || '',
     notas_menu: ajustes?.notas_menu || '',
   });
@@ -447,6 +460,8 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato })
       acompanamientos: datos.acompanamientos,
       hay_teenagers: datos.hay_teenagers,
       cantidad_teenagers: datos.hay_teenagers ? parseInt(datos.cantidad_teenagers) : 0,
+      teenagers_tipo_comida: datos.hay_teenagers ? datos.teenagers_tipo_comida : null,
+      teenagers_tipo_pasta: datos.hay_teenagers && datos.teenagers_tipo_comida === 'pasta' ? datos.teenagers_tipo_pasta : null,
       restricciones_alimentarias: datos.restricciones_alimentarias,
       notas_menu: datos.notas_menu,
     });
@@ -470,6 +485,44 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato })
           </p>
         )}
       </div>
+
+      {/* Sección de Pasapalos (Solo informativa) */}
+      {tienePasapalos && (
+        <div className="border-2 border-amber-200 rounded-xl p-6 bg-gradient-to-br from-amber-50 to-yellow-50">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-2xl">🥟</span>
+            <h3 className="text-lg font-bold text-amber-900">
+              Pasapalos Incluidos
+            </h3>
+          </div>
+          <p className="text-sm text-amber-800 mb-4">
+            Tu evento incluye los siguientes pasapalos para deleitar a tus invitados:
+          </p>
+          <ul className="space-y-2">
+            <li className="flex items-start gap-2 text-gray-700">
+              <CheckCircle2 className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <span><strong>Tequeños</strong> - Clásicos y deliciosos</span>
+            </li>
+            <li className="flex items-start gap-2 text-gray-700">
+              <CheckCircle2 className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <span><strong>Bolitas de carne</strong> - Jugosas y sabrosas</span>
+            </li>
+            <li className="flex items-start gap-2 text-gray-700">
+              <CheckCircle2 className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <span><strong>Salchichas en hojaldre</strong> - Perfectas para picar</span>
+            </li>
+            <li className="flex items-start gap-2 text-gray-700">
+              <CheckCircle2 className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <span><strong>Tuna tartar</strong> - Elegante y fresco</span>
+            </li>
+          </ul>
+          <div className="mt-4 pt-4 border-t border-amber-200">
+            <p className="text-xs text-amber-700 italic">
+              ℹ️ Los pasapalos se servirán durante el cóctel de bienvenida
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Selección de Menú para Adultos */}
       <div className="border-2 border-orange-200 rounded-xl p-6 bg-orange-50">
@@ -572,12 +625,68 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato })
                 }}
                 disabled={estaBloqueado}
                 className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white disabled:bg-gray-100"
+                required
               />
-              <p className="text-xs text-purple-700 mt-1">
-                💡 Los teens/kids recibirán: <strong>Pasta con pollo</strong>
-              </p>
             </div>
 
+            {/* Tipo de comida: Pasta o Menú */}
+            {datos.cantidad_teenagers > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  ¿Quieren pasta o menú? *
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="teenagers_tipo_comida"
+                      value="pasta"
+                      checked={datos.teenagers_tipo_comida === 'pasta'}
+                      onChange={(e) => setDatos({ ...datos, teenagers_tipo_comida: e.target.value, teenagers_tipo_pasta: '' })}
+                      disabled={estaBloqueado}
+                      className="w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500 disabled:opacity-50"
+                      required
+                    />
+                    <span className="text-sm font-medium text-gray-900">Pasta</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="teenagers_tipo_comida"
+                      value="menu"
+                      checked={datos.teenagers_tipo_comida === 'menu'}
+                      onChange={(e) => setDatos({ ...datos, teenagers_tipo_comida: e.target.value, teenagers_tipo_pasta: '' })}
+                      disabled={estaBloqueado}
+                      className="w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500 disabled:opacity-50"
+                      required
+                    />
+                    <span className="text-sm font-medium text-gray-900">Menú</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Selección de tipo de pasta si eligieron pasta */}
+            {datos.cantidad_teenagers > 0 && datos.teenagers_tipo_comida === 'pasta' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Tipo de Pasta *
+                </label>
+                <select
+                  value={datos.teenagers_tipo_pasta}
+                  onChange={(e) => setDatos({ ...datos, teenagers_tipo_pasta: e.target.value })}
+                  disabled={estaBloqueado}
+                  className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white disabled:bg-gray-100"
+                  required
+                >
+                  <option value="">Seleccionar tipo de pasta...</option>
+                  <option value="napolitana">Pasta Napolitana</option>
+                  <option value="alfredo">Pasta Alfredo</option>
+                </select>
+              </div>
+            )}
+
+            {/* Resumen de platos */}
             {datos.cantidad_teenagers > 0 && (
               <div className="bg-purple-100 border border-purple-300 rounded-lg p-4">
                 <p className="text-sm font-medium text-purple-900">
@@ -585,7 +694,12 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato })
                 </p>
                 <ul className="text-sm text-purple-800 mt-2 space-y-1">
                   <li>• {invitadosAdultos} platos según selección de menú (adultos)</li>
-                  <li>• {datos.cantidad_teenagers} pasta(s) con pollo (teens/kids)</li>
+                  <li>
+                    • {datos.cantidad_teenagers} {datos.teenagers_tipo_comida === 'pasta' 
+                      ? `pasta(s) ${datos.teenagers_tipo_pasta === 'napolitana' ? 'Napolitana' : datos.teenagers_tipo_pasta === 'alfredo' ? 'Alfredo' : ''}`
+                      : 'menú(es) según selección'}
+                    {' '}(teens/kids)
+                  </li>
                 </ul>
               </div>
             )}
@@ -649,31 +763,66 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato })
   );
 }
 
-// ===== SECCIÓN ENTRETENIMIENTO =====
+// ===== SECCIÓN MÚSICA =====
 function SeccionEntretenimiento({ ajustes, onGuardar, guardando, estaBloqueado }) {
+  // Parsear bailes desde JSON o inicializar como array vacío
+  const bailesIniciales = ajustes?.bailes_adicionales 
+    ? (typeof ajustes.bailes_adicionales === 'string' 
+        ? JSON.parse(ajustes.bailes_adicionales) 
+        : ajustes.bailes_adicionales)
+    : [];
+
   const [datos, setDatos] = useState({
     musica_ceremonial: ajustes?.musica_ceremonial || '',
     primer_baile: ajustes?.primer_baile || '',
-    baile_padre_hija: ajustes?.baile_padre_hija || '',
-    baile_madre_hijo: ajustes?.baile_madre_hijo || '',
-    hora_show: ajustes?.hora_show || '',
-    actividades_especiales: ajustes?.actividades_especiales || '',
+    bailes: bailesIniciales.length > 0 ? bailesIniciales : [{ nombre: '', con_quien: '' }],
+    cancion_sorpresa: ajustes?.cancion_sorpresa || '',
     notas_entretenimiento: ajustes?.notas_entretenimiento || '',
   });
 
+  const agregarBaile = () => {
+    setDatos({
+      ...datos,
+      bailes: [...datos.bailes, { nombre: '', con_quien: '' }]
+    });
+  };
+
+  const eliminarBaile = (index) => {
+    const nuevosBailes = datos.bailes.filter((_, i) => i !== index);
+    setDatos({
+      ...datos,
+      bailes: nuevosBailes.length > 0 ? nuevosBailes : [{ nombre: '', con_quien: '' }]
+    });
+  };
+
+  const actualizarBaile = (index, campo, valor) => {
+    const nuevosBailes = [...datos.bailes];
+    nuevosBailes[index] = { ...nuevosBailes[index], [campo]: valor };
+    setDatos({ ...datos, bailes: nuevosBailes });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onGuardar('entretenimiento', datos);
+    // Filtrar bailes vacíos antes de guardar
+    const bailesFiltrados = datos.bailes.filter(b => b.nombre.trim() || b.con_quien.trim());
+    onGuardar('entretenimiento', {
+      musica_ceremonial: datos.musica_ceremonial,
+      primer_baile: datos.primer_baile,
+      bailes_adicionales: JSON.stringify(bailesFiltrados),
+      cancion_sorpresa: datos.cancion_sorpresa,
+      notas_entretenimiento: datos.notas_entretenimiento,
+    });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <Music2 className="w-6 h-6 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Entretenimiento y Música</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Música</h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-6">
+        {/* Música para Ceremonia / Entrada */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Música para Ceremonia / Entrada
@@ -683,9 +832,12 @@ function SeccionEntretenimiento({ ajustes, onGuardar, guardando, estaBloqueado }
             value={datos.musica_ceremonial}
             onChange={(e) => setDatos({ ...datos, musica_ceremonial: e.target.value })}
             placeholder="Ej: A Thousand Years - Christina Perri"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            disabled={estaBloqueado}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
           />
         </div>
+
+        {/* Primer Baile */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Primer Baile
@@ -695,71 +847,106 @@ function SeccionEntretenimiento({ ajustes, onGuardar, guardando, estaBloqueado }
             value={datos.primer_baile}
             onChange={(e) => setDatos({ ...datos, primer_baile: e.target.value })}
             placeholder="Ej: Perfect - Ed Sheeran"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            disabled={estaBloqueado}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Baile Padre-Hija
-          </label>
-          <input
-            type="text"
-            value={datos.baile_padre_hija}
-            onChange={(e) => setDatos({ ...datos, baile_padre_hija: e.target.value })}
-            placeholder="Ej: My Girl - The Temptations"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Baile Madre-Hijo
-          </label>
-          <input
-            type="text"
-            value={datos.baile_madre_hijo}
-            onChange={(e) => setDatos({ ...datos, baile_madre_hijo: e.target.value })}
-            placeholder="Ej: A Song for Mama - Boyz II Men"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Hora del Show / Entretenimiento Especial
-          </label>
-          <input
-            type="text"
-            value={datos.hora_show}
-            onChange={(e) => setDatos({ ...datos, hora_show: e.target.value })}
-            placeholder="Ej: 22:00 - Show de Fuego"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-          />
-        </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Actividades Especiales
-        </label>
-        <textarea
-          value={datos.actividades_especiales}
-          onChange={(e) => setDatos({ ...datos, actividades_especiales: e.target.value })}
-          rows={3}
-          placeholder="Juegos, sorpresas, dinámicas especiales..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-        />
-      </div>
+        {/* Bailes Adicionales */}
+        <div className="border-2 border-blue-200 rounded-xl p-6 bg-blue-50">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-blue-900">Bailes Adicionales</h3>
+            {!estaBloqueado && (
+              <button
+                type="button"
+                onClick={agregarBaile}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                Agregar Baile
+              </button>
+            )}
+          </div>
+          
+          <div className="space-y-4">
+            {datos.bailes.map((baile, index) => (
+              <div key={index} className="bg-white p-4 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-blue-900">
+                    Baile {index + 1}
+                  </span>
+                  {!estaBloqueado && datos.bailes.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => eliminarBaile(index)}
+                      className="text-red-600 hover:text-red-700 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Canción
+                    </label>
+                    <input
+                      type="text"
+                      value={baile.nombre}
+                      onChange={(e) => actualizarBaile(index, 'nombre', e.target.value)}
+                      placeholder="Ej: My Girl - The Temptations"
+                      disabled={estaBloqueado}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm disabled:bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Con quién
+                    </label>
+                    <input
+                      type="text"
+                      value={baile.con_quien}
+                      onChange={(e) => actualizarBaile(index, 'con_quien', e.target.value)}
+                      placeholder="Ej: Con papá, Con mamá, Con hermano"
+                      disabled={estaBloqueado}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm disabled:bg-gray-100"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Notas Adicionales
-        </label>
-        <textarea
-          value={datos.notas_entretenimiento}
-          onChange={(e) => setDatos({ ...datos, notas_entretenimiento: e.target.value })}
-          rows={3}
-          placeholder="Cualquier detalle especial sobre el entretenimiento..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-        />
+        {/* Canción Sorpresa */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Canción Sorpresa
+          </label>
+          <input
+            type="text"
+            value={datos.cancion_sorpresa}
+            onChange={(e) => setDatos({ ...datos, cancion_sorpresa: e.target.value })}
+            placeholder="Ej: Canción especial para sorprender a alguien"
+            disabled={estaBloqueado}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
+          />
+        </div>
+
+        {/* Notas Adicionales */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notas Adicionales
+          </label>
+          <textarea
+            value={datos.notas_entretenimiento}
+            onChange={(e) => setDatos({ ...datos, notas_entretenimiento: e.target.value })}
+            rows={3}
+            placeholder="Cualquier detalle especial sobre la música..."
+            disabled={estaBloqueado}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
+          />
+        </div>
       </div>
 
       <button
@@ -784,56 +971,331 @@ function SeccionEntretenimiento({ ajustes, onGuardar, guardando, estaBloqueado }
 }
 
 // ===== SECCIÓN BAR =====
-function SeccionBar({ ajustes, onGuardar, guardando, estaBloqueado }) {
+function SeccionBar({ ajustes, contrato }) {
+  // Detectar tipo de licor contratado
+  const todosServicios = [
+    ...(contrato?.contratos_servicios || []).map(cs => cs.servicios?.nombre),
+    ...(contrato?.paquetes?.paquetes_servicios || []).map(ps => ps.servicios?.nombre)
+  ].filter(Boolean);
+
+  const tieneLicorBasico = todosServicios.some(nombre => 
+    nombre?.toLowerCase().includes('licor básico') || nombre?.toLowerCase().includes('licor basico')
+  );
+  const tieneLicorPremium = todosServicios.some(nombre => 
+    nombre?.toLowerCase().includes('licor premium')
+  );
+
+  const tipoLicor = tieneLicorPremium ? 'premium' : tieneLicorBasico ? 'basico' : null;
+
+  // Productos comunes (iguales para ambos)
+  const refrescos = [
+    'Club Soda',
+    'Agua Tónica',
+    'Coca Cola',
+    'Coca Cola Diet',
+    'Sprite',
+    'Sprite Diet',
+    'Fanta Naranja'
+  ];
+
+  const jugos = [
+    'Naranja',
+    'Cranberry'
+  ];
+
+  const otros = [
+    'Granadina',
+    'Blue Curaçao'
+  ];
+
+  const cocteles = [
+    'Piña Colada',
+    'Daiquirí',
+    'Shirley Temple'
+  ];
+
+  const vinos = [
+    'Vino Blanco',
+    'Vino Tinto',
+    'Vino Chardonnay'
+  ];
+
+  // Productos según tipo de licor
+  const licorBasico = [
+    'Whisky House',
+    'Ron Spice',
+    'Ron Blanco',
+    'Vodka',
+    'Tequila'
+  ];
+
+  const licorPremium = [
+    'Whisky Black Label',
+    'Ron Bacardi Blanco',
+    'Ron Bacardi Gold',
+    ...licorBasico // Premium incluye todo lo del básico
+  ];
+
+  if (!tipoLicor) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Wine className="w-6 h-6 text-indigo-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
+        </div>
+        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
+          <Wine className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-yellow-900 mb-2">Servicio de Bar no Contratado</h3>
+          <p className="text-yellow-800">
+            No tienes contratado ningún servicio de licor (Básico o Premium) en tu evento.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <Wine className="w-6 h-6 text-indigo-600" />
         <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
+        {tipoLicor === 'premium' && (
+          <span className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-medium">
+            ⭐ Premium
+          </span>
+        )}
+        {tipoLicor === 'basico' && (
+          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+            📦 Básico
+          </span>
+        )}
       </div>
 
-      {/* Banner de En Construcción */}
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-12 text-center border-2 border-indigo-200">
-        <Construction className="w-16 h-16 text-indigo-400 mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-indigo-900 mb-2">Sección en Construcción</h3>
-        <p className="text-indigo-700 mb-4">
-          Estamos preparando esta sección para que puedas personalizar los cócteles, bebidas y detalles del bar de tu evento.
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+        <p className="text-sm text-blue-800">
+          <strong>Información del Bar:</strong> Esta es la lista completa de bebidas incluidas en tu servicio de {tipoLicor === 'premium' ? 'Licor Premium' : 'Licor Básico'}.
         </p>
-        <div className="flex items-center justify-center gap-2 text-sm text-indigo-600">
-          <Wine className="w-4 h-4" />
-          <span>Próximamente disponible</span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Alcohol - Izquierda */}
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Wine className="w-6 h-6 text-red-600" />
+              <h3 className="text-xl font-bold text-gray-900">Licores y Alcohol</h3>
+            </div>
+            
+            {/* Vinos */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <span className="text-red-500">🍷</span> Vinos
+              </h4>
+              <div className="space-y-1">
+                {vinos.map((vino, index) => (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-900 text-sm">{vino}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Ron */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <span className="text-amber-600">🍸</span> Ron
+              </h4>
+              <div className="space-y-1">
+                {(tipoLicor === 'premium' 
+                  ? ['Ron Bacardi Blanco', 'Ron Bacardi Gold'] 
+                  : ['Ron Spice', 'Ron Blanco']
+                ).map((ron, index) => (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-900 text-sm">{ron}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Whisky */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <span className="text-amber-700">🥃</span> Whisky
+              </h4>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">
+                    {tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Vodka y Tequila */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className="text-gray-900 text-sm">Vodka</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className="text-gray-900 text-sm">Tequila</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Cócteles */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-purple-500">🍹</span> Cócteles
+            </h3>
+            <div className="space-y-1">
+              {cocteles.map((coctel, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">{coctel}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Refrescos, Jugos y Otros - Derecha */}
+        <div className="space-y-4">
+          {/* Refrescos */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-blue-500">🥤</span> Refrescos
+            </h3>
+            <div className="space-y-1">
+              {refrescos.map((refresco, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">{refresco}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Jugos */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-orange-500">🧃</span> Jugos
+            </h3>
+            <div className="space-y-1">
+              {jugos.map((jugo, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">{jugo}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Otros */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-purple-500">✨</span> Otros
+            </h3>
+            <div className="space-y-1">
+              {otros.map((otro, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-900 text-sm">{otro}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// ===== SECCIÓN OTROS =====
-function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimosina }) {
+// ===== SECCIÓN OTROS (FINAL) =====
+function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimosina, contrato }) {
+  // Determinar si es evento de 15 años (quinceañera)
+  // Puede ser por el nombre del evento, homenajeado, o tipo de evento
+  const nombreEvento = contrato?.eventos?.nombre_evento?.toLowerCase() || '';
+  const homenajeado = contrato?.homenajeado?.toLowerCase() || '';
+  const esQuinceanera = nombreEvento.includes('15') || nombreEvento.includes('quince') || 
+                        nombreEvento.includes('quinceañera') || homenajeado.includes('quince');
+
+  // Estado del protocolo - parsear desde JSON o string
+  const protocoloInicial = ajustes?.protocolo 
+    ? (typeof ajustes.protocolo === 'string' && ajustes.protocolo.startsWith('{')
+        ? JSON.parse(ajustes.protocolo || '{}')
+        : {})
+    : {};
+  
+  // Valores por defecto del protocolo
+  const protocoloConDefaults = {
+    hora_apertura: protocoloInicial.hora_apertura || '',
+    hora_anuncio_padres: protocoloInicial.hora_anuncio_padres || '',
+    nombres_padres: protocoloInicial.nombres_padres || '',
+    hora_anuncio_homenajeado: protocoloInicial.hora_anuncio_homenajeado || '',
+    nombre_homenajeado: protocoloInicial.nombre_homenajeado || contrato?.homenajeado || '',
+    acompanantes: protocoloInicial.acompanantes || '',
+    cambio_zapatilla: protocoloInicial.cambio_zapatilla !== undefined ? protocoloInicial.cambio_zapatilla : true,
+    cambio_zapatilla_a_cargo: protocoloInicial.cambio_zapatilla_a_cargo || 'El papá',
+    baile_papa: protocoloInicial.baile_papa !== undefined ? protocoloInicial.baile_papa : true,
+    baile_mama: protocoloInicial.baile_mama !== undefined ? protocoloInicial.baile_mama : true,
+    bailes_adicionales: protocoloInicial.bailes_adicionales || '',
+    ceremonia_velas: protocoloInicial.ceremonia_velas !== undefined ? protocoloInicial.ceremonia_velas : true,
+    brindis: protocoloInicial.brindis !== undefined ? protocoloInicial.brindis : true,
+    brindis_a_cargo: protocoloInicial.brindis_a_cargo || '',
+    hora_fotos: protocoloInicial.hora_fotos || '',
+    hora_cena: protocoloInicial.hora_cena || '',
+    hora_photobooth: protocoloInicial.hora_photobooth || '',
+    hora_loca: protocoloInicial.hora_loca || '',
+    hora_happy_birthday: protocoloInicial.hora_happy_birthday || '',
+    hora_fin: protocoloInicial.hora_fin || '',
+  };
+
   const [datos, setDatos] = useState({
-    invitado_honor: ajustes?.invitado_honor || '',
-    brindis_especial: ajustes?.brindis_especial || '',
+    vestido_nina: ajustes?.vestido_nina || '',
+    observaciones_adicionales: ajustes?.observaciones_adicionales || '',
+    items_especiales: ajustes?.items_especiales || '',
     sorpresas_planeadas: ajustes?.sorpresas_planeadas || '',
-    solicitudes_especiales: ajustes?.solicitudes_especiales || '',
+    protocolo: protocoloConDefaults,
     hora_limosina: ajustes?.hora_limosina || '18:00', // Hora genérica por defecto
   });
 
+  // Función para actualizar protocolo
+  const actualizarProtocolo = (campo, valor) => {
+    setDatos({
+      ...datos,
+      protocolo: {
+        ...datos.protocolo,
+        [campo]: valor
+      }
+    });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onGuardar('otros', datos);
+    // Convertir protocolo a JSON string antes de enviar
+    const datosEnviar = {
+      ...datos,
+      protocolo: JSON.stringify(datos.protocolo)
+    };
+    onGuardar('otros', datosEnviar);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <Settings className="w-6 h-6 text-gray-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Otros Detalles</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Final</h2>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Limosina (solo si está contratada) */}
         {tieneLimosina && (
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
             <div className="flex items-center gap-3 mb-3">
               <Car className="w-5 h-5 text-blue-600" />
               <h3 className="font-bold text-blue-900">Servicio de Limosina</h3>
@@ -857,32 +1319,57 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
           </div>
         )}
 
+        {/* Vestido de la niña (solo si es 15 años) */}
+        {esQuinceanera && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Vestido de la niña
+            </label>
+            <input
+              type="text"
+              value={datos.vestido_nina}
+              onChange={(e) => setDatos({ ...datos, vestido_nina: e.target.value })}
+              disabled={estaBloqueado}
+              placeholder="Describe el vestido o estilo que llevará..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent outline-none disabled:bg-gray-100"
+            />
+          </div>
+        )}
+
+        {/* Observaciones adicionales */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Invitado(s) de Honor
+            Observaciones Adicionales
           </label>
-          <input
-            type="text"
-            value={datos.invitado_honor}
-            onChange={(e) => setDatos({ ...datos, invitado_honor: e.target.value })}
-            placeholder="Ej: Padrinos, abuelos, persona especial..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent outline-none"
+          <textarea
+            value={datos.observaciones_adicionales}
+            onChange={(e) => setDatos({ ...datos, observaciones_adicionales: e.target.value })}
+            disabled={estaBloqueado}
+            rows={4}
+            placeholder="Cualquier observación o detalle adicional que quieras comunicar..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent outline-none disabled:bg-gray-100"
           />
         </div>
 
+        {/* Items especiales que el cliente va a llevar */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Brindis Especial
+            Items Especiales que Traerás
           </label>
-          <input
-            type="text"
-            value={datos.brindis_especial}
-            onChange={(e) => setDatos({ ...datos, brindis_especial: e.target.value })}
-            placeholder="Ej: Brindis del padrino a las 20:30"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent outline-none"
+          <textarea
+            value={datos.items_especiales}
+            onChange={(e) => setDatos({ ...datos, items_especiales: e.target.value })}
+            disabled={estaBloqueado}
+            rows={3}
+            placeholder="Ej: Flores, recuerdos, fotos, decoración especial, etc..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent outline-none disabled:bg-gray-100"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            💡 Indica cualquier elemento especial que planeas traer al evento
+          </p>
         </div>
 
+        {/* Sorpresas Planeadas */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Sorpresas Planeadas
@@ -890,23 +1377,400 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
           <textarea
             value={datos.sorpresas_planeadas}
             onChange={(e) => setDatos({ ...datos, sorpresas_planeadas: e.target.value })}
+            disabled={estaBloqueado}
             rows={3}
             placeholder="Describe cualquier sorpresa que estés planeando..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent outline-none"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent outline-none disabled:bg-gray-100"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Solicitudes Especiales
-          </label>
-          <textarea
-            value={datos.solicitudes_especiales}
-            onChange={(e) => setDatos({ ...datos, solicitudes_especiales: e.target.value })}
-            rows={4}
-            placeholder="Cualquier otra solicitud o detalle importante que quieras comunicar..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent outline-none"
-          />
+        {/* Sección Protocolo */}
+        <div className="border-t-2 border-gray-200 pt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Clock className="w-6 h-6 text-purple-600" />
+            <h3 className="text-xl font-bold text-gray-900">Protocolo del Evento</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Completa el protocolo de tu evento de forma sencilla. Selecciona las opciones y horarios.
+          </p>
+
+          <div className="space-y-6 bg-purple-50 rounded-xl p-6 border-2 border-purple-200">
+            {/* Hora de Apertura */}
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                🕐 Hora de Apertura del Salón para Invitados
+              </label>
+              <p className="text-xs text-gray-600 mb-2">
+                Esta es la hora en que se abrirá el salón para que los invitados puedan ingresar.
+              </p>
+              <input
+                type="time"
+                value={datos.protocolo?.hora_apertura || ''}
+                onChange={(e) => actualizarProtocolo('hora_apertura', e.target.value)}
+                disabled={estaBloqueado}
+                className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+              />
+            </div>
+
+            {/* Anuncio de Padres */}
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                👨‍👩‍👧 Anuncio de Padres
+              </label>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Hora del anuncio</label>
+                  <input
+                    type="time"
+                    value={datos.protocolo?.hora_anuncio_padres || ''}
+                    onChange={(e) => actualizarProtocolo('hora_anuncio_padres', e.target.value)}
+                    disabled={estaBloqueado}
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Nombres de los Padres</label>
+                  <input
+                    type="text"
+                    value={datos.protocolo?.nombres_padres || ''}
+                    onChange={(e) => actualizarProtocolo('nombres_padres', e.target.value)}
+                    disabled={estaBloqueado}
+                    placeholder="Ej: Sr. Yael y Sra. Yaneli"
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Anuncio de Homenajeado */}
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                ⭐ Anuncio del Homenajeado
+              </label>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Hora del anuncio</label>
+                  <input
+                    type="time"
+                    value={datos.protocolo?.hora_anuncio_homenajeado || ''}
+                    onChange={(e) => actualizarProtocolo('hora_anuncio_homenajeado', e.target.value)}
+                    disabled={estaBloqueado}
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Nombre del Homenajeado</label>
+                  <input
+                    type="text"
+                    value={datos.protocolo?.nombre_homenajeado || contrato?.homenajeado || ''}
+                    onChange={(e) => actualizarProtocolo('nombre_homenajeado', e.target.value)}
+                    disabled={estaBloqueado}
+                    placeholder="Nombre completo"
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Acompañado de (opcional)</label>
+                  <input
+                    type="text"
+                    value={datos.protocolo?.acompanantes || ''}
+                    onChange={(e) => actualizarProtocolo('acompanantes', e.target.value)}
+                    disabled={estaBloqueado}
+                    placeholder="Ej: Sus hermanos Yoel y Sebastian"
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Cambio de Zapatilla */}
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <label className="block text-sm font-semibold text-gray-900 mb-3">
+                👠 Cambio de Zapatilla
+              </label>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-700">¿Incluir cambio de zapatilla?</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => actualizarProtocolo('cambio_zapatilla', true)}
+                    disabled={estaBloqueado}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${
+                      datos.protocolo?.cambio_zapatilla === true
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    } disabled:opacity-50`}
+                  >
+                    Sí
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => actualizarProtocolo('cambio_zapatilla', false)}
+                    disabled={estaBloqueado}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${
+                      datos.protocolo?.cambio_zapatilla === false
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    } disabled:opacity-50`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+              {datos.protocolo?.cambio_zapatilla === true && (
+                <div className="mt-3">
+                  <label className="block text-xs text-gray-600 mb-1">A cargo de</label>
+                  <input
+                    type="text"
+                    value={datos.protocolo?.cambio_zapatilla_a_cargo || 'El papá'}
+                    onChange={(e) => actualizarProtocolo('cambio_zapatilla_a_cargo', e.target.value)}
+                    disabled={estaBloqueado}
+                    placeholder="Ej: El papá"
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Bailes */}
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <label className="block text-sm font-semibold text-gray-900 mb-3">
+                💃 Bailes Especiales
+              </label>
+              <div className="space-y-3">
+                {/* Baile con Papá */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">Baile con Papá</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => actualizarProtocolo('baile_papa', true)}
+                      disabled={estaBloqueado}
+                      className={`px-3 py-1 rounded font-medium text-sm transition ${
+                        datos.protocolo?.baile_papa === true
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      } disabled:opacity-50`}
+                    >
+                      Sí
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => actualizarProtocolo('baile_papa', false)}
+                      disabled={estaBloqueado}
+                      className={`px-3 py-1 rounded font-medium text-sm transition ${
+                        datos.protocolo?.baile_papa === false
+                          ? 'bg-red-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      } disabled:opacity-50`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+
+                {/* Baile con Mamá */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">Baile con Mamá</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => actualizarProtocolo('baile_mama', true)}
+                      disabled={estaBloqueado}
+                      className={`px-3 py-1 rounded font-medium text-sm transition ${
+                        datos.protocolo?.baile_mama === true
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      } disabled:opacity-50`}
+                    >
+                      Sí
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => actualizarProtocolo('baile_mama', false)}
+                      disabled={estaBloqueado}
+                      className={`px-3 py-1 rounded font-medium text-sm transition ${
+                        datos.protocolo?.baile_mama === false
+                          ? 'bg-red-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      } disabled:opacity-50`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bailes adicionales */}
+                <div className="pt-2 border-t border-gray-200">
+                  <label className="block text-xs text-gray-600 mb-2">Otros bailes (opcional)</label>
+                  <textarea
+                    value={datos.protocolo?.bailes_adicionales || ''}
+                    onChange={(e) => actualizarProtocolo('bailes_adicionales', e.target.value)}
+                    disabled={estaBloqueado}
+                    rows={2}
+                    placeholder="Ej: Baile con hermano Yoel, Baile con hermano Sebastian..."
+                    className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm disabled:bg-gray-100"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Ceremonia de las 15 Velas */}
+            {esQuinceanera && (
+              <div className="bg-white rounded-lg p-4 border border-purple-200">
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  🕯️ Ceremonia de las 15 Velas
+                </label>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-700">¿Incluir ceremonia?</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => actualizarProtocolo('ceremonia_velas', true)}
+                      disabled={estaBloqueado}
+                      className={`px-4 py-2 rounded-lg font-medium transition ${
+                        datos.protocolo?.ceremonia_velas === true
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      } disabled:opacity-50`}
+                    >
+                      Sí
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => actualizarProtocolo('ceremonia_velas', false)}
+                      disabled={estaBloqueado}
+                      className={`px-4 py-2 rounded-lg font-medium transition ${
+                        datos.protocolo?.ceremonia_velas === false
+                          ? 'bg-red-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      } disabled:opacity-50`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Palabras / Brindis */}
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <label className="block text-sm font-semibold text-gray-900 mb-3">
+                🥂 Palabras / Brindis
+              </label>
+              <div className="flex items-center gap-4 mb-3">
+                <span className="text-sm text-gray-700">¿Incluir brindis?</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => actualizarProtocolo('brindis', true)}
+                    disabled={estaBloqueado}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${
+                      datos.protocolo?.brindis === true
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    } disabled:opacity-50`}
+                  >
+                    Sí
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => actualizarProtocolo('brindis', false)}
+                    disabled={estaBloqueado}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${
+                      datos.protocolo?.brindis === false
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    } disabled:opacity-50`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+              {datos.protocolo?.brindis === true && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">A cargo de (opcional)</label>
+                  <input
+                    type="text"
+                    value={datos.protocolo?.brindis_a_cargo || ''}
+                    onChange={(e) => actualizarProtocolo('brindis_a_cargo', e.target.value)}
+                    disabled={estaBloqueado}
+                    placeholder="Ej: El padrino"
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Horarios de Actividades */}
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <label className="block text-sm font-semibold text-gray-900 mb-3">
+                📅 Horarios de Actividades
+              </label>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Momento Social / Fotos</label>
+                  <input
+                    type="time"
+                    value={datos.protocolo?.hora_fotos || ''}
+                    onChange={(e) => actualizarProtocolo('hora_fotos', e.target.value)}
+                    disabled={estaBloqueado}
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Cena / Proyección de Video</label>
+                  <input
+                    type="time"
+                    value={datos.protocolo?.hora_cena || ''}
+                    onChange={(e) => actualizarProtocolo('hora_cena', e.target.value)}
+                    disabled={estaBloqueado}
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Photobooth</label>
+                  <input
+                    type="time"
+                    value={datos.protocolo?.hora_photobooth || ''}
+                    onChange={(e) => actualizarProtocolo('hora_photobooth', e.target.value)}
+                    disabled={estaBloqueado}
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Hora Loca</label>
+                  <input
+                    type="time"
+                    value={datos.protocolo?.hora_loca || ''}
+                    onChange={(e) => actualizarProtocolo('hora_loca', e.target.value)}
+                    disabled={estaBloqueado}
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Happy Birthday</label>
+                  <input
+                    type="time"
+                    value={datos.protocolo?.hora_happy_birthday || ''}
+                    onChange={(e) => actualizarProtocolo('hora_happy_birthday', e.target.value)}
+                    disabled={estaBloqueado}
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Fin del Evento</label>
+                  <input
+                    type="time"
+                    value={datos.protocolo?.hora_fin || ''}
+                    onChange={(e) => actualizarProtocolo('hora_fin', e.target.value)}
+                    disabled={estaBloqueado}
+                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:bg-gray-100"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

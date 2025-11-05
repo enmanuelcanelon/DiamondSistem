@@ -17,3 +17,6 @@ SELECT id, nombre, descripcion
 FROM paquetes 
 WHERE nombre IN ('Paquete Personalizado', 'Servicio Especial');
 
+
+
+

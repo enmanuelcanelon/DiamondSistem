@@ -42,7 +42,6 @@ router.post('/', authenticate, async (req, res, next) => {
       numero_mesa,
       nombre_mesa,
       capacidad,
-      forma,
       notas
     } = req.body;
 
@@ -87,7 +86,6 @@ router.post('/', authenticate, async (req, res, next) => {
         numero_mesa: parseInt(numero_mesa),
         nombre_mesa: nombre_mesa || null,
         capacidad: parseInt(capacidad),
-        forma: forma || 'redonda',
         notas: notas || null
       },
       include: {

@@ -18,3 +18,6 @@ FROM paquetes
 WHERE nombre IN ('Personalizado', 'Especial')
 ORDER BY nombre;
 
+
+
+

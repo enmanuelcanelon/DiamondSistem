@@ -10,3 +10,6 @@ FROM information_schema.columns
 WHERE table_name = 'contratos' 
 AND column_name = 'notas_vendedor';
 
+
+
+

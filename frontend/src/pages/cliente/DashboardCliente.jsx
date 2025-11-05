@@ -335,7 +335,7 @@ function DashboardCliente() {
 
         {/* Versiones del Contrato */}
         <Link
-          to="/cliente/versiones"
+          to="/cliente/contratos"
           className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition group"
         >
           <div className="flex items-center gap-4">
@@ -343,7 +343,7 @@ function DashboardCliente() {
               <FileText className="w-6 h-6 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Versiones del Contrato</p>
+              <p className="text-sm text-gray-600">Mis Contratos</p>
               <p className="text-2xl font-bold text-gray-900">
                 Ver PDFs
               </p>

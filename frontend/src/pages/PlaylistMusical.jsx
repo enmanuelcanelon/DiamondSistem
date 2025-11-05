@@ -21,8 +21,8 @@ function PlaylistMusical() {
   const { user } = useAuthStore();
   
   // Determinar si el usuario actual puede editar (solo clientes)
-  const puedeEditar = user?.rol === 'cliente';
-  const esVendedor = user?.rol === 'vendedor';
+  const puedeEditar = user?.tipo === 'cliente';
+  const esVendedor = user?.tipo === 'vendedor';
   
   const [nuevaCancion, setNuevaCancion] = useState({
     titulo: '',

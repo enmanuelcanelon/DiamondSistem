@@ -175,3 +175,6 @@ echo "   - database/fix_comision_y_homenajeado.sql"
 echo ""
 echo -e "${GREEN}¡Listo para usar!${NC}"
 
+
+
+

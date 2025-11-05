@@ -29,3 +29,6 @@ FROM temporadas
 WHERE descripcion LIKE '%Ã%'
 ORDER BY nombre;
 
+
+
+

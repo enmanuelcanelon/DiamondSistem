@@ -27,7 +27,6 @@ import AjustesEvento from './pages/cliente/AjustesEvento';
 import ChatCliente from './pages/cliente/ChatCliente';
 import MisSolicitudes from './pages/cliente/MisSolicitudes';
 import SolicitarCambios from './pages/cliente/SolicitarCambios';
-import VersionesContrato from './pages/cliente/VersionesContrato';
 import MisContratos from './pages/cliente/MisContratos';
 import MiPerfil from './pages/cliente/MiPerfil';
 
@@ -122,7 +121,7 @@ function App() {
             <Route path="dashboard" element={<DashboardCliente />} />
             <Route path="solicitudes" element={<MisSolicitudes />} />
             <Route path="solicitar-cambios" element={<SolicitarCambios />} />
-            <Route path="versiones" element={<VersionesContrato />} />
+            <Route path="versiones" element={<Navigate to="/cliente/contratos" replace />} />
             <Route path="playlist/:id" element={<PlaylistMusical />} />
             <Route path="mesas/:id" element={<AsignacionMesas />} />
             <Route path="ajustes" element={<AjustesEvento />} />

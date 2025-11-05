@@ -151,3 +151,6 @@ const terminaDiaSiguiente = minutosFin < minutosInicio;
 **Estado**: ✅ Implementado y funcionando
 **Afecta a**: Crear Oferta, Editar Oferta
 
+
+
+

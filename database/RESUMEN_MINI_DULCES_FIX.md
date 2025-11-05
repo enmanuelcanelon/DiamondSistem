@@ -102,3 +102,6 @@ Este cambio afecta **todas las ofertas nuevas** creadas a partir de ahora. Las o
 **Fecha de corrección**: Noviembre 4, 2025  
 **Estado**: ✅ Completado y verificado
 
+
+
+
