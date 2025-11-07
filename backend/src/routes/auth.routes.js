@@ -4,13 +4,13 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
 const { generateVendedorToken, generateClienteToken, generateManagerToken, generateGerenteToken } = require('../utils/jwt');
 const { authenticate, requireVendedor, requireManager, requireGerente } = require('../middleware/auth');
 const { UnauthorizedError, ValidationError, NotFoundError } = require('../middleware/errorHandler');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * @route   POST /api/auth/login/vendedor

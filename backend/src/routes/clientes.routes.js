@@ -4,12 +4,12 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor } = require('../middleware/auth');
 const { validarDatosCliente, sanitizarObjeto } = require('../utils/validators');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * @route   GET /api/clientes
@@ -38,31 +38,35 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
       ];
     }
 
-    const clientes = await prisma.clientes.findMany({
-      where,
-      include: {
-        vendedores: {
-          select: {
-            id: true,
-            nombre_completo: true,
-            codigo_vendedor: true
+    const { getPaginationParams, createPaginationResponse } = require('../utils/pagination');
+    const { page, limit, skip } = getPaginationParams(req.query);
+
+    const [clientes, total] = await Promise.all([
+      prisma.clientes.findMany({
+        where,
+        include: {
+          vendedores: {
+            select: {
+              id: true,
+              nombre_completo: true,
+              codigo_vendedor: true
+            }
+          },
+          _count: {
+            select: {
+              contratos: true,
+              ofertas: true
+            }
           }
         },
-        _count: {
-          select: {
-            contratos: true,
-            ofertas: true
-          }
-        }
-      },
-      orderBy: { fecha_registro: 'desc' }
-    });
+        orderBy: { fecha_registro: 'desc' },
+        take: limit,
+        skip: skip
+      }),
+      prisma.clientes.count({ where })
+    ]);
 
-    res.json({
-      success: true,
-      count: clientes.length,
-      clientes
-    });
+    res.json(createPaginationResponse(clientes, total, page, limit));
 
   } catch (error) {
     next(error);

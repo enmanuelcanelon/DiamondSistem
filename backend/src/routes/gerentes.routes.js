@@ -4,14 +4,14 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate, requireGerente } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const { hashPassword, validatePasswordStrength } = require('../utils/password');
 const { generarCodigoVendedor } = require('../utils/codeGenerator');
 const logger = require('../utils/logger');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 // ============================================
 // GESTIÓN DE VENDEDORES

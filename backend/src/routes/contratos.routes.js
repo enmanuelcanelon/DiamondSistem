@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor, requireCliente, requireOwnerOrVendedor } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const { generarCodigoContrato, generarCodigoAccesoCliente } = require('../utils/codeGenerator');
@@ -12,7 +12,7 @@ const { calcularComisionVendedor, calcularPagosFinanciamiento } = require('../ut
 const { generarPDFContrato } = require('../utils/pdfContrato');
 const { generarFacturaProforma } = require('../utils/pdfFactura');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * @route   GET /api/contratos
@@ -21,7 +21,7 @@ const prisma = new PrismaClient();
  */
 router.get('/', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { cliente_id, estado, estado_pago } = req.query;
+    const { cliente_id, estado, estado_pago, fecha_desde, fecha_hasta, search } = req.query;
 
     // CRÍTICO: Forzar que el vendedor solo vea SUS contratos
     const where = {
@@ -41,34 +41,57 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
       where.estado_pago = estado_pago;
     }
 
-    const contratos = await prisma.contratos.findMany({
-      where,
-      include: {
-        clientes: {
-          select: {
-            id: true,
-            nombre_completo: true,
-            email: true,
-            telefono: true
-          }
-        },
-        paquetes: {
-          select: {
-            id: true,
-            nombre: true,
-            precio_base: true
-          }
-        },
-        salones: {
-          select: {
-            id: true,
-            nombre: true,
-            capacidad_maxima: true
-          }
-        },
-        vendedores: {
-          select: {
-            id: true,
+    // Filtro por fecha del evento
+    if (fecha_desde || fecha_hasta) {
+      where.fecha_evento = {};
+      if (fecha_desde) {
+        where.fecha_evento.gte = new Date(fecha_desde);
+      }
+      if (fecha_hasta) {
+        where.fecha_evento.lte = new Date(fecha_hasta + 'T23:59:59');
+      }
+    }
+
+    // Búsqueda por código de contrato o nombre de cliente
+    if (search) {
+      where.OR = [
+        { codigo_contrato: { contains: search, mode: 'insensitive' } },
+        { clientes: { nombre_completo: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    const { getPaginationParams, createPaginationResponse } = require('../utils/pagination');
+    const { page, limit, skip } = getPaginationParams(req.query);
+
+    const [contratos, total] = await Promise.all([
+      prisma.contratos.findMany({
+        where,
+        include: {
+          clientes: {
+            select: {
+              id: true,
+              nombre_completo: true,
+              email: true,
+              telefono: true
+            }
+          },
+          paquetes: {
+            select: {
+              id: true,
+              nombre: true,
+              precio_base: true
+            }
+          },
+          salones: {
+            select: {
+              id: true,
+              nombre: true,
+              capacidad_maxima: true
+            }
+          },
+          vendedores: {
+            select: {
+              id: true,
             nombre_completo: true,
             codigo_vendedor: true
           }
@@ -81,14 +104,14 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
           }
         }
       },
-      orderBy: { fecha_firma: 'desc' }
-    });
+      orderBy: { fecha_firma: 'desc' },
+      take: limit,
+      skip: skip
+    }),
+    prisma.contratos.count({ where })
+    ]);
 
-    res.json({
-      success: true,
-      count: contratos.length,
-      contratos
-    });
+    res.json(createPaginationResponse(contratos, total, page, limit));
 
   } catch (error) {
     next(error);
@@ -102,10 +125,11 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
  */
 router.get('/:id', authenticate, async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { sanitizarId } = require('../utils/validators');
+    const id = sanitizarId(req.params.id, 'contrato_id');
 
     const contrato = await prisma.contratos.findUnique({
-      where: { id: parseInt(id) },
+      where: { id }, // Ya sanitizado
       include: {
         clientes: true,
         vendedores: {
@@ -169,6 +193,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
  */
 router.post('/', authenticate, requireVendedor, async (req, res, next) => {
   try {
+    const { sanitizarId, sanitizarString, sanitizarInt } = require('../utils/validators');
     const {
       oferta_id,
       tipo_pago,
@@ -178,22 +203,25 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       plan_pagos
     } = req.body;
 
-    // Validaciones
-    if (!oferta_id) {
-      throw new ValidationError('El ID de la oferta es requerido');
-    }
+    // Sanitizar y validar
+    const ofertaIdSanitizado = sanitizarId(oferta_id, 'oferta_id');
 
     if (!tipo_pago || !['unico', 'financiado', 'plazos'].includes(tipo_pago)) {
       throw new ValidationError('Tipo de pago inválido');
     }
 
-    if ((tipo_pago === 'financiado' || tipo_pago === 'plazos') && (!meses_financiamiento || meses_financiamiento < 1)) {
-      throw new ValidationError('Los meses de financiamiento son requeridos');
+    // Sanitizar meses de financiamiento si aplica
+    let mesesFinanciamientoSanitizado = 1;
+    if (tipo_pago === 'financiado' || tipo_pago === 'plazos') {
+      if (!meses_financiamiento) {
+        throw new ValidationError('Los meses de financiamiento son requeridos');
+      }
+      mesesFinanciamientoSanitizado = sanitizarInt(meses_financiamiento, 1, 60);
     }
 
     // Obtener oferta con todas sus relaciones
     const oferta = await prisma.ofertas.findUnique({
-      where: { id: parseInt(oferta_id) },
+      where: { id: ofertaIdSanitizado },
       include: {
         clientes: true,
         vendedores: true,
@@ -222,7 +250,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
 
     // Verificar que no exista un contrato para esta oferta
     const contratoExistente = await prisma.contratos.findFirst({
-      where: { oferta_id: parseInt(oferta_id) }
+      where: { oferta_id: ofertaIdSanitizado }
     });
 
     if (contratoExistente) {
@@ -244,7 +272,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     if (tipo_pago === 'financiado') {
       const financiamiento = calcularPagosFinanciamiento(
         parseFloat(oferta.total_final),
-        parseInt(meses_financiamiento)
+        mesesFinanciamientoSanitizado
       );
       pago_mensual = financiamiento.pagoMensual;
     }
@@ -273,7 +301,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           cantidad_invitados: oferta.cantidad_invitados,
           total_contrato: parseFloat(oferta.total_final),
           tipo_pago,
-          meses_financiamiento: (tipo_pago === 'financiado' || tipo_pago === 'plazos') ? parseInt(meses_financiamiento) : 1,
+          meses_financiamiento: mesesFinanciamientoSanitizado,
           pago_mensual,
           plan_pagos: plan_pagos || null,
           saldo_pendiente: parseFloat(oferta.total_final),
@@ -829,26 +857,28 @@ router.post('/:id/versiones', authenticate, requireVendedor, async (req, res, ne
 
     const pdfBuffer = Buffer.concat(chunks);
 
-    // Crear la nueva versión
-    const nuevaVersion = await prisma.versiones_contratos_pdf.create({
-      data: {
-        contrato_id: parseInt(id),
-        version_numero: nuevoNumeroVersion,
-        total_contrato: contrato.total_contrato,
-        cantidad_invitados: contrato.cantidad_invitados,
-        motivo_cambio: motivo_cambio || 'Actualización del contrato',
-        cambios_detalle: cambios_detalle || {},
-        pdf_contenido: pdfBuffer,
-        generado_por: req.user.id,
-      },
-      include: {
-        vendedores: {
-          select: {
-            nombre_completo: true,
-            codigo_vendedor: true,
+    // Crear la nueva versión en transacción (aunque solo es un INSERT, es buena práctica)
+    const nuevaVersion = await prisma.$transaction(async (tx) => {
+      return await tx.versiones_contratos_pdf.create({
+        data: {
+          contrato_id: parseInt(id),
+          version_numero: nuevoNumeroVersion,
+          total_contrato: contrato.total_contrato,
+          cantidad_invitados: contrato.cantidad_invitados,
+          motivo_cambio: motivo_cambio || 'Actualización del contrato',
+          cambios_detalle: cambios_detalle || {},
+          pdf_contenido: pdfBuffer,
+          generado_por: req.user.id,
+        },
+        include: {
+          vendedores: {
+            select: {
+              nombre_completo: true,
+              codigo_vendedor: true,
+            },
           },
         },
-      },
+      });
     });
 
     res.status(201).json({

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Filter, Edit2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Filter, Edit2, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
 import { formatearHora } from '../utils/formatters';
@@ -42,37 +42,59 @@ function Ofertas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroDias]);
   
-  const { data: ofertas, isLoading } = useQuery({
-    queryKey: ['ofertas'],
-    queryFn: async () => {
-      const response = await api.get('/ofertas');
-      return response.data.ofertas;
+  // Scroll infinito con useInfiniteQuery
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ['ofertas', searchTerm, estadoFiltro, fechaDesde, fechaHasta],
+    queryFn: async ({ pageParam = 1 }) => {
+      const params = {
+        page: pageParam,
+        limit: 50,
+        // Enviar filtros al backend
+        ...(searchTerm && { search: searchTerm }),
+        ...(estadoFiltro && { estado: estadoFiltro }),
+        ...(fechaDesde && { fecha_desde: fechaDesde }),
+        ...(fechaHasta && { fecha_hasta: fechaHasta }),
+      };
+      const response = await api.get('/ofertas', { params });
+      return response.data; // Retorna { data: [...], total, page, hasNextPage, ... }
     },
+    getNextPageParam: (lastPage) => {
+      return lastPage.hasNextPage ? lastPage.page + 1 : undefined;
+    },
+    initialPageParam: 1,
   });
 
-  // Filtrar ofertas
-  const ofertasFiltradas = ofertas?.filter(oferta => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchSearch = 
-      oferta.codigo_oferta.toLowerCase().includes(searchLower) ||
-      oferta.clientes?.nombre_completo.toLowerCase().includes(searchLower);
-    
-    const matchEstado = !estadoFiltro || oferta.estado === estadoFiltro;
-    
-    // Filtro por fecha de creación de la oferta (NO por fecha del evento)
-    if (!oferta.fecha_creacion) {
-      // Si no hay fecha de creación, no filtrar por fecha (mostrar todas)
-      return matchSearch && matchEstado;
+  // Aplanar todas las ofertas de todas las páginas
+  const ofertas = data?.pages.flatMap(page => page.data) || [];
+  const totalOfertas = data?.pages[0]?.total || 0;
+
+  // Detección de scroll para cargar más
+  const observerTarget = useRef(null);
+
+  const handleObserver = useCallback((entries) => {
+    const [target] = entries;
+    if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
-    
-    const fechaCreacion = new Date(oferta.fecha_creacion);
-    // Comparar solo la fecha (sin hora) para el filtro
-    const fechaCreacionSolo = new Date(fechaCreacion.getFullYear(), fechaCreacion.getMonth(), fechaCreacion.getDate());
-    const matchFechaDesde = !fechaDesde || fechaCreacionSolo >= new Date(fechaDesde + 'T00:00:00');
-    const matchFechaHasta = !fechaHasta || fechaCreacionSolo <= new Date(fechaHasta + 'T23:59:59');
-    
-    return matchSearch && matchEstado && matchFechaDesde && matchFechaHasta;
-  });
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    const element = observerTarget.current;
+    const option = { threshold: 0.1 };
+
+    const observer = new IntersectionObserver(handleObserver, option);
+    if (element) observer.observe(element);
+
+    return () => {
+      if (element) observer.unobserve(element);
+    };
+  }, [handleObserver]);
 
   // Mutation para aceptar oferta
   const aceptarMutation = useMutation({
@@ -95,7 +117,7 @@ function Ofertas() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['ofertas']);
+      queryClient.invalidateQueries({ queryKey: ['ofertas'] });
     },
   });
 
@@ -308,7 +330,7 @@ function Ofertas() {
             </div>
           ))}
         </div>
-      ) : ofertasFiltradas?.length === 0 ? (
+      ) : ofertas.length === 0 ? (
         <div className="bg-white rounded-xl p-12 text-center shadow-sm border">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="w-8 h-8 text-gray-400" />
@@ -331,7 +353,7 @@ function Ofertas() {
         </div>
       ) : (
         <div className="space-y-4">
-          {ofertasFiltradas?.map((oferta) => (
+          {ofertas.map((oferta) => (
             <div
               key={oferta.id}
               className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition"
@@ -485,6 +507,23 @@ function Ofertas() {
               )}
             </div>
           ))}
+          
+          {/* Observador para scroll infinito */}
+          <div ref={observerTarget} className="h-10 flex items-center justify-center">
+            {isFetchingNextPage && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Cargando más ofertas...</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Indicador de fin */}
+          {!hasNextPage && ofertas.length > 0 && (
+            <div className="text-center py-4 text-gray-500 text-sm">
+              Mostrando todas las {totalOfertas} oferta{totalOfertas !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       )}
 

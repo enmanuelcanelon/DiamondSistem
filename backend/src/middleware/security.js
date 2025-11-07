@@ -41,9 +41,26 @@ const createLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiting más permisivo para fotos (muchas imágenes se cargan a la vez)
+const fotosLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 200, // Máximo 200 requests por minuto (muy permisivo para galerías)
+  message: {
+    error: 'Demasiadas solicitudes de fotos',
+    message: 'Has excedido el límite de solicitudes de fotos. Por favor intenta más tarde.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // No aplicar rate limiting a archivos estáticos de imágenes
+    return req.path.startsWith('/fotos/servicios');
+  }
+});
+
 module.exports = {
   generalLimiter,
   authLimiter,
-  createLimiter
+  createLimiter,
+  fotosLimiter
 };
 

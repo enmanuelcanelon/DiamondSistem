@@ -46,6 +46,10 @@ model clientes {
   ofertas             ofertas[]
   contratos           contratos[]
   solicitudes_cliente solicitudes_cliente[]
+
+  @@index([vendedor_id], map: "idx_clientes_vendedor")
+  @@index([vendedor_id, tipo_evento], map: "idx_clientes_vendedor_tipo")
+  @@index([email], map: "idx_clientes_email")
 }
 
 model temporadas {
@@ -184,6 +188,9 @@ model ofertas {
   ofertas_servicios_adicionales ofertas_servicios_adicionales[]
 
   @@index([salon_id], map: "idx_ofertas_salon")
+  @@index([vendedor_id, estado], map: "idx_ofertas_vendedor_estado")
+  @@index([vendedor_id, fecha_evento], map: "idx_ofertas_vendedor_fecha")
+  @@index([cliente_id, estado], map: "idx_ofertas_cliente_estado")
 }
 
 model ofertas_servicios_adicionales {
@@ -255,6 +262,10 @@ model contratos {
 
   @@index([salon_id], map: "idx_contratos_salon")
   @@index([tipo_pago], map: "idx_contratos_tipo_pago")
+  @@index([vendedor_id, estado_pago], map: "idx_contratos_vendedor_estado_pago")
+  @@index([vendedor_id, fecha_evento], map: "idx_contratos_vendedor_fecha")
+  @@index([cliente_id, estado_pago], map: "idx_contratos_cliente_estado_pago")
+  @@index([codigo_acceso_cliente], map: "idx_contratos_codigo_acceso")
 }
 
 model contratos_servicios {
@@ -284,6 +295,10 @@ model pagos {
   fecha_pago        DateTime?  @default(now()) @db.Timestamp(6)
   registrado_por    Int?
   contratos         contratos? @relation(fields: [contrato_id], references: [id])
+
+  @@index([contrato_id], map: "idx_pagos_contrato")
+  @@index([contrato_id, estado], map: "idx_pagos_contrato_estado")
+  @@index([fecha_pago], map: "idx_pagos_fecha")
 }
 
 model eventos {
@@ -403,6 +418,7 @@ model mesas {
   invitados invitados[]
 
   @@unique([contrato_id, numero_mesa])
+  @@index([contrato_id], map: "idx_mesas_contrato")
 }
 
 model invitados {
@@ -421,6 +437,10 @@ model invitados {
   fecha_actualizacion        DateTime?  @default(now()) @db.Timestamp(6)
   contratos                  contratos? @relation(fields: [contrato_id], references: [id])
   mesas                      mesas?     @relation(fields: [mesa_id], references: [id])
+
+  @@index([contrato_id], map: "idx_invitados_contrato")
+  @@index([contrato_id, mesa_id], map: "idx_invitados_contrato_mesa")
+  @@index([mesa_id], map: "idx_invitados_mesa")
 }
 
 model playlist_canciones {
@@ -470,6 +490,7 @@ model ajustes_evento {
   bailes_adicionales          String? // JSON string para almacenar array de bailes
   cancion_sorpresa            String?    @db.VarChar(255)
   notas_entretenimiento       String?
+  playlist_urls               Json?      // Array de URLs de playlists externas (YouTube/Spotify)
   momentos_especiales         String?
   poses_especificas           String?
   ubicaciones_fotos           String?
@@ -518,6 +539,7 @@ model fotos_servicios {
   id             Int       @id @default(autoincrement())
   tipo_servicio  String    @db.VarChar(50) // torta, decoracion, menu, bar
   nombre         String    @db.VarChar(255)
+  nombre_archivo String?   @db.VarChar(255)
   descripcion    String?
   url_imagen     String    @db.VarChar(500)
   orden          Int?      @default(0)
@@ -556,6 +578,50 @@ model managers {
 }
 
 model checklist_servicios_externos {
+  id                  Int       @id @default(autoincrement())
+  contrato_id         Int
+  servicio_tipo       String    @db.VarChar(50) // limosina, hora_loca, animador, chef
+  contacto_realizado  Boolean?  @default(false)
+  fecha_contacto      DateTime? @db.Timestamp(6)
+  notas               String?
+  estado              String?   @default("pendiente") @db.VarChar(50) // pendiente, en_proceso, completado
+  manager_id          Int?
+  fecha_creacion      DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  contratos contratos? @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+  managers  managers?  @relation(fields: [manager_id], references: [id])
+
+  @@unique([contrato_id, servicio_tipo])
+  @@index([contrato_id], map: "idx_checklist_contrato")
+  @@index([estado], map: "idx_checklist_estado")
+  @@index([manager_id], map: "idx_checklist_manager")
+}
+
+
+  id                  Int       @id @default(autoincrement())
+  contrato_id         Int
+  servicio_tipo       String    @db.VarChar(50) // limosina, hora_loca, animador, chef
+  contacto_realizado  Boolean?  @default(false)
+  fecha_contacto      DateTime? @db.Timestamp(6)
+  notas               String?
+  estado              String?   @default("pendiente") @db.VarChar(50) // pendiente, en_proceso, completado
+  manager_id          Int?
+  fecha_creacion      DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  contratos contratos? @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+  managers  managers?  @relation(fields: [manager_id], references: [id])
+
+  @@unique([contrato_id, servicio_tipo])
+  @@index([contrato_id], map: "idx_checklist_contrato")
+  @@index([estado], map: "idx_checklist_estado")
+  @@index([manager_id], map: "idx_checklist_manager")
+}
+
+
   id                  Int       @id @default(autoincrement())
   contrato_id         Int
   servicio_tipo       String    @db.VarChar(50) // limosina, hora_loca, animador, chef

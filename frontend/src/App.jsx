@@ -51,12 +51,17 @@ import LayoutCliente from './components/LayoutCliente';
 // import LayoutManager from './components/LayoutManager';
 // import LayoutGerente from './components/LayoutGerente';
 
-// Create a client
+// Create a client con configuración optimizada
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      // staleTime: 5 minutos - los datos se consideran "frescos" durante este tiempo
+      // Evita refetch innecesario cuando el usuario navega entre páginas
+      staleTime: 5 * 60 * 1000, // 5 minutos en milisegundos
+      // cacheTime: 10 minutos - tiempo que los datos permanecen en caché después de ser "viejos"
+      gcTime: 10 * 60 * 1000, // 10 minutos (anteriormente cacheTime)
     },
   },
 });

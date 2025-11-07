@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 // ====================================
 // OBTENER TODOS LOS INVITADOS DE UN CONTRATO
@@ -80,19 +80,15 @@ router.get('/:id', authenticate, async (req, res, next) => {
 // ====================================
 router.post('/', authenticate, async (req, res, next) => {
   try {
+    const { sanitizarId, sanitizarString } = require('../utils/validators');
     const { contrato_id, invitados } = req.body;
 
-    // Validar datos requeridos
-    if (!contrato_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Falta el contrato_id'
-      });
-    }
+    // Sanitizar contrato_id
+    const contratoIdSanitizado = sanitizarId(contrato_id, 'contrato_id');
 
     // Verificar que el contrato existe
     const contrato = await prisma.contratos.findUnique({
-      where: { id: parseInt(contrato_id) }
+      where: { id: contratoIdSanitizado }
     });
 
     if (!contrato) {
@@ -115,8 +111,8 @@ router.post('/', authenticate, async (req, res, next) => {
 
       const nuevoInvitado = await prisma.invitados.create({
         data: {
-          contrato_id: parseInt(contrato_id),
-          nombre_completo,
+          contrato_id: contratoIdSanitizado, // Ya sanitizado
+          nombre_completo: sanitizarString(nombre_completo, 255),
           email: email || null,
           telefono: telefono || null,
           tipo: tipo || 'adulto',
@@ -144,9 +140,37 @@ router.post('/', authenticate, async (req, res, next) => {
       });
     }
 
+    // Verificar capacidad del contrato antes de crear invitados
+    const contratoCompleto = await prisma.contratos.findUnique({
+      where: { id: contratoIdSanitizado }, // Ya sanitizado
+      include: {
+        salones: true
+      }
+    });
+
+    if (!contratoCompleto) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contrato no encontrado'
+      });
+    }
+
+    // Verificar capacidad máxima del salón
+    const capacidadMaxima = contratoCompleto.salones?.capacidad_maxima || contratoCompleto.cantidad_invitados;
+    const invitadosActuales = await prisma.invitados.count({
+      where: { contrato_id: contratoIdSanitizado } // Ya sanitizado
+    });
+
+    if (invitadosActuales + invitados.length > capacidadMaxima) {
+      return res.status(400).json({
+        success: false,
+        message: `No se pueden agregar ${invitados.length} invitados. Capacidad máxima: ${capacidadMaxima}, Invitados actuales: ${invitadosActuales}, Nuevos: ${invitados.length}, Total: ${invitadosActuales + invitados.length}`
+      });
+    }
+
     const invitadosCrear = invitados.map(inv => ({
-      contrato_id: parseInt(contrato_id),
-      nombre_completo: inv.nombre_completo,
+      contrato_id: contratoIdSanitizado, // Ya sanitizado
+      nombre_completo: sanitizarString(inv.nombre_completo, 255),
       email: inv.email || null,
       telefono: inv.telefono || null,
       tipo: inv.tipo || 'adulto',
@@ -155,9 +179,12 @@ router.post('/', authenticate, async (req, res, next) => {
       notas: inv.notas || null
     }));
 
-    const resultado = await prisma.invitados.createMany({
-      data: invitadosCrear,
-      skipDuplicates: true
+    // Crear invitados en transacción
+    const resultado = await prisma.$transaction(async (tx) => {
+      return await tx.invitados.createMany({
+        data: invitadosCrear,
+        skipDuplicates: true
+      });
     });
 
     res.status(201).json({
@@ -199,47 +226,46 @@ router.put('/:id', authenticate, async (req, res, next) => {
       });
     }
 
-    // Si se asigna a una mesa, verificar que existe y tiene espacio
-    if (mesa_id && mesa_id !== invitadoExistente.mesa_id) {
-      const mesa = await prisma.mesas.findUnique({
-        where: { id: parseInt(mesa_id) },
+    // Actualizar invitado en transacción (si se asigna a mesa, verificar capacidad)
+    const invitadoActualizado = await prisma.$transaction(async (tx) => {
+      // Si se asigna a una mesa, verificar que existe y tiene espacio dentro de la transacción
+      if (mesa_id && mesa_id !== invitadoExistente.mesa_id) {
+        const mesa = await tx.mesas.findUnique({
+          where: { id: parseInt(mesa_id) },
+          include: {
+            invitados: true
+          }
+        });
+
+        if (!mesa) {
+          throw new Error('Mesa no encontrada');
+        }
+
+        // Verificar capacidad (sin contar al invitado actual)
+        const invitadosEnMesa = mesa.invitados.filter(inv => inv.id !== parseInt(id));
+        if (invitadosEnMesa.length >= mesa.capacidad) {
+          throw new Error(`La mesa ${mesa.numero_mesa} ya está llena (capacidad: ${mesa.capacidad})`);
+        }
+      }
+
+      return await tx.invitados.update({
+        where: { id: parseInt(id) },
+        data: {
+          nombre_completo: nombre_completo || invitadoExistente.nombre_completo,
+          email: email !== undefined ? email : invitadoExistente.email,
+          telefono: telefono !== undefined ? telefono : invitadoExistente.telefono,
+          tipo: tipo || invitadoExistente.tipo,
+          mesa_id: mesa_id !== undefined ? (mesa_id ? parseInt(mesa_id) : null) : invitadoExistente.mesa_id,
+          confirmado: confirmado !== undefined ? confirmado : invitadoExistente.confirmado,
+          asistira: asistira !== undefined ? asistira : invitadoExistente.asistira,
+          restricciones_alimentarias: restricciones_alimentarias !== undefined ? restricciones_alimentarias : invitadoExistente.restricciones_alimentarias,
+          notas: notas !== undefined ? notas : invitadoExistente.notas,
+          fecha_actualizacion: new Date()
+        },
         include: {
-          invitados: true
+          mesas: true
         }
       });
-
-      if (!mesa) {
-        return res.status(404).json({
-          success: false,
-          message: 'Mesa no encontrada'
-        });
-      }
-
-      if (mesa.invitados.length >= mesa.capacidad) {
-        return res.status(400).json({
-          success: false,
-          message: `La mesa ${mesa.numero_mesa} ya está llena (capacidad: ${mesa.capacidad})`
-        });
-      }
-    }
-
-    const invitadoActualizado = await prisma.invitados.update({
-      where: { id: parseInt(id) },
-      data: {
-        nombre_completo: nombre_completo || invitadoExistente.nombre_completo,
-        email: email !== undefined ? email : invitadoExistente.email,
-        telefono: telefono !== undefined ? telefono : invitadoExistente.telefono,
-        tipo: tipo || invitadoExistente.tipo,
-        mesa_id: mesa_id !== undefined ? (mesa_id ? parseInt(mesa_id) : null) : invitadoExistente.mesa_id,
-        confirmado: confirmado !== undefined ? confirmado : invitadoExistente.confirmado,
-        asistira: asistira !== undefined ? asistira : invitadoExistente.asistira,
-        restricciones_alimentarias: restricciones_alimentarias !== undefined ? restricciones_alimentarias : invitadoExistente.restricciones_alimentarias,
-        notas: notas !== undefined ? notas : invitadoExistente.notas,
-        fecha_actualizacion: new Date()
-      },
-      include: {
-        mesas: true
-      }
     });
 
     res.json({
@@ -248,6 +274,13 @@ router.put('/:id', authenticate, async (req, res, next) => {
       invitado: invitadoActualizado
     });
   } catch (error) {
+    // Manejar errores de transacción
+    if (error.message.includes('Mesa') || error.message.includes('capacidad') || error.message.includes('no encontrada')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
     next(error);
   }
 });
@@ -326,32 +359,58 @@ router.patch('/:id/asignar-mesa', authenticate, async (req, res, next) => {
       });
     }
 
-    // Verificar capacidad (sin contar al invitado actual si ya está en la mesa)
-    const invitadosEnMesa = mesa.invitados.filter(inv => inv.id !== parseInt(id));
-    if (invitadosEnMesa.length >= mesa.capacidad) {
-      return res.status(400).json({
-        success: false,
-        message: `La mesa ${mesa.numero_mesa} ya está llena (capacidad: ${mesa.capacidad}, ocupados: ${invitadosEnMesa.length})`
+    // Asignar invitado a mesa en transacción (para evitar race conditions)
+    const invitadoActualizado = await prisma.$transaction(async (tx) => {
+      // Verificar capacidad dentro de la transacción (evita race conditions)
+      const mesaActualizada = await tx.mesas.findUnique({
+        where: { id: parseInt(mesa_id) },
+        include: {
+          invitados: true
+        }
       });
-    }
 
-    const invitadoActualizado = await prisma.invitados.update({
-      where: { id: parseInt(id) },
-      data: {
-        mesa_id: parseInt(mesa_id),
-        fecha_actualizacion: new Date()
-      },
-      include: {
-        mesas: true
+      if (!mesaActualizada) {
+        throw new Error('Mesa no encontrada');
       }
+
+      // Verificar capacidad (sin contar al invitado actual si ya está en la mesa)
+      const invitadosEnMesa = mesaActualizada.invitados.filter(inv => inv.id !== parseInt(id));
+      if (invitadosEnMesa.length >= mesaActualizada.capacidad) {
+        throw new Error(`La mesa ${mesaActualizada.numero_mesa} ya está llena (capacidad: ${mesaActualizada.capacidad}, ocupados: ${invitadosEnMesa.length})`);
+      }
+
+      // Actualizar invitado
+      return await tx.invitados.update({
+        where: { id: parseInt(id) },
+        data: {
+          mesa_id: parseInt(mesa_id),
+          fecha_actualizacion: new Date()
+        },
+        include: {
+          mesas: true
+        }
+      });
+    });
+
+    // Obtener la mesa actualizada para el mensaje
+    const mesaInfo = await prisma.mesas.findUnique({
+      where: { id: parseInt(mesa_id) },
+      select: { numero_mesa: true }
     });
 
     res.json({
       success: true,
-      message: `Invitado asignado a la mesa ${mesa.numero_mesa}`,
+      message: `Invitado asignado a la mesa ${mesaInfo?.numero_mesa || mesa_id}`,
       invitado: invitadoActualizado
     });
   } catch (error) {
+    // Manejar errores de transacción
+    if (error.message.includes('Mesa') || error.message.includes('capacidad') || error.message.includes('no encontrada')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
     next(error);
   }
 });

@@ -4,13 +4,13 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const emailService = require('../services/emailService');
 const { generarPDFContrato } = require('../utils/pdfContrato');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * @route   POST /api/emails/contrato/:id

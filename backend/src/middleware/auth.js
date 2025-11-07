@@ -3,10 +3,10 @@
  */
 
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { UnauthorizedError } = require('./errorHandler');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * Verificar token JWT

@@ -4,11 +4,11 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { optionalAuth } = require('../middleware/auth');
 const { NotFoundError } = require('../middleware/errorHandler');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * @route   GET /api/paquetes

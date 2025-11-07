@@ -181,9 +181,103 @@ const validarDatosSolicitud = (datos) => {
 };
 
 /**
+ * Sanitizar y validar número entero
+ */
+const sanitizarInt = (value, min = null, max = null, defaultValue = null) => {
+  if (value === null || value === undefined) {
+    return defaultValue;
+  }
+  
+  const num = parseInt(value, 10);
+  
+  if (isNaN(num)) {
+    throw new ValidationError(`Valor numérico inválido: ${value}`);
+  }
+  
+  if (min !== null && num < min) {
+    throw new ValidationError(`El valor debe ser mayor o igual a ${min}`);
+  }
+  
+  if (max !== null && num > max) {
+    throw new ValidationError(`El valor debe ser menor o igual a ${max}`);
+  }
+  
+  return num;
+};
+
+/**
+ * Sanitizar y validar número decimal
+ */
+const sanitizarFloat = (value, min = null, max = null, defaultValue = null) => {
+  if (value === null || value === undefined) {
+    return defaultValue;
+  }
+  
+  const num = parseFloat(value);
+  
+  if (isNaN(num)) {
+    throw new ValidationError(`Valor numérico inválido: ${value}`);
+  }
+  
+  if (min !== null && num < min) {
+    throw new ValidationError(`El valor debe ser mayor o igual a ${min}`);
+  }
+  
+  if (max !== null && num > max) {
+    throw new ValidationError(`El valor debe ser menor o igual a ${max}`);
+  }
+  
+  return num;
+};
+
+/**
+ * Sanitizar ID (debe ser un entero positivo)
+ */
+const sanitizarId = (value, fieldName = 'ID') => {
+  if (!value) {
+    throw new ValidationError(`${fieldName} es requerido`);
+  }
+  
+  const id = sanitizarInt(value, 1, Number.MAX_SAFE_INTEGER);
+  
+  if (id <= 0) {
+    throw new ValidationError(`${fieldName} debe ser un número positivo`);
+  }
+  
+  return id;
+};
+
+/**
+ * Sanitizar fecha
+ */
+const sanitizarFecha = (value, allowPast = false) => {
+  if (!value) {
+    throw new ValidationError('La fecha es requerida');
+  }
+  
+  const fecha = new Date(value);
+  
+  if (isNaN(fecha.getTime())) {
+    throw new ValidationError('Fecha inválida');
+  }
+  
+  if (!allowPast) {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fecha.setHours(0, 0, 0, 0);
+    
+    if (fecha < hoy) {
+      throw new ValidationError('La fecha debe ser futura');
+    }
+  }
+  
+  return fecha;
+};
+
+/**
  * Sanitizar string (prevenir XSS y SQL injection)
  */
-const sanitizarString = (str) => {
+const sanitizarString = (str, maxLength = 5000) => {
   if (typeof str !== 'string') return str;
   
   return str
@@ -194,7 +288,7 @@ const sanitizarString = (str) => {
     .replace(/on\w+=/gi, '') // Eliminar event handlers (onclick, onerror, etc.)
     // Eliminar caracteres peligrosos para SQL (aunque Prisma lo previene, es buena práctica)
     .replace(/['";\\]/g, '') // Eliminar comillas y punto y coma
-    .substring(0, 5000); // Limitar longitud
+    .substring(0, maxLength); // Limitar longitud
 };
 
 /**
@@ -216,6 +310,56 @@ const sanitizarObjeto = (obj) => {
   return sanitized;
 };
 
+/**
+ * Validar y sanitizar parámetros de query (paginación, filtros)
+ */
+const sanitizarQueryParams = (query) => {
+  const sanitized = {};
+  
+  // Paginación
+  if (query.page) {
+    sanitized.page = sanitizarInt(query.page, 1, 1000, 1);
+  }
+  
+  if (query.limit) {
+    sanitized.limit = sanitizarInt(query.limit, 1, 1000, 50);
+  }
+  
+  // Búsqueda
+  if (query.search) {
+    sanitized.search = sanitizarString(query.search, 200);
+  }
+  
+  // IDs
+  if (query.cliente_id) {
+    sanitized.cliente_id = sanitizarId(query.cliente_id, 'cliente_id');
+  }
+  
+  if (query.vendedor_id) {
+    sanitized.vendedor_id = sanitizarId(query.vendedor_id, 'vendedor_id');
+  }
+  
+  // Fechas
+  if (query.fecha_desde) {
+    sanitized.fecha_desde = sanitizarFecha(query.fecha_desde, true);
+  }
+  
+  if (query.fecha_hasta) {
+    sanitized.fecha_hasta = sanitizarFecha(query.fecha_hasta, true);
+  }
+  
+  // Otros campos string
+  if (query.estado) {
+    sanitized.estado = sanitizarString(query.estado, 50);
+  }
+  
+  if (query.estado_pago) {
+    sanitized.estado_pago = sanitizarString(query.estado_pago, 50);
+  }
+  
+  return sanitized;
+};
+
 module.exports = {
   validarEmail,
   validarTelefono,
@@ -225,6 +369,10 @@ module.exports = {
   validarDatosPago,
   validarDatosSolicitud,
   sanitizarString,
-  sanitizarObjeto
+  sanitizarObjeto,
+  sanitizarInt,
+  sanitizarFloat,
+  sanitizarId,
+  sanitizarFecha,
+  sanitizarQueryParams
 };
-

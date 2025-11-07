@@ -4,11 +4,11 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * @route   GET /api/vendedores
@@ -17,25 +17,37 @@ const prisma = new PrismaClient();
  */
 router.get('/', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const vendedores = await prisma.vendedores.findMany({
-      where: { activo: true },
-      select: {
-        id: true,
-        nombre_completo: true,
-        codigo_vendedor: true,
-        email: true,
-        telefono: true,
-        comision_porcentaje: true,
-        total_ventas: true,
-        total_comisiones: true,
-        fecha_registro: true
-      },
-      orderBy: { fecha_registro: 'desc' }
-    });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [vendedores, total] = await Promise.all([
+      prisma.vendedores.findMany({
+        where: { activo: true },
+        select: {
+          id: true,
+          nombre_completo: true,
+          codigo_vendedor: true,
+          email: true,
+          telefono: true,
+          comision_porcentaje: true,
+          total_ventas: true,
+          total_comisiones: true,
+          fecha_registro: true
+        },
+        orderBy: { fecha_registro: 'desc' },
+        take: limit,
+        skip: skip
+      }),
+      prisma.vendedores.count({ where: { activo: true } })
+    ]);
 
     res.json({
       success: true,
       count: vendedores.length,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
       vendedores
     });
 
@@ -193,24 +205,28 @@ router.get('/:id/clientes', authenticate, requireVendedor, async (req, res, next
       throw new ValidationError('No tienes permiso para ver clientes de otro vendedor');
     }
 
-    const clientes = await prisma.clientes.findMany({
-      where: { vendedor_id: parseInt(id) },
-      include: {
-        _count: {
-          select: {
-            contratos: true,
-            ofertas: true
+    const { getPaginationParams, createPaginationResponse } = require('../utils/pagination');
+    const { page, limit, skip } = getPaginationParams(req.query);
+    
+    const [clientes, total] = await Promise.all([
+      prisma.clientes.findMany({
+        where: { vendedor_id: parseInt(id) },
+        include: {
+          _count: {
+            select: {
+              contratos: true,
+              ofertas: true
+            }
           }
-        }
-      },
-      orderBy: { fecha_registro: 'desc' }
-    });
+        },
+        orderBy: { fecha_registro: 'desc' },
+        take: limit,
+        skip: skip
+      }),
+      prisma.clientes.count({ where: { vendedor_id: parseInt(id) } })
+    ]);
 
-    res.json({
-      success: true,
-      count: clientes.length,
-      clientes
-    });
+    res.json(createPaginationResponse(clientes, total, page, limit));
 
   } catch (error) {
     next(error);

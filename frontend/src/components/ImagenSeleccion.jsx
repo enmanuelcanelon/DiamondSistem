@@ -83,4 +83,3 @@ function ImagenSeleccion({ urlImagen, alt = 'Imagen', tamaño = 'medium', onClos
 }
 
 export default ImagenSeleccion;
-

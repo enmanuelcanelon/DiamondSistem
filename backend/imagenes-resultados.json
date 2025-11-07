@@ -1,0 +1,452 @@
+[
+  {
+    "nombreArchivo": "cake_blanco_2pisos.webp",
+    "descripcion": "2pisos - Cake Blanco 2pisos",
+    "tipoServicio": "torta"
+  },
+  {
+    "nombreArchivo": "cake_chanel_2pisos.webp",
+    "descripcion": "2pisos - Cake Chanel 2pisos",
+    "tipoServicio": "torta"
+  },
+  {
+    "nombreArchivo": "cake_delux_2pisos.webp",
+    "descripcion": "2pisos - Cake Delux 2pisos",
+    "tipoServicio": "torta"
+  },
+  {
+    "nombreArchivo": "cake_desnudo_2pisos.webp",
+    "descripcion": "2pisos - Cake Desnudo 2pisos",
+    "tipoServicio": "torta"
+  },
+  {
+    "nombreArchivo": "cake_blanco_3pisos.webp",
+    "descripcion": "3pisos - Cake Blanco 3pisos",
+    "tipoServicio": "torta"
+  },
+  {
+    "nombreArchivo": "cake_channel_3pisos.webp",
+    "descripcion": "3pisos - Cake Channel 3pisos",
+    "tipoServicio": "torta"
+  },
+  {
+    "nombreArchivo": "cake_delux_3pisos.webp",
+    "descripcion": "3pisos - Cake Delux 3pisos",
+    "tipoServicio": "torta"
+  },
+  {
+    "nombreArchivo": "cake_desnudo_3pisos.webp",
+    "descripcion": "3pisos - Cake Desnudo 3pisos",
+    "tipoServicio": "torta"
+  },
+  {
+    "nombreArchivo": "bar_jugo_crawberry.webp",
+    "descripcion": "jugos - Bar Jugo Crawberry",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_jugo_naranja.webp",
+    "descripcion": "jugos - Bar Jugo Naranja",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "champage.webp",
+    "descripcion": "brindis - Champage",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "sidra.webp",
+    "descripcion": "brindis - Sidra",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_cocteles_daiquiri.webp",
+    "descripcion": "cocteles - Bar Cocteles Daiquiri",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_cocteles_shirley_tempe.webp",
+    "descripcion": "cocteles - Bar Cocteles Shirley Tempe",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_coctele_pinacolada.webp",
+    "descripcion": "cocteles - Bar Coctele Pinacolada",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_ron_bacardi.webp",
+    "descripcion": "ron - Bar Ron Bacardi",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_ron_bacardi_gold.webp",
+    "descripcion": "ron - Bar Ron Bacardi Gold",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_vino_blanco.webp",
+    "descripcion": "vinos - Bar Vino Blanco",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_vino_chardonnay.webp",
+    "descripcion": "vinos - Bar Vino Chardonnay",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_vino_tinto.webp",
+    "descripcion": "vinos - Bar Vino Tinto",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_vodka.webp",
+    "descripcion": "vodka - Bar Vodka",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_whisky_black_label.webp",
+    "descripcion": "whisky - Bar Whisky Black Label",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_bluecuracao.webp",
+    "descripcion": "otros - Bar Bluecuracao",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_granadina.webp",
+    "descripcion": "otros - Bar Granadina",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_tequila.webp",
+    "descripcion": "otros - Bar Tequila",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_refrescos_clubsoda.webp",
+    "descripcion": "refrescos - Bar Refrescos Clubsoda",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_refresco_aguatonica.webp",
+    "descripcion": "refrescos - Bar Refresco Aguatonica",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_refresco_cocac.webp",
+    "descripcion": "refrescos - Bar Refresco Cocac",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_refresco_cokediet.webp",
+    "descripcion": "refrescos - Bar Refresco Cokediet",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_refresco_fantaN.webp",
+    "descripcion": "refrescos - Bar Refresco Fanta N",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_refresco_sprite.webp",
+    "descripcion": "refrescos - Bar Refresco Sprite",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "bar_refresco_spriteZero.webp",
+    "descripcion": "refrescos - Bar Refresco Sprite Zero",
+    "tipoServicio": "bar"
+  },
+  {
+    "nombreArchivo": "menu_ensaladaCesar.webp",
+    "descripcion": "ensalada+pan - Menu Ensalada Cesar",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_panymantequilla.webp",
+    "descripcion": "ensalada+pan - Menu Panymantequilla",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_pasapalos_bolasdecarne.webp",
+    "descripcion": "pasapalos - Menu Pasapalos Bolasdecarne",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_pasapalos_salchichas.webp",
+    "descripcion": "pasapalos - Menu Pasapalos Salchichas",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_pasapalos_tequenos.webp",
+    "descripcion": "pasapalos - Menu Pasapalos Tequenos",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_pasapalos_tunartartar.webp",
+    "descripcion": "pasapalos - Menu Pasapalos Tunartartar",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_teen_pasta_alfredo.webp",
+    "descripcion": "pastas - Menu Teen Pasta Alfredo",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_teen_pasta_napolitana.webp",
+    "descripcion": "pastas - Menu Teen Pasta Napolitana",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_Bistec.webp",
+    "descripcion": "plato_principal - Menu Bistec",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_PolloPicata.webp",
+    "descripcion": "plato_principal - Menu Pollo Picata",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_polloStrongonoff.webp",
+    "descripcion": "plato_principal - Menu Pollo Strongonoff",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_SolomilloCerdoMarinado.webp",
+    "descripcion": "plato_principal - Menu Solomillo Cerdo Marinado",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_arrozamarillo.webp",
+    "descripcion": "slide - Menu Arrozamarillo",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_arrozblanco.webp",
+    "descripcion": "slide - Menu Arrozblanco",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_patatasromero.webp",
+    "descripcion": "slide - Menu Patatasromero",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_platanomaduro.webp",
+    "descripcion": "slide - Menu Platanomaduro",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_puredepatatas.webp",
+    "descripcion": "slide - Menu Puredepatatas",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "menu_verdurasalvapor.webp",
+    "descripcion": "slide - Menu Verdurasalvapor",
+    "tipoServicio": "menu"
+  },
+  {
+    "nombreArchivo": "aro_clear.webp",
+    "descripcion": "aros - Aro Clear",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "aro_dorado.webp",
+    "descripcion": "aros - Aro Dorado",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "aro_silver.webp",
+    "descripcion": "aros - Aro Silver",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "base_arbol.webp",
+    "descripcion": "base - Base Arbol",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "base_clear.webp",
+    "descripcion": "base - Base Clear",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "base_dorado.webp",
+    "descripcion": "base - Base Dorado",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "base_silver.webp",
+    "descripcion": "base - Base Silver",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "centrodemesa_arbol.webp",
+    "descripcion": "centrosdemesa - Centrodemesa Arbol",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "centrodemesa_azul.webp",
+    "descripcion": "centrosdemesa - Centrodemesa Azul",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "centrodemesa_blanco.webp",
+    "descripcion": "centrosdemesa - Centrodemesa Blanco",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "centrodemesa_candelabro.webp",
+    "descripcion": "centrosdemesa - Centrodemesa Candelabro",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "centrodemesa_cilindro.webp",
+    "descripcion": "centrosdemesa - Centrodemesa Cilindro",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "centrodemesa_flor.webp",
+    "descripcion": "centrosdemesa - Centrodemesa Flor",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "centrodemesa_rosada.webp",
+    "descripcion": "centrosdemesa - Centrodemesa Rosada",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "challer_clear.webp",
+    "descripcion": "challer - Challer Clear",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "challer_dorado.webp",
+    "descripcion": "challer - Challer Dorado",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "challer_silver.webp",
+    "descripcion": "challer - Challer Silver",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "cojin_blanco.webp",
+    "descripcion": "cojines - Cojin Blanco",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "cojin_negro.webp",
+    "descripcion": "cojines - Cojin Negro",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_azul.webp",
+    "descripcion": "runner - Runner Azul",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_beige.webp",
+    "descripcion": "runner - Runner Beige",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_blanco.webp",
+    "descripcion": "runner - Runner Blanco",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_disco.webp",
+    "descripcion": "runner - Runner Disco",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_dorado.webp",
+    "descripcion": "runner - Runner Dorado",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_gatsby.webp",
+    "descripcion": "runner - Runner Gatsby",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_morado.webp",
+    "descripcion": "runner - Runner Morado",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_negro.webp",
+    "descripcion": "runner - Runner Negro",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_rojo.webp",
+    "descripcion": "runner - Runner Rojo",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_rosado.webp",
+    "descripcion": "runner - Runner Rosado",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_silver.webp",
+    "descripcion": "runner - Runner Silver",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "runner_verde.webp",
+    "descripcion": "runner - Runner Verde",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "servilleta_azul.webp",
+    "descripcion": "servilletas - Servilleta Azul",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "servilleta_blanca.webp",
+    "descripcion": "servilletas - Servilleta Blanca",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "servilleta_morada.webp",
+    "descripcion": "servilletas - Servilleta Morada",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "servilleta_negra.webp",
+    "descripcion": "servilletas - Servilleta Negra",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "servilleta_roja.webp",
+    "descripcion": "servilletas - Servilleta Roja",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "servilleta_rosada.webp",
+    "descripcion": "servilletas - Servilleta Rosada",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "servilleta_verde.webp",
+    "descripcion": "servilletas - Servilleta Verde",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "servilleta_vinotinto.webp",
+    "descripcion": "servilletas - Servilleta Vinotinto",
+    "tipoServicio": "decoracion"
+  },
+  {
+    "nombreArchivo": "sevilleta_beige.webp",
+    "descripcion": "servilletas - Sevilleta Beige",
+    "tipoServicio": "decoracion"
+  }
+]

@@ -4,14 +4,14 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate, requireCliente } = require('../middleware/auth');
 const { NotFoundError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * Tipos de servicios válidos para fotos
@@ -37,20 +37,24 @@ router.get('/:tipo', authenticate, requireCliente, async (req, res, next) => {
         tipo_servicio: tipo,
         activo: true
       },
-      orderBy: {
-        fecha_subida: 'desc'
-      }
+      orderBy: [
+        { orden: 'asc' },
+        { fecha_creacion: 'desc' }
+      ]
     });
 
     // Construir URLs completas de las fotos
-    const fotosConUrl = fotos.map(foto => ({
-      id: foto.id,
-      tipo_servicio: foto.tipo_servicio,
-      nombre_archivo: foto.nombre_archivo,
-      url: `/fotos/servicios/${tipo}/${foto.nombre_archivo}`,
-      descripcion: foto.descripcion,
-      fecha_subida: foto.fecha_subida
-    }));
+    const fotosConUrl = fotos.map(foto => {
+      const nombreArchivo = foto.nombre_archivo || foto.url_imagen?.split('/').pop() || 'imagen.webp';
+      return {
+        id: foto.id,
+        tipo_servicio: foto.tipo_servicio,
+        nombre_archivo: nombreArchivo,
+        url: foto.url_imagen || `/fotos/servicios/${tipo}/medium/${nombreArchivo}`,
+        descripcion: foto.descripcion,
+        fecha_creacion: foto.fecha_creacion
+      };
+    });
 
     res.json({
       success: true,
@@ -75,9 +79,11 @@ router.get('/', authenticate, requireCliente, async (req, res, next) => {
       where: {
         activo: true
       },
-      orderBy: {
-        fecha_subida: 'desc'
-      }
+      orderBy: [
+        { tipo_servicio: 'asc' },
+        { orden: 'asc' },
+        { fecha_creacion: 'desc' }
+      ]
     });
 
     // Agrupar por tipo de servicio
@@ -85,14 +91,17 @@ router.get('/', authenticate, requireCliente, async (req, res, next) => {
     TIPOS_SERVICIOS_VALIDOS.forEach(tipo => {
       fotosPorTipo[tipo] = fotos
         .filter(foto => foto.tipo_servicio === tipo)
-        .map(foto => ({
-          id: foto.id,
-          tipo_servicio: foto.tipo_servicio,
-          nombre_archivo: foto.nombre_archivo,
-          url: `/fotos/servicios/${tipo}/${foto.nombre_archivo}`,
-          descripcion: foto.descripcion,
-          fecha_subida: foto.fecha_subida
-        }));
+        .map(foto => {
+          const nombreArchivo = foto.nombre_archivo || foto.url_imagen?.split('/').pop() || 'imagen.webp';
+          return {
+            id: foto.id,
+            tipo_servicio: foto.tipo_servicio,
+            nombre_archivo: nombreArchivo,
+            url: foto.url_imagen || `/fotos/servicios/${tipo}/medium/${nombreArchivo}`,
+            descripcion: foto.descripcion,
+            fecha_creacion: foto.fecha_creacion
+          };
+        });
     });
 
     res.json({

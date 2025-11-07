@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Search, FileCheck, Calendar, Clock, DollarSign, Eye, Download, Filter, X } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { Search, FileCheck, Calendar, Clock, DollarSign, Eye, Download, Filter, X, Loader2 } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
@@ -45,14 +45,6 @@ function Contratos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroDias]);
 
-  const { data: contratos, isLoading } = useQuery({
-    queryKey: ['contratos'],
-    queryFn: async () => {
-      const response = await api.get('/contratos');
-      return response.data.contratos;
-    },
-  });
-
   // Sincronizar filtro de cliente con URL
   useEffect(() => {
     if (clienteIdFromUrl) {
@@ -60,8 +52,43 @@ function Contratos() {
     }
   }, [clienteIdFromUrl]);
 
-  // Obtener nombre del cliente para mostrar en el filtro
-  const clienteFiltrado = contratos?.find(c => c.cliente_id === parseInt(clienteFiltro))?.clientes;
+  // Scroll infinito con useInfiniteQuery
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isRefetching,
+  } = useInfiniteQuery({
+    queryKey: ['contratos', searchTerm, estadoPagoFiltro, estadoContratoFiltro, fechaDesde, fechaHasta, clienteFiltro],
+    queryFn: async ({ pageParam = 1 }) => {
+      const params = {
+        page: pageParam,
+        limit: 50,
+        // Enviar filtros al backend
+        ...(searchTerm && { search: searchTerm }),
+        ...(estadoPagoFiltro && { estado_pago: estadoPagoFiltro }),
+        ...(estadoContratoFiltro && { estado: estadoContratoFiltro }),
+        ...(fechaDesde && { fecha_desde: fechaDesde }),
+        ...(fechaHasta && { fecha_hasta: fechaHasta }),
+        ...(clienteFiltro && { cliente_id: clienteFiltro }),
+      };
+      const response = await api.get('/contratos', { params });
+      return response.data; // Retorna { data: [...], total, page, hasNextPage, ... }
+    },
+    getNextPageParam: (lastPage) => {
+      return lastPage.hasNextPage ? lastPage.page + 1 : undefined;
+    },
+    initialPageParam: 1,
+  });
+
+  // Aplanar todos los contratos de todas las páginas
+  const contratos = data?.pages.flatMap(page => page.data) || [];
+  const totalContratos = data?.pages[0]?.total || 0;
+
+  // Obtener nombre del cliente para mostrar en el filtro (del primer contrato que coincida)
+  const clienteFiltrado = contratos.find(c => c.cliente_id === parseInt(clienteFiltro))?.clientes;
 
   // Limpiar filtro de cliente
   const limpiarFiltroCliente = () => {
@@ -69,26 +96,27 @@ function Contratos() {
     navigate('/contratos');
   };
 
-  // Filtrar contratos
-  const contratosFiltrados = contratos?.filter(contrato => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchSearch = 
-      contrato.codigo_contrato.toLowerCase().includes(searchLower) ||
-      contrato.clientes?.nombre_completo.toLowerCase().includes(searchLower);
-    
-    const matchEstadoPago = !estadoPagoFiltro || contrato.estado_pago === estadoPagoFiltro;
-    const matchEstadoContrato = !estadoContratoFiltro || contrato.estado === estadoContratoFiltro;
-    
-    // Filtro por fecha del evento (no por fecha de creación)
-    const fechaEvento = new Date(contrato.fecha_evento);
-    const matchFechaDesde = !fechaDesde || fechaEvento >= new Date(fechaDesde);
-    const matchFechaHasta = !fechaHasta || fechaEvento <= new Date(fechaHasta);
-    
-    // Filtro por cliente
-    const matchCliente = !clienteFiltro || contrato.cliente_id === parseInt(clienteFiltro);
-    
-    return matchSearch && matchEstadoPago && matchEstadoContrato && matchFechaDesde && matchFechaHasta && matchCliente;
-  });
+  // Detección de scroll para cargar más
+  const observerTarget = useRef(null);
+
+  const handleObserver = useCallback((entries) => {
+    const [target] = entries;
+    if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    const element = observerTarget.current;
+    const option = { threshold: 0.1 };
+
+    const observer = new IntersectionObserver(handleObserver, option);
+    if (element) observer.observe(element);
+
+    return () => {
+      if (element) observer.unobserve(element);
+    };
+  }, [handleObserver]);
 
   const handleDescargarContrato = async (contratoId, codigoContrato) => {
     try {
@@ -159,7 +187,7 @@ function Contratos() {
                 Filtrando contratos de: <strong>{clienteFiltrado.nombre_completo}</strong>
               </p>
               <p className="text-xs text-indigo-700">
-                Mostrando {contratosFiltrados?.length || 0} contrato{(contratosFiltrados?.length || 0) !== 1 ? 's' : ''}
+                Mostrando {contratos.length} de {totalContratos} contrato{totalContratos !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
@@ -291,18 +319,18 @@ function Contratos() {
             </div>
           ))}
         </div>
-      ) : contratosFiltrados?.length === 0 ? (
+      ) : contratos.length === 0 ? (
         <div className="bg-white rounded-xl p-12 text-center shadow-sm border">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileCheck className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {searchTerm || estadoPagoFiltro || estadoContratoFiltro ? 'No se encontraron contratos' : 'No hay contratos'}
+            {searchTerm || estadoPagoFiltro || estadoContratoFiltro || fechaDesde || fechaHasta ? 'No se encontraron contratos' : 'No hay contratos'}
           </h3>
           <p className="text-gray-600 mb-6">
-            {searchTerm || estadoPagoFiltro || estadoContratoFiltro ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
+            {searchTerm || estadoPagoFiltro || estadoContratoFiltro || fechaDesde || fechaHasta ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
           </p>
-          {!searchTerm && !estadoPagoFiltro && !estadoContratoFiltro && (
+          {!searchTerm && !estadoPagoFiltro && !estadoContratoFiltro && !fechaDesde && !fechaHasta && (
             <Link
               to="/ofertas"
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -313,7 +341,7 @@ function Contratos() {
         </div>
       ) : (
         <div className="space-y-4">
-          {contratosFiltrados?.map((contrato) => {
+          {contratos.map((contrato) => {
             // Debug: verificar datos del salón
             console.log('🔍 Contrato salón data:', {
               id: contrato.id,
@@ -494,6 +522,23 @@ function Contratos() {
             </div>
             );
           })}
+          
+          {/* Observador para scroll infinito */}
+          <div ref={observerTarget} className="h-10 flex items-center justify-center">
+            {isFetchingNextPage && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Cargando más contratos...</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Indicador de fin */}
+          {!hasNextPage && contratos.length > 0 && (
+            <div className="text-center py-4 text-gray-500 text-sm">
+              Mostrando todos los {totalContratos} contrato{totalContratos !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       )}
     </div>

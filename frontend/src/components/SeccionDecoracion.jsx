@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GaleriaFotos from './GaleriaFotos';
+import ImagenSeleccion from './ImagenSeleccion';
+import { obtenerImagenDecoracion } from '../utils/mapeoImagenes';
 
 /**
  * Opciones de colores disponibles para servilletas con sus cantidades límite
@@ -41,7 +43,7 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
     centro_mesa_1: ajustes?.centro_mesa_1 || '',
     base_color: ajustes?.base_color || '',
     challer_color: ajustes?.challer_color || '',
-    servilletas: ajustes?.servilletas || [],
+    servilletas_color: ajustes?.servilletas_color || '',
     aros_color: ajustes?.aros_color || '',
     aros_nota: ajustes?.aros_nota || '',
     runner_tipo: ajustes?.runner_tipo || '',
@@ -79,98 +81,10 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
   // Calcular invitados totales del contrato
   const totalInvitados = contrato?.cantidad_invitados || 0;
 
-  // Validar servilletas (solo si es decoración básica)
-  const validarServilletas = () => {
-    // Si no es decoración básica, no validar servilletas
-    if (datos.tipo_decoracion !== 'basica') {
-      return { valido: true, mensaje: '' };
-    }
-
-    // Si no tiene servilletas configuradas, es válido (el cliente puede guardar sin completar todo)
-    if (!datos.servilletas || datos.servilletas.length === 0) {
-      return { valido: true, mensaje: 'Sin servilletas configuradas aún' };
-    }
-
-    const totalServilletas = datos.servilletas.reduce((sum, s) => sum + (parseInt(s.cantidad) || 0), 0);
-    
-    // Solo validar si el cliente ya empezó a configurar servilletas
-    if (totalServilletas > 0) {
-      if (totalServilletas < totalInvitados) {
-        return { 
-          valido: false, 
-          mensaje: `⚠️ Faltan servilletas: tienes ${totalServilletas} pero necesitas ${totalInvitados}` 
-        };
-      }
-      
-      if (totalServilletas > totalInvitados) {
-        return { 
-          valido: false, 
-          mensaje: `⚠️ Sobran servilletas: tienes ${totalServilletas} pero necesitas ${totalInvitados}` 
-        };
-      }
-
-      // Validar límites por color
-      for (const servilleta of datos.servilletas) {
-        if (servilleta.color && servilleta.cantidad) {
-          const opcion = SERVILLETAS_OPCIONES.find(o => o.color === servilleta.color);
-          if (opcion && opcion.cantidad_disponible !== Infinity) {
-            if (parseInt(servilleta.cantidad) > opcion.cantidad_disponible) {
-              return {
-                valido: false,
-                mensaje: `⚠️ Solo hay ${opcion.cantidad_disponible} servilletas ${opcion.label} disponibles`
-              };
-            }
-          }
-        }
-      }
-    }
-
-    return { valido: true, mensaje: '✅ Cantidad correcta de servilletas' };
-  };
-
-  const validacion = validarServilletas();
-
-  // Agregar servilleta
-  const agregarServilleta = () => {
-    setDatos(prev => ({
-      ...prev,
-      servilletas: [...prev.servilletas, { color: '', cantidad: 0 }]
-    }));
-  };
-
-  // Actualizar servilleta
-  const actualizarServilleta = (index, campo, valor) => {
-    setDatos(prev => {
-      const nuevasServilletas = [...prev.servilletas];
-      nuevasServilletas[index] = { ...nuevasServilletas[index], [campo]: valor };
-      return { ...prev, servilletas: nuevasServilletas };
-    });
-  };
-
-  // Eliminar servilleta
-  const eliminarServilleta = (index) => {
-    setDatos(prev => ({
-      ...prev,
-      servilletas: prev.servilletas.filter((_, i) => i !== index)
-    }));
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Validar servilletas antes de guardar (solo si hay servilletas configuradas)
-    if (datos.tipo_decoracion === 'basica' && datos.servilletas && datos.servilletas.length > 0) {
-      const totalServilletas = datos.servilletas.reduce((sum, s) => sum + (parseInt(s.cantidad) || 0), 0);
-      
-      if (totalServilletas > 0) {
-        const validacion = validarServilletas();
-        if (!validacion.valido) {
-          toast.error(validacion.mensaje, { duration: 4000 });
-          return;
-        }
-      }
-    }
-
+    // No hay validación especial de servilletas, solo se guardan los colores seleccionados
     onGuardar('decoracion', datos);
   };
 
@@ -210,6 +124,16 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
               <span className="text-sm">Blancos</span>
             </label>
           </div>
+          {/* Mostrar imagen cuando se selecciona un color de cojín */}
+          {datos.cojines_color && (
+            <div className="mt-3 flex justify-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenDecoracion('cojin', datos.cojines_color)}
+                alt={`Cojines ${datos.cojines_color}`}
+                tamaño="small"
+              />
+            </div>
+          )}
         </div>
 
         {/* Centro de Mesa */}
@@ -230,6 +154,16 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
           <p className="text-xs text-gray-500 mt-2">
             💡 <strong>Nota:</strong> La opción "Cilindro" incluye 3 cilindros por mesa
           </p>
+          {/* Mostrar imagen cuando se selecciona un centro de mesa */}
+          {datos.centro_mesa_1 && (
+            <div className="mt-3 flex justify-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenDecoracion('centro_mesa', datos.centro_mesa_1)}
+                alt={`Centro de mesa ${datos.centro_mesa_1}`}
+                tamaño="medium"
+              />
+            </div>
+          )}
         </div>
 
         {/* Base y Challer */}
@@ -248,6 +182,16 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
                 <option key={b} value={b} className="capitalize">{b}</option>
               ))}
             </select>
+            {/* Mostrar imagen cuando se selecciona una base */}
+            {datos.base_color && (
+              <div className="mt-3 flex justify-center">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenDecoracion('base', datos.base_color)}
+                  alt={`Base ${datos.base_color}`}
+                  tamaño="small"
+                />
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-lg border p-4">
@@ -264,114 +208,47 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
                 <option key={c} value={c} className="capitalize">{c}</option>
               ))}
             </select>
+            {/* Mostrar imagen cuando se selecciona un challer */}
+            {datos.challer_color && (
+              <div className="mt-3 flex justify-center">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenDecoracion('challer', datos.challer_color)}
+                  alt={`Challer ${datos.challer_color}`}
+                  tamaño="small"
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Servilletas */}
-        <div className="bg-purple-50 rounded-lg border-2 border-purple-200 p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-1">
-                Servilletas * (Total: {totalInvitados} invitados)
-              </label>
-              <p className="text-xs text-gray-600">
-                Debes seleccionar exactamente {totalInvitados} servilletas en total
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={agregarServilleta}
-              disabled={estaBloqueado}
-              className="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition disabled:opacity-50"
-            >
-              + Agregar Color
-            </button>
-          </div>
-
-          {/* Validación Visual */}
-          {datos.servilletas.length > 0 && validacion.mensaje && (
-            <div className={`mb-4 p-3 rounded-lg flex items-start gap-2 ${
-              validacion.valido 
-                ? validacion.mensaje.includes('✅') 
-                  ? 'bg-green-50 border border-green-200' 
-                  : 'bg-blue-50 border border-blue-200'
-                : 'bg-yellow-50 border border-yellow-200'
-            }`}>
-              {validacion.valido ? (
-                validacion.mensaje.includes('✅') ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                )
-              ) : (
-                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-              )}
-              <p className={`text-sm ${
-                validacion.valido 
-                  ? validacion.mensaje.includes('✅') 
-                    ? 'text-green-800' 
-                    : 'text-blue-800'
-                  : 'text-yellow-800'
-              }`}>
-                {validacion.mensaje}
-              </p>
-            </div>
-          )}
-
-          {/* Lista de Servilletas */}
-          <div className="space-y-3">
-            {datos.servilletas.map((servilleta, index) => (
-              <div key={index} className="flex gap-3 items-start bg-white p-3 rounded-lg">
-                <div className="flex-1">
-                  <select
-                    value={servilleta.color}
-                    onChange={(e) => actualizarServilleta(index, 'color', e.target.value)}
-                    disabled={estaBloqueado}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm"
-                  >
-                    <option value="">Seleccionar color...</option>
-                    {SERVILLETAS_OPCIONES.map(opcion => (
-                      <option key={opcion.color} value={opcion.color}>
-                        {opcion.label} {opcion.nota ? `(${opcion.nota})` : `(Máx: ${opcion.cantidad_disponible})`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="w-24">
-                  <input
-                    type="number"
-                    min="0"
-                    value={servilleta.cantidad}
-                    onChange={(e) => actualizarServilleta(index, 'cantidad', parseInt(e.target.value) || 0)}
-                    disabled={estaBloqueado || servilleta.color === 'blanca'}
-                    placeholder="Cant."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm text-center disabled:bg-gray-100"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => eliminarServilleta(index)}
-                  disabled={estaBloqueado}
-                  className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
-                >
-                  ✕
-                </button>
-              </div>
+        <div className="bg-white rounded-lg border p-4">
+          <label className="block text-sm font-bold text-gray-900 mb-3">
+            Servilletas *
+          </label>
+          <select
+            value={datos.servilletas_color}
+            onChange={(e) => setDatos({ ...datos, servilletas_color: e.target.value })}
+            disabled={estaBloqueado}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+          >
+            <option value="">Seleccionar color...</option>
+            {SERVILLETAS_OPCIONES.map(opcion => (
+              <option key={opcion.color} value={opcion.color}>
+                {opcion.label}
+              </option>
             ))}
-          </div>
-
-          {datos.servilletas.length === 0 && (
-            <div className="text-center py-6 text-gray-500 text-sm">
-              <Info className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              Haz clic en "+ Agregar Color" para seleccionar servilletas
+          </select>
+          {/* Mostrar imagen cuando se selecciona un color de servilleta */}
+          {datos.servilletas_color && (
+            <div className="mt-3 flex justify-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenDecoracion('servilleta', datos.servilletas_color)}
+                alt={`Servilleta ${datos.servilletas_color}`}
+                tamaño="small"
+              />
             </div>
           )}
-
-          {/* Info sobre servilletas blancas */}
-          <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-            💡 <strong>Nota:</strong> Las servilletas blancas son ilimitadas y se ajustan automáticamente.
-            Los demás colores tienen disponibilidad limitada.
-          </div>
         </div>
 
         {/* Aros */}
@@ -398,6 +275,16 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
                 placeholder="Especifica el tipo de aro..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
               />
+            )}
+            {/* Mostrar imagen cuando se selecciona un aro */}
+            {datos.aros_color && datos.aros_color !== 'otro' && (
+              <div className="mt-3 flex justify-center">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenDecoracion('aros', datos.aros_color)}
+                  alt={`Aro ${datos.aros_color}`}
+                  tamaño="small"
+                />
+              </div>
             )}
           </div>
         </div>
@@ -426,6 +313,16 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
                 placeholder="Especifica el tipo de runner..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
               />
+            )}
+            {/* Mostrar imagen cuando se selecciona un runner */}
+            {datos.runner_tipo && datos.runner_tipo !== 'otros' && (
+              <div className="mt-3 flex justify-center">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenDecoracion('runner', datos.runner_tipo)}
+                  alt={`Runner ${datos.runner_tipo}`}
+                  tamaño="medium"
+                />
+              </div>
             )}
           </div>
         </div>
@@ -483,12 +380,6 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
           <h2 className="text-2xl font-bold text-gray-900">Decoración</h2>
         </div>
 
-        {/* Galería de Fotos */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
-          <GaleriaFotos tipoServicio="decoracion" titulo="decoraciones" />
-        </div>
-
         <div className="text-center py-12">
           <Sparkles className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600">
@@ -519,12 +410,6 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
             ⭐ Premium
           </span>
         )}
-      </div>
-
-      {/* Galería de Fotos */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
-        <GaleriaFotos tipoServicio="decoracion" titulo="decoraciones" />
       </div>
 
       {/* ===== DECORACIÓN PREMIUM ===== */}

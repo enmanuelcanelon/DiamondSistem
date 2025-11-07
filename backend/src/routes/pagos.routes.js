@@ -4,14 +4,14 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor } = require('../middleware/auth');
 const { validarDatosPago } = require('../utils/validators');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const { calcularRecargoTarjeta } = require('../utils/priceCalculator');
 const { generarPDFContrato } = require('../utils/pdfContrato');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * @route   GET /api/pagos
@@ -57,37 +57,41 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
       }
     }
 
-    const pagos = await prisma.pagos.findMany({
-      where,
-      include: {
-        contratos: {
-          select: {
-            id: true,
-            codigo_contrato: true,
-            clientes: {
-              select: {
-                id: true,
-                nombre_completo: true
+    const { getPaginationParams, createPaginationResponse } = require('../utils/pagination');
+    const { page, limit, skip } = getPaginationParams(req.query);
+
+    const [pagos, total] = await Promise.all([
+      prisma.pagos.findMany({
+        where,
+        include: {
+          contratos: {
+            select: {
+              id: true,
+              codigo_contrato: true,
+              clientes: {
+                select: {
+                  id: true,
+                  nombre_completo: true
+                }
               }
+            }
+          },
+          vendedores: {
+            select: {
+              id: true,
+              nombre_completo: true,
+              codigo_vendedor: true
             }
           }
         },
-        vendedores: {
-          select: {
-            id: true,
-            nombre_completo: true,
-            codigo_vendedor: true
-          }
-        }
-      },
-      orderBy: { fecha_pago: 'desc' }
-    });
+        orderBy: { fecha_pago: 'desc' },
+        take: limit,
+        skip: skip
+      }),
+      prisma.pagos.count({ where })
+    ]);
 
-    res.json({
-      success: true,
-      count: pagos.length,
-      pagos
-    });
+    res.json(createPaginationResponse(pagos, total, page, limit));
 
   } catch (error) {
     next(error);
@@ -154,9 +158,13 @@ router.post('/', authenticate, async (req, res, next) => {
     // Validar datos
     validarDatosPago(datos);
 
+    // Sanitizar contrato_id
+    const { sanitizarId, sanitizarFloat } = require('../utils/validators');
+    const contratoIdSanitizado = sanitizarId(datos.contrato_id, 'contrato_id');
+
     // Verificar que el contrato existe
     const contrato = await prisma.contratos.findUnique({
-      where: { id: parseInt(datos.contrato_id) },
+      where: { id: contratoIdSanitizado },
       include: {
         clientes: {
           select: {
@@ -185,8 +193,9 @@ router.post('/', authenticate, async (req, res, next) => {
     }
 
     // Verificar que el monto no exceda el saldo pendiente
-    let monto = parseFloat(datos.monto);
-    if (monto > parseFloat(contrato.saldo_pendiente)) {
+    let monto = sanitizarFloat(datos.monto, 0.01, Number.MAX_SAFE_INTEGER);
+    const saldoPendiente = parseFloat(contrato.saldo_pendiente);
+    if (monto > saldoPendiente) {
       throw new ValidationError(
         'El monto excede el saldo pendiente',
         [`Saldo pendiente: $${contrato.saldo_pendiente}`]
@@ -212,7 +221,7 @@ router.post('/', authenticate, async (req, res, next) => {
       // Registrar pago (el trigger se encarga de actualizar el contrato)
       const pago = await tx.pagos.create({
         data: {
-          contrato_id: parseInt(datos.contrato_id),
+          contrato_id: contratoIdSanitizado, // Ya sanitizado
           monto: monto,
           metodo_pago: datos.metodo_pago,
           tipo_tarjeta: datos.tipo_tarjeta || null,
@@ -227,7 +236,7 @@ router.post('/', authenticate, async (req, res, next) => {
 
       // Obtener el contrato actualizado después del trigger
       const contratoActualizado = await tx.contratos.findUnique({
-        where: { id: parseInt(datos.contrato_id) },
+        where: { id: contratoIdSanitizado }, // Ya sanitizado
         include: {
           clientes: true,
           vendedores: true,
@@ -247,7 +256,7 @@ router.post('/', authenticate, async (req, res, next) => {
 
       // Obtener el próximo número de versión
       const ultimaVersion = await tx.versiones_contratos_pdf.findFirst({
-        where: { contrato_id: parseInt(datos.contrato_id) },
+        where: { contrato_id: contratoIdSanitizado }, // Ya sanitizado
         orderBy: { version_numero: 'desc' },
       });
 

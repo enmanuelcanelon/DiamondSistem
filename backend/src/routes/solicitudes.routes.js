@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { generarPDFContrato } = require('../utils/pdfContrato');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 // =====================================================
 // RUTAS PARA EL CLIENTE

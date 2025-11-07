@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor } = require('../middleware/auth');
 const { validarDatosOferta } = require('../utils/validators');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
@@ -17,7 +17,7 @@ const { generarCodigoOferta } = require('../utils/codeGenerator');
 const { generarFacturaProforma } = require('../utils/pdfFactura');
 const logger = require('../utils/logger');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 /**
  * @route   POST /api/ofertas/calcular
@@ -160,7 +160,7 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
  */
 router.get('/', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { cliente_id, estado } = req.query;
+    const { cliente_id, estado, fecha_desde, fecha_hasta, search } = req.query;
 
     // CRÍTICO: Forzar que el vendedor solo vea SUS ofertas
     const where = {
@@ -176,53 +176,76 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
       where.estado = estado;
     }
 
-    const ofertas = await prisma.ofertas.findMany({
-      where,
-      include: {
-        clientes: {
-          select: {
-            id: true,
-            nombre_completo: true,
-            email: true,
-            telefono: true
-          }
-        },
-        paquetes: {
-          select: {
-            id: true,
-            nombre: true,
-            precio_base: true
-          }
-        },
-        vendedores: {
-          select: {
-            id: true,
-            nombre_completo: true,
-            codigo_vendedor: true
-          }
-        },
-        contratos: {
-          select: {
-            id: true,
-            codigo_contrato: true,
-            estado: true
-          }
-        },
-        salones: {
-          select: {
-            id: true,
-            nombre: true
-          }
-        }
-      },
-      orderBy: { fecha_creacion: 'desc' }
-    });
+    // Filtro por fecha de creación de la oferta
+    if (fecha_desde || fecha_hasta) {
+      where.fecha_creacion = {};
+      if (fecha_desde) {
+        where.fecha_creacion.gte = new Date(fecha_desde + 'T00:00:00');
+      }
+      if (fecha_hasta) {
+        where.fecha_creacion.lte = new Date(fecha_hasta + 'T23:59:59');
+      }
+    }
 
-    res.json({
-      success: true,
-      count: ofertas.length,
-      ofertas
-    });
+    // Búsqueda por código de oferta o nombre de cliente
+    if (search) {
+      where.OR = [
+        { codigo_oferta: { contains: search, mode: 'insensitive' } },
+        { clientes: { nombre_completo: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    const { getPaginationParams, createPaginationResponse } = require('../utils/pagination');
+    const { page, limit, skip } = getPaginationParams(req.query);
+
+    const [ofertas, total] = await Promise.all([
+      prisma.ofertas.findMany({
+        where,
+        include: {
+          clientes: {
+            select: {
+              id: true,
+              nombre_completo: true,
+              email: true,
+              telefono: true
+            }
+          },
+          paquetes: {
+            select: {
+              id: true,
+              nombre: true,
+              precio_base: true
+            }
+          },
+          vendedores: {
+            select: {
+              id: true,
+              nombre_completo: true,
+              codigo_vendedor: true
+            }
+          },
+          contratos: {
+            select: {
+              id: true,
+              codigo_contrato: true,
+              estado: true
+            }
+          },
+          salones: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          }
+        },
+        orderBy: { fecha_creacion: 'desc' },
+        take: limit,
+        skip: skip
+      }),
+      prisma.ofertas.count({ where })
+    ]);
+
+    res.json(createPaginationResponse(ofertas, total, page, limit));
 
   } catch (error) {
     next(error);
@@ -656,10 +679,11 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
  */
 router.put('/:id/aceptar', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { sanitizarId } = require('../utils/validators');
+    const id = sanitizarId(req.params.id, 'oferta_id');
 
     const oferta = await prisma.ofertas.update({
-      where: { id: parseInt(id) },
+      where: { id }, // Ya sanitizado
       data: {
         estado: 'aceptada',
         fecha_respuesta: new Date()
@@ -684,11 +708,12 @@ router.put('/:id/aceptar', authenticate, requireVendedor, async (req, res, next)
  */
 router.put('/:id/rechazar', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { sanitizarId } = require('../utils/validators');
+    const id = sanitizarId(req.params.id, 'oferta_id');
 
     // Verificar que la oferta existe
     const ofertaExistente = await prisma.ofertas.findUnique({
-      where: { id: parseInt(id) }
+      where: { id } // Ya sanitizado
     });
 
     if (!ofertaExistente) {
@@ -700,7 +725,7 @@ router.put('/:id/rechazar', authenticate, requireVendedor, async (req, res, next
 
     // Actualizar solo el estado
     const oferta = await prisma.ofertas.update({
-      where: { id: parseInt(id) },
+      where: { id }, // Ya sanitizado
       data: {
         estado: 'rechazada',
         fecha_respuesta: new Date()

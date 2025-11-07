@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Mail, Phone, Calendar, Users, Edit2, Trash2 } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, Mail, Phone, Calendar, Users, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
 
@@ -8,22 +8,56 @@ function Clientes() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { data: clientes, isLoading } = useQuery({
-    queryKey: ['clientes'],
-    queryFn: async () => {
-      const response = await api.get('/clientes');
-      return response.data.clientes;
+  // Scroll infinito con useInfiniteQuery
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ['clientes', searchTerm],
+    queryFn: async ({ pageParam = 1 }) => {
+      const params = {
+        page: pageParam,
+        limit: 50,
+        // Enviar búsqueda al backend
+        ...(searchTerm && { search: searchTerm }),
+      };
+      const response = await api.get('/clientes', { params });
+      return response.data; // Retorna { data: [...], total, page, hasNextPage, ... }
     },
+    getNextPageParam: (lastPage) => {
+      return lastPage.hasNextPage ? lastPage.page + 1 : undefined;
+    },
+    initialPageParam: 1,
   });
 
-  // Filtrar clientes por búsqueda
-  const clientesFiltrados = clientes?.filter(cliente => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      cliente.nombre_completo.toLowerCase().includes(searchLower) ||
-      cliente.email.toLowerCase().includes(searchLower)
-    );
-  });
+  // Aplanar todos los clientes de todas las páginas
+  const clientes = data?.pages.flatMap(page => page.data) || [];
+  const totalClientes = data?.pages[0]?.total || 0;
+
+  // Detección de scroll para cargar más
+  const observerTarget = useRef(null);
+
+  const handleObserver = useCallback((entries) => {
+    const [target] = entries;
+    if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    const element = observerTarget.current;
+    const option = { threshold: 0.1 };
+
+    const observer = new IntersectionObserver(handleObserver, option);
+    if (element) observer.observe(element);
+
+    return () => {
+      if (element) observer.unobserve(element);
+    };
+  }, [handleObserver]);
 
   // Mutation para eliminar cliente
   const eliminarMutation = useMutation({
@@ -31,7 +65,7 @@ function Clientes() {
       await api.delete(`/clientes/${clienteId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['clientes']);
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
       alert('Cliente eliminado exitosamente');
     },
     onError: (error) => {
@@ -87,7 +121,7 @@ function Clientes() {
             </div>
           ))}
         </div>
-      ) : clientesFiltrados?.length === 0 ? (
+      ) : clientes.length === 0 ? (
         <div className="bg-white rounded-xl p-12 text-center shadow-sm border">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="w-8 h-8 text-gray-400" />
@@ -110,7 +144,7 @@ function Clientes() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {clientesFiltrados?.map((cliente) => (
+          {clientes.map((cliente) => (
             <div
               key={cliente.id}
               className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition group"
@@ -181,6 +215,23 @@ function Clientes() {
               </div>
             </div>
           ))}
+          
+          {/* Observador para scroll infinito */}
+          <div ref={observerTarget} className="h-10 flex items-center justify-center col-span-full">
+            {isFetchingNextPage && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Cargando más clientes...</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Indicador de fin */}
+          {!hasNextPage && clientes.length > 0 && (
+            <div className="text-center py-4 text-gray-500 text-sm col-span-full">
+              Mostrando todos los {totalClientes} cliente{totalClientes !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       )}
     </div>

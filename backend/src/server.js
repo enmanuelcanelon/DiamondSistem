@@ -84,11 +84,18 @@ const corsOptions = {
       const allowedOrigins = process.env.CORS_ORIGINS 
         ? process.env.CORS_ORIGINS.split(',')
         : [
-            'http://localhost:5173',
+            // Frontends separados - cada uno en su puerto
+            'http://localhost:5173', // frontend-vendedor
+            'http://localhost:5174', // frontend-cliente
+            'http://localhost:5175', // frontend-manager
+            'http://localhost:5176', // frontend-gerente
             'http://localhost:3000',
             'http://127.0.0.1:5173',
+            'http://127.0.0.1:5174',
+            'http://127.0.0.1:5175',
+            'http://127.0.0.1:5176',
             'http://127.0.0.1:3000',
-            // Permitir IPs locales (10.x.x.x, 192.168.x.x)
+            // Permitir IPs locales (10.x.x.x, 192.168.x.x) en cualquier puerto
             /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
             /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
           ];

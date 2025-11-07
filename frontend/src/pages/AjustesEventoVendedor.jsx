@@ -1236,4 +1236,3 @@ function SeccionOtros({ ajustes, contrato }) {
 }
 
 export default AjustesEventoVendedor;
-

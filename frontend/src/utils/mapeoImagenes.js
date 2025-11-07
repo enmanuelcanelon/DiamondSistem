@@ -242,4 +242,3 @@ export function obtenerImagenBar(tipo, bebida) {
   
   return null;
 }
-

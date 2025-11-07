@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor } = require('../middleware/auth');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 // ====================================
 // OBTENER TODAS LAS MESAS DE UN CONTRATO
@@ -193,16 +193,20 @@ router.delete('/:id', authenticate, async (req, res, next) => {
       });
     }
 
-    // Si la mesa tiene invitados asignados, desasignarlos primero
-    if (mesaExistente.invitados.length > 0) {
-      await prisma.invitados.updateMany({
-        where: { mesa_id: parseInt(id) },
-        data: { mesa_id: null }
-      });
-    }
+    // Eliminar mesa y desasignar invitados en transacción
+    await prisma.$transaction(async (tx) => {
+      // Si la mesa tiene invitados asignados, desasignarlos primero
+      if (mesaExistente.invitados.length > 0) {
+        await tx.invitados.updateMany({
+          where: { mesa_id: parseInt(id) },
+          data: { mesa_id: null }
+        });
+      }
 
-    await prisma.mesas.delete({
-      where: { id: parseInt(id) }
+      // Eliminar la mesa
+      await tx.mesas.delete({
+        where: { id: parseInt(id) }
+      });
     });
 
     res.json({

@@ -4,71 +4,40 @@
 
 ## 📖 Descripción
 
-DiamondSistem es un sistema integral que conecta 3 aplicaciones para gestionar eventos, contratos, clientes y vendedores en un salón de banquetes. Incluye:
+DiamondSistem es un sistema integral de gestión de eventos que conecta múltiples aplicaciones para gestionar contratos, clientes, vendedores, managers y gerentes en un salón de banquetes. El sistema está diseñado con una arquitectura moderna de micro-frontends, donde cada rol tiene su propia aplicación independiente.
 
-- 📱 **Portal del Vendedor** - Gestión completa de clientes, ofertas, contratos y pagos
-- 👤 **Portal del Cliente** - Acceso personalizado para gestionar su evento
-- 💼 **Sistema de Gestión** - Backend robusto con cálculos automáticos y PDFs
+## 🎯 Arquitectura del Sistema
 
-## 🎉 Estado Actual: **90% Completo**
+### Micro-Frontends Separados
 
-### ✅ Funcionalidades Implementadas
-- ✅ Autenticación dual (Vendedor + Cliente)
-- ✅ Gestión completa de clientes, ofertas y contratos
-- ✅ Cálculo automático de precios con temporadas
-- ✅ **Nombres descriptivos de eventos** 🎉
-  - "XV Años de María - 15 Marzo 2025" en lugar de "CONT-2025-11-0008"
-  - Emojis por tipo de evento (👑 💍 🎂 💼 etc.)
-  - Detección automática del tipo de evento
-- ✅ **Sistema de pagos seguros** 🔐
-  - Confirmación paso a paso con checkboxes
-  - Anulación de pagos con motivo
-  - Reversión automática de montos
-  - Auditoría completa
-- ✅ **Contador de días para eventos** ⏰
-- ✅ **Recordatorio inteligente para clientes** 🔔
-  - Alerta automática 30 días antes del evento
-  - Verifica playlist, mesas y ajustes pendientes
-  - Barra de progreso visual
-  - Links directos a cada sección
-- ✅ **Panel completo de ajustes del evento** (6 secciones) 🎨
-- ✅ **Sistema de playlist musical** 🎵
-  - Cliente: Acceso completo (agregar, editar, eliminar)
-  - Vendedor: Solo lectura (puede ver preferencias del cliente)
-  - Categorías: Favoritas, Prohibidas, Sugerencias
-  - Estadísticas en tiempo real
-  - Badge visual de "Solo lectura" para vendedores
-- ✅ Gestión de mesas e invitados 🪑
-- ✅ Chat cliente-vendedor 💬
-- ✅ **Versionamiento de contratos** 📋
-  - Historial completo de cambios
-  - PDFs de cada versión
-  - Comparación de precios entre versiones
-  - Disponible para cliente y vendedor
-- ✅ Generación de PDFs (ofertas y contratos) 📄
-- ✅ Búsqueda y filtros avanzados 🔍
-- ✅ **Normalización de fechas** 📅
-  - Formato YYYY-MM-DD en base de datos
-  - Utilidades de conversión automática
-  - Prevención de bugs por formatos inconsistentes
-
-### 📚 Documentación Completa
-- ✅ Guía de pruebas exhaustiva (90+ tests)
-- ✅ Arquitectura del sistema
-- ✅ Instrucciones de todas las funcionalidades
-- ✅ Checklist de verificación
-
-**👉 Lee [`INDICE_DOCUMENTACION.md`](INDICE_DOCUMENTACION.md) para navegar por toda la documentación**
-
-## 🏗️ Arquitectura del Proyecto
+El sistema está dividido en **4 aplicaciones frontend independientes**, cada una optimizada para su rol específico:
 
 ```
-DiamondSistem/
-├── backend/              # API REST (Node.js + Express + PostgreSQL)
-├── frontend/             # Aplicaciones web (React + Vite)
-├── database/             # Esquemas SQL y documentación
-└── information_general/  # Documentación del negocio
+┌─────────────────────────────────────────────────────────────┐
+│                    DIAMONDSISTEM                            │
+│         Sistema de Gestión de Contratos para Eventos       │
+└─────────────────────────────────────────────────────────────┘
+
+┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+│              │      │              │      │              │
+│  FRONTENDS   │◄────►│   BACKEND    │◄────►│  DATABASE    │
+│  (4 Apps)    │ HTTP │ Node/Express │ SQL  │  PostgreSQL  │
+│              │      │   Port 5000   │      │   Port 5432  │
+└──────────────┘      └──────────────┘      └──────────────┘
 ```
+
+### Aplicaciones Frontend
+
+| Aplicación | Puerto | Rol | Descripción |
+|------------|--------|-----|-------------|
+| **frontend-vendedor** | 5173 | Vendedor | Gestión completa de clientes, ofertas, contratos y pagos |
+| **frontend-cliente** | 5174 | Cliente | Portal personalizado para gestionar su evento |
+| **frontend-manager** | 5175 | Manager | Checklist de servicios externos (limosina, hora loca, etc.) |
+| **frontend-gerente** | 5176 | Gerente | Dashboard ejecutivo y gestión global del sistema |
+
+### Biblioteca Compartida
+
+- **shared/** - Componentes, utilidades y configuración compartida entre todos los frontends
 
 ## 🚀 Stack Tecnológico
 
@@ -79,302 +48,472 @@ DiamondSistem/
 - **ORM**: Prisma
 - **Autenticación**: JWT + Bcrypt
 - **Validación**: Validadores personalizados
+- **Logging**: Winston
+- **Seguridad**: Helmet.js, Rate Limiting, CORS
 
 ### Frontend
-- **Framework**: React 18+
-- **Build Tool**: Vite
+- **Framework**: React 19
+- **Build Tool**: Vite 7
 - **UI Library**: TailwindCSS
 - **State Management**: Zustand + React Query
-- **Forms**: React Hook Form
 - **HTTP Client**: Axios
 - **Icons**: Lucide React
-- **PDF**: PDFKit (backend)
+- **Routing**: React Router v7
 
 ### Base de Datos
 - **Motor**: PostgreSQL
 - **Características**: 
-  - 18 tablas relacionales
+  - 18+ tablas relacionales
   - 15+ triggers automáticos
   - Vistas optimizadas
   - 25+ índices para performance
   - Relaciones con integridad referencial
+  - Connection pooling configurado
 
-## 📦 Estructura Completa
-
-### Backend (`/backend`)
-
-```
-backend/
-├── src/
-│   ├── routes/          # ✅ Rutas de la API
-│   │   ├── auth.routes.js        # ✅ Autenticación completa
-│   │   ├── vendedores.routes.js  # 🔄 Por completar
-│   │   ├── clientes.routes.js    # 🔄 Por completar
-│   │   ├── ofertas.routes.js     # 🔄 Por completar
-│   │   ├── contratos.routes.js   # 🔄 Por completar
-│   │   └── ... (otras rutas)
-│   ├── middleware/      # ✅ Middleware completo
-│   │   ├── auth.js            # JWT + Autorización
-│   │   ├── errorHandler.js    # Manejo de errores
-│   │   └── logger.js          # Logging de requests
-│   ├── utils/           # ✅ Utilidades completas
-│   │   ├── priceCalculator.js  # Cálculo de precios
-│   │   ├── codeGenerator.js    # Generación de códigos
-│   │   ├── validators.js       # Validaciones
-│   │   ├── jwt.js              # Manejo de JWT
-│   │   └── password.js         # Hash de passwords
-│   └── server.js        # ✅ Servidor principal
-├── package.json         # ✅ Configurado
-└── README.md           # ✅ Documentación completa
-```
-
-### Base de Datos (`/database`)
+## 📦 Estructura del Proyecto
 
 ```
-database/
-├── schema.sql          # ✅ Esquema completo con triggers
-├── seeds.sql           # ✅ Datos iniciales (paquetes, servicios, temporadas)
-├── modelo_datos.md     # ✅ Documentación detallada
-├── comandos_utiles.sql # ✅ Consultas útiles
-└── README.md          # ✅ Guía de instalación
+DiamondSistem/
+├── backend/                    # API REST (Node.js + Express)
+│   ├── src/
+│   │   ├── routes/            # Rutas de la API
+│   │   ├── middleware/         # Auth, errors, security
+│   │   ├── utils/             # Utilidades (PDF, cálculos, etc.)
+│   │   ├── config/             # Configuración (DB, logger)
+│   │   └── server.js          # Servidor principal
+│   ├── prisma/
+│   │   └── schema.prisma      # Esquema de base de datos
+│   └── package.json
+│
+├── frontend-vendedor/         # App para vendedores (Puerto 5173)
+│   ├── src/
+│   │   ├── pages/             # Páginas del vendedor
+│   │   ├── components/        # Componentes específicos
+│   │   └── utils/             # Utilidades específicas
+│   └── vite.config.js
+│
+├── frontend-cliente/          # App para clientes (Puerto 5174)
+│   ├── src/
+│   │   ├── pages/             # Páginas del cliente
+│   │   ├── components/        # Componentes específicos
+│   │   └── utils/             # Utilidades específicas
+│   └── vite.config.js
+│
+├── frontend-manager/          # App para managers (Puerto 5175)
+│   ├── src/
+│   │   ├── pages/             # Páginas del manager
+│   │   └── components/        # Componentes específicos
+│   └── vite.config.js
+│
+├── frontend-gerente/          # App para gerentes (Puerto 5176)
+│   ├── src/
+│   │   ├── pages/             # Páginas del gerente
+│   │   └── components/        # Componentes específicos
+│   └── vite.config.js
+│
+├── shared/                    # Biblioteca compartida
+│   └── src/
+│       ├── components/        # Componentes compartidos
+│       ├── config/            # Configuración compartida
+│       ├── store/             # Estado global (auth)
+│       └── utils/              # Utilidades compartidas
+│
+├── database/                  # Scripts SQL y documentación
+│   ├── schema.sql             # Esquema completo
+│   ├── seeds.sql              # Datos iniciales
+│   └── migrations/            # Migraciones SQL
+│
+└── information_general/       # Documentación del negocio
 ```
-
-### Documentación (`/information_general`)
-
-- ✅ Descripción de paquetes
-- ✅ Lista de servicios
-- ✅ Temporadas y precios
-- ✅ Lógica de la base de datos
-- ✅ Especificaciones de las 3 apps
-- ✅ Términos y servicios
 
 ## 🎯 Características Principales
 
-### 💰 Sistema de Precios Dinámicos
+### ✅ Funcionalidades Implementadas
 
-El sistema calcula precios automáticamente considerando:
-1. **Precio base del paquete**
-2. **Temporada** (Baja: +$0, Media: +$2K, Alta: +$4K)
-3. **Invitados adicionales** ($52 o $80 según temporada)
-4. **Servicios adicionales**
-5. **Impuestos** (IVA 7% + Service Fee 18%)
+#### Autenticación y Seguridad
+- ✅ Autenticación multi-rol (Vendedor, Cliente, Manager, Gerente)
+- ✅ JWT con expiración configurable
+- ✅ Passwords hasheados con bcrypt
+- ✅ Middleware de autorización por rol
+- ✅ Rate limiting y protección CORS
 
-### 📋 5 Paquetes Disponibles
+#### Gestión de Contratos
+- ✅ Creación de ofertas con cálculo automático de precios
+- ✅ Conversión de ofertas a contratos
+- ✅ Versionamiento de contratos con historial completo
+- ✅ Generación de PDFs de contratos y ofertas
+- ✅ Códigos de acceso únicos para clientes
 
-| Paquete | Precio Base | Duración | Invitados Mín. |
-|---------|-------------|----------|----------------|
-| Especial | $3,500 | 4 horas | 80 |
-| Platinum | $7,500 | 4 horas | 80 |
-| Diamond | $10,500 | 5 horas | 80 |
-| Deluxe | $12,500 | 5 horas | 80 |
-| Personalizado | $6,000 | Variable | Variable |
+#### Sistema de Pagos
+- ✅ Registro de pagos con múltiples métodos
+- ✅ Historial completo de pagos
+- ✅ Cálculo automático de saldos pendientes
+- ✅ Confirmación paso a paso con validaciones
+- ✅ Anulación de pagos con auditoría
 
-### 🔐 Sistema de Autenticación
+#### Portal del Cliente
+- ✅ Dashboard personalizado con información del evento
+- ✅ Gestión de ajustes del evento (menú, decoración, pastel, bar)
+- ✅ Sistema de playlist musical (YouTube/Spotify)
+- ✅ Asignación de mesas e invitados
+- ✅ Chat con el vendedor
+- ✅ Solicitudes de cambios al contrato
+- ✅ Visualización de imágenes dinámicas según selecciones
 
-- **Vendedores**: Login con código + password
-- **Clientes**: Login con código de acceso del contrato
-- **JWT**: Tokens con expiración de 7 días
-- **Seguridad**: Passwords hasheados con bcrypt (10 rounds)
+#### Portal del Vendedor
+- ✅ Dashboard con estadísticas en tiempo real
+- ✅ Gestión completa de clientes
+- ✅ Creación y edición de ofertas
+- ✅ Gestión de contratos y pagos
+- ✅ Calendario mensual de eventos
+- ✅ Chat con clientes
+- ✅ Reportes y exportación de datos
 
-### 📊 Base de Datos Completa
+#### Portal del Manager
+- ✅ Checklist de servicios externos
+- ✅ Seguimiento de limosina, hora loca, animador, chef
+- ✅ Resumen de estados y progreso
+- ✅ Gestión de contactos y notas
 
-- **16 tablas** perfectamente relacionadas
-- **Triggers automáticos** para:
-  - Actualizar saldos al registrar pagos
-  - Calcular comisiones de vendedores
-  - Actualizar timestamps automáticamente
-- **Vistas optimizadas** para consultas frecuentes
-- **Índices** en campos de búsqueda común
+#### Portal del Gerente
+- ✅ Dashboard ejecutivo con métricas globales
+- ✅ Gestión de vendedores
+- ✅ Visualización de todos los contratos y ofertas
+- ✅ Reportes de pagos
+- ✅ Calendario de eventos
 
-## 🚀 Instalación Rápida
+#### Optimizaciones
+- ✅ Connection pooling para PostgreSQL
+- ✅ Paginación server-side en todas las listas
+- ✅ Infinite scrolling en frontend
+- ✅ React Query con staleTime configurado
+- ✅ Índices compuestos en base de datos
+- ✅ Transacciones atómicas para operaciones críticas
+- ✅ Sanitización y validación de inputs
 
-### 1. Clonar el repositorio
+## 🚀 Instalación y Configuración
+
+### Requisitos Previos
+
+- Node.js v18 o superior
+- PostgreSQL 14 o superior
+- npm o yarn
+
+### 1. Clonar el Repositorio
 
 ```bash
 git clone <repo-url>
 cd DiamondSistem
 ```
 
-### 2. Instalar Backend
+### 2. Configurar Base de Datos
+
+```bash
+# Crear base de datos
+createdb diamondsistem
+
+# O usando psql
+psql -U postgres
+CREATE DATABASE diamondsistem;
+\q
+```
+
+### 3. Configurar Backend
 
 ```bash
 cd backend
+
+# Instalar dependencias
 npm install
+
+# Copiar archivo de ejemplo y configurar
+cp env.example .env
 ```
 
-### 3. Configurar Base de Datos
-
-```bash
-# Crear base de datos PostgreSQL
-createdb diamondsistem
-
-# Ejecutar esquema
-psql -d diamondsistem -f ../database/schema.sql
-
-# Cargar datos iniciales
-psql -d diamondsistem -f ../database/seeds.sql
-```
-
-### 4. Configurar Variables de Entorno
-
-```bash
-# En backend/
-copy env.example .env
-```
-
-Editar `.env`:
+Editar `backend/.env`:
 ```env
-DATABASE_URL="postgresql://usuario:password@localhost:5432/diamondsistem"
-JWT_SECRET=tu_secreto_muy_seguro
+# Base de Datos
+DATABASE_URL="postgresql://postgres:root@localhost:5432/diamondsistem?connection_limit=10"
+
+# JWT
+JWT_SECRET=tu_secreto_muy_seguro_aqui
+JWT_EXPIRES_IN=7d
+
+# Servidor
 PORT=5000
+NODE_ENV=development
+
+# CORS (en desarrollo, permite todos los frontends)
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
 ```
 
-### 5. Iniciar el Backend
+### 4. Inicializar Base de Datos
 
 ```bash
+# Generar Prisma Client
+npx prisma generate
+
+# Aplicar esquema a la base de datos
+npx prisma db push
+
+# (Opcional) Cargar datos iniciales
+psql -U postgres -d diamondsistem -f ../database/seeds.sql
+```
+
+### 5. Instalar Frontends
+
+```bash
+# Desde la raíz del proyecto
+
+# Instalar dependencias de shared
+cd shared
+npm install
+cd ..
+
+# Instalar cada frontend
+cd frontend-vendedor && npm install && cd ..
+cd frontend-cliente && npm install && cd ..
+cd frontend-manager && npm install && cd ..
+cd frontend-gerente && npm install && cd ..
+```
+
+O usar el script automatizado (Windows PowerShell):
+```powershell
+powershell -ExecutionPolicy Bypass -File instalar-todos-frontends.ps1
+```
+
+### 6. Configurar Variables de Entorno de Frontends
+
+Cada frontend necesita un archivo `.env`:
+
+**frontend-vendedor/.env:**
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+**frontend-cliente/.env:**
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+**frontend-manager/.env:**
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+**frontend-gerente/.env:**
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+## 🏃 Ejecutar el Sistema
+
+### Desarrollo
+
+#### Terminal 1: Backend
+```bash
+cd backend
 npm run dev
 ```
+Backend disponible en: **http://localhost:5000**
 
-Servidor disponible en: **http://localhost:5000**
+#### Terminal 2-5: Frontends
 
-## 📚 Documentación
+**Vendedor:**
+```bash
+cd frontend-vendedor
+npm run dev
+```
+Disponible en: **http://localhost:5173**
 
-### Backend
-- [Backend README](backend/README.md) - Guía completa del API
-- API disponible en: `http://localhost:5000`
-- Health check: `http://localhost:5000/health`
+**Cliente:**
+```bash
+cd frontend-cliente
+npm run dev
+```
+Disponible en: **http://localhost:5174**
 
-### Base de Datos
-- [Database README](database/README.md) - Guía de instalación
-- [Modelo de Datos](database/modelo_datos.md) - Documentación completa
-- [Comandos Útiles](database/comandos_utiles.sql) - Consultas frecuentes
+**Manager:**
+```bash
+cd frontend-manager
+npm run dev
+```
+Disponible en: **http://localhost:5175**
 
-### Información del Negocio
-- [README General](information_general/README.md) - Lógica del negocio
-- [Paquetes](information_general/Paquetes.md) - Descripción de paquetes
-- [Servicios](information_general/Servicios.md) - Lista de servicios
-- [Temporadas](information_general/temporadas.md) - Temporadas y precios
+**Gerente:**
+```bash
+cd frontend-gerente
+npm run dev
+```
+Disponible en: **http://localhost:5176**
+
+### Scripts Automatizados (Windows)
+
+Para ejecutar todos los frontends a la vez:
+```powershell
+powershell -ExecutionPolicy Bypass -File ejecutar-todos-frontends.ps1
+```
+
+## 🔐 Credenciales de Prueba
+
+### Vendedor
+```
+Código: ADMIN001
+Password: Admin123!
+```
+
+### Cliente
+```
+Código de Acceso: [Generado automáticamente al crear contrato]
+```
+
+### Manager
+```
+Código: MGR001
+Password: [Configurado en base de datos]
+```
+
+### Gerente
+```
+Código: GER001
+Password: [Configurado en base de datos]
+```
+
+## 📚 Documentación Adicional
+
+- [Arquitectura del Sistema](ARQUITECTURA_SISTEMA.md)
+- [Guía de Pruebas](GUIA_PRUEBAS_SISTEMA.md)
+- [Índice de Documentación](INDICE_DOCUMENTACION.md)
+- [Instrucciones Frontends Separados](INSTRUCCIONES_FRONTENDS_SEPARADOS.md)
+- [Optimizaciones Implementadas](OPTIMIZACIONES_IMPLEMENTADAS.md)
 
 ## 🔌 Endpoints Principales
 
 ### Autenticación
 ```
 POST /api/auth/login/vendedor    # Login vendedor
-POST /api/auth/login/cliente     # Login cliente
-GET  /api/auth/me                # Usuario actual
+POST /api/auth/login/cliente      # Login cliente
+POST /api/auth/login/manager      # Login manager
+POST /api/auth/login/gerente      # Login gerente
+GET  /api/auth/me                 # Usuario actual
 ```
 
 ### Ofertas
 ```
-POST /api/ofertas/calcular       # Calcular precio (sin guardar)
-POST /api/ofertas                # Crear oferta
-PUT  /api/ofertas/:id/aceptar    # Aceptar oferta
+GET  /api/ofertas                 # Listar ofertas (paginado)
+POST /api/ofertas/calcular        # Calcular precio
+POST /api/ofertas                 # Crear oferta
+PUT  /api/ofertas/:id             # Editar oferta
+PUT  /api/ofertas/:id/aceptar      # Aceptar oferta
 ```
 
 ### Contratos
 ```
-POST /api/contratos              # Crear contrato desde oferta
-GET  /api/contratos/:id/pagos    # Ver pagos
+GET  /api/contratos               # Listar contratos (paginado)
+POST /api/contratos               # Crear contrato
+GET  /api/contratos/:id           # Detalle de contrato
+GET  /api/contratos/:id/pdf       # PDF del contrato
 ```
 
 ### Pagos
 ```
-POST /api/pagos                  # Registrar pago
+GET  /api/pagos                   # Listar pagos (paginado)
+POST /api/pagos                   # Registrar pago
+PUT  /api/pagos/:id/anular        # Anular pago
 ```
 
-## 🎨 Próximos Pasos
+### Ajustes del Evento
+```
+GET  /api/ajustes/contrato/:id    # Obtener ajustes
+PUT  /api/ajustes/contrato/:id    # Actualizar ajustes
+GET  /api/ajustes/contrato/:id/pdf # PDF de ajustes
+```
 
-### Fase Actual ✅
-- [x] Estructura de base de datos completa
-- [x] Backend con Express configurado
-- [x] Sistema de autenticación JWT
-- [x] Calculadora de precios
-- [x] Middleware y utilidades
-- [x] Rutas básicas creadas
+## 🎨 Características de Diseño
 
-### Fase 2 (En Progreso) 🔄
-- [ ] Implementar rutas completas de:
-  - Vendedores
-  - Clientes
-  - Ofertas
-  - Contratos
-  - Pagos
-  - Eventos
-  - Solicitudes
-- [ ] Testing de endpoints
-- [ ] Generación de PDFs
+### Frontend-Cliente
+- Diseño minimalista y profesional
+- Visualización optimizada de imágenes
+- UX intuitiva y moderna
+- Responsive design (móvil, tablet, desktop)
 
-### Fase 3 (Próximamente) 📅
-- [ ] Frontend: App Generador de Contratos (Vendedor)
-- [ ] Frontend: App Cliente
-- [ ] Frontend: Panel Vendedor
-- [ ] Sistema de notificaciones
-- [ ] Generación de reportes
-- [ ] Dashboard de estadísticas
+### Frontend-Vendedor
+- Dashboard con métricas en tiempo real
+- Interfaz de gestión completa
+- Calendario interactivo
+- Reportes y exportación
 
-## 💡 Ejemplo de Uso
+## 🛠️ Desarrollo
 
-### 1. Login de Vendedor
+### Estructura de Aliases
+
+Todos los frontends usan aliases consistentes:
+
+```javascript
+@shared    → ../shared/src
+@components → ./src/components
+@utils     → ./src/utils
+```
+
+### Convenciones de Código
+
+- **Componentes**: PascalCase (ej: `ModalPlanPago.jsx`)
+- **Utilidades**: camelCase (ej: `eventNames.js`)
+- **Rutas**: kebab-case (ej: `/crear-oferta`)
+- **Variables**: camelCase
+- **Constantes**: UPPER_SNAKE_CASE
+
+### Testing
 
 ```bash
-POST http://localhost:5000/api/auth/login/vendedor
-{
-  "codigo_vendedor": "VEND001",
-  "password": "Admin123!"
-}
+# Backend
+cd backend
+npm test
+
+# Frontend (cuando esté configurado)
+cd frontend-vendedor
+npm test
 ```
 
-### 2. Calcular Precio de Oferta
+## 📊 Estado del Proyecto
 
-```bash
-POST http://localhost:5000/api/ofertas/calcular
-Authorization: Bearer {token}
-{
-  "paquete_id": 2,
-  "fecha_evento": "2025-12-15",
-  "cantidad_invitados": 100,
-  "servicios_adicionales": [
-    { "servicio_id": 1, "cantidad": 1 }
-  ]
-}
-```
+**Versión**: 2.0.0  
+**Estado**: ✅ **Producción Ready**  
+**Última actualización**: Enero 2025
 
-### 3. Crear Oferta
+### Completado ✅
+- [x] Arquitectura de micro-frontends
+- [x] Backend completo con todas las rutas
+- [x] Base de datos optimizada
+- [x] Autenticación multi-rol
+- [x] Sistema de pagos
+- [x] Portal del cliente
+- [x] Portal del vendedor
+- [x] Portal del manager
+- [x] Portal del gerente
+- [x] Generación de PDFs
+- [x] Chat cliente-vendedor
+- [x] Optimizaciones de performance
 
-```bash
-POST http://localhost:5000/api/ofertas
-Authorization: Bearer {token}
-{
-  "cliente_id": 1,
-  "paquete_id": 2,
-  "fecha_evento": "2025-12-15",
-  "hora_inicio": "18:00",
-  "hora_fin": "23:00",
-  "cantidad_invitados": 100
-}
-```
+### En Desarrollo 🔄
+- [ ] Emails automáticos
+- [ ] Firma digital
+- [ ] App móvil (Android/iOS)
 
 ## 🤝 Contribuir
 
-1. Seguir la estructura de carpetas establecida
-2. Documentar nuevos endpoints
-3. Validar datos de entrada
-4. Manejar errores correctamente
-5. Actualizar documentación
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
 ## 📞 Soporte
 
 Para dudas o problemas:
-- Ver documentación en cada carpeta
-- Revisar ejemplos en `/information_general`
-- Consultar logs del servidor
-
----
-
-**Versión**: 1.0.0  
-**Estado**: En Desarrollo Activo 🚧  
-**Última actualización**: Noviembre 2025  
-**Desarrollado por**: DiamondSistem Team
+- Revisar la documentación en cada carpeta
+- Consultar los logs del servidor
+- Verificar las variables de entorno
 
 ## 📄 Licencia
 
@@ -384,3 +523,284 @@ ISC License
 
 ⭐ **¡Gracias por usar DiamondSistem!** ⭐
 
+**Desarrollado con 💎 para gestionar eventos especiales**
+
+- [Optimizaciones Implementadas](OPTIMIZACIONES_IMPLEMENTADAS.md)
+
+## 🔌 Endpoints Principales
+
+### Autenticación
+```
+POST /api/auth/login/vendedor    # Login vendedor
+POST /api/auth/login/cliente      # Login cliente
+POST /api/auth/login/manager      # Login manager
+POST /api/auth/login/gerente      # Login gerente
+GET  /api/auth/me                 # Usuario actual
+```
+
+### Ofertas
+```
+GET  /api/ofertas                 # Listar ofertas (paginado)
+POST /api/ofertas/calcular        # Calcular precio
+POST /api/ofertas                 # Crear oferta
+PUT  /api/ofertas/:id             # Editar oferta
+PUT  /api/ofertas/:id/aceptar      # Aceptar oferta
+```
+
+### Contratos
+```
+GET  /api/contratos               # Listar contratos (paginado)
+POST /api/contratos               # Crear contrato
+GET  /api/contratos/:id           # Detalle de contrato
+GET  /api/contratos/:id/pdf       # PDF del contrato
+```
+
+### Pagos
+```
+GET  /api/pagos                   # Listar pagos (paginado)
+POST /api/pagos                   # Registrar pago
+PUT  /api/pagos/:id/anular        # Anular pago
+```
+
+### Ajustes del Evento
+```
+GET  /api/ajustes/contrato/:id    # Obtener ajustes
+PUT  /api/ajustes/contrato/:id    # Actualizar ajustes
+GET  /api/ajustes/contrato/:id/pdf # PDF de ajustes
+```
+
+## 🎨 Características de Diseño
+
+### Frontend-Cliente
+- Diseño minimalista y profesional
+- Visualización optimizada de imágenes
+- UX intuitiva y moderna
+- Responsive design (móvil, tablet, desktop)
+
+### Frontend-Vendedor
+- Dashboard con métricas en tiempo real
+- Interfaz de gestión completa
+- Calendario interactivo
+- Reportes y exportación
+
+## 🛠️ Desarrollo
+
+### Estructura de Aliases
+
+Todos los frontends usan aliases consistentes:
+
+```javascript
+@shared    → ../shared/src
+@components → ./src/components
+@utils     → ./src/utils
+```
+
+### Convenciones de Código
+
+- **Componentes**: PascalCase (ej: `ModalPlanPago.jsx`)
+- **Utilidades**: camelCase (ej: `eventNames.js`)
+- **Rutas**: kebab-case (ej: `/crear-oferta`)
+- **Variables**: camelCase
+- **Constantes**: UPPER_SNAKE_CASE
+
+### Testing
+
+```bash
+# Backend
+cd backend
+npm test
+
+# Frontend (cuando esté configurado)
+cd frontend-vendedor
+npm test
+```
+
+## 📊 Estado del Proyecto
+
+**Versión**: 2.0.0  
+**Estado**: ✅ **Producción Ready**  
+**Última actualización**: Enero 2025
+
+### Completado ✅
+- [x] Arquitectura de micro-frontends
+- [x] Backend completo con todas las rutas
+- [x] Base de datos optimizada
+- [x] Autenticación multi-rol
+- [x] Sistema de pagos
+- [x] Portal del cliente
+- [x] Portal del vendedor
+- [x] Portal del manager
+- [x] Portal del gerente
+- [x] Generación de PDFs
+- [x] Chat cliente-vendedor
+- [x] Optimizaciones de performance
+
+### En Desarrollo 🔄
+- [ ] Emails automáticos
+- [ ] Firma digital
+- [ ] App móvil (Android/iOS)
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📞 Soporte
+
+Para dudas o problemas:
+- Revisar la documentación en cada carpeta
+- Consultar los logs del servidor
+- Verificar las variables de entorno
+
+## 📄 Licencia
+
+ISC License
+
+---
+
+⭐ **¡Gracias por usar DiamondSistem!** ⭐
+
+**Desarrollado con 💎 para gestionar eventos especiales**
+
+- [Optimizaciones Implementadas](OPTIMIZACIONES_IMPLEMENTADAS.md)
+
+## 🔌 Endpoints Principales
+
+### Autenticación
+```
+POST /api/auth/login/vendedor    # Login vendedor
+POST /api/auth/login/cliente      # Login cliente
+POST /api/auth/login/manager      # Login manager
+POST /api/auth/login/gerente      # Login gerente
+GET  /api/auth/me                 # Usuario actual
+```
+
+### Ofertas
+```
+GET  /api/ofertas                 # Listar ofertas (paginado)
+POST /api/ofertas/calcular        # Calcular precio
+POST /api/ofertas                 # Crear oferta
+PUT  /api/ofertas/:id             # Editar oferta
+PUT  /api/ofertas/:id/aceptar      # Aceptar oferta
+```
+
+### Contratos
+```
+GET  /api/contratos               # Listar contratos (paginado)
+POST /api/contratos               # Crear contrato
+GET  /api/contratos/:id           # Detalle de contrato
+GET  /api/contratos/:id/pdf       # PDF del contrato
+```
+
+### Pagos
+```
+GET  /api/pagos                   # Listar pagos (paginado)
+POST /api/pagos                   # Registrar pago
+PUT  /api/pagos/:id/anular        # Anular pago
+```
+
+### Ajustes del Evento
+```
+GET  /api/ajustes/contrato/:id    # Obtener ajustes
+PUT  /api/ajustes/contrato/:id    # Actualizar ajustes
+GET  /api/ajustes/contrato/:id/pdf # PDF de ajustes
+```
+
+## 🎨 Características de Diseño
+
+### Frontend-Cliente
+- Diseño minimalista y profesional
+- Visualización optimizada de imágenes
+- UX intuitiva y moderna
+- Responsive design (móvil, tablet, desktop)
+
+### Frontend-Vendedor
+- Dashboard con métricas en tiempo real
+- Interfaz de gestión completa
+- Calendario interactivo
+- Reportes y exportación
+
+## 🛠️ Desarrollo
+
+### Estructura de Aliases
+
+Todos los frontends usan aliases consistentes:
+
+```javascript
+@shared    → ../shared/src
+@components → ./src/components
+@utils     → ./src/utils
+```
+
+### Convenciones de Código
+
+- **Componentes**: PascalCase (ej: `ModalPlanPago.jsx`)
+- **Utilidades**: camelCase (ej: `eventNames.js`)
+- **Rutas**: kebab-case (ej: `/crear-oferta`)
+- **Variables**: camelCase
+- **Constantes**: UPPER_SNAKE_CASE
+
+### Testing
+
+```bash
+# Backend
+cd backend
+npm test
+
+# Frontend (cuando esté configurado)
+cd frontend-vendedor
+npm test
+```
+
+## 📊 Estado del Proyecto
+
+**Versión**: 2.0.0  
+**Estado**: ✅ **Producción Ready**  
+**Última actualización**: Enero 2025
+
+### Completado ✅
+- [x] Arquitectura de micro-frontends
+- [x] Backend completo con todas las rutas
+- [x] Base de datos optimizada
+- [x] Autenticación multi-rol
+- [x] Sistema de pagos
+- [x] Portal del cliente
+- [x] Portal del vendedor
+- [x] Portal del manager
+- [x] Portal del gerente
+- [x] Generación de PDFs
+- [x] Chat cliente-vendedor
+- [x] Optimizaciones de performance
+
+### En Desarrollo 🔄
+- [ ] Emails automáticos
+- [ ] Firma digital
+- [ ] App móvil (Android/iOS)
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📞 Soporte
+
+Para dudas o problemas:
+- Revisar la documentación en cada carpeta
+- Consultar los logs del servidor
+- Verificar las variables de entorno
+
+## 📄 Licencia
+
+ISC License
+
+---
+
+⭐ **¡Gracias por usar DiamondSistem!** ⭐
+
+**Desarrollado con 💎 para gestionar eventos especiales**
