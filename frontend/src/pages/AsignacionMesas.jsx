@@ -223,7 +223,7 @@ function AsignacionMesas() {
       cantidadMesas: 3,
       asientosPorMesa: 4,
       sillasPorMesa: 10,
-      imagen: '/distribucion_mesas/Kendall/kendall.png',
+      imagen: '/distribucion_mesas/Kendall/kendallgood.png',
       activo: true
     },
     'Doral': {
@@ -443,10 +443,25 @@ function AsignacionMesas() {
                   {/* Imagen del plano del salón */}
                   <div className="relative w-full">
                     <img 
-                      src={configSalon.imagen} 
+                      src={(() => {
+                        // Construir URL completa si es relativa
+                        const imagenPath = configSalon.imagen;
+                        if (!imagenPath) return '';
+                        if (imagenPath.startsWith('http')) return imagenPath;
+                        
+                        // Si es relativa, construir URL completa
+                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                        const baseUrl = apiUrl.replace('/api', '') || 'http://localhost:5000';
+                        const path = imagenPath.startsWith('/') ? imagenPath : `/${imagenPath}`;
+                        return `${baseUrl}${path}`;
+                      })()} 
                       alt={`Plano del salón ${salonNombreKey || salonNombre}`}
                       className="w-full h-auto object-contain"
                       style={{ maxHeight: '800px' }}
+                      onError={(e) => {
+                        console.error('Error cargando imagen:', configSalon.imagen);
+                        e.target.style.display = 'none';
+                      }}
                     />
                   </div>
                   

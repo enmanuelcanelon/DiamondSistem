@@ -18,11 +18,13 @@ import {
   Clock,
   Plus,
   X,
+  Download,
 } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import api from '../../config/api';
 import SeccionDecoracion from '../../components/SeccionDecoracion';
-import GaleriaFotos from '../../components/GaleriaFotos';
+import ImagenSeleccion from '../../components/ImagenSeleccion';
+import { obtenerImagenTorta, obtenerImagenDecoracion, obtenerImagenMenu, obtenerImagenBar } from '../../utils/mapeoImagenes';
 
 function AjustesEvento() {
   const { user } = useAuthStore();
@@ -154,11 +156,42 @@ function AjustesEvento() {
       <Toaster position="top-right" />
       
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Ajustes del Evento</h1>
-        <p className="text-gray-600 mt-1">
-          Personaliza todos los detalles de tu día especial
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Ajustes del Evento</h1>
+          <p className="text-gray-600 mt-1">
+            Personaliza todos los detalles de tu día especial
+          </p>
+        </div>
+        <button
+          onClick={async () => {
+            try {
+              const response = await api.get(`/ajustes/contrato/${contratoId}/pdf`, {
+                responseType: 'blob'
+              });
+              const url = window.URL.createObjectURL(new Blob([response.data]));
+              const link = document.createElement('a');
+              link.href = url;
+              link.setAttribute('download', `Ajustes-Evento-${contrato?.codigo_contrato || 'evento'}.pdf`);
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+              toast.success('PDF descargado exitosamente', {
+                duration: 3000,
+                icon: '✅',
+              });
+            } catch (error) {
+              toast.error('Error al descargar el PDF', {
+                duration: 4000,
+                icon: '❌',
+              });
+            }
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition shadow-md"
+        >
+          <Download className="w-5 h-5" />
+          <span className="hidden sm:inline">Descargar PDF</span>
+        </button>
       </div>
 
       {/* Banner de Bloqueo */}
@@ -316,44 +349,7 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
         <h2 className="text-2xl font-bold text-gray-900">Detalles de la Torta</h2>
       </div>
 
-      {/* Galería de Fotos */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
-        <GaleriaFotos tipoServicio="torta" titulo="tortas" />
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Sabor: Vainilla, Marmoleado, u Otro */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Sabor *
-          </label>
-          <select
-            value={datos.sabor_torta}
-            onChange={(e) => {
-              setDatos({ ...datos, sabor_torta: e.target.value, sabor_otro: e.target.value !== 'Otro' ? '' : datos.sabor_otro });
-              setMostrarSaborOtro(e.target.value === 'Otro');
-            }}
-            disabled={estaBloqueado}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none disabled:bg-gray-100"
-          >
-            <option value="">Seleccionar...</option>
-            <option value="Vainilla">Vainilla</option>
-            <option value="Marmoleado">Marmoleado</option>
-            <option value="Otro">Otro</option>
-          </select>
-          {mostrarSaborOtro && (
-            <input
-              type="text"
-              value={datos.sabor_otro}
-              onChange={(e) => setDatos({ ...datos, sabor_otro: e.target.value })}
-              disabled={estaBloqueado}
-              placeholder="Especificar sabor..."
-              className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none disabled:bg-gray-100"
-            />
-          )}
-        </div>
-
         {/* Diseño: Channel, Delux, Blanco, Desnudo, u Otro */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -385,6 +381,47 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
               className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none disabled:bg-gray-100"
             />
           )}
+          {/* Mostrar imagen cuando se selecciona un diseño */}
+          {datos.diseno_torta && datos.diseno_torta !== 'Otro' && (
+            <div className="mt-3 flex justify-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenTorta(datos.diseno_torta, pisosAutomaticos)}
+                alt={`Torta ${datos.diseno_torta} de ${pisosAutomaticos} pisos`}
+                tamaño="medium"
+              />
+            </div>
+          )}
+          
+          {/* Sabor: Vainilla, Marmoleado, u Otro - Debajo del diseño */}
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sabor *
+            </label>
+            <select
+              value={datos.sabor_torta}
+              onChange={(e) => {
+                setDatos({ ...datos, sabor_torta: e.target.value, sabor_otro: e.target.value !== 'Otro' ? '' : datos.sabor_otro });
+                setMostrarSaborOtro(e.target.value === 'Otro');
+              }}
+              disabled={estaBloqueado}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none disabled:bg-gray-100"
+            >
+              <option value="">Seleccionar...</option>
+              <option value="Vainilla">Vainilla</option>
+              <option value="Marmoleado">Marmoleado</option>
+              <option value="Otro">Otro</option>
+            </select>
+            {mostrarSaborOtro && (
+              <input
+                type="text"
+                value={datos.sabor_otro}
+                onChange={(e) => setDatos({ ...datos, sabor_otro: e.target.value })}
+                disabled={estaBloqueado}
+                placeholder="Especificar sabor..."
+                className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none disabled:bg-gray-100"
+              />
+            )}
+          </div>
         </div>
 
         {/* Pisos (solo lectura) */}
@@ -446,6 +483,7 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
     entrada: 'Ensalada César', // Valor fijo por defecto
     plato_principal: ajustes?.plato_principal || '',
     acompanamientos: ajustes?.acompanamientos || '',
+    acompanamiento_seleccionado: ajustes?.acompanamiento_seleccionado || '', // Para arroz o patatas específico
     hay_teenagers: ajustes?.hay_teenagers || false,
     cantidad_teenagers: ajustes?.cantidad_teenagers || 0,
     teenagers_tipo_comida: ajustes?.teenagers_tipo_comida || 'pasta', // 'pasta' o 'menu'
@@ -460,10 +498,13 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
   const handleSubmit = (e) => {
     e.preventDefault();
     // Enviar solo los campos que Prisma reconoce
+    // Si hay un acompañamiento seleccionado específico, usar ese, sino el general
+    const acompanamientoFinal = datos.acompanamiento_seleccionado || datos.acompanamientos;
+    
     onGuardar('menu', {
       entrada: datos.entrada, // Siempre será "Ensalada César"
       plato_principal: datos.plato_principal,
-      acompanamientos: datos.acompanamientos,
+      acompanamientos: acompanamientoFinal,
       hay_teenagers: datos.hay_teenagers,
       cantidad_teenagers: datos.hay_teenagers ? parseInt(datos.cantidad_teenagers) : 0,
       teenagers_tipo_comida: datos.hay_teenagers ? datos.teenagers_tipo_comida : null,
@@ -480,11 +521,6 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
         <h2 className="text-2xl font-bold text-gray-900">Servicio de Comida</h2>
       </div>
 
-      {/* Galería de Fotos */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
-        <GaleriaFotos tipoServicio="menu" titulo="platos del menú" />
-      </div>
 
       {/* Información de distribución */}
       <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
@@ -510,24 +546,48 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
           <p className="text-sm text-amber-800 mb-4">
             Tu evento incluye los siguientes pasapalos para deleitar a tus invitados:
           </p>
-          <ul className="space-y-2">
-            <li className="flex items-start gap-2 text-gray-700">
-              <CheckCircle2 className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <span><strong>Tequeños</strong> - Clásicos y deliciosos</span>
-            </li>
-            <li className="flex items-start gap-2 text-gray-700">
-              <CheckCircle2 className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <span><strong>Bolitas de carne</strong> - Jugosas y sabrosas</span>
-            </li>
-            <li className="flex items-start gap-2 text-gray-700">
-              <CheckCircle2 className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <span><strong>Salchichas en hojaldre</strong> - Perfectas para picar</span>
-            </li>
-            <li className="flex items-start gap-2 text-gray-700">
-              <CheckCircle2 className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <span><strong>Tuna tartar</strong> - Elegante y fresco</span>
-            </li>
-          </ul>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenMenu('pasapalos', 'tequeños')}
+                alt="Tequeños"
+                tamaño="medium"
+              />
+              <p className="text-sm font-medium text-gray-700 mt-2">
+                <strong>Tequeños</strong> - Clásicos y deliciosos
+              </p>
+            </div>
+            <div className="text-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenMenu('pasapalos', 'bolitas de carne')}
+                alt="Bolitas de carne"
+                tamaño="medium"
+              />
+              <p className="text-sm font-medium text-gray-700 mt-2">
+                <strong>Bolitas de carne</strong> - Jugosas y sabrosas
+              </p>
+            </div>
+            <div className="text-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenMenu('pasapalos', 'salchichas en hojaldre')}
+                alt="Salchichas en hojaldre"
+                tamaño="medium"
+              />
+              <p className="text-sm font-medium text-gray-700 mt-2">
+                <strong>Salchichas en hojaldre</strong> - Perfectas para picar
+              </p>
+            </div>
+            <div className="text-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenMenu('pasapalos', 'tuna tartar')}
+                alt="Tuna tartar"
+                tamaño="medium"
+              />
+              <p className="text-sm font-medium text-gray-700 mt-2">
+                <strong>Tuna tartar</strong> - Elegante y fresco
+              </p>
+            </div>
+          </div>
           <div className="mt-4 pt-4 border-t border-amber-200">
             <p className="text-xs text-amber-700 italic">
               ℹ️ Los pasapalos se servirán durante el cóctel de bienvenida
@@ -551,10 +611,28 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
             <div className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg bg-gray-50 text-gray-700 font-medium">
               🥗 {datos.entrada}
             </div>
+            {/* Mostrar imagen de ensalada césar y pan lado a lado */}
             {datos.entrada === 'Ensalada César' && (
-              <p className="text-xs text-gray-600 mt-2 italic">
-                💡 Incluye Pan y Mantequilla
-              </p>
+              <div className="mt-3">
+                <div className="flex items-center justify-center gap-4">
+                  <div className="text-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('entrada', datos.entrada)}
+                      alt="Ensalada César"
+                      tamaño="medium"
+                    />
+                    <p className="text-xs text-gray-600 mt-2">Ensalada César</p>
+                  </div>
+                  <div className="text-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('pan', 'pan y mantequilla')}
+                      alt="Pan y Mantequilla"
+                      tamaño="medium"
+                    />
+                    <p className="text-xs text-gray-600 mt-2">Pan y Mantequilla</p>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -581,6 +659,16 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                 Solomillo de Cerdo Marinado
               </option>
             </select>
+            {/* Mostrar imagen cuando se selecciona un plato principal */}
+            {datos.plato_principal && (
+              <div className="mt-3 flex justify-center">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenMenu('plato_principal', datos.plato_principal)}
+                  alt={datos.plato_principal}
+                  tamaño="medium"
+                />
+              </div>
+            )}
           </div>
 
           {/* Acompañamiento */}
@@ -590,7 +678,7 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
             </label>
             <select
               value={datos.acompanamientos}
-              onChange={(e) => setDatos({ ...datos, acompanamientos: e.target.value })}
+              onChange={(e) => setDatos({ ...datos, acompanamientos: e.target.value, acompanamiento_seleccionado: '' })}
               disabled={estaBloqueado}
               className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none bg-white disabled:bg-gray-100"
             >
@@ -602,6 +690,81 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
               <option value="Verduras al Vapor">Verduras al Vapor</option>
               <option value="Plátano Maduro">Plátano Maduro</option>
             </select>
+            
+            {/* Mostrar opciones de arroz si seleccionó "Arroz Blanco o Amarillo" */}
+            {datos.acompanamientos === 'Arroz Blanco o Amarillo' && (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">Selecciona el tipo de arroz:</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div 
+                    className={`cursor-pointer border-2 rounded-lg p-3 transition ${datos.acompanamiento_seleccionado === 'Arroz Blanco' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'}`}
+                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Arroz Blanco' })}
+                  >
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('acompanamiento', 'arroz blanco')}
+                      alt="Arroz Blanco"
+                      tamaño="medium"
+                    />
+                    <p className="text-sm font-medium text-center mt-2">Arroz Blanco</p>
+                  </div>
+                  <div 
+                    className={`cursor-pointer border-2 rounded-lg p-3 transition ${datos.acompanamiento_seleccionado === 'Arroz Amarillo' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'}`}
+                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Arroz Amarillo' })}
+                  >
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('acompanamiento', 'arroz amarillo')}
+                      alt="Arroz Amarillo"
+                      tamaño="medium"
+                    />
+                    <p className="text-sm font-medium text-center mt-2">Arroz Amarillo</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Mostrar opciones de patatas si seleccionó "Puré de Patatas o Patatas al Romero" */}
+            {datos.acompanamientos === 'Puré de Patatas o Patatas al Romero' && (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">Selecciona el tipo de patatas:</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div 
+                    className={`cursor-pointer border-2 rounded-lg p-3 transition ${datos.acompanamiento_seleccionado === 'Puré de Patatas' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'}`}
+                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Puré de Patatas' })}
+                  >
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('acompanamiento', 'puré de patatas')}
+                      alt="Puré de Patatas"
+                      tamaño="medium"
+                    />
+                    <p className="text-sm font-medium text-center mt-2">Puré de Patatas</p>
+                  </div>
+                  <div 
+                    className={`cursor-pointer border-2 rounded-lg p-3 transition ${datos.acompanamiento_seleccionado === 'Patatas al Romero' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'}`}
+                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Patatas al Romero' })}
+                  >
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('acompanamiento', 'patatas al romero')}
+                      alt="Patatas al Romero"
+                      tamaño="medium"
+                    />
+                    <p className="text-sm font-medium text-center mt-2">Patatas al Romero</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Mostrar imagen cuando se selecciona un acompañamiento simple */}
+            {datos.acompanamientos && 
+             datos.acompanamientos !== 'Arroz Blanco o Amarillo' && 
+             datos.acompanamientos !== 'Puré de Patatas o Patatas al Romero' && (
+              <div className="mt-3 flex justify-center">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenMenu('acompanamiento', datos.acompanamientos)}
+                  alt={datos.acompanamientos}
+                  tamaño="medium"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -699,6 +862,16 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                   <option value="napolitana">Pasta Napolitana</option>
                   <option value="alfredo">Pasta Alfredo</option>
                 </select>
+                {/* Mostrar imagen cuando se selecciona un tipo de pasta */}
+                {datos.teenagers_tipo_pasta && (
+                  <div className="mt-3 flex justify-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('pasta', datos.teenagers_tipo_pasta)}
+                      alt={`Pasta ${datos.teenagers_tipo_pasta}`}
+                      tamaño="medium"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -1059,11 +1232,6 @@ function SeccionBar({ ajustes, contrato }) {
         <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
       </div>
 
-      {/* Galería de Fotos */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Galería de Ejemplos</h3>
-        <GaleriaFotos tipoServicio="bar" titulo="bar y bebidas" />
-      </div>
 
       {!tipoLicor ? (
         <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
@@ -1108,11 +1276,15 @@ function SeccionBar({ ajustes, contrato }) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <span className="text-red-500">🍷</span> Vinos
               </h4>
-              <div className="space-y-1">
+              <div className="grid grid-cols-2 gap-3">
                 {vinos.map((vino, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-900 text-sm">{vino}</span>
+                  <div key={index} className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenBar('vino', vino)}
+                      alt={vino}
+                      tamaño="small"
+                    />
+                    <span className="text-gray-900 text-xs mt-2 text-center">{vino}</span>
                   </div>
                 ))}
               </div>
@@ -1123,14 +1295,18 @@ function SeccionBar({ ajustes, contrato }) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <span className="text-amber-600">🍸</span> Ron
               </h4>
-              <div className="space-y-1">
+              <div className="grid grid-cols-2 gap-3">
                 {(tipoLicor === 'premium' 
                   ? ['Ron Bacardi Blanco', 'Ron Bacardi Gold'] 
                   : ['Ron Spice', 'Ron Blanco']
                 ).map((ron, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-900 text-sm">{ron}</span>
+                  <div key={index} className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenBar('ron', ron)}
+                      alt={ron}
+                      tamaño="small"
+                    />
+                    <span className="text-gray-900 text-xs mt-2 text-center">{ron}</span>
                   </div>
                 ))}
               </div>
@@ -1141,10 +1317,14 @@ function SeccionBar({ ajustes, contrato }) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <span className="text-amber-700">🥃</span> Whisky
               </h4>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">
+              <div className="flex justify-center">
+                <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('whisky', tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House')}
+                    alt={tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House'}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">
                     {tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House'}
                   </span>
                 </div>
@@ -1152,14 +1332,22 @@ function SeccionBar({ ajustes, contrato }) {
             </div>
 
             {/* Vodka y Tequila */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                <span className="text-gray-900 text-sm">Vodka</span>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenBar('vodka', 'Vodka')}
+                  alt="Vodka"
+                  tamaño="small"
+                />
+                <span className="text-gray-900 text-xs mt-2 text-center">Vodka</span>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                <span className="text-gray-900 text-sm">Tequila</span>
+              <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenBar('tequila', 'Tequila')}
+                  alt="Tequila"
+                  tamaño="small"
+                />
+                <span className="text-gray-900 text-xs mt-2 text-center">Tequila</span>
               </div>
             </div>
           </div>
@@ -1169,11 +1357,15 @@ function SeccionBar({ ajustes, contrato }) {
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-purple-500">🍹</span> Cócteles
             </h3>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3">
               {cocteles.map((coctel, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">{coctel}</span>
+                <div key={index} className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('coctel', coctel)}
+                    alt={coctel}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">{coctel}</span>
                 </div>
               ))}
             </div>
@@ -1187,11 +1379,15 @@ function SeccionBar({ ajustes, contrato }) {
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-blue-500">🥤</span> Refrescos
             </h3>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3">
               {refrescos.map((refresco, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">{refresco}</span>
+                <div key={index} className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('refresco', refresco)}
+                    alt={refresco}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">{refresco}</span>
                 </div>
               ))}
             </div>
@@ -1202,11 +1398,15 @@ function SeccionBar({ ajustes, contrato }) {
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-orange-500">🧃</span> Jugos
             </h3>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3">
               {jugos.map((jugo, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">{jugo}</span>
+                <div key={index} className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('jugo', jugo)}
+                    alt={jugo}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">{jugo}</span>
                 </div>
               ))}
             </div>
@@ -1217,11 +1417,15 @@ function SeccionBar({ ajustes, contrato }) {
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-purple-500">✨</span> Otros
             </h3>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3">
               {otros.map((otro, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">{otro}</span>
+                <div key={index} className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('otro', otro)}
+                    alt={otro}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">{otro}</span>
                 </div>
               ))}
             </div>

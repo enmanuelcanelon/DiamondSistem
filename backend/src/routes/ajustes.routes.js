@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
+const { generarPDFAjustesEvento } = require('../utils/pdfAjustesEvento');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 // ====================================
 // OBTENER AJUSTES DE UN CONTRATO
@@ -277,6 +278,72 @@ router.delete('/contrato/:contratoId', authenticate, async (req, res, next) => {
       success: true,
       message: 'Ajustes eliminados exitosamente'
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ====================================
+// DESCARGAR PDF DE AJUSTES DEL EVENTO
+// ====================================
+router.get('/contrato/:contratoId/pdf', authenticate, async (req, res, next) => {
+  try {
+    const { contratoId } = req.params;
+
+    // Obtener contrato con relaciones
+    const contrato = await prisma.contratos.findUnique({
+      where: { id: parseInt(contratoId) },
+      include: {
+        clientes: true,
+        vendedores: {
+          select: {
+            id: true,
+            nombre_completo: true,
+            codigo_vendedor: true
+          }
+        },
+        salones: true
+      }
+    });
+
+    if (!contrato) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contrato no encontrado'
+      });
+    }
+
+    // Verificar acceso
+    if (req.user.tipo === 'cliente' && contrato.cliente_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes acceso a este contrato'
+      });
+    }
+
+    // Obtener ajustes
+    const ajustes = await prisma.ajustes_evento.findUnique({
+      where: { contrato_id: parseInt(contratoId) }
+    });
+
+    if (!ajustes) {
+      return res.status(404).json({
+        success: false,
+        message: 'No hay ajustes configurados para este evento'
+      });
+    }
+
+    // Generar PDF
+    const doc = generarPDFAjustesEvento(ajustes, contrato);
+
+    // Configurar headers para descarga
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Ajustes-Evento-${contrato.codigo_contrato}.pdf`);
+
+    // Enviar el PDF
+    doc.pipe(res);
+    doc.end();
+
   } catch (error) {
     next(error);
   }

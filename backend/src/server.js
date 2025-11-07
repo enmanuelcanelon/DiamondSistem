@@ -42,7 +42,7 @@ const gerentesRoutes = require('./routes/gerentes.routes');
 // Middleware personalizado
 const { errorHandler } = require('./middleware/errorHandler');
 const { requestLogger } = require('./middleware/logger');
-const { generalLimiter, authLimiter } = require('./middleware/security');
+const { generalLimiter, authLimiter, fotosLimiter } = require('./middleware/security');
 
 // Crear directorio de logs si no existe
 const logsDir = path.join(__dirname, '../logs');
@@ -54,8 +54,9 @@ if (!fs.existsSync(logsDir)) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Inicializar Prisma Client
-const prisma = new PrismaClient();
+// Inicializar Prisma Client (singleton)
+const { getPrismaClient, disconnectPrisma } = require('./config/database');
+const prisma = getPrismaClient();
 
 // ============================================
 // MIDDLEWARE GLOBAL DE SEGURIDAD
@@ -68,10 +69,11 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "http:", "blob:"],
     },
   },
   crossOriginEmbedderPolicy: false, // Permitir PDFs embebidos
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Permitir recursos cross-origin (imágenes)
 }));
 
 // CORS - Configuración segura
@@ -135,7 +137,35 @@ app.use(cors(corsOptions));
 // Rate limiting general
 app.use(generalLimiter);
 
-// Servir archivos estáticos (fotos, etc.)
+// Servir archivos estáticos (fotos, etc.) con CORS habilitado
+app.use('/fotos', express.static(path.join(__dirname, '../public/fotos'), {
+  setHeaders: (res, path) => {
+    // Permitir CORS para imágenes
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET');
+    res.set('Cache-Control', 'public, max-age=31536000'); // Cache por 1 año
+  }
+}));
+
+// Servir imágenes de distribución de mesas desde information_general
+// Con caché reducido para permitir actualizaciones rápidas
+app.use('/distribucion_mesas', express.static(path.join(__dirname, '../../information_general/distribucion_mesas'), {
+  setHeaders: (res, filePath) => {
+    // Permitir CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET');
+    // Cache reducido (1 hora) o sin cache en desarrollo para permitir actualizaciones rápidas
+    if (process.env.NODE_ENV === 'development') {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+    } else {
+      res.set('Cache-Control', 'public, max-age=3600'); // 1 hora en producción
+    }
+  }
+}));
+
+// Servir otros archivos estáticos normalmente
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Body parser con límites de tamaño
@@ -235,7 +265,8 @@ app.use('/api/ajustes', ajustesRoutes);
 app.use('/api/ajustes-evento', ajustesRoutes); // Alias para compatibilidad
 app.use('/api/emails', emailsRoutes);
 app.use('/api/salones', salonesRoutes);
-app.use('/api/fotos', fotosRoutes);
+// Rutas de fotos con rate limiting más permisivo
+app.use('/api/fotos', fotosLimiter, fotosRoutes);
 app.use('/api/managers', managersRoutes);
 app.use('/api/gerentes', gerentesRoutes);
 
@@ -259,8 +290,8 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
-    // Verificar conexión a la base de datos
-    await prisma.$connect();
+    // Verificar conexión a la base de datos (ya está conectado por el singleton)
+    await prisma.$queryRaw`SELECT 1`;
     logger.info('✅ Conexión a la base de datos establecida');
 
     // Iniciar el servidor
@@ -302,14 +333,14 @@ const startServer = async () => {
 // Manejo de cierre graceful
 process.on('SIGINT', async () => {
   logger.info('\n⚠️  Cerrando servidor...');
-  await prisma.$disconnect();
+  await disconnectPrisma();
   logger.info('✅ Conexión a la base de datos cerrada');
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   logger.info('\n⚠️  Cerrando servidor...');
-  await prisma.$disconnect();
+  await disconnectPrisma();
   logger.info('✅ Conexión a la base de datos cerrada');
   process.exit(0);
 });

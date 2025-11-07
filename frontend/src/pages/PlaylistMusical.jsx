@@ -11,6 +11,10 @@ import {
   Lightbulb,
   Search,
   Eye,
+  ExternalLink,
+  Copy,
+  Share2,
+  Download,
 } from 'lucide-react';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
@@ -35,6 +39,8 @@ function PlaylistMusical() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [nuevaPlaylistUrl, setNuevaPlaylistUrl] = useState('');
+  const [guardandoUrl, setGuardandoUrl] = useState(false);
 
   // Query para obtener el contrato
   const { data: contrato } = useQuery({
@@ -54,6 +60,25 @@ function PlaylistMusical() {
       return response.data;
     },
   });
+
+  // Query para obtener ajustes (para las URLs de playlist)
+  const { data: ajustes } = useQuery({
+    queryKey: ['ajustes', contratoId],
+    queryFn: async () => {
+      const response = await api.get(`/ajustes/contrato/${contratoId}`);
+      return response.data.ajustes;
+    },
+    enabled: !!contratoId,
+  });
+
+  // Parsear URLs de playlist desde JSON
+  const playlistUrls = ajustes?.playlist_urls 
+    ? (typeof ajustes.playlist_urls === 'string' 
+        ? JSON.parse(ajustes.playlist_urls) 
+        : Array.isArray(ajustes.playlist_urls) 
+          ? ajustes.playlist_urls 
+          : [])
+    : [];
 
   // Mutation para crear canción
   const crearCancionMutation = useMutation({
@@ -103,6 +128,131 @@ function PlaylistMusical() {
     }
   };
 
+  // Función para agregar una nueva URL de playlist
+  const handleAgregarPlaylistUrl = async () => {
+    if (!nuevaPlaylistUrl.trim()) {
+      alert('Por favor, ingrese una URL válida');
+      return;
+    }
+
+    // Validar que sea una URL de YouTube o Spotify
+    const esYouTube = nuevaPlaylistUrl.includes('youtube.com') || nuevaPlaylistUrl.includes('youtu.be') || nuevaPlaylistUrl.includes('music.youtube.com');
+    const esSpotify = nuevaPlaylistUrl.includes('spotify.com') || nuevaPlaylistUrl.includes('open.spotify.com');
+
+    if (!esYouTube && !esSpotify) {
+      alert('Por favor, ingrese una URL válida de YouTube o Spotify');
+      return;
+    }
+
+    // Verificar que no esté duplicada
+    if (playlistUrls.includes(nuevaPlaylistUrl.trim())) {
+      alert('Esta URL ya está en la lista');
+      return;
+    }
+
+    setGuardandoUrl(true);
+    try {
+      const nuevasUrls = [...playlistUrls, nuevaPlaylistUrl.trim()];
+      await api.put(`/ajustes/contrato/${contratoId}`, {
+        playlist_urls: nuevasUrls
+      });
+      queryClient.invalidateQueries(['ajustes', contratoId]);
+      setNuevaPlaylistUrl('');
+      alert('URL de playlist agregada exitosamente');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Error al guardar la URL');
+    } finally {
+      setGuardandoUrl(false);
+    }
+  };
+
+  // Función para eliminar una URL de playlist
+  const handleEliminarPlaylistUrl = async (urlAEliminar) => {
+    if (!window.confirm('¿Eliminar esta URL de playlist?')) {
+      return;
+    }
+
+    setGuardandoUrl(true);
+    try {
+      const nuevasUrls = playlistUrls.filter(url => url !== urlAEliminar);
+      await api.put(`/ajustes/contrato/${contratoId}`, {
+        playlist_urls: nuevasUrls
+      });
+      queryClient.invalidateQueries(['ajustes', contratoId]);
+      alert('URL eliminada exitosamente');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Error al eliminar la URL');
+    } finally {
+      setGuardandoUrl(false);
+    }
+  };
+
+  // Función para copiar URL al portapapeles
+  const copiarUrl = async (url) => {
+    if (!url) {
+      alert('No hay URL para copiar');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      alert('URL copiada al portapapeles');
+    } catch (error) {
+      alert('Error al copiar la URL');
+    }
+  };
+
+  // Función para abrir en la plataforma
+  const abrirEnPlataforma = (url) => {
+    if (!url) {
+      alert('No hay URL para abrir');
+      return;
+    }
+    window.open(url, '_blank');
+  };
+
+  // Detectar tipo de plataforma
+  const detectarPlataforma = (url) => {
+    if (!url) return null;
+    if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('music.youtube.com')) {
+      return 'youtube';
+    }
+    if (url.includes('spotify.com') || url.includes('open.spotify.com')) {
+      return 'spotify';
+    }
+    return null;
+  };
+
+  // Extraer ID de playlist de YouTube
+  const extraerIdYouTube = (url) => {
+    const match = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+  };
+
+  // Extraer ID de playlist/album de Spotify
+  const extraerIdSpotify = (url) => {
+    const match = url.match(/spotify\.com\/(?:playlist|album)\/([a-zA-Z0-9]+)/);
+    return match ? match[1] : null;
+  };
+
+  // Generar URL de preview/thumbnail
+  const obtenerPreviewUrl = (url) => {
+    const plataforma = detectarPlataforma(url);
+    if (plataforma === 'youtube') {
+      const playlistId = extraerIdYouTube(url);
+      if (playlistId) {
+        // Usar oEmbed de YouTube para obtener thumbnail
+        return `https://img.youtube.com/vi/${playlistId}/maxresdefault.jpg`;
+      }
+      // Fallback: usar thumbnail genérico de YouTube
+      return 'https://www.youtube.com/img/desktop/yt_1200.png';
+    }
+    if (plataforma === 'spotify') {
+      // Spotify no tiene thumbnails públicos directos, usar logo genérico
+      return 'https://developer.spotify.com/assets/branding-guidelines/icon3@2x.png';
+    }
+    return null;
+  };
+
   const getCategoriaIcon = (categoria) => {
     switch (categoria) {
       case 'favorita':
@@ -145,6 +295,79 @@ function PlaylistMusical() {
     'Electrónica', 'Hip Hop', 'Jazz', 'Clásica', 'Country', 'Otro'
   ];
 
+  // Componente para cada item de playlist con preview
+  const PlaylistItem = ({ url, index, plataforma, previewUrl, onCopiar, onAbrir, onEliminar, puedeEditar, guardandoUrl }) => {
+    const [imagenError, setImagenError] = useState(false);
+    
+    return (
+      <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-indigo-300 transition">
+        {/* Preview/Thumbnail de la playlist */}
+        <div className="flex-shrink-0">
+          <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-gray-200 bg-white shadow-sm">
+            {previewUrl && !imagenError ? (
+              <img
+                src={previewUrl}
+                alt={`Preview ${plataforma}`}
+                className="w-full h-full object-cover"
+                onError={() => setImagenError(true)}
+              />
+            ) : (
+              <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${
+                plataforma === 'youtube' 
+                  ? 'from-red-500 to-red-600' 
+                  : 'from-green-500 to-green-600'
+              }`}>
+                <span className="text-white text-2xl">
+                  {plataforma === 'youtube' ? '▶' : '♪'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            {plataforma && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs font-medium">
+                {plataforma === 'youtube' ? '🎵 YouTube Music' : '🎵 Spotify'}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-gray-600 break-all" title={url}>
+            {url}
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => onCopiar(url)}
+            className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition"
+            title="Copiar URL"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onAbrir(url)}
+            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+            title="Abrir en plataforma"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </button>
+          {puedeEditar && (
+            <button
+              onClick={() => onEliminar(url)}
+              disabled={guardandoUrl}
+              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+              title="Eliminar URL"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -166,6 +389,102 @@ function PlaylistMusical() {
           <p className="text-gray-600 mt-1">
             {contrato?.codigo_contrato} - {contrato?.clientes?.nombre_completo}
           </p>
+        </div>
+        <button
+          onClick={async () => {
+            try {
+              const response = await api.get(`/playlist/contrato/${contratoId}/pdf`, {
+                responseType: 'blob'
+              });
+              const url = window.URL.createObjectURL(new Blob([response.data]));
+              const link = document.createElement('a');
+              link.href = url;
+              link.setAttribute('download', `Playlist-${contrato?.codigo_contrato || 'evento'}.pdf`);
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+              alert('PDF descargado exitosamente');
+            } catch (error) {
+              alert('Error al descargar el PDF');
+            }
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition shadow-md"
+        >
+          <Download className="w-5 h-5" />
+          <span className="hidden sm:inline">Descargar PDF</span>
+        </button>
+      </div>
+
+      {/* Sección de Playlist Externa */}
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Share2 className="w-5 h-5 text-indigo-600" />
+          Playlists Externas (YouTube/Spotify)
+        </h3>
+        <div className="space-y-4">
+          {puedeEditar && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Agregar Nueva URL de Playlist
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={nuevaPlaylistUrl}
+                  onChange={(e) => setNuevaPlaylistUrl(e.target.value)}
+                  placeholder="https://music.youtube.com/playlist?list=... o https://open.spotify.com/..."
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                />
+                <button
+                  onClick={handleAgregarPlaylistUrl}
+                  disabled={guardandoUrl || !nuevaPlaylistUrl.trim()}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {guardandoUrl ? 'Guardando...' : 'Agregar'}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                💡 Puedes agregar múltiples playlists de YouTube Music o Spotify
+              </p>
+            </div>
+          )}
+
+          {/* Lista de URLs guardadas */}
+          {playlistUrls.length > 0 ? (
+            <div className="space-y-3 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700">
+                Playlists Agregadas ({playlistUrls.length})
+              </h4>
+              {playlistUrls.map((url, index) => {
+                const plataforma = detectarPlataforma(url);
+                const previewUrl = obtenerPreviewUrl(url);
+                
+                return (
+                  <PlaylistItem
+                    key={index}
+                    url={url}
+                    index={index}
+                    plataforma={plataforma}
+                    previewUrl={previewUrl}
+                    onCopiar={copiarUrl}
+                    onAbrir={abrirEnPlataforma}
+                    onEliminar={handleEliminarPlaylistUrl}
+                    puedeEditar={puedeEditar}
+                    guardandoUrl={guardandoUrl}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 border-t border-gray-200">
+              <Music className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 text-sm">
+                {puedeEditar 
+                  ? 'No hay playlists agregadas. Agrega una URL arriba.' 
+                  : 'No hay playlists agregadas por el cliente.'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

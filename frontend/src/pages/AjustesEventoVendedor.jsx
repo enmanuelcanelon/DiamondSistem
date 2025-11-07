@@ -12,9 +12,12 @@ import {
   Clock,
   Car,
   Wine,
-  CheckCircle2
+  CheckCircle2,
+  Download
 } from 'lucide-react';
 import api from '../config/api';
+import ImagenSeleccion from '../components/ImagenSeleccion';
+import { obtenerImagenTorta, obtenerImagenDecoracion, obtenerImagenMenu, obtenerImagenBar } from '../utils/mapeoImagenes';
 
 function AjustesEventoVendedor() {
   const { contratoId } = useParams();
@@ -67,21 +70,46 @@ function AjustesEventoVendedor() {
             Cliente: {contrato?.clientes?.nombre_completo} - {contrato?.codigo_contrato}
           </p>
         </div>
-        {contrato?.fecha_evento && (
-          <div className="bg-purple-100 px-4 py-2 rounded-lg">
-            <div className="flex items-center gap-2 text-purple-700">
-              <Calendar className="w-5 h-5" />
-              <span className="font-medium">
-                {new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </span>
+        <div className="flex items-center gap-3">
+          {contrato?.fecha_evento && (
+            <div className="bg-purple-100 px-4 py-2 rounded-lg">
+              <div className="flex items-center gap-2 text-purple-700">
+                <Calendar className="w-5 h-5" />
+                <span className="font-medium">
+                  {new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          <button
+            onClick={async () => {
+              try {
+                const response = await api.get(`/ajustes/contrato/${contratoId}/pdf`, {
+                  responseType: 'blob'
+                });
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `Ajustes-Evento-${contrato?.codigo_contrato || 'evento'}.pdf`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                alert('PDF descargado exitosamente');
+              } catch (error) {
+                alert('Error al descargar el PDF');
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition shadow-md"
+          >
+            <Download className="w-5 h-5" />
+            <span className="hidden sm:inline">Descargar PDF</span>
+          </button>
+        </div>
       </div>
 
       {/* Info Banner */}
@@ -144,7 +172,7 @@ function AjustesEventoVendedor() {
       {ajustes ? (
         <div className="space-y-6">
           {/* Torta */}
-          <SeccionTorta ajustes={ajustes} />
+          <SeccionTorta ajustes={ajustes} contrato={contrato} />
           
           {/* Decoración */}
           <SeccionDecoracion ajustes={ajustes} />
@@ -189,7 +217,17 @@ function Campo({ label, valor, icono }) {
 }
 
 // Sección Torta
-function SeccionTorta({ ajustes }) {
+function SeccionTorta({ ajustes, contrato }) {
+  // Determinar número de pisos automáticamente según el salón
+  const pisosPorSalon = {
+    'Diamond': 3,
+    'Kendall': 2,
+    'Doral': 2
+  };
+  
+  const nombreSalon = contrato?.lugar_salon || contrato?.salones?.nombre || 'Diamond';
+  const pisosAutomaticos = pisosPorSalon[nombreSalon] || 3;
+
   return (
     <div id="torta" className="bg-white rounded-xl shadow-sm border p-6">
       <div className="flex items-center gap-3 mb-6 pb-4 border-b">
@@ -197,9 +235,25 @@ function SeccionTorta({ ajustes }) {
         <h2 className="text-2xl font-bold text-gray-900">Torta</h2>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Campo label="Sabor de la Torta" valor={ajustes?.sabor_torta} />
-        <Campo label="Relleno" valor={ajustes?.relleno_torta} />
-        <Campo label="Decoración de la Torta" valor={ajustes?.decoracion_torta} />
+        <div>
+          <Campo label="Diseño de la Torta" valor={ajustes?.diseno_torta || ajustes?.diseno_otro} />
+          {/* Mostrar imagen del diseño */}
+          {ajustes?.diseno_torta && ajustes.diseno_torta !== 'Otro' && (
+            <div className="mt-3 flex justify-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenTorta(ajustes.diseno_torta, pisosAutomaticos)}
+                alt={`Torta ${ajustes.diseno_torta} de ${pisosAutomaticos} pisos`}
+                tamaño="medium"
+              />
+            </div>
+          )}
+        </div>
+        <div>
+          <Campo label="Sabor de la Torta" valor={ajustes?.sabor_torta || ajustes?.sabor_otro} />
+        </div>
+        <div className="md:col-span-2">
+          <Campo label="Número de Pisos" valor={`${pisosAutomaticos} ${pisosAutomaticos === 1 ? 'piso' : 'pisos'} (automático según salón)`} />
+        </div>
         <div className="md:col-span-2">
           <Campo label="Notas Adicionales" valor={ajustes?.notas_torta} />
         </div>
@@ -267,7 +321,14 @@ function SeccionDecoracion({ ajustes }) {
               {ajustes?.cojines_color && (
                 <div className="bg-purple-50 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Cojines</p>
-                  <p className="text-gray-900 capitalize font-medium">{ajustes.cojines_color}</p>
+                  <p className="text-gray-900 capitalize font-medium mb-2">{ajustes.cojines_color}</p>
+                  <div className="flex justify-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenDecoracion('cojin', ajustes.cojines_color)}
+                      alt={`Cojines ${ajustes.cojines_color}`}
+                      tamaño="small"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -275,10 +336,17 @@ function SeccionDecoracion({ ajustes }) {
               {ajustes?.centro_mesa_1 && (
                 <div className="bg-purple-50 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Centro de Mesa</p>
-                  <p className="text-gray-900 capitalize font-medium">{ajustes.centro_mesa_1}</p>
+                  <p className="text-gray-900 capitalize font-medium mb-2">{ajustes.centro_mesa_1}</p>
                   {ajustes.centro_mesa_1 === 'cilindro' && (
-                    <p className="text-xs text-gray-600 mt-1">💡 Incluye 3 cilindros</p>
+                    <p className="text-xs text-gray-600 mb-2">💡 Incluye 3 cilindros</p>
                   )}
+                  <div className="flex justify-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenDecoracion('centro_mesa', ajustes.centro_mesa_1)}
+                      alt={`Centro de mesa ${ajustes.centro_mesa_1}`}
+                      tamaño="small"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -286,7 +354,14 @@ function SeccionDecoracion({ ajustes }) {
               {ajustes?.base_color && (
                 <div className="bg-purple-50 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Base</p>
-                  <p className="text-gray-900 capitalize font-medium">{ajustes.base_color}</p>
+                  <p className="text-gray-900 capitalize font-medium mb-2">{ajustes.base_color}</p>
+                  <div className="flex justify-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenDecoracion('base', ajustes.base_color)}
+                      alt={`Base ${ajustes.base_color}`}
+                      tamaño="small"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -294,7 +369,14 @@ function SeccionDecoracion({ ajustes }) {
               {ajustes?.challer_color && (
                 <div className="bg-purple-50 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Challer (Cargador de Plato)</p>
-                  <p className="text-gray-900 capitalize font-medium">{ajustes.challer_color}</p>
+                  <p className="text-gray-900 capitalize font-medium mb-2">{ajustes.challer_color}</p>
+                  <div className="flex justify-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenDecoracion('challer', ajustes.challer_color)}
+                      alt={`Challer ${ajustes.challer_color}`}
+                      tamaño="small"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -302,9 +384,18 @@ function SeccionDecoracion({ ajustes }) {
               {ajustes?.aros_color && (
                 <div className="bg-purple-50 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Aros (Anillos para Servilleta)</p>
-                  <p className="text-gray-900 capitalize font-medium">{ajustes.aros_color}</p>
+                  <p className="text-gray-900 capitalize font-medium mb-2">{ajustes.aros_color}</p>
                   {ajustes.aros_color === 'otro' && ajustes.aros_nota && (
-                    <p className="text-sm text-gray-700 mt-1">📝 {ajustes.aros_nota}</p>
+                    <p className="text-sm text-gray-700 mb-2">📝 {ajustes.aros_nota}</p>
+                  )}
+                  {ajustes.aros_color !== 'otro' && (
+                    <div className="flex justify-center">
+                      <ImagenSeleccion
+                        urlImagen={obtenerImagenDecoracion('aros', ajustes.aros_color)}
+                        alt={`Aros ${ajustes.aros_color}`}
+                        tamaño="small"
+                      />
+                    </div>
                   )}
                 </div>
               )}
@@ -313,9 +404,18 @@ function SeccionDecoracion({ ajustes }) {
               {ajustes?.runner_tipo && (
                 <div className="bg-purple-50 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Runner (Camino de Mesa)</p>
-                  <p className="text-gray-900 capitalize font-medium">{ajustes.runner_tipo}</p>
+                  <p className="text-gray-900 capitalize font-medium mb-2">{ajustes.runner_tipo}</p>
                   {ajustes.runner_tipo === 'otros' && ajustes.runner_nota && (
-                    <p className="text-sm text-gray-700 mt-1">📝 {ajustes.runner_nota}</p>
+                    <p className="text-sm text-gray-700 mb-2">📝 {ajustes.runner_nota}</p>
+                  )}
+                  {ajustes.runner_tipo !== 'otros' && (
+                    <div className="flex justify-center">
+                      <ImagenSeleccion
+                        urlImagen={obtenerImagenDecoracion('runner', ajustes.runner_tipo)}
+                        alt={`Runner ${ajustes.runner_tipo}`}
+                        tamaño="small"
+                      />
+                    </div>
                   )}
                 </div>
               )}
@@ -340,8 +440,17 @@ function SeccionDecoracion({ ajustes }) {
                 <span>🧻</span> Servilletas
               </h3>
               <div className="bg-purple-50 rounded-lg p-4">
-                <div className="flex flex-wrap gap-2">
-                  {formatearServilletas()}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {ajustes.servilletas.map((s, i) => (
+                    <div key={i} className="text-center">
+                      <ImagenSeleccion
+                        urlImagen={obtenerImagenDecoracion('servilleta', s.color)}
+                        alt={`Servilleta ${s.color}`}
+                        tamaño="small"
+                      />
+                      <p className="text-sm font-medium text-gray-700 mt-2 capitalize">{s.color}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -384,28 +493,63 @@ function SeccionMenu({ ajustes, contrato }) {
       
       {/* Sección de Pasapalos (Solo informativa) */}
       {tienePasapalos && (
-        <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">🍤</span>
+        <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-2xl">🥟</span>
             <h3 className="text-lg font-bold text-amber-900">
               Pasapalos Incluidos
             </h3>
           </div>
-          <p className="text-sm text-amber-800 mb-2">
-            Tu evento incluye los siguientes pasapalos para deleitar a tus invitados:
+          <p className="text-sm text-amber-800 mb-4">
+            El evento incluye los siguientes pasapalos para deleitar a los invitados:
           </p>
-          <div className="bg-white rounded-lg p-3 border border-amber-300">
-            <ul className="text-sm text-amber-900 space-y-1">
-              <li>• Empanadas de Carne</li>
-              <li>• Empanadas de Pollo</li>
-              <li>• Tequeños</li>
-              <li>• Croquetas de Jamón</li>
-              <li>• Mini Pastelitos</li>
-            </ul>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenMenu('pasapalos', 'tequeños')}
+                alt="Tequeños"
+                tamaño="medium"
+              />
+              <p className="text-sm font-medium text-gray-700 mt-2">
+                <strong>Tequeños</strong> - Clásicos y deliciosos
+              </p>
+            </div>
+            <div className="text-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenMenu('pasapalos', 'bolitas de carne')}
+                alt="Bolitas de carne"
+                tamaño="medium"
+              />
+              <p className="text-sm font-medium text-gray-700 mt-2">
+                <strong>Bolitas de carne</strong> - Jugosas y sabrosas
+              </p>
+            </div>
+            <div className="text-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenMenu('pasapalos', 'salchichas en hojaldre')}
+                alt="Salchichas en hojaldre"
+                tamaño="medium"
+              />
+              <p className="text-sm font-medium text-gray-700 mt-2">
+                <strong>Salchichas en hojaldre</strong> - Perfectas para picar
+              </p>
+            </div>
+            <div className="text-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenMenu('pasapalos', 'tuna tartar')}
+                alt="Tuna tartar"
+                tamaño="medium"
+              />
+              <p className="text-sm font-medium text-gray-700 mt-2">
+                <strong>Tuna tartar</strong> - Fresco y elegante
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-amber-700 italic mt-2">
-            ℹ️ Los pasapalos se servirán durante el cóctel de bienvenida
-          </p>
+          <div className="mt-4 pt-4 border-t border-amber-200">
+            <p className="text-xs text-amber-700 italic">
+              ℹ️ Los pasapalos se servirán durante el cóctel de bienvenida
+            </p>
+          </div>
         </div>
       )}
       
@@ -414,16 +558,83 @@ function SeccionMenu({ ajustes, contrato }) {
         {ajustes?.entrada && (
           <div className="bg-gray-50 rounded-lg p-4">
             <p className="text-sm font-medium text-gray-700 mb-1">Entrada</p>
-            <p className="text-gray-900 font-medium">🥗 {ajustes.entrada}</p>
+            <p className="text-gray-900 font-medium mb-3">🥗 {ajustes.entrada}</p>
             {ajustes.entrada === 'Ensalada César' && (
-              <p className="text-xs text-gray-600 mt-2 italic">
-                💡 Incluye Pan y Mantequilla
-              </p>
+              <div className="flex items-center justify-center gap-4">
+                <div className="text-center">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenMenu('entrada', ajustes.entrada)}
+                    alt="Ensalada César"
+                    tamaño="medium"
+                  />
+                  <p className="text-xs text-gray-600 mt-2">Ensalada César</p>
+                </div>
+                <div className="text-center">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenMenu('pan', 'pan y mantequilla')}
+                    alt="Pan y Mantequilla"
+                    tamaño="medium"
+                  />
+                  <p className="text-xs text-gray-600 mt-2">Pan y Mantequilla</p>
+                </div>
+              </div>
             )}
           </div>
         )}
-        <Campo label="Plato Principal" valor={ajustes?.plato_principal} />
-        <Campo label="Acompañamientos" valor={ajustes?.acompanamientos} />
+        <div>
+          <Campo label="Plato Principal" valor={ajustes?.plato_principal} />
+          {ajustes?.plato_principal && (
+            <div className="mt-3 flex justify-center">
+              <ImagenSeleccion
+                urlImagen={obtenerImagenMenu('plato_principal', ajustes.plato_principal)}
+                alt={ajustes.plato_principal}
+                tamaño="medium"
+              />
+            </div>
+          )}
+        </div>
+        <div>
+          <Campo label="Acompañamientos" valor={ajustes?.acompanamientos || ajustes?.acompanamiento_seleccionado} />
+          {ajustes?.acompanamientos && (
+            <div className="mt-3 space-y-3">
+              {ajustes.acompanamientos === 'Arroz Blanco o Amarillo' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('acompanamiento', ajustes.acompanamiento_seleccionado === 'Arroz Amarillo' ? 'arroz amarillo' : 'arroz blanco')}
+                      alt={ajustes.acompanamiento_seleccionado || 'Arroz Blanco'}
+                      tamaño="medium"
+                    />
+                    <p className="text-xs text-gray-600 mt-2">{ajustes.acompanamiento_seleccionado || 'Arroz Blanco'}</p>
+                  </div>
+                </div>
+              )}
+              {ajustes.acompanamientos === 'Puré de Patatas o Patatas al Romero' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('acompanamiento', ajustes.acompanamiento_seleccionado === 'Patatas al Romero' ? 'patatas al romero' : 'puré de patatas')}
+                      alt={ajustes.acompanamiento_seleccionado || 'Puré de Patatas'}
+                      tamaño="medium"
+                    />
+                    <p className="text-xs text-gray-600 mt-2">{ajustes.acompanamiento_seleccionado || 'Puré de Patatas'}</p>
+                  </div>
+                </div>
+              )}
+              {ajustes.acompanamientos && 
+               ajustes.acompanamientos !== 'Arroz Blanco o Amarillo' && 
+               ajustes.acompanamientos !== 'Puré de Patatas o Patatas al Romero' && (
+                <div className="flex justify-center">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenMenu('acompanamiento', ajustes.acompanamientos)}
+                    alt={ajustes.acompanamientos}
+                    tamaño="medium"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div className="md:col-span-2">
           <Campo label="Opciones Vegetarianas" valor={ajustes?.opciones_vegetarianas} />
         </div>
@@ -443,13 +654,22 @@ function SeccionMenu({ ajustes, contrato }) {
                 <span className="font-medium">Tipo de comida:</span> {ajustes.teenagers_tipo_comida === 'pasta' ? 'Pasta' : 'Menú'}
               </p>
               {ajustes.teenagers_tipo_comida === 'pasta' && ajustes.teenagers_tipo_pasta && (
-                <p className="text-sm text-gray-700">
-                  <span className="font-medium">Tipo de pasta:</span> {
-                    ajustes.teenagers_tipo_pasta === 'napolitana' ? 'Pasta Napolitana' : 
-                    ajustes.teenagers_tipo_pasta === 'alfredo' ? 'Pasta Alfredo' : 
-                    ajustes.teenagers_tipo_pasta
-                  }
-                </p>
+                <>
+                  <p className="text-sm text-gray-700 mb-3">
+                    <span className="font-medium">Tipo de pasta:</span> {
+                      ajustes.teenagers_tipo_pasta === 'napolitana' ? 'Pasta Napolitana' : 
+                      ajustes.teenagers_tipo_pasta === 'alfredo' ? 'Pasta Alfredo' : 
+                      ajustes.teenagers_tipo_pasta
+                    }
+                  </p>
+                  <div className="flex justify-center">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenMenu('pasta', ajustes.teenagers_tipo_pasta)}
+                      alt={`Pasta ${ajustes.teenagers_tipo_pasta}`}
+                      tamaño="medium"
+                    />
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -633,11 +853,15 @@ function SeccionBar({ ajustes, contrato }) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <span className="text-red-500">🍷</span> Vinos
               </h4>
-              <div className="space-y-1">
+              <div className="grid grid-cols-2 gap-3">
                 {vinos.map((vino, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-900 text-sm">{vino}</span>
+                  <div key={index} className="flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenBar('vino', vino)}
+                      alt={vino}
+                      tamaño="small"
+                    />
+                    <span className="text-gray-900 text-xs mt-2 text-center">{vino}</span>
                   </div>
                 ))}
               </div>
@@ -648,11 +872,15 @@ function SeccionBar({ ajustes, contrato }) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <span className="text-amber-600">🍸</span> Ron
               </h4>
-              <div className="space-y-1">
+              <div className="grid grid-cols-2 gap-3">
                 {(tipoLicor === 'premium' ? ['Ron Bacardi Blanco', 'Ron Bacardi Gold'] : ['Ron Spice', 'Ron Blanco']).map((ron, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-900 text-sm">{ron}</span>
+                  <div key={index} className="flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200">
+                    <ImagenSeleccion
+                      urlImagen={obtenerImagenBar('ron', ron)}
+                      alt={ron}
+                      tamaño="small"
+                    />
+                    <span className="text-gray-900 text-xs mt-2 text-center">{ron}</span>
                   </div>
                 ))}
               </div>
@@ -663,10 +891,14 @@ function SeccionBar({ ajustes, contrato }) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <span className="text-amber-700">🥃</span> Whisky
               </h4>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('whisky', tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House')}
+                    alt={tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House'}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">
                     {tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House'}
                   </span>
                 </div>
@@ -674,14 +906,22 @@ function SeccionBar({ ajustes, contrato }) {
             </div>
 
             {/* Vodka y Tequila */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                <span className="text-gray-900 text-sm">Vodka</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenBar('vodka', 'vodka')}
+                  alt="Vodka"
+                  tamaño="small"
+                />
+                <span className="text-gray-900 text-xs mt-2 text-center">Vodka</span>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                <span className="text-gray-900 text-sm">Tequila</span>
+              <div className="flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200">
+                <ImagenSeleccion
+                  urlImagen={obtenerImagenBar('tequila', 'tequila')}
+                  alt="Tequila"
+                  tamaño="small"
+                />
+                <span className="text-gray-900 text-xs mt-2 text-center">Tequila</span>
               </div>
             </div>
           </div>
@@ -691,11 +931,15 @@ function SeccionBar({ ajustes, contrato }) {
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-purple-500">🍹</span> Cócteles
             </h3>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3">
               {cocteles.map((coctel, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">{coctel}</span>
+                <div key={index} className="flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('coctel', coctel)}
+                    alt={coctel}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">{coctel}</span>
                 </div>
               ))}
             </div>
@@ -710,11 +954,15 @@ function SeccionBar({ ajustes, contrato }) {
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-blue-500">🥤</span> Refrescos
             </h3>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3">
               {refrescos.map((refresco, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">{refresco}</span>
+                <div key={index} className="flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('refresco', refresco)}
+                    alt={refresco}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">{refresco}</span>
                 </div>
               ))}
             </div>
@@ -725,11 +973,15 @@ function SeccionBar({ ajustes, contrato }) {
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-orange-500">🧃</span> Jugos
             </h3>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3">
               {jugos.map((jugo, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">{jugo}</span>
+                <div key={index} className="flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('jugo', jugo)}
+                    alt={jugo}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">{jugo}</span>
                 </div>
               ))}
             </div>
@@ -740,11 +992,15 @@ function SeccionBar({ ajustes, contrato }) {
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-purple-500">✨</span> Otros
             </h3>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3">
               {otros.map((otro, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <span className="text-gray-900 text-sm">{otro}</span>
+                <div key={index} className="flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenBar('otro', otro)}
+                    alt={otro}
+                    tamaño="small"
+                  />
+                  <span className="text-gray-900 text-xs mt-2 text-center">{otro}</span>
                 </div>
               ))}
             </div>

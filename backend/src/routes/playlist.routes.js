@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
+const { generarPDFPlaylist } = require('../utils/pdfPlaylist');
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 // ====================================
 // OBTENER TODAS LAS CANCIONES DE UN CONTRATO
@@ -356,6 +357,77 @@ router.delete('/contrato/:contratoId', authenticate, async (req, res, next) => {
       message: `${resultado.count} canción(es) eliminada(s) exitosamente`,
       count: resultado.count
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ====================================
+// DESCARGAR PDF DE PLAYLIST
+// ====================================
+router.get('/contrato/:contratoId/pdf', authenticate, async (req, res, next) => {
+  try {
+    const { contratoId } = req.params;
+
+    // Obtener contrato con relaciones
+    const contrato = await prisma.contratos.findUnique({
+      where: { id: parseInt(contratoId) },
+      include: {
+        clientes: true,
+        vendedores: {
+          select: {
+            id: true,
+            nombre_completo: true,
+            codigo_vendedor: true
+          }
+        }
+      }
+    });
+
+    if (!contrato) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contrato no encontrado'
+      });
+    }
+
+    // Verificar acceso
+    if (req.user.tipo === 'cliente' && contrato.cliente_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes acceso a este contrato'
+      });
+    }
+
+    // Obtener todas las canciones
+    const canciones = await prisma.playlist_canciones.findMany({
+      where: { contrato_id: parseInt(contratoId) },
+      orderBy: [
+        { categoria: 'asc' },
+        { orden: 'asc' },
+        { fecha_creacion: 'desc' }
+      ]
+    });
+
+    // Obtener ajustes para las URLs de playlists externas
+    const ajustes = await prisma.ajustes_evento.findUnique({
+      where: { contrato_id: parseInt(contratoId) },
+      select: {
+        playlist_urls: true
+      }
+    });
+
+    // Generar PDF
+    const doc = generarPDFPlaylist(canciones, contrato, ajustes);
+
+    // Configurar headers para descarga
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Playlist-${contrato.codigo_contrato}.pdf`);
+
+    // Enviar el PDF
+    doc.pipe(res);
+    doc.end();
+
   } catch (error) {
     next(error);
   }
