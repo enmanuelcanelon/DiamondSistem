@@ -1,8 +1,8 @@
-﻿import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Mail, Phone, Calendar, Users, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import api from '@shared/config/api';
+import api from '../config/api';
 
 function Clientes() {
   const queryClient = useQueryClient();

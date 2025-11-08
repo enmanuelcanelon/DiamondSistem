@@ -42,7 +42,10 @@ const calcularPrecioBasePaquete = (paquete, temporada) => {
  * Calcular precio de un servicio
  */
 const calcularPrecioServicio = (servicio, cantidad, cantidadPersonas = 0) => {
-  const precioUnitario = parseFloat(servicio.precio_base);
+  // Usar precio_unitario si existe (precio ajustado), si no, usar precio_base
+  const precioUnitario = servicio.precio_unitario !== undefined && servicio.precio_unitario !== null
+    ? parseFloat(servicio.precio_unitario)
+    : parseFloat(servicio.precio_base);
   let subtotal = 0;
 
   switch (servicio.tipo_cobro) {
@@ -189,13 +192,25 @@ const calcularPrecioTotal = ({
 
   // 5. Aplicar descuento
   const montoDescuento = parseFloat(descuento) || 0;
+  
+  // Validar que el descuento no exceda el subtotal base
+  if (montoDescuento > subtotalBase) {
+    throw new Error(`El descuento ($${montoDescuento.toFixed(2)}) no puede ser mayor que el subtotal base ($${subtotalBase.toFixed(2)})`);
+  }
+  
   const subtotalConDescuento = subtotalBase - montoDescuento;
 
-  // 6. Calcular impuestos (sobre el subtotal con descuento)
-  const impuestos = calcularImpuestos(subtotalConDescuento, configuracion);
+  // 6. Calcular impuestos (sobre el subtotal con descuento, mínimo 0)
+  const subtotalParaImpuestos = Math.max(0, subtotalConDescuento);
+  const impuestos = calcularImpuestos(subtotalParaImpuestos, configuracion);
 
-  // 7. Total final
-  const totalFinal = subtotalConDescuento + impuestos.total;
+  // 7. Total final (asegurar que nunca sea negativo)
+  const totalFinal = Math.max(0, subtotalConDescuento + impuestos.total);
+  
+  // Validación adicional: el total final nunca debe ser negativo
+  if (totalFinal < 0) {
+    throw new Error(`El total final no puede ser negativo. Descuento máximo permitido: $${subtotalBase.toFixed(2)}`);
+  }
 
   return {
     desglose: {

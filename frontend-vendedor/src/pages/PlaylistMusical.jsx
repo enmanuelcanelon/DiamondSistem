@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,8 +16,8 @@ import {
   Share2,
   Download,
 } from 'lucide-react';
-import api from '@shared/config/api';
-import useAuthStore from '@shared/store/useAuthStore';
+import api from '../config/api';
+import useAuthStore from '../store/useAuthStore';
 
 function PlaylistMusical() {
   const { id: contratoId } = useParams();
@@ -742,4 +742,3 @@ function PlaylistMusical() {
 }
 
 export default PlaylistMusical;
-

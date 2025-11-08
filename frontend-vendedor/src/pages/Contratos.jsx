@@ -1,10 +1,10 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Search, FileCheck, Calendar, Clock, DollarSign, Eye, Download, Filter, X, Loader2 } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import api from '@shared/config/api';
-import { generarNombreEvento, getEventoEmoji } from '@utils/eventNames';
-import { formatearHora } from '@shared/utils/formatters';
+import api from '../config/api';
+import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
+import { formatearHora, calcularDuracion } from '../utils/formatters';
 
 function Contratos() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,14 +12,10 @@ function Contratos() {
   const clienteIdFromUrl = searchParams.get('cliente_id');
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [estadoPagoFiltro, setEstadoPagoFiltro] = useState('');
-  const [estadoContratoFiltro, setEstadoContratoFiltro] = useState('');
   const [filtroDias, setFiltroDias] = useState('30'); // Por defecto: últimos 30 días
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
-  const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || '');
-
-  // Calcular fechas basadas en el filtro de días
+  const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || ''); // Calcular fechas basadas en el filtro de días
   const calcularFechasPorDias = (dias) => {
     if (dias === 'todos') {
       return { desde: '', hasta: '' };
@@ -43,16 +39,12 @@ function Contratos() {
       setFechaHasta(fechas.hasta);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroDias]);
-
-  // Sincronizar filtro de cliente con URL
+  }, [filtroDias]); // Sincronizar filtro de cliente con URL
   useEffect(() => {
     if (clienteIdFromUrl) {
       setClienteFiltro(clienteIdFromUrl);
     }
-  }, [clienteIdFromUrl]);
-
-  // Scroll infinito con useInfiniteQuery
+  }, [clienteIdFromUrl]); // Scroll infinito con useInfiniteQuery
   const {
     data,
     fetchNextPage,
@@ -61,15 +53,13 @@ function Contratos() {
     isLoading,
     isRefetching,
   } = useInfiniteQuery({
-    queryKey: ['contratos', searchTerm, estadoPagoFiltro, estadoContratoFiltro, fechaDesde, fechaHasta, clienteFiltro],
+    queryKey: ['contratos', searchTerm, fechaDesde, fechaHasta, clienteFiltro],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         page: pageParam,
         limit: 50,
         // Enviar filtros al backend
         ...(searchTerm && { search: searchTerm }),
-        ...(estadoPagoFiltro && { estado_pago: estadoPagoFiltro }),
-        ...(estadoContratoFiltro && { estado: estadoContratoFiltro }),
         ...(fechaDesde && { fecha_desde: fechaDesde }),
         ...(fechaHasta && { fecha_hasta: fechaHasta }),
         ...(clienteFiltro && { cliente_id: clienteFiltro }),
@@ -81,9 +71,7 @@ function Contratos() {
       return lastPage.hasNextPage ? lastPage.page + 1 : undefined;
     },
     initialPageParam: 1,
-  });
-
-  // Aplanar todos los contratos de todas las páginas
+  }); // Aplanar todos los contratos de todas las páginas
   const contratos = data?.pages.flatMap(page => page.data) || [];
   const totalContratos = data?.pages[0]?.total || 0;
 
@@ -215,26 +203,7 @@ function Contratos() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
               />
             </div>
-            <select 
-              value={estadoPagoFiltro}
-              onChange={(e) => setEstadoPagoFiltro(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-            >
-              <option value="">Estado de Pago</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="parcial">Parcial</option>
-              <option value="pagado">Pagado</option>
-            </select>
-            <select 
-              value={estadoContratoFiltro}
-              onChange={(e) => setEstadoContratoFiltro(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-            >
-              <option value="">Estado</option>
-              <option value="activo">Activo</option>
-              <option value="completado">Completado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
+            {/* ELIMINADOS: Selects de Estado de Pago y Estado */}
           </div>
           {/* Filtros de fecha del evento */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -325,12 +294,12 @@ function Contratos() {
             <FileCheck className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {searchTerm || estadoPagoFiltro || estadoContratoFiltro || fechaDesde || fechaHasta ? 'No se encontraron contratos' : 'No hay contratos'}
+            {searchTerm || fechaDesde || fechaHasta ? 'No se encontraron contratos' : 'No hay contratos'}
           </h3>
           <p className="text-gray-600 mb-6">
-            {searchTerm || estadoPagoFiltro || estadoContratoFiltro || fechaDesde || fechaHasta ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
+            {searchTerm || fechaDesde || fechaHasta ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
           </p>
-          {!searchTerm && !estadoPagoFiltro && !estadoContratoFiltro && !fechaDesde && !fechaHasta && (
+          {!searchTerm && !fechaDesde && !fechaHasta && (
             <Link
               to="/ofertas"
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -341,18 +310,7 @@ function Contratos() {
         </div>
       ) : (
         <div className="space-y-4">
-          {contratos.map((contrato) => {
-            // Debug: verificar datos del salón
-            console.log('🔍 Contrato salón data:', {
-              id: contrato.id,
-              codigo: contrato.codigo_contrato,
-              lugar_salon: contrato.lugar_salon,
-              salones: contrato.salones,
-              salon_id: contrato.salon_id,
-              tieneLugarSalon: !!contrato.lugar_salon,
-              tieneSalonesNombre: !!contrato.salones?.nombre
-            });
-            return (
+          {contratos.map((contrato) => (
             <div
               key={contrato.id}
               className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition"
@@ -398,29 +356,21 @@ function Contratos() {
                     {contrato.hora_inicio && contrato.hora_fin && (
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        {formatearHora(contrato.hora_inicio)} - {formatearHora(contrato.hora_fin)}
-                        {(() => {
-                          try {
-                            // Extraer solo HH:mm si viene en formato TIME completo
-                            const horaInicioStr = typeof contrato.hora_inicio === 'string' 
-                              ? contrato.hora_inicio.slice(0, 5) 
-                              : contrato.hora_inicio;
-                            const horaFinStr = typeof contrato.hora_fin === 'string' 
-                              ? contrato.hora_fin.slice(0, 5) 
-                              : contrato.hora_fin;
-                            
-                            const inicio = new Date(`1970-01-01T${horaInicioStr}`);
-                            const fin = new Date(`1970-01-01T${horaFinStr}`);
-                            
-                            if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) return '';
-                            
-                            let horas = (fin - inicio) / (1000 * 60 * 60);
-                            if (horas < 0) horas += 24;
-                            return ` (${horas.toFixed(1)}h)`;
-                          } catch (e) {
+                        <span className="font-medium">
+                          {formatearHora(contrato.hora_inicio)} / {formatearHora(contrato.hora_fin)}
+                          {(() => {
+                            const duracion = calcularDuracion(contrato.hora_inicio, contrato.hora_fin);
+                            if (duracion > 0) {
+                              const horasEnteras = Math.floor(duracion);
+                              const minutos = Math.round((duracion - horasEnteras) * 60);
+                              if (minutos > 0 && minutos < 60) {
+                                return ` • ${horasEnteras}h ${minutos}m`;
+                              }
+                              return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
+                            }
                             return '';
-                          }
-                        })()}
+                          })()}
+                        </span>
                       </div>
                     )}
                     <div className="flex items-center gap-2">
@@ -520,8 +470,7 @@ function Contratos() {
                 </div>
               </div>
             </div>
-            );
-          })}
+          ))}
           
           {/* Observador para scroll infinito */}
           <div ref={observerTarget} className="h-10 flex items-center justify-center">
@@ -546,3 +495,7 @@ function Contratos() {
 }
 
 export default Contratos;
+
+
+
+

@@ -42,7 +42,7 @@ const gerentesRoutes = require('./routes/gerentes.routes');
 // Middleware personalizado
 const { errorHandler } = require('./middleware/errorHandler');
 const { requestLogger } = require('./middleware/logger');
-const { generalLimiter, authLimiter, fotosLimiter } = require('./middleware/security');
+const { generalLimiter, authLimiter, fotosLimiter, mensajesLimiter } = require('./middleware/security');
 
 // Crear directorio de logs si no existe
 const logsDir = path.join(__dirname, '../logs');
@@ -141,7 +141,8 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting general
+// Rate limiting general (aumentado para uso normal)
+// Nota: Rutas específicas tienen sus propios limiters más permisivos
 app.use(generalLimiter);
 
 // Servir archivos estáticos (fotos, etc.) con CORS habilitado
@@ -263,7 +264,8 @@ app.use('/api/contratos', contratosRoutes);
 app.use('/api/eventos', eventosRoutes);
 app.use('/api/pagos', pagosRoutes);
 app.use('/api/solicitudes', solicitudesRoutes);
-app.use('/api/mensajes', mensajesRoutes);
+// Rutas de mensajes con rate limiting muy permisivo (chat en tiempo real)
+app.use('/api/mensajes', mensajesLimiter, mensajesRoutes);
 app.use('/api/temporadas', temporadasRoutes);
 app.use('/api/mesas', mesasRoutes);
 app.use('/api/invitados', invitadosRoutes);

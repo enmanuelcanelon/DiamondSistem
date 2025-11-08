@@ -1,4 +1,4 @@
-﻿import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
   ArrowLeft, 
@@ -15,9 +15,9 @@ import {
   CheckCircle2,
   Download
 } from 'lucide-react';
-import api from '@shared/config/api';
-import ImagenSeleccion from '@shared/components/ImagenSeleccion';
-import { obtenerImagenTorta, obtenerImagenDecoracion, obtenerImagenMenu, obtenerImagenBar } from '@shared/utils/mapeoImagenes';
+import api from '../config/api';
+import ImagenSeleccion from '../components/ImagenSeleccion';
+import { obtenerImagenTorta, obtenerImagenDecoracion, obtenerImagenMenu, obtenerImagenBar } from '../utils/mapeoImagenes';
 
 function AjustesEventoVendedor() {
   const { contratoId } = useParams();
@@ -1236,4 +1236,3 @@ function SeccionOtros({ ajustes, contrato }) {
 }
 
 export default AjustesEventoVendedor;
-

@@ -99,10 +99,10 @@ function LayoutCliente() {
               </div>
               <div>
                 <h1 className="text-base font-semibold text-gray-900">
-                  {contrato ? generarNombreEventoCorto(contrato) : 'Mi Evento'}
+                  Party Venue
                 </h1>
                 <p className="text-xs text-gray-500">
-                  Portal del Cliente
+                  {contrato ? generarNombreEventoCorto(contrato) : 'Portal del Cliente'}
                 </p>
               </div>
             </div>

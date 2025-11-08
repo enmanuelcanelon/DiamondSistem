@@ -11,7 +11,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { useState } from 'react';
-import useAuthStore from '@shared/store/useAuthStore';
+import useAuthStore from '../store/useAuthStore';
 
 function Layout() {
   const location = useLocation();
@@ -50,7 +50,7 @@ function Layout() {
             <div className="flex h-16 items-center justify-between px-4 border-b">
               <div className="flex items-center gap-2">
                 <Diamond className="w-8 h-8 text-indigo-600" />
-                <span className="text-xl font-bold text-gray-900">DiamondSistem</span>
+                <span className="text-xl font-bold text-gray-900">Party Venue</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
                 <X className="w-5 h-5" />
@@ -86,7 +86,7 @@ function Layout() {
         <div className="flex flex-col flex-1 border-r bg-white">
           <div className="flex h-16 items-center px-4 border-b">
             <Diamond className="w-8 h-8 text-indigo-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900">DiamondSistem</span>
+            <span className="ml-2 text-xl font-bold text-gray-900">Party Venue</span>
           </div>
           <nav className="flex-1 space-y-1 px-3 py-4">
             {navigation.map((item) => {
@@ -142,7 +142,7 @@ function Layout() {
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex-1 text-center">
-            <span className="text-lg font-semibold text-gray-900">DiamondSistem</span>
+            <span className="text-lg font-semibold text-gray-900">Party Venue</span>
           </div>
         </div>
 

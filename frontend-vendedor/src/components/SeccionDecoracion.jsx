@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, 
   Save, 
@@ -9,8 +9,9 @@ import {
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import ImagenSeleccion from '@shared/components/ImagenSeleccion';
-import { obtenerImagenDecoracion } from '@shared/utils/mapeoImagenes';
+import GaleriaFotos from './GaleriaFotos';
+import ImagenSeleccion from './ImagenSeleccion';
+import { obtenerImagenDecoracion } from '../utils/mapeoImagenes';
 
 /**
  * Opciones de colores disponibles para servilletas con sus cantidades límite

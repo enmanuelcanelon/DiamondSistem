@@ -157,7 +157,9 @@ model ofertas {
   cantidad_invitados         Int
   temporada_id               Int?
   precio_paquete_base        Decimal   @db.Decimal(10, 2)
+  precio_base_ajustado       Decimal?  @db.Decimal(10, 2)
   ajuste_temporada           Decimal?  @default(0.00) @db.Decimal(10, 2)
+  ajuste_temporada_custom    Decimal?  @db.Decimal(10, 2)
   subtotal_servicios         Decimal?  @default(0.00) @db.Decimal(10, 2)
   subtotal                   Decimal   @db.Decimal(10, 2)
   descuento                  Decimal?  @default(0.00) @db.Decimal(10, 2)
@@ -578,50 +580,6 @@ model managers {
 }
 
 model checklist_servicios_externos {
-  id                  Int       @id @default(autoincrement())
-  contrato_id         Int
-  servicio_tipo       String    @db.VarChar(50) // limosina, hora_loca, animador, chef
-  contacto_realizado  Boolean?  @default(false)
-  fecha_contacto      DateTime? @db.Timestamp(6)
-  notas               String?
-  estado              String?   @default("pendiente") @db.VarChar(50) // pendiente, en_proceso, completado
-  manager_id          Int?
-  fecha_creacion      DateTime? @default(now()) @db.Timestamp(6)
-  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
-
-  // Relaciones
-  contratos contratos? @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
-  managers  managers?  @relation(fields: [manager_id], references: [id])
-
-  @@unique([contrato_id, servicio_tipo])
-  @@index([contrato_id], map: "idx_checklist_contrato")
-  @@index([estado], map: "idx_checklist_estado")
-  @@index([manager_id], map: "idx_checklist_manager")
-}
-
-
-  id                  Int       @id @default(autoincrement())
-  contrato_id         Int
-  servicio_tipo       String    @db.VarChar(50) // limosina, hora_loca, animador, chef
-  contacto_realizado  Boolean?  @default(false)
-  fecha_contacto      DateTime? @db.Timestamp(6)
-  notas               String?
-  estado              String?   @default("pendiente") @db.VarChar(50) // pendiente, en_proceso, completado
-  manager_id          Int?
-  fecha_creacion      DateTime? @default(now()) @db.Timestamp(6)
-  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
-
-  // Relaciones
-  contratos contratos? @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
-  managers  managers?  @relation(fields: [manager_id], references: [id])
-
-  @@unique([contrato_id, servicio_tipo])
-  @@index([contrato_id], map: "idx_checklist_contrato")
-  @@index([estado], map: "idx_checklist_estado")
-  @@index([manager_id], map: "idx_checklist_manager")
-}
-
-
   id                  Int       @id @default(autoincrement())
   contrato_id         Int
   servicio_tipo       String    @db.VarChar(50) // limosina, hora_loca, animador, chef

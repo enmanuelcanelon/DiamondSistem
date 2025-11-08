@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, Loader2, Diamond, Eye, EyeOff, ClipboardCheck } from 'lucide-react';
+import { LogIn, Loader2, Eye, EyeOff, Building2 } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
 
-function LoginManager() {
+function LoginGerente() {
   const navigate = useNavigate();
-  const { loginManager, isLoading } = useAuthStore();
+  const { loginGerente, isLoading } = useAuthStore();
   const [formData, setFormData] = useState({
-    codigo_manager: '',
+    codigo_gerente: '',
     password: '',
   });
   const [mostrarPassword, setMostrarPassword] = useState(false);
@@ -16,11 +16,11 @@ function LoginManager() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const result = await loginManager(formData.codigo_manager, formData.password);
+    const result = await loginGerente(formData.codigo_gerente, formData.password);
     
     if (result.success) {
       toast.success('Inicio de sesión exitoso');
-      navigate('/manager');
+      navigate('/gerente');
     } else {
       toast.error(result.error || 'Error al iniciar sesión');
     }
@@ -34,40 +34,40 @@ function LoginManager() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Logo y Título */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="bg-emerald-600 p-4 rounded-2xl shadow-lg">
-              <ClipboardCheck className="w-12 h-12 text-white" />
+            <div className="bg-purple-600 p-4 rounded-2xl shadow-lg">
+              <Building2 className="w-12 h-12 text-white" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">DiamondSistem</h1>
-          <p className="text-gray-600">Manager - Checklist de Servicios</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Party Venue</h1>
+          <p className="text-gray-600">Gerente - Gestión Completa</p>
         </div>
 
         {/* Formulario */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="mb-6">
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Iniciar Sesión</h2>
-            <p className="text-gray-600 text-sm">Ingresa tus credenciales de manager</p>
+            <p className="text-gray-600 text-sm">Ingresa tus credenciales de gerente</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="codigo_manager" className="block text-sm font-medium text-gray-700 mb-2">
-                Código de Manager
+              <label htmlFor="codigo_gerente" className="block text-sm font-medium text-gray-700 mb-2">
+                Código de Gerente
               </label>
               <input
                 type="text"
-                id="codigo_manager"
-                name="codigo_manager"
-                value={formData.codigo_manager}
+                id="codigo_gerente"
+                name="codigo_gerente"
+                value={formData.codigo_gerente}
                 onChange={handleChange}
-                placeholder="MGR001"
+                placeholder="GER001"
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
               />
             </div>
 
@@ -84,7 +84,7 @@ function LoginManager() {
                   onChange={handleChange}
                   placeholder="••••••••"
                   required
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
                 />
                 <button
                   type="button"
@@ -104,7 +104,7 @@ function LoginManager() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
@@ -123,13 +123,12 @@ function LoginManager() {
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-600 mt-8">
-          © 2025 DiamondSistem. Todos los derechos reservados.
+          © 2025 Party Venue. Todos los derechos reservados.
         </p>
       </div>
     </div>
   );
 }
 
-export default LoginManager;
-
+export default LoginGerente;
 

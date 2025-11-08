@@ -4,30 +4,28 @@ import { Search, FileCheck, Calendar, Clock, DollarSign, Eye, Download, Filter, 
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
-import { formatearHora } from '../utils/formatters';
+import { formatearHora, calcularDuracion } from '../utils/formatters';
 
 function Contratos() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const clienteIdFromUrl = searchParams.get('cliente_id');
+  const [searchParams, setSearchParams] = useSearchParams())}
+  const navigate = useNavigate())}
+  const clienteIdFromUrl = searchParams.get('cliente_id'))}
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [estadoPagoFiltro, setEstadoPagoFiltro] = useState('');
-  const [estadoContratoFiltro, setEstadoContratoFiltro] = useState('');
-  const [filtroDias, setFiltroDias] = useState('30'); // Por defecto: últimos 30 días
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
-  const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || '');
+  const [searchTerm, setSearchTerm] = useState(''))}
+  const [filtroDias, setFiltroDias] = useState('30'))} // Por defecto: últimos 30 días
+  const [fechaDesde, setFechaDesde] = useState(''))}
+  const [fechaHasta, setFechaHasta] = useState(''))}
+  const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || ''))}
 
   // Calcular fechas basadas en el filtro de días
   const calcularFechasPorDias = (dias) => {
     if (dias === 'todos') {
       return { desde: '', hasta: '' };
     }
-    const hoy = new Date();
-    const fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-    const fechaDesde = new Date(hoy);
-    fechaDesde.setDate(fechaDesde.getDate() - parseInt(dias));
+    const hoy = new Date())}
+    const fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()))}
+    const fechaDesde = new Date(hoy))}
+    fechaDesde.setDate(fechaDesde.getDate() - parseInt(dias)))}
     
     return {
       desde: fechaDesde.toISOString().split('T')[0],
@@ -38,19 +36,19 @@ function Contratos() {
   // Actualizar fechas cuando cambia el filtro de días
   useEffect(() => {
     if (filtroDias !== 'personalizado') {
-      const fechas = calcularFechasPorDias(filtroDias);
-      setFechaDesde(fechas.desde);
-      setFechaHasta(fechas.hasta);
+      const fechas = calcularFechasPorDias(filtroDias))}
+      setFechaDesde(fechas.desde))}
+      setFechaHasta(fechas.hasta))}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroDias]);
+  }, [filtroDias]))}
 
   // Sincronizar filtro de cliente con URL
   useEffect(() => {
     if (clienteIdFromUrl) {
-      setClienteFiltro(clienteIdFromUrl);
+      setClienteFiltro(clienteIdFromUrl))}
     }
-  }, [clienteIdFromUrl]);
+  }, [clienteIdFromUrl]))}
 
   // Scroll infinito con useInfiniteQuery
   const {
@@ -61,27 +59,25 @@ function Contratos() {
     isLoading,
     isRefetching,
   } = useInfiniteQuery({
-    queryKey: ['contratos', searchTerm, estadoPagoFiltro, estadoContratoFiltro, fechaDesde, fechaHasta, clienteFiltro],
+    queryKey: ['contratos', searchTerm, fechaDesde, fechaHasta, clienteFiltro],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         page: pageParam,
         limit: 50,
         // Enviar filtros al backend
         ...(searchTerm && { search: searchTerm }),
-        ...(estadoPagoFiltro && { estado_pago: estadoPagoFiltro }),
-        ...(estadoContratoFiltro && { estado: estadoContratoFiltro }),
         ...(fechaDesde && { fecha_desde: fechaDesde }),
         ...(fechaHasta && { fecha_hasta: fechaHasta }),
         ...(clienteFiltro && { cliente_id: clienteFiltro }),
       };
-      const response = await api.get('/contratos', { params });
+      const response = await api.get('/contratos', { params }))}
       return response.data; // Retorna { data: [...], total, page, hasNextPage, ... }
     },
     getNextPageParam: (lastPage) => {
       return lastPage.hasNextPage ? lastPage.page + 1 : undefined;
     },
     initialPageParam: 1,
-  });
+  }))}
 
   // Aplanar todos los contratos de todas las páginas
   const contratos = data?.pages.flatMap(page => page.data) || [];
@@ -92,50 +88,50 @@ function Contratos() {
 
   // Limpiar filtro de cliente
   const limpiarFiltroCliente = () => {
-    setClienteFiltro('');
-    navigate('/contratos');
+    setClienteFiltro(''))}
+    navigate('/contratos'))}
   };
 
   // Detección de scroll para cargar más
-  const observerTarget = useRef(null);
+  const observerTarget = useRef(null))}
 
   const handleObserver = useCallback((entries) => {
     const [target] = entries;
     if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+      fetchNextPage())}
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]))}
 
   useEffect(() => {
     const element = observerTarget.current;
     const option = { threshold: 0.1 };
 
-    const observer = new IntersectionObserver(handleObserver, option);
-    if (element) observer.observe(element);
+    const observer = new IntersectionObserver(handleObserver, option))}
+    if (element) observer.observe(element))}
 
     return () => {
-      if (element) observer.unobserve(element);
+      if (element) observer.unobserve(element))}
     };
-  }, [handleObserver]);
+  }, [handleObserver]))}
 
   const handleDescargarContrato = async (contratoId, codigoContrato) => {
     try {
       const response = await api.get(`/contratos/${contratoId}/pdf-contrato`, {
         responseType: 'blob'
-      });
+      }))}
       
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const blob = new Blob([response.data], { type: 'application/pdf' }))}
+      const url = window.URL.createObjectURL(blob))}
+      const link = document.createElement('a'))}
       link.href = url;
       link.download = `Contrato-${codigoContrato}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      document.body.appendChild(link))}
+      link.click())}
+      document.body.removeChild(link))}
+      window.URL.revokeObjectURL(url))}
     } catch (error) {
-      alert('Error al descargar el contrato');
-      console.error(error);
+      alert('Error al descargar el contrato'))}
+      console.error(error))}
     }
   };
 
@@ -215,26 +211,7 @@ function Contratos() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
               />
             </div>
-            <select 
-              value={estadoPagoFiltro}
-              onChange={(e) => setEstadoPagoFiltro(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-            >
-              <option value="">Estado de Pago</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="parcial">Parcial</option>
-              <option value="pagado">Pagado</option>
-            </select>
-            <select 
-              value={estadoContratoFiltro}
-              onChange={(e) => setEstadoContratoFiltro(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-            >
-              <option value="">Estado</option>
-              <option value="activo">Activo</option>
-              <option value="completado">Completado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
+            {/* ELIMINADOS: Selects de Estado de Pago y Estado */}
           </div>
           {/* Filtros de fecha del evento */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -249,10 +226,10 @@ function Contratos() {
               <select
                 value={filtroDias}
                 onChange={(e) => {
-                  setFiltroDias(e.target.value);
+                  setFiltroDias(e.target.value))}
                   if (e.target.value === 'todos') {
-                    setFechaDesde('');
-                    setFechaHasta('');
+                    setFechaDesde(''))}
+                    setFechaHasta(''))}
                   }
                 }}
                 className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm bg-white"
@@ -272,8 +249,8 @@ function Contratos() {
                 type="date"
                 value={fechaDesde}
                 onChange={(e) => {
-                  setFechaDesde(e.target.value);
-                  setFiltroDias('personalizado');
+                  setFechaDesde(e.target.value))}
+                  setFiltroDias('personalizado'))}
                 }}
                 className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
               />
@@ -284,8 +261,8 @@ function Contratos() {
                 type="date"
                 value={fechaHasta}
                 onChange={(e) => {
-                  setFechaHasta(e.target.value);
-                  setFiltroDias('personalizado');
+                  setFechaHasta(e.target.value))}
+                  setFiltroDias('personalizado'))}
                 }}
                 className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
               />
@@ -293,9 +270,9 @@ function Contratos() {
             {(fechaDesde || fechaHasta) && (
               <button
                 onClick={() => {
-                  setFechaDesde('');
-                  setFechaHasta('');
-                  setFiltroDias('30'); // Volver al valor por defecto
+                  setFechaDesde(''))}
+                  setFechaHasta(''))}
+                  setFiltroDias('30'))} // Volver al valor por defecto
                 }}
                 className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
               >
@@ -325,12 +302,12 @@ function Contratos() {
             <FileCheck className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {searchTerm || estadoPagoFiltro || estadoContratoFiltro || fechaDesde || fechaHasta ? 'No se encontraron contratos' : 'No hay contratos'}
+            {searchTerm || fechaDesde || fechaHasta ? 'No se encontraron contratos' : 'No hay contratos'}
           </h3>
           <p className="text-gray-600 mb-6">
-            {searchTerm || estadoPagoFiltro || estadoContratoFiltro || fechaDesde || fechaHasta ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
+            {searchTerm || fechaDesde || fechaHasta ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
           </p>
-          {!searchTerm && !estadoPagoFiltro && !estadoContratoFiltro && !fechaDesde && !fechaHasta && (
+          {!searchTerm && !fechaDesde && !fechaHasta && (
             <Link
               to="/ofertas"
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -341,17 +318,7 @@ function Contratos() {
         </div>
       ) : (
         <div className="space-y-4">
-          {contratos.map((contrato) => {
-            // Debug: verificar datos del salón
-            console.log('🔍 Contrato salón data:', {
-              id: contrato.id,
-              codigo: contrato.codigo_contrato,
-              lugar_salon: contrato.lugar_salon,
-              salones: contrato.salones,
-              salon_id: contrato.salon_id,
-              tieneLugarSalon: !!contrato.lugar_salon,
-              tieneSalonesNombre: !!contrato.salones?.nombre
-            });
+          {contratos.map((contrato) => (
             return (
             <div
               key={contrato.id}
@@ -409,12 +376,12 @@ function Contratos() {
                               ? contrato.hora_fin.slice(0, 5) 
                               : contrato.hora_fin;
                             
-                            const inicio = new Date(`1970-01-01T${horaInicioStr}`);
-                            const fin = new Date(`1970-01-01T${horaFinStr}`);
+                            const inicio = new Date(`1970-01-01T${horaInicioStr}`))}
+                            const fin = new Date(`1970-01-01T${horaFinStr}`))}
                             
                             if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) return '';
                             
-                            let horas = (fin - inicio) / (1000 * 60 * 60);
+                            let horas = (fin - inicio) / (1000 * 60 * 60))}
                             if (horas < 0) horas += 24;
                             return ` (${horas.toFixed(1)}h)`;
                           } catch (e) {
@@ -520,7 +487,7 @@ function Contratos() {
                 </div>
               </div>
             </div>
-            );
+            ))}
           })}
           
           {/* Observador para scroll infinito */}
@@ -542,7 +509,10 @@ function Contratos() {
         </div>
       )}
     </div>
-  );
+  ))}
 }
 
 export default Contratos;
+
+
+

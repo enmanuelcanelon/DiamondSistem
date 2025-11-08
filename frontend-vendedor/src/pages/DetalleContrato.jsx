@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -21,11 +21,11 @@ import {
   EyeOff,
   Mail,
 } from 'lucide-react';
-import api from '@shared/config/api';
-import { formatearHora } from '@shared/utils/formatters';
-import { generarNombreEvento, getEventoEmoji } from '@utils/eventNames';
-import ModalConfirmacionPago from '@components/ModalConfirmacionPago';
-import ModalAnularPago from '@components/ModalAnularPago';
+import api from '../config/api';
+import { formatearHora, calcularDuracion } from '../utils/formatters';
+import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
+import ModalConfirmacionPago from '../components/ModalConfirmacionPago';
+import ModalAnularPago from '../components/ModalAnularPago';
 import toast, { Toaster } from 'react-hot-toast';
 
 function DetalleContrato() {
@@ -553,7 +553,19 @@ function DetalleContrato() {
                 <div>
                   <p className="text-sm text-gray-600">Horario</p>
                   <p className="font-medium">
-                    {formatearHora(contrato?.hora_inicio)} - {formatearHora(contrato?.hora_fin)}
+                    {formatearHora(contrato?.hora_inicio)} / {formatearHora(contrato?.hora_fin)}
+                    {(() => {
+                      const duracion = calcularDuracion(contrato?.hora_inicio, contrato?.hora_fin);
+                      if (duracion > 0) {
+                        const horasEnteras = Math.floor(duracion);
+                        const minutos = Math.round((duracion - horasEnteras) * 60);
+                        if (minutos > 0) {
+                          return ` • ${horasEnteras}h ${minutos}m`;
+                        }
+                        return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
+                      }
+                      return '';
+                    })()}
                   </p>
                 </div>
               </div>

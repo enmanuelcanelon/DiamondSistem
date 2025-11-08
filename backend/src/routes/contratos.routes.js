@@ -248,6 +248,11 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       throw new ValidationError('Solo se pueden crear contratos de ofertas aceptadas');
     }
 
+    // Validar que el total de la oferta no sea negativo
+    if (parseFloat(oferta.total_final) < 0) {
+      throw new ValidationError('No se puede crear un contrato con un total negativo. Por favor, ajusta el descuento de la oferta.');
+    }
+
     // Verificar que no exista un contrato para esta oferta
     const contratoExistente = await prisma.contratos.findFirst({
       where: { oferta_id: ofertaIdSanitizado }

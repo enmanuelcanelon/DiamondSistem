@@ -1,9 +1,9 @@
-﻿import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, MessageCircle, ArrowLeft } from 'lucide-react';
-import useAuthStore from '@shared/store/useAuthStore';
-import Chat from '@shared/components/Chat';
-import api from '@shared/config/api';
+import useAuthStore from '../store/useAuthStore';
+import Chat from '../components/Chat';
+import api from '../config/api';
 
 function ChatVendedor() {
   const { contratoId } = useParams();

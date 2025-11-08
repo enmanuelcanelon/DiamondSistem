@@ -5,15 +5,22 @@
 const rateLimit = require('express-rate-limit');
 
 // Rate limiting general para todas las rutas
+// Aumentado para permitir uso normal del sistema (dashboard, listas, etc.)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Máximo 100 requests por IP en 15 minutos
+  max: 500, // Máximo 500 requests por IP en 15 minutos (aumentado de 100)
   message: {
     error: 'Demasiadas solicitudes',
     message: 'Has excedido el límite de solicitudes. Por favor intenta más tarde.'
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Excluir rutas que tienen su propio rate limiter
+  skip: (req) => {
+    return req.path.startsWith('/api/mensajes') || 
+           req.path.startsWith('/api/fotos') ||
+           req.path.startsWith('/api/auth');
+  }
 });
 
 // Rate limiting estricto para autenticación (protección contra fuerza bruta)
@@ -57,10 +64,23 @@ const fotosLimiter = rateLimit({
   }
 });
 
+// Rate limiting muy permisivo para mensajes/chat (necesita polling frecuente)
+const mensajesLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 300, // Máximo 300 requests por minuto (muy permisivo para chat en tiempo real)
+  message: {
+    error: 'Demasiadas solicitudes de mensajes',
+    message: 'Has excedido el límite de solicitudes de mensajes. Por favor intenta más tarde.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   generalLimiter,
   authLimiter,
   createLimiter,
-  fotosLimiter
+  fotosLimiter,
+  mensajesLimiter
 };
 

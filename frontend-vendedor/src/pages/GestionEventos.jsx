@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
@@ -15,9 +15,9 @@ import {
   TrendingUp,
   MessageCircle,
 } from 'lucide-react';
-import useAuthStore from '@shared/store/useAuthStore';
-import api from '@shared/config/api';
-import { generarNombreEvento, getEventoEmoji } from '@utils/eventNames';
+import useAuthStore from '../store/useAuthStore';
+import api from '../config/api';
+import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
 
 function GestionEventos() {
   const { user } = useAuthStore();

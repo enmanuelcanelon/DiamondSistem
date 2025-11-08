@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Users, FileText, FileCheck, DollarSign, TrendingUp, Calendar, ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import api from '@shared/config/api';
-import useAuthStore from '@shared/store/useAuthStore';
+import api from '../config/api';
+import useAuthStore from '../store/useAuthStore';
 
 function Dashboard() {
   const { user } = useAuthStore();

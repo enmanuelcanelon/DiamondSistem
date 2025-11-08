@@ -1,7 +1,7 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { X, Save, Loader2, UserPlus } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@shared/config/api';
+import api from '../config/api';
 
 function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
   const queryClient = useQueryClient();

@@ -1,15 +1,19 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@shared/config/api';
-import ModalCrearCliente from '@components/ModalCrearCliente';
+import api from '../config/api';
+import ModalCrearCliente from '../components/ModalCrearCliente';
 
 function CrearOferta() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const clienteIdFromUrl = searchParams.get('cliente_id');
+  
+  // Estado para el wizard por pasos
+  const [pasoActual, setPasoActual] = useState(1);
+  const TOTAL_PASOS = 5;
 
   const [formData, setFormData] = useState({
     cliente_id: clienteIdFromUrl || '',
@@ -121,52 +125,79 @@ function CrearOferta() {
   };
 
   // Queries
-  const { data: clientes } = useQuery({
+  const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
     queryFn: async () => {
-      const response = await api.get('/clientes');
-      return response.data.clientes;
+      try {
+        const response = await api.get('/clientes');
+        // El endpoint retorna { data: [...], total, page, ... }
+        return response.data?.data || [];
+      } catch (error) {
+        console.error('Error al cargar clientes:', error);
+        return [];
+      }
     },
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 
   // Query para obtener salones
-  const { data: salones } = useQuery({
+  const { data: salones = [] } = useQuery({
     queryKey: ['salones'],
     queryFn: async () => {
-      const response = await api.get('/salones');
-      return response.data.salones;
+      try {
+        const response = await api.get('/salones');
+        return response.data?.salones || response.data?.data || [];
+      } catch (error) {
+        console.error('Error al cargar salones:', error);
+        return [];
+      }
     },
   });
 
   // Query para obtener paquetes según el salón seleccionado
-  const { data: paquetes } = useQuery({
+  const { data: paquetes = [] } = useQuery({
     queryKey: ['paquetes-salon', formData.salon_id],
     queryFn: async () => {
-      if (!formData.salon_id) {
-        // Si no hay salón, obtener todos los paquetes
-        const response = await api.get('/paquetes');
-        return response.data.paquetes;
+      try {
+        if (!formData.salon_id) {
+          // Si no hay salón, obtener todos los paquetes
+          const response = await api.get('/paquetes');
+          return response.data?.paquetes || response.data?.data || [];
+        }
+        // Si hay salón, obtener paquetes de ese salón con precios personalizados
+        const response = await api.get(`/salones/${formData.salon_id}/paquetes`);
+        return response.data?.paquetes || response.data?.data || [];
+      } catch (error) {
+        console.error('Error al cargar paquetes:', error);
+        return [];
       }
-      // Si hay salón, obtener paquetes de ese salón con precios personalizados
-      const response = await api.get(`/salones/${formData.salon_id}/paquetes`);
-      return response.data.paquetes;
     },
     enabled: true,
   });
 
-  const { data: temporadas } = useQuery({
+  const { data: temporadas = [] } = useQuery({
     queryKey: ['temporadas'],
     queryFn: async () => {
-      const response = await api.get('/temporadas');
-      return response.data.temporadas;
+      try {
+        const response = await api.get('/temporadas');
+        return response.data?.temporadas || response.data?.data || [];
+      } catch (error) {
+        console.error('Error al cargar temporadas:', error);
+        return [];
+      }
     },
   });
 
-  const { data: servicios } = useQuery({
+  const { data: servicios = [] } = useQuery({
     queryKey: ['servicios'],
     queryFn: async () => {
-      const response = await api.get('/servicios');
-      return response.data.servicios;
+      try {
+        const response = await api.get('/servicios');
+        return response.data?.servicios || response.data?.data || [];
+      } catch (error) {
+        console.error('Error al cargar servicios:', error);
+        return [];
+      }
     },
   });
 
@@ -174,8 +205,13 @@ function CrearOferta() {
   const { data: paqueteDetalle } = useQuery({
     queryKey: ['paquete', formData.paquete_id],
     queryFn: async () => {
-      const response = await api.get(`/paquetes/${formData.paquete_id}`);
-      return response.data.paquete;
+      try {
+        const response = await api.get(`/paquetes/${formData.paquete_id}`);
+        return response.data?.paquete || null;
+      } catch (error) {
+        console.error('Error al cargar detalles del paquete:', error);
+        return null;
+      }
     },
     enabled: !!formData.paquete_id,
   });
@@ -357,8 +393,8 @@ function CrearOferta() {
         salon_id: formData.salon_id ? parseInt(formData.salon_id) : null,
         fecha_evento: formData.fecha_evento,
         cantidad_invitados: parseInt(formData.cantidad_invitados),
-        precio_base_ajustado: precioBaseAjustado ? parseFloat(precioBaseAjustado) : null,
-        ajuste_temporada_custom: ajusteTemporadaCustom ? parseFloat(ajusteTemporadaCustom) : null,
+        precio_base_ajustado: precioBaseAjustado && precioBaseAjustado !== '' ? parseFloat(precioBaseAjustado) : null,
+        ajuste_temporada_custom: ajusteTemporadaCustom && ajusteTemporadaCustom !== '' ? parseFloat(ajusteTemporadaCustom) : null,
         servicios_adicionales: serviciosSeleccionados
           .filter(s => s.servicio_id)
           .map(s => ({
@@ -689,9 +725,13 @@ function CrearOferta() {
       homenajeado: formData.homenajeado || null,
       descuento: parseFloat(formData.descuento_porcentaje) || 0,
       notas_vendedor: formData.notas_internas || null,
+      // Incluir ajustes personalizados para que el backend los use al calcular
+      precio_base_ajustado: precioBaseAjustado && precioBaseAjustado !== '' ? parseFloat(precioBaseAjustado) : null,
+      ajuste_temporada_custom: ajusteTemporadaCustom && ajusteTemporadaCustom !== '' ? parseFloat(ajusteTemporadaCustom) : null,
       servicios_adicionales: serviciosSeleccionados.map(s => ({
         servicio_id: parseInt(s.servicio_id),
         cantidad: parseInt(s.cantidad),
+        precio_ajustado: s.precio_ajustado ? parseFloat(s.precio_ajustado) : null,
         opcion_seleccionada: s.opcion_seleccionada || null,
       })).filter(s => s.servicio_id),
     };
@@ -704,6 +744,236 @@ function CrearOferta() {
     setMostrarModalCapacidad(false);
     enviarOferta();
   };
+
+  // ============================================
+  // FUNCIONES DE VALIDACIÓN POR PASO
+  // ============================================
+
+  // Validar Paso 1: Información del Cliente
+  const validarPaso1 = () => {
+    if (!formData.cliente_id || formData.cliente_id === '') {
+      alert('⚠️ Por favor, selecciona un cliente antes de continuar.');
+      return false;
+    }
+    return true;
+  };
+
+  // Validar Paso 2: Detalles del Evento
+  const validarPaso2 = () => {
+    if (!formData.fecha_evento) {
+      alert('⚠️ Por favor, selecciona la fecha del evento.');
+      return false;
+    }
+
+    // Validar que la fecha no sea pasada
+    const fechaSeleccionada = new Date(formData.fecha_evento);
+    const fechaHoy = new Date();
+    fechaHoy.setHours(0, 0, 0, 0);
+
+    if (fechaSeleccionada < fechaHoy) {
+      setErrorFecha('No se puede seleccionar una fecha pasada. Por favor, elige una fecha presente o futura.');
+      alert('⚠️ No se puede seleccionar una fecha pasada.');
+      return false;
+    }
+
+    if (!formData.cantidad_invitados || parseInt(formData.cantidad_invitados) < 1) {
+      alert('⚠️ Por favor, ingresa la cantidad de invitados.');
+      return false;
+    }
+
+    if (!formData.hora_inicio) {
+      alert('⚠️ Por favor, selecciona la hora de inicio del evento.');
+      return false;
+    }
+
+    if (!formData.hora_fin) {
+      alert('⚠️ Por favor, selecciona la hora de fin del evento.');
+      return false;
+    }
+
+    // Validar horarios
+    const errorHorarios = validarHorarios(formData.hora_inicio, formData.hora_fin);
+    if (errorHorarios) {
+      setErrorHorario(errorHorarios);
+      alert(`⚠️ ${errorHorarios}`);
+      return false;
+    }
+
+    if (!formData.salon_id || formData.salon_id === '') {
+      alert('⚠️ Por favor, selecciona un lugar para el evento.');
+      return false;
+    }
+
+    if (formData.salon_id === 'otro' && !lugarPersonalizado.trim()) {
+      alert('⚠️ Por favor, especifica el lugar del evento (sede externa).');
+      return false;
+    }
+
+    return true;
+  };
+
+  // Validar Paso 3: Paquete y Temporada
+  const validarPaso3 = () => {
+    if (!formData.paquete_id || formData.paquete_id === '') {
+      alert('⚠️ Por favor, selecciona un paquete antes de continuar.');
+      return false;
+    }
+
+    // Validar que se hayan agregado las horas extras necesarias
+    const { necesarias } = calcularHorasExtras();
+    if (necesarias > 0) {
+      const horaExtraServicio = servicios?.find(s => s.nombre === 'Hora Extra');
+      if (horaExtraServicio) {
+        const cantidadAgregada = serviciosSeleccionados.find(
+          s => s.servicio_id === horaExtraServicio.id
+        )?.cantidad || 0;
+
+        const faltante = necesarias - cantidadAgregada;
+
+        if (faltante > 0) {
+          setHorasExtrasFaltantes(faltante);
+          setMostrarModalHorasExtras(true);
+          return false;
+        }
+      }
+    }
+
+    // Si excede la capacidad, mostrar modal de confirmación
+    if (excedeCapacidad) {
+      setMostrarModalCapacidad(true);
+      return false;
+    }
+
+    return true;
+  };
+
+  // Validar Paso 4: Servicios Adicionales (opcional, siempre válido)
+  const validarPaso4 = () => {
+    // Los servicios adicionales son opcionales, siempre es válido
+    return true;
+  };
+
+  // Validar Paso 5: Descuento (opcional, siempre válido)
+  const validarPaso5 = () => {
+    // El descuento es opcional, siempre es válido
+    return true;
+  };
+
+  // Función para validar el paso actual
+  const validarPasoActual = () => {
+    switch (pasoActual) {
+      case 1:
+        return validarPaso1();
+      case 2:
+        return validarPaso2();
+      case 3:
+        return validarPaso3();
+      case 4:
+        return validarPaso4();
+      case 5:
+        return validarPaso5();
+      default:
+        return false;
+    }
+  };
+
+  // Función para avanzar al siguiente paso
+  const avanzarPaso = () => {
+    if (validarPasoActual()) {
+      if (pasoActual < TOTAL_PASOS) {
+        setPasoActual(pasoActual + 1);
+        // Scroll al inicio del formulario
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        // Si estamos en el último paso, enviar el formulario
+        handleSubmitFinal();
+      }
+    }
+  };
+
+  // Función para retroceder al paso anterior
+  const retrocederPaso = () => {
+    if (pasoActual > 1) {
+      setPasoActual(pasoActual - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Función para ir directamente a un paso (solo si los pasos anteriores están completos)
+  const irAPaso = (paso) => {
+    // Validar que todos los pasos anteriores estén completos
+    for (let i = 1; i < paso; i++) {
+      let pasoValido = false;
+      switch (i) {
+        case 1:
+          pasoValido = formData.cliente_id !== '';
+          break;
+        case 2:
+          pasoValido = formData.fecha_evento !== '' && 
+                      formData.cantidad_invitados !== '' && 
+                      formData.hora_inicio !== '' && 
+                      formData.hora_fin !== '' && 
+                      formData.salon_id !== '';
+          break;
+        case 3:
+          pasoValido = formData.paquete_id !== '';
+          break;
+        default:
+          pasoValido = true;
+      }
+      
+      if (!pasoValido) {
+        alert(`⚠️ Debes completar el paso ${i} antes de ir al paso ${paso}.`);
+        return;
+      }
+    }
+    
+    setPasoActual(paso);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Función para enviar el formulario final (desde el último paso)
+  const handleSubmitFinal = () => {
+    // Validar todo antes de enviar
+    if (!validarPaso1() || !validarPaso2() || !validarPaso3()) {
+      alert('⚠️ Por favor, completa todos los pasos obligatorios antes de crear la oferta.');
+      return;
+    }
+
+    // Si todo está bien, enviar
+    enviarOferta();
+  };
+
+  // Función para verificar si un paso está completo
+  const pasoCompleto = (paso) => {
+    switch (paso) {
+      case 1:
+        return formData.cliente_id !== '';
+      case 2:
+        return formData.fecha_evento !== '' && 
+               formData.cantidad_invitados !== '' && 
+               formData.hora_inicio !== '' && 
+               formData.hora_fin !== '' && 
+               formData.salon_id !== '' &&
+               !errorFecha && !errorHorario;
+      case 3:
+        return formData.paquete_id !== '';
+      case 4:
+        return true; // Opcional
+      case 5:
+        return true; // Opcional
+      default:
+        return false;
+    }
+  };
+
+  const nombresPasos = [
+    'Información del Cliente',
+    'Detalles del Evento',
+    'Paquete y Temporada',
+    'Servicios Adicionales',
+    'Descuento'
+  ];
 
   return (
     <div className="space-y-6">
@@ -718,10 +988,53 @@ function CrearOferta() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Indicador de Progreso */}
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="flex items-center justify-between">
+          {[1, 2, 3, 4, 5].map((paso, index) => (
+            <div key={paso} className="flex items-center flex-1">
+              <div className="flex flex-col items-center flex-1">
+                <button
+                  type="button"
+                  onClick={() => irAPaso(paso)}
+                  className={`relative flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
+                    paso === pasoActual
+                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      : pasoCompleto(paso)
+                      ? 'bg-green-100 border-green-500 text-green-700'
+                      : paso < pasoActual
+                      ? 'bg-gray-100 border-gray-300 text-gray-500'
+                      : 'bg-white border-gray-300 text-gray-400'
+                  }`}
+                  disabled={paso > pasoActual && !pasoCompleto(paso - 1)}
+                >
+                  {pasoCompleto(paso) && paso !== pasoActual ? (
+                    <CheckCircle2 className="w-6 h-6" />
+                  ) : (
+                    <span className="font-semibold">{paso}</span>
+                  )}
+                </button>
+                <span className={`mt-2 text-xs font-medium text-center ${
+                  paso === pasoActual ? 'text-indigo-600' : 'text-gray-500'
+                }`}>
+                  {nombresPasos[paso - 1]}
+                </span>
+              </div>
+              {index < 4 && (
+                <div className={`flex-1 h-0.5 mx-2 ${
+                  pasoCompleto(paso) ? 'bg-green-500' : 'bg-gray-200'
+                }`} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <form onSubmit={(e) => { e.preventDefault(); handleSubmitFinal(); }} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Formulario */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Información del Cliente */}
+          {/* PASO 1: Información del Cliente */}
+          {pasoActual === 1 && (
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Información del Cliente</h2>
             <div className="space-y-4">
@@ -757,8 +1070,10 @@ function CrearOferta() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Detalles del Evento */}
+          {/* PASO 2: Detalles del Evento */}
+          {pasoActual === 2 && (
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Detalles del Evento</h2>
             
@@ -924,8 +1239,11 @@ function CrearOferta() {
 
             </div>
           </div>
+          )}
 
-          {/* Paquete y Temporada */}
+          {/* PASO 3: Paquete y Temporada */}
+          {pasoActual === 3 && (
+          <>
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Paquete y Temporada</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1211,8 +1529,11 @@ function CrearOferta() {
               </div>
             </div>
           )}
+          </>
+          )}
 
-          {/* Servicios Adicionales */}
+          {/* PASO 4: Servicios Adicionales */}
+          {pasoActual === 4 && (
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Servicios Adicionales</h2>
             
@@ -1514,8 +1835,10 @@ function CrearOferta() {
               </div>
             )}
           </div>
+          )}
 
-          {/* Descuento */}
+          {/* PASO 5: Descuento */}
+          {pasoActual === 5 && (
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Descuento</h2>
             <div className="space-y-4">
@@ -1530,6 +1853,13 @@ function CrearOferta() {
                   onChange={(e) => {
                     const valor = parseFloat(e.target.value) || 0;
                     const subtotal = precioCalculado?.desglose?.subtotalBase || 0;
+                    
+                    // Validar que el descuento no exceda el subtotal base
+                    if (valor > subtotal) {
+                      alert(`❌ El descuento no puede ser mayor que el subtotal base ($${subtotal.toLocaleString()}). El total no puede ser negativo.`);
+                      return;
+                    }
+                    
                     const porcentajeDescuento = subtotal > 0 ? (valor / subtotal) * 100 : 0;
                     
                     if (porcentajeDescuento > 22) {
@@ -1543,12 +1873,19 @@ function CrearOferta() {
                   }}
                   min="0"
                   step="0.01"
+                  max={precioCalculado?.desglose?.subtotalBase || 0}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                   placeholder="0.00"
                 />
+                {precioCalculado?.desglose?.subtotalBase && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Descuento máximo permitido: ${precioCalculado.desglose.subtotalBase.toLocaleString()}
+                  </p>
+                )}
               </div>
             </div>
           </div>
+          )}
 
           {/* Error Message */}
           {mutation.isError && (
@@ -1559,25 +1896,48 @@ function CrearOferta() {
             </div>
           )}
 
-          {/* Botones */}
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Creando oferta...
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  Crear Oferta
-                </>
-              )}
-            </button>
+          {/* Botones de Navegación del Wizard */}
+          <div className="flex gap-3 pt-4 border-t">
+            {pasoActual > 1 && (
+              <button
+                type="button"
+                onClick={retrocederPaso}
+                className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+              >
+                <ChevronLeft className="w-5 h-5" />
+                Anterior
+              </button>
+            )}
+            <div className="flex-1" />
+            {pasoActual < TOTAL_PASOS ? (
+              <button
+                type="button"
+                onClick={avanzarPaso}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+              >
+                Siguiente
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmitFinal}
+                disabled={mutation.isPending}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Creando oferta...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Crear Oferta
+                  </>
+                )}
+              </button>
+            )}
             <Link
               to="/ofertas"
               className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"

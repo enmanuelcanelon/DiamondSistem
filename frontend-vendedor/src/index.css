@@ -1,3 +1,74 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Aumentar tamaño de fuente base para mejor legibilidad */
+@layer base {
+  html {
+    font-size: 16px; /* Tamaño base aumentado */
+  }
+  
+  body {
+    font-size: 1rem; /* 16px base */
+    line-height: 1.6;
+  }
+  
+  /* Aumentar tamaños de texto pequeños */
+  .text-xs {
+    font-size: 0.875rem !important; /* 14px en lugar de 12px */
+    line-height: 1.5;
+  }
+  
+  .text-sm {
+    font-size: 1rem !important; /* 16px en lugar de 14px */
+    line-height: 1.5;
+  }
+  
+  .text-base {
+    font-size: 1.125rem !important; /* 18px en lugar de 16px */
+    line-height: 1.6;
+  }
+  
+  .text-lg {
+    font-size: 1.25rem !important; /* 20px en lugar de 18px */
+    line-height: 1.6;
+  }
+  
+  .text-xl {
+    font-size: 1.5rem !important; /* 24px en lugar de 20px */
+    line-height: 1.6;
+  }
+  
+  .text-2xl {
+    font-size: 1.875rem !important; /* 30px en lugar de 24px */
+    line-height: 1.5;
+  }
+  
+  .text-3xl {
+    font-size: 2.25rem !important; /* 36px en lugar de 30px */
+    line-height: 1.4;
+  }
+  
+  /* Aumentar tamaños de inputs y labels */
+  input, textarea, select {
+    font-size: 1rem !important; /* 16px */
+  }
+  
+  label {
+    font-size: 1rem !important; /* 16px */
+  }
+  
+  button {
+    font-size: 1rem !important; /* 16px */
+  }
+  
+  /* Aumentar tamaño de tablas */
+  table {
+    font-size: 1rem !important; /* 16px */
+  }
+  
+  th, td {
+    font-size: 1rem !important; /* 16px */
+    padding: 0.75rem !important;
+  }
+}

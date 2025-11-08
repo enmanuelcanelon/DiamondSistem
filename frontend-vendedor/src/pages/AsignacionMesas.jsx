@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -14,8 +14,8 @@ import {
   Table,
   Eye,
 } from 'lucide-react';
-import api from '@shared/config/api';
-import useAuthStore from '@shared/store/useAuthStore';
+import api from '../config/api';
+import useAuthStore from '../store/useAuthStore';
 
 function AsignacionMesas() {
   const { id: contratoId } = useParams();
@@ -476,6 +476,3 @@ function AsignacionMesas() {
 }
 
 export default AsignacionMesas;
-
-
-

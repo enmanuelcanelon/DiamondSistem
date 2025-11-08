@@ -1,9 +1,9 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, ChevronLeft, ChevronRight, Clock, Users, MapPin, DollarSign, Loader2 } from 'lucide-react';
-import api from '@shared/config/api';
-import useAuthStore from '@shared/store/useAuthStore';
+import api from '../config/api';
+import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
 function CalendarioMensual() {

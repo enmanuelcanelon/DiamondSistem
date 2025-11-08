@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,7 +12,7 @@ import {
   FileText,
   AlertCircle,
 } from 'lucide-react';
-import api from '@shared/config/api';
+import api from '../config/api';
 
 function DetalleSolicitud() {
   const { id } = useParams();

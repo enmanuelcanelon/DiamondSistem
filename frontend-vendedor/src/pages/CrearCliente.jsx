@@ -1,8 +1,8 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@shared/config/api';
+import api from '../config/api';
 
 function CrearCliente() {
   const navigate = useNavigate();

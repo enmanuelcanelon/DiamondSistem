@@ -73,7 +73,7 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
     }
 
     // Si se proporcionó un precio base ajustado manualmente, usarlo (tiene prioridad)
-    if (precio_base_ajustado && parseFloat(precio_base_ajustado) > 0) {
+    if (precio_base_ajustado && precio_base_ajustado !== '' && parseFloat(precio_base_ajustado) > 0) {
       paquete = {
         ...paquete,
         precio_base: parseFloat(precio_base_ajustado)
@@ -92,11 +92,14 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
     }
 
     // Si se proporcionó un ajuste de temporada personalizado, usarlo
-    if (ajuste_temporada_custom !== null && ajuste_temporada_custom !== undefined) {
-      temporada = {
-        ...temporada,
-        ajuste_precio: parseFloat(ajuste_temporada_custom)
-      };
+    if (ajuste_temporada_custom !== null && ajuste_temporada_custom !== undefined && ajuste_temporada_custom !== '') {
+      const ajusteCustom = parseFloat(ajuste_temporada_custom);
+      if (!isNaN(ajusteCustom)) {
+        temporada = {
+          ...temporada,
+          ajuste_precio: ajusteCustom
+        };
+      }
     }
 
     // Obtener servicios adicionales con sus datos
@@ -114,13 +117,13 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
         const servicioRequest = servicios_adicionales.find(s => 
           (s.servicio_id || s.id) === servicio.id
         );
-        
+        // Si hay precio_ajustado (incluso si es 0), usarlo; si no, usar precio_unitario o precio_base
+        const precioUnitario = servicioRequest?.precio_ajustado !== null && servicioRequest?.precio_ajustado !== undefined
+          ? parseFloat(servicioRequest.precio_ajustado)
+          : (servicioRequest?.precio_unitario || parseFloat(servicio.precio_base));
         return {
           ...servicio,
-          // Si hay precio ajustado, usarlo; si no, usar el precio base original
-          precio_base: servicioRequest?.precio_ajustado 
-            ? parseFloat(servicioRequest.precio_ajustado)
-            : servicio.precio_base,
+          precio_unitario: precioUnitario, // Usar precio_unitario para que calcularPrecioServicio lo use
           cantidad: servicioRequest?.cantidad || 1
         };
       });
@@ -134,14 +137,28 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
     });
 
     // Calcular precio total
-    const calculo = calcularPrecioTotal({
-      paquete,
-      temporada,
-      serviciosAdicionales: servicios,
-      cantidadInvitados: parseInt(cantidad_invitados),
-      descuento: parseFloat(descuento) || 0,
-      configuracion
-    });
+    let calculo;
+    try {
+      calculo = calcularPrecioTotal({
+        paquete,
+        temporada,
+        serviciosAdicionales: servicios,
+        cantidadInvitados: parseInt(cantidad_invitados),
+        descuento: parseFloat(descuento) || 0,
+        configuracion
+      });
+    } catch (error) {
+      // Si el error es sobre descuento/total negativo, lanzar ValidationError
+      if (error.message.includes('descuento') || error.message.includes('negativo')) {
+        throw new ValidationError(error.message);
+      }
+      throw error;
+    }
+    
+    // Validación adicional: asegurar que el total final no sea negativo
+    if (calculo.desglose.totalFinal < 0) {
+      throw new ValidationError(`El total final no puede ser negativo. Descuento máximo permitido: $${calculo.desglose.subtotalBase.toFixed(2)}`);
+    }
 
     res.json({
       success: true,
@@ -344,15 +361,34 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       }
     }
 
+    // Si se proporcionó un precio base ajustado manualmente, usarlo (tiene prioridad)
+    if (datos.precio_base_ajustado && parseFloat(datos.precio_base_ajustado) > 0) {
+      paquete = {
+        ...paquete,
+        precio_base: parseFloat(datos.precio_base_ajustado)
+      };
+    }
+
     // Obtener temporadas y determinar la temporada
     const temporadas = await prisma.temporadas.findMany({
       where: { activo: true }
     });
 
-    const temporada = getTemporadaByMes(new Date(datos.fecha_evento), temporadas);
+    let temporada = getTemporadaByMes(new Date(datos.fecha_evento), temporadas);
 
     if (!temporada) {
       throw new ValidationError('No se pudo determinar la temporada');
+    }
+
+    // Aplicar ajuste de temporada personalizado si se proporcionó
+    if (datos.ajuste_temporada_custom !== null && datos.ajuste_temporada_custom !== undefined && datos.ajuste_temporada_custom !== '') {
+      const ajusteCustom = parseFloat(datos.ajuste_temporada_custom);
+      if (!isNaN(ajusteCustom)) {
+        temporada = {
+          ...temporada,
+          ajuste_precio: ajusteCustom
+        };
+      }
     }
 
     // Obtener servicios adicionales
@@ -366,15 +402,18 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         }
       });
 
-      servicios = serviciosData.map(servicio => ({
-        ...servicio,
-        cantidad: datos.servicios_adicionales.find(s => 
+      servicios = serviciosData.map(servicio => {
+        const servicioInput = datos.servicios_adicionales.find(s => 
           (s.servicio_id || s.id) === servicio.id
-        )?.cantidad || 1,
-        precio_unitario: datos.servicios_adicionales.find(s => 
-          (s.servicio_id || s.id) === servicio.id
-        )?.precio_unitario || servicio.precio_base
-      }));
+        );
+        return {
+          ...servicio,
+          cantidad: servicioInput?.cantidad || 1,
+          precio_unitario: (servicioInput?.precio_ajustado !== null && servicioInput?.precio_ajustado !== undefined)
+            ? parseFloat(servicioInput.precio_ajustado)
+            : (servicioInput?.precio_unitario || parseFloat(servicio.precio_base))
+        };
+      });
     }
 
     // Obtener configuración
@@ -385,14 +424,28 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     });
 
     // Calcular precio total
-    const calculo = calcularPrecioTotal({
-      paquete,
-      temporada,
-      serviciosAdicionales: servicios,
-      cantidadInvitados: parseInt(datos.cantidad_invitados),
-      descuento: parseFloat(datos.descuento || datos.descuento_porcentaje) || 0,
-      configuracion
-    });
+    let calculo;
+    try {
+      calculo = calcularPrecioTotal({
+        paquete,
+        temporada,
+        serviciosAdicionales: servicios,
+        cantidadInvitados: parseInt(datos.cantidad_invitados),
+        descuento: parseFloat(datos.descuento || datos.descuento_porcentaje) || 0,
+        configuracion
+      });
+    } catch (error) {
+      // Si el error es sobre descuento/total negativo, lanzar ValidationError
+      if (error.message.includes('descuento') || error.message.includes('negativo')) {
+        throw new ValidationError(error.message);
+      }
+      throw error;
+    }
+    
+    // Validación adicional: asegurar que el total final no sea negativo
+    if (calculo.desglose.totalFinal < 0) {
+      throw new ValidationError(`El total final no puede ser negativo. Descuento máximo permitido: $${calculo.desglose.subtotalBase.toFixed(2)}`);
+    }
 
     // Generar código de oferta
     const ultimaOferta = await prisma.ofertas.findFirst({
@@ -416,11 +469,13 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
            hora_fin: new Date(`1970-01-01T${datos.hora_fin || '23:00'}:00Z`),
            cantidad_invitados: parseInt(datos.cantidad_invitados),
            lugar_evento: datos.lugar_evento || null,
-           lugar_salon: datos.lugar_evento || null,
-           homenajeado: datos.homenajeado || null,
-           temporada_id: temporada.id,
+          lugar_salon: datos.lugar_evento || null,
+          homenajeado: datos.homenajeado || null,
+          temporada_id: temporada.id,
           precio_paquete_base: parseFloat(calculo.desglose.paquete.precioBase),
+          precio_base_ajustado: datos.precio_base_ajustado && datos.precio_base_ajustado !== '' ? parseFloat(datos.precio_base_ajustado) : null,
           ajuste_temporada: parseFloat(calculo.desglose.paquete.ajusteTemporada),
+          ajuste_temporada_custom: datos.ajuste_temporada_custom && datos.ajuste_temporada_custom !== '' ? parseFloat(datos.ajuste_temporada_custom) : null,
           subtotal_servicios: parseFloat(calculo.desglose.serviciosAdicionales.subtotal),
           subtotal: parseFloat(calculo.desglose.subtotalBase),
           descuento: parseFloat(datos.descuento) || 0,
@@ -525,7 +580,28 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
       throw new NotFoundError('Paquete no encontrado');
     }
 
-    // Aplicar precio base ajustado si se proporcionó
+    // Si hay salon_id, obtener el precio del paquete para ese salón
+    if (datos.salon_id) {
+      const paqueteSalon = await prisma.paquetes_salones.findFirst({
+        where: {
+          paquete_id: parseInt(datos.paquete_id),
+          salon_id: parseInt(datos.salon_id)
+        }
+      });
+
+      if (paqueteSalon && paqueteSalon.disponible) {
+        // Usar el precio del salón en lugar del precio base del paquete
+        paquete = {
+          ...paquete,
+          precio_base: parseFloat(paqueteSalon.precio_base),
+          invitados_minimo: paqueteSalon.invitados_minimo
+        };
+      } else if (paqueteSalon && !paqueteSalon.disponible) {
+        throw new ValidationError('Este paquete no está disponible en el salón seleccionado');
+      }
+    }
+
+    // Si se proporcionó un precio base ajustado manualmente, usarlo (tiene prioridad)
     if (datos.precio_base_ajustado && parseFloat(datos.precio_base_ajustado) > 0) {
       paquete = {
         ...paquete,
@@ -545,11 +621,14 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
     }
 
     // Aplicar ajuste de temporada personalizado si se proporcionó
-    if (datos.ajuste_temporada_custom !== null && datos.ajuste_temporada_custom !== undefined) {
-      temporada = {
-        ...temporada,
-        ajuste_precio: parseFloat(datos.ajuste_temporada_custom)
-      };
+    if (datos.ajuste_temporada_custom !== null && datos.ajuste_temporada_custom !== undefined && datos.ajuste_temporada_custom !== '') {
+      const ajusteCustom = parseFloat(datos.ajuste_temporada_custom);
+      if (!isNaN(ajusteCustom)) {
+        temporada = {
+          ...temporada,
+          ajuste_precio: ajusteCustom
+        };
+      }
     }
 
     // Obtener servicios adicionales
@@ -570,7 +649,9 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
         return {
           ...servicio,
           cantidad: servicioInput?.cantidad || 1,
-          precio_unitario: servicioInput?.precio_ajustado || servicioInput?.precio_unitario || servicio.precio_base
+          precio_unitario: (servicioInput?.precio_ajustado !== null && servicioInput?.precio_ajustado !== undefined)
+            ? parseFloat(servicioInput.precio_ajustado)
+            : (servicioInput?.precio_unitario || parseFloat(servicio.precio_base))
         };
       });
     }
@@ -583,14 +664,28 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
     });
 
     // Calcular precio total
-    const calculo = calcularPrecioTotal({
-      paquete,
-      temporada,
-      serviciosAdicionales: servicios,
-      cantidadInvitados: parseInt(datos.cantidad_invitados),
-      descuento: parseFloat(datos.descuento || datos.descuento_porcentaje) || 0,
-      configuracion
-    });
+    let calculo;
+    try {
+      calculo = calcularPrecioTotal({
+        paquete,
+        temporada,
+        serviciosAdicionales: servicios,
+        cantidadInvitados: parseInt(datos.cantidad_invitados),
+        descuento: parseFloat(datos.descuento || datos.descuento_porcentaje) || 0,
+        configuracion
+      });
+    } catch (error) {
+      // Si el error es sobre descuento/total negativo, lanzar ValidationError
+      if (error.message.includes('descuento') || error.message.includes('negativo')) {
+        throw new ValidationError(error.message);
+      }
+      throw error;
+    }
+    
+    // Validación adicional: asegurar que el total final no sea negativo
+    if (calculo.desglose.totalFinal < 0) {
+      throw new ValidationError(`El total final no puede ser negativo. Descuento máximo permitido: $${calculo.desglose.subtotalBase.toFixed(2)}`);
+    }
 
     // Actualizar oferta en transacción
     const oferta = await prisma.$transaction(async (prisma) => {
@@ -608,7 +703,9 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
           homenajeado: datos.homenajeado || null,
           temporada_id: temporada.id,
           precio_paquete_base: parseFloat(calculo.desglose.paquete.precioBase),
+          precio_base_ajustado: datos.precio_base_ajustado && datos.precio_base_ajustado !== '' ? parseFloat(datos.precio_base_ajustado) : null,
           ajuste_temporada: parseFloat(calculo.desglose.paquete.ajusteTemporada),
+          ajuste_temporada_custom: datos.ajuste_temporada_custom && datos.ajuste_temporada_custom !== '' ? parseFloat(datos.ajuste_temporada_custom) : null,
           subtotal_servicios: parseFloat(calculo.desglose.serviciosAdicionales.subtotal),
           subtotal: parseFloat(calculo.desglose.subtotalBase),
           descuento: parseFloat(datos.descuento) || 0,
@@ -687,6 +784,17 @@ router.put('/:id/aceptar', authenticate, requireVendedor, async (req, res, next)
       data: {
         estado: 'aceptada',
         fecha_respuesta: new Date()
+      },
+      include: {
+        clientes: true,
+        paquetes: true,
+        temporadas: true,
+        salones: true,
+        ofertas_servicios_adicionales: {
+          include: {
+            servicios: true
+          }
+        }
       }
     });
 

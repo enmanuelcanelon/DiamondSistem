@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Loader2, Diamond, Eye, EyeOff } from 'lucide-react';
-import useAuthStore from '@shared/store/useAuthStore';
+import useAuthStore from '../store/useAuthStore';
 
 function Login() {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ function Login() {
               <Diamond className="w-12 h-12 text-white" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">DiamondSistem</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Party Venue</h1>
           <p className="text-gray-600">Generador de Contratos</p>
         </div>
 
@@ -129,7 +129,7 @@ function Login() {
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-600 mt-8">
-          © 2025 DiamondSistem. Todos los derechos reservados.
+          © 2025 Party Venue. Todos los derechos reservados.
         </p>
       </div>
     </div>

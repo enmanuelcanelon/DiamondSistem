@@ -1,10 +1,10 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Filter, Edit2, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import api from '@shared/config/api';
-import { formatearHora } from '@shared/utils/formatters';
-import ModalPlanPago from '@components/ModalPlanPago';
+import api from '../config/api';
+import { formatearHora, calcularDuracion } from '../utils/formatters';
+import ModalPlanPago from '../components/ModalPlanPago';
 
 function Ofertas() {
   const queryClient = useQueryClient();
@@ -100,13 +100,30 @@ function Ofertas() {
   const aceptarMutation = useMutation({
     mutationFn: async (oferta) => {
       const response = await api.put(`/ofertas/${oferta.id}/aceptar`);
-      return { ...response.data, oferta };
+      // Usar la oferta actualizada del backend, no la original
+      return { ...response.data, oferta: response.data.oferta || oferta };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries(['ofertas']);
+      // NO invalidar queries antes de abrir el modal para evitar que se recargue la lista
+      // y se pierda el objeto de oferta actualizado
+      // queryClient.invalidateQueries(['ofertas']);
+      
       // Abrir automáticamente el modal de plan de pago
-      setOfertaSeleccionada(data.oferta);
+      // Asegurarse de usar la oferta actualizada con el total_final correcto
+      const ofertaActualizada = data.oferta;
+      
+      // Asegurarse de que el total_final sea un número
+      if (ofertaActualizada && ofertaActualizada.total_final) {
+        ofertaActualizada.total_final = parseFloat(ofertaActualizada.total_final);
+      }
+      
+      setOfertaSeleccionada(ofertaActualizada);
       setModalPlanPagoOpen(true);
+      
+      // Invalidar queries después de abrir el modal
+      setTimeout(() => {
+        queryClient.invalidateQueries(['ofertas']);
+      }, 100);
     },
   });
 
@@ -387,31 +404,21 @@ function Ofertas() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
-                      {formatearHora(oferta.hora_inicio)} - {formatearHora(oferta.hora_fin)}
-                      {(() => {
-                        try {
-                          if (!oferta.hora_inicio || !oferta.hora_fin) return '';
-                          
-                          // Extraer solo HH:mm si viene en formato TIME completo
-                          const horaInicioStr = typeof oferta.hora_inicio === 'string' 
-                            ? oferta.hora_inicio.slice(0, 5) 
-                            : oferta.hora_inicio;
-                          const horaFinStr = typeof oferta.hora_fin === 'string' 
-                            ? oferta.hora_fin.slice(0, 5) 
-                            : oferta.hora_fin;
-                          
-                          const inicio = new Date(`1970-01-01T${horaInicioStr}`);
-                          const fin = new Date(`1970-01-01T${horaFinStr}`);
-                          
-                          if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) return '';
-                          
-                          let horas = (fin - inicio) / (1000 * 60 * 60);
-                          if (horas < 0) horas += 24;
-                          return ` (${horas.toFixed(1)}h)`;
-                        } catch (e) {
+                      <span className="font-medium">
+                        {formatearHora(oferta.hora_inicio)} / {formatearHora(oferta.hora_fin)}
+                        {(() => {
+                          const duracion = calcularDuracion(oferta.hora_inicio, oferta.hora_fin);
+                          if (duracion > 0) {
+                            const horasEnteras = Math.floor(duracion);
+                            const minutos = Math.round((duracion - horasEnteras) * 60);
+                            if (minutos > 0 && minutos < 60) {
+                              return ` • ${horasEnteras}h ${minutos}m`;
+                            }
+                            return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
+                          }
                           return '';
-                        }
-                      })()}
+                        })()}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{oferta.cantidad_invitados} invitados</span>
@@ -535,7 +542,7 @@ function Ofertas() {
           setOfertaSeleccionada(null);
         }}
         onConfirm={handleConfirmarPlanPago}
-        totalContrato={ofertaSeleccionada?.total_final || 0}
+        totalContrato={ofertaSeleccionada?.total_final ? parseFloat(ofertaSeleccionada.total_final) : 0}
       />
     </div>
   );

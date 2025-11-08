@@ -20,8 +20,9 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
       console.log('👤 Usuario actual:', user?.tipo, user?.id);
       return response.data;
     },
-    refetchInterval: 3000, // Refetch cada 3 segundos (más frecuente)
+    refetchInterval: 5000, // Refetch cada 5 segundos (optimizado de 3 segundos)
     refetchOnWindowFocus: true, // Refetch cuando se enfoca la ventana
+    staleTime: 2000, // Considerar datos frescos por 2 segundos
     enabled: !!contratoId,
   });
 
@@ -50,9 +51,9 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
     },
     onSuccess: (data) => {
       console.log('✅ Mensaje enviado, refrescando inmediatamente...');
-      // Refrescar inmediatamente
+      // Solo invalidar, React Query refetchará automáticamente
+      // No hacer refetch manual para evitar requests duplicados
       queryClient.invalidateQueries(['mensajes', contratoId]);
-      queryClient.refetchQueries(['mensajes', contratoId]);
       setNuevoMensaje('');
     },
     onError: (error) => {
