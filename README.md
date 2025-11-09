@@ -1,27 +1,27 @@
 # 💎 DiamondSistem
 
-**Sistema Completo de Gestión de Eventos y Contratos para Salón de Banquetes**
+**Sistema Completo de Gestión de Eventos, Contratos e Inventario para Salón de Banquetes**
 
 ## 📖 Descripción
 
-DiamondSistem es un sistema integral de gestión de eventos que conecta múltiples aplicaciones para gestionar contratos, clientes, vendedores, managers y gerentes en un salón de banquetes. El sistema está diseñado con una arquitectura moderna de micro-frontends, donde cada rol tiene su propia aplicación independiente.
+DiamondSistem es un sistema integral de gestión de eventos que conecta múltiples aplicaciones para gestionar contratos, clientes, vendedores, managers, gerentes e inventario en un salón de banquetes. El sistema está diseñado con una arquitectura moderna de micro-frontends, donde cada rol tiene su propia aplicación independiente.
 
 ## 🎯 Arquitectura del Sistema
 
 ### Micro-Frontends Separados
 
-El sistema está dividido en **4 aplicaciones frontend independientes**, cada una optimizada para su rol específico:
+El sistema está dividido en **5 aplicaciones frontend independientes**, cada una optimizada para su rol específico:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    DIAMONDSISTEM                            │
-│         Sistema de Gestión de Contratos para Eventos       │
+│    Sistema de Gestión de Contratos e Inventario para Eventos│
 └─────────────────────────────────────────────────────────────┘
 
 ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
 │              │      │              │      │              │
 │  FRONTENDS   │◄────►│   BACKEND    │◄────►│  DATABASE    │
-│  (4 Apps)    │ HTTP │ Node/Express │ SQL  │  PostgreSQL  │
+│  (5 Apps)    │ HTTP │ Node/Express │ SQL  │  PostgreSQL  │
 │              │      │   Port 5000   │      │   Port 5432  │
 └──────────────┘      └──────────────┘      └──────────────┘
 ```
@@ -34,6 +34,7 @@ El sistema está dividido en **4 aplicaciones frontend independientes**, cada un
 | **frontend-cliente** | 5174 | Cliente | Portal personalizado para gestionar su evento |
 | **frontend-manager** | 5175 | Manager | Checklist de servicios externos (limosina, hora loca, etc.) |
 | **frontend-gerente** | 5176 | Gerente | Dashboard ejecutivo y gestión global del sistema |
+| **frontend-inventario** | 5177 | Inventario | Gestión de inventario, asignaciones y abastecimiento de salones |
 
 ### Biblioteca Compartida
 
@@ -50,6 +51,7 @@ El sistema está dividido en **4 aplicaciones frontend independientes**, cada un
 - **Validación**: Validadores personalizados
 - **Logging**: Winston
 - **Seguridad**: Helmet.js, Rate Limiting, CORS
+- **Tareas Programadas**: node-cron (asignación automática de inventario)
 
 ### Frontend
 - **Framework**: React 19
@@ -63,10 +65,10 @@ El sistema está dividido en **4 aplicaciones frontend independientes**, cada un
 ### Base de Datos
 - **Motor**: PostgreSQL
 - **Características**: 
-  - 18+ tablas relacionales
+  - 25+ tablas relacionales (incluyendo sistema de inventario)
   - 15+ triggers automáticos
   - Vistas optimizadas
-  - 25+ índices para performance
+  - 30+ índices para performance
   - Relaciones con integridad referencial
   - Connection pooling configurado
 
@@ -77,10 +79,21 @@ DiamondSistem/
 ├── backend/                    # API REST (Node.js + Express)
 │   ├── src/
 │   │   ├── routes/            # Rutas de la API
+│   │   │   ├── inventario.routes.js  # Rutas de inventario
+│   │   │   ├── auth.routes.js
+│   │   │   ├── contratos.routes.js
+│   │   │   └── ...
 │   │   ├── middleware/         # Auth, errors, security
-│   │   ├── utils/             # Utilidades (PDF, cálculos, etc.)
+│   │   ├── utils/             # Utilidades
+│   │   │   ├── inventarioCalculator.js  # Cálculo de inventario
+│   │   │   └── ...
+│   │   ├── jobs/              # Tareas programadas
+│   │   │   └── inventarioAutoAsignacion.js
 │   │   ├── config/             # Configuración (DB, logger)
 │   │   └── server.js          # Servidor principal
+│   ├── scripts/               # Scripts de utilidad
+│   │   ├── populateInventario.js
+│   │   └── abastecerSalones.js
 │   ├── prisma/
 │   │   └── schema.prisma      # Esquema de base de datos
 │   └── package.json
@@ -111,18 +124,33 @@ DiamondSistem/
 │   │   └── components/        # Componentes específicos
 │   └── vite.config.js
 │
+├── frontend-inventario/        # App para inventario (Puerto 5177)
+│   ├── src/
+│   │   ├── pages/             # Páginas de inventario
+│   │   │   ├── DashboardInventario.jsx
+│   │   │   ├── AsignacionesInventario.jsx
+│   │   │   ├── SalonInventario.jsx
+│   │   │   └── LoginInventario.jsx
+│   │   ├── components/        # Componentes específicos
+│   │   └── utils/             # Utilidades específicas
+│   └── vite.config.js
+│
 ├── shared/                    # Biblioteca compartida
 │   └── src/
 │       ├── components/        # Componentes compartidos
 │       ├── config/            # Configuración compartida
 │       ├── store/             # Estado global (auth)
-│       └── utils/              # Utilidades compartidas
+│       └── utils/             # Utilidades compartidas
 │
 ├── database/                  # Scripts SQL y documentación
 │   ├── schema.sql             # Esquema completo
 │   ├── seeds.sql              # Datos iniciales
+│   ├── seeds_inventario.sql   # Items de inventario
+│   ├── init_inventario_central.sql
+│   ├── create_usuario_inventario.sql
 │   └── migrations/            # Migraciones SQL
 │
+├── SETUP_INVENTARIO.md        # Guía de setup de inventario
 └── information_general/       # Documentación del negocio
 ```
 
@@ -131,7 +159,7 @@ DiamondSistem/
 ### ✅ Funcionalidades Implementadas
 
 #### Autenticación y Seguridad
-- ✅ Autenticación multi-rol (Vendedor, Cliente, Manager, Gerente)
+- ✅ Autenticación multi-rol (Vendedor, Cliente, Manager, Gerente, Inventario)
 - ✅ JWT con expiración configurable
 - ✅ Passwords hasheados con bcrypt
 - ✅ Middleware de autorización por rol
@@ -139,17 +167,22 @@ DiamondSistem/
 
 #### Gestión de Contratos
 - ✅ Creación de ofertas con cálculo automático de precios
+- ✅ Wizard paso a paso para crear/editar ofertas
+- ✅ Validación de disponibilidad de salones (con buffer de 1 hora)
 - ✅ Conversión de ofertas a contratos
 - ✅ Versionamiento de contratos con historial completo
 - ✅ Generación de PDFs de contratos y ofertas
 - ✅ Códigos de acceso únicos para clientes
+- ✅ Cálculo automático de comisiones de vendedores
 
 #### Sistema de Pagos
 - ✅ Registro de pagos con múltiples métodos
 - ✅ Historial completo de pagos
 - ✅ Cálculo automático de saldos pendientes
+- ✅ Planes de pago personalizados
 - ✅ Confirmación paso a paso con validaciones
 - ✅ Anulación de pagos con auditoría
+- ✅ Sistema de comisiones (3% dividido en 2 pagos de 1.5%)
 
 #### Portal del Cliente
 - ✅ Dashboard personalizado con información del evento
@@ -159,15 +192,17 @@ DiamondSistem/
 - ✅ Chat con el vendedor
 - ✅ Solicitudes de cambios al contrato
 - ✅ Visualización de imágenes dinámicas según selecciones
+- ✅ Historial de pagos y contratos
 
 #### Portal del Vendedor
 - ✅ Dashboard con estadísticas en tiempo real
 - ✅ Gestión completa de clientes
-- ✅ Creación y edición de ofertas
+- ✅ Creación y edición de ofertas (wizard paso a paso)
 - ✅ Gestión de contratos y pagos
 - ✅ Calendario mensual de eventos
 - ✅ Chat con clientes
 - ✅ Reportes y exportación de datos
+- ✅ Validación de disponibilidad en tiempo real
 
 #### Portal del Manager
 - ✅ Checklist de servicios externos
@@ -182,6 +217,19 @@ DiamondSistem/
 - ✅ Reportes de pagos
 - ✅ Calendario de eventos
 
+#### Sistema de Inventario (NUEVO)
+- ✅ Gestión de inventario central y por salones
+- ✅ Catálogo completo de items (bebidas, vajilla, decoración, etc.)
+- ✅ Cálculo automático de inventario necesario por evento
+- ✅ Asignación automática de inventario (30 días antes del evento)
+- ✅ Abastecimiento masivo de salones desde almacén central
+- ✅ Alertas de stock bajo
+- ✅ Páginas de detalles por salón (Diamond, Kendall, Doral)
+- ✅ Gestión de asignaciones por contrato
+- ✅ Edición manual de asignaciones
+- ✅ Historial de movimientos de inventario
+- ✅ Tareas programadas (node-cron) para asignación automática
+
 #### Optimizaciones
 - ✅ Connection pooling para PostgreSQL
 - ✅ Paginación server-side en todas las listas
@@ -190,6 +238,7 @@ DiamondSistem/
 - ✅ Índices compuestos en base de datos
 - ✅ Transacciones atómicas para operaciones críticas
 - ✅ Sanitización y validación de inputs
+- ✅ Debounce en búsquedas y validaciones
 
 ## 🚀 Instalación y Configuración
 
@@ -202,7 +251,7 @@ DiamondSistem/
 ### 1. Clonar el Repositorio
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/IamEac/DiamondSistem.git
 cd DiamondSistem
 ```
 
@@ -244,7 +293,7 @@ PORT=5000
 NODE_ENV=development
 
 # CORS (en desarrollo, permite todos los frontends)
-CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177
 ```
 
 ### 4. Inicializar Base de Datos
@@ -256,11 +305,35 @@ npx prisma generate
 # Aplicar esquema a la base de datos
 npx prisma db push
 
-# (Opcional) Cargar datos iniciales
+# Cargar datos iniciales
 psql -U postgres -d diamondsistem -f ../database/seeds.sql
 ```
 
-### 5. Instalar Frontends
+### 5. Configurar Sistema de Inventario
+
+Sigue la guía completa en [SETUP_INVENTARIO.md](SETUP_INVENTARIO.md) para:
+- Poblar el catálogo de items
+- Inicializar inventario central
+- Crear usuario de inventario
+- Abastecer salones
+
+**Resumen rápido:**
+```bash
+# Poblar items de inventario
+psql -U postgres -d diamondsistem -f database/seeds_inventario.sql
+
+# Inicializar inventario central
+psql -U postgres -d diamondsistem -f database/init_inventario_central.sql
+
+# Crear usuario de inventario
+psql -U postgres -d diamondsistem -f database/create_usuario_inventario.sql
+
+# Abastecer salones (desde backend)
+cd backend
+npm run inventario:abastecer
+```
+
+### 6. Instalar Frontends
 
 ```bash
 # Desde la raíz del proyecto
@@ -275,6 +348,7 @@ cd frontend-vendedor && npm install && cd ..
 cd frontend-cliente && npm install && cd ..
 cd frontend-manager && npm install && cd ..
 cd frontend-gerente && npm install && cd ..
+cd frontend-inventario && npm install && cd ..
 ```
 
 O usar el script automatizado (Windows PowerShell):
@@ -282,7 +356,7 @@ O usar el script automatizado (Windows PowerShell):
 powershell -ExecutionPolicy Bypass -File instalar-todos-frontends.ps1
 ```
 
-### 6. Configurar Variables de Entorno de Frontends
+### 7. Configurar Variables de Entorno de Frontends
 
 Cada frontend necesita un archivo `.env`:
 
@@ -306,6 +380,11 @@ VITE_API_URL=http://localhost:5000
 VITE_API_URL=http://localhost:5000
 ```
 
+**frontend-inventario/.env:**
+```env
+VITE_API_URL=http://localhost:5000
+```
+
 ## 🏃 Ejecutar el Sistema
 
 ### Desarrollo
@@ -317,7 +396,7 @@ npm run dev
 ```
 Backend disponible en: **http://localhost:5000**
 
-#### Terminal 2-5: Frontends
+#### Terminal 2-6: Frontends
 
 **Vendedor:**
 ```bash
@@ -346,6 +425,13 @@ cd frontend-gerente
 npm run dev
 ```
 Disponible en: **http://localhost:5176**
+
+**Inventario:**
+```bash
+cd frontend-inventario
+npm run dev
+```
+Disponible en: **http://localhost:5177**
 
 ### Scripts Automatizados (Windows)
 
@@ -379,127 +465,185 @@ Código: GER001
 Password: [Configurado en base de datos]
 ```
 
+### Inventario
+```
+Código: INV001
+Password: Inventario123!
+```
+
+## 🔌 Endpoints Principales
+
+### Autenticación
+```
+POST /api/auth/login/vendedor      # Login vendedor
+POST /api/auth/login/cliente        # Login cliente
+POST /api/auth/login/manager        # Login manager
+POST /api/auth/login/gerente        # Login gerente
+POST /api/auth/login/inventario     # Login inventario
+GET  /api/auth/me                   # Usuario actual
+```
+
+### Ofertas
+```
+GET  /api/ofertas                   # Listar ofertas (paginado)
+POST /api/ofertas/calcular          # Calcular precio
+POST /api/ofertas                   # Crear oferta
+PUT  /api/ofertas/:id               # Editar oferta
+PUT  /api/ofertas/:id/aceptar       # Aceptar oferta
+GET  /api/ofertas/disponibilidad    # Verificar disponibilidad
+```
+
+### Contratos
+```
+GET  /api/contratos                 # Listar contratos (paginado)
+POST /api/contratos                 # Crear contrato
+GET  /api/contratos/:id             # Detalle de contrato
+GET  /api/contratos/:id/pdf         # PDF del contrato
+PUT  /api/contratos/:id             # Actualizar contrato
+```
+
+### Pagos
+```
+GET  /api/pagos                     # Listar pagos (paginado)
+POST /api/pagos                     # Registrar pago
+PUT  /api/pagos/:id/anular          # Anular pago
+GET  /api/pagos/contrato/:id        # Pagos de un contrato
+```
+
+### Ajustes del Evento
+```
+GET  /api/ajustes/contrato/:id      # Obtener ajustes
+PUT  /api/ajustes/contrato/:id      # Actualizar ajustes
+GET  /api/ajustes/contrato/:id/pdf  # PDF de ajustes
+```
+
+### Inventario
+```
+# Inventario Central
+GET  /api/inventario/central         # Listar inventario central
+PUT  /api/inventario/central/:id     # Actualizar cantidad
+
+# Inventario por Salones
+GET  /api/inventario/salones         # Listar inventario por salones
+GET  /api/inventario/salones/:id     # Inventario de un salón
+
+# Asignaciones
+GET  /api/inventario/asignaciones    # Listar asignaciones
+GET  /api/inventario/asignaciones/:id # Detalle de asignación
+POST /api/inventario/asignar/:contratoId # Asignar inventario automáticamente
+PUT  /api/inventario/asignaciones/:id # Editar asignación
+
+# Cálculos
+POST /api/inventario/calcular/:contratoId # Calcular inventario necesario
+
+# Transferencias
+POST /api/inventario/transferencia   # Transferir item individual
+POST /api/inventario/abastecer-salon # Abastecimiento masivo
+
+# Alertas
+GET  /api/inventario/alertas         # Alertas de stock bajo
+GET  /api/inventario/contratos-alertas # Contratos que necesitan asignación
+```
+
+### Salones
+```
+GET  /api/salones                   # Listar salones
+GET  /api/salones/:id               # Detalle de salón
+```
+
+## 🎨 Características de Diseño
+
+### Frontend-Cliente
+- Diseño minimalista y profesional
+- Visualización optimizada de imágenes
+- UX intuitiva y moderna
+- Responsive design (móvil, tablet, desktop)
+
+### Frontend-Vendedor
+- Dashboard con métricas en tiempo real
+- Interfaz de gestión completa
+- Calendario interactivo
+- Wizard paso a paso para ofertas
+- Reportes y exportación
+
+### Frontend-Inventario
+- Dashboard con inventario central y alertas
+- Gestión por salones con páginas de detalles
+- Abastecimiento masivo con selección múltiple
+- Cálculo y asignación automática de inventario
+- Interfaz limpia y organizada
+
+## 🛠️ Desarrollo
+
+### Estructura de Aliases
+
+Todos los frontends usan aliases consistentes:
+
+```javascript
+@shared    → ../shared/src
+@components → ./src/components
+@utils     → ./src/utils
+```
+
+### Convenciones de Código
+
+- **Componentes**: PascalCase (ej: `ModalPlanPago.jsx`)
+- **Utilidades**: camelCase (ej: `eventNames.js`)
+- **Rutas**: kebab-case (ej: `/crear-oferta`)
+- **Variables**: camelCase
+- **Constantes**: UPPER_SNAKE_CASE
+
+### Testing
+
+```bash
+# Backend
+cd backend
+npm test
+
+# Frontend (cuando esté configurado)
+cd frontend-vendedor
+npm test
+```
+
+## 📊 Estado del Proyecto
+
+**Versión**: 3.0.0  
+**Estado**: ✅ **Producción Ready**  
+**Última actualización**: Noviembre 2025
+
+### Completado ✅
+- [x] Arquitectura de micro-frontends (5 aplicaciones)
+- [x] Backend completo con todas las rutas
+- [x] Base de datos optimizada (25+ tablas)
+- [x] Autenticación multi-rol (5 roles)
+- [x] Sistema de pagos completo
+- [x] Portal del cliente
+- [x] Portal del vendedor
+- [x] Portal del manager
+- [x] Portal del gerente
+- [x] **Sistema de inventario completo** 🆕
+- [x] Generación de PDFs
+- [x] Chat cliente-vendedor
+- [x] Wizard paso a paso para ofertas
+- [x] Validación de disponibilidad en tiempo real
+- [x] Sistema de comisiones
+- [x] Optimizaciones de performance
+
+### En Desarrollo 🔄
+- [ ] Emails automáticos
+- [ ] Firma digital
+- [ ] App móvil (Android/iOS)
+- [ ] Reportes avanzados de inventario
+
 ## 📚 Documentación Adicional
 
+- [Setup de Inventario](SETUP_INVENTARIO.md) - Guía completa para configurar el sistema de inventario
 - [Arquitectura del Sistema](ARQUITECTURA_SISTEMA.md)
 - [Guía de Pruebas](GUIA_PRUEBAS_SISTEMA.md)
 - [Índice de Documentación](INDICE_DOCUMENTACION.md)
 - [Instrucciones Frontends Separados](INSTRUCCIONES_FRONTENDS_SEPARADOS.md)
 - [Optimizaciones Implementadas](OPTIMIZACIONES_IMPLEMENTADAS.md)
 
-## 🔌 Endpoints Principales
-
-### Autenticación
-```
-POST /api/auth/login/vendedor    # Login vendedor
-POST /api/auth/login/cliente      # Login cliente
-POST /api/auth/login/manager      # Login manager
-POST /api/auth/login/gerente      # Login gerente
-GET  /api/auth/me                 # Usuario actual
-```
-
-### Ofertas
-```
-GET  /api/ofertas                 # Listar ofertas (paginado)
-POST /api/ofertas/calcular        # Calcular precio
-POST /api/ofertas                 # Crear oferta
-PUT  /api/ofertas/:id             # Editar oferta
-PUT  /api/ofertas/:id/aceptar      # Aceptar oferta
-```
-
-### Contratos
-```
-GET  /api/contratos               # Listar contratos (paginado)
-POST /api/contratos               # Crear contrato
-GET  /api/contratos/:id           # Detalle de contrato
-GET  /api/contratos/:id/pdf       # PDF del contrato
-```
-
-### Pagos
-```
-GET  /api/pagos                   # Listar pagos (paginado)
-POST /api/pagos                   # Registrar pago
-PUT  /api/pagos/:id/anular        # Anular pago
-```
-
-### Ajustes del Evento
-```
-GET  /api/ajustes/contrato/:id    # Obtener ajustes
-PUT  /api/ajustes/contrato/:id    # Actualizar ajustes
-GET  /api/ajustes/contrato/:id/pdf # PDF de ajustes
-```
-
-## 🎨 Características de Diseño
-
-### Frontend-Cliente
-- Diseño minimalista y profesional
-- Visualización optimizada de imágenes
-- UX intuitiva y moderna
-- Responsive design (móvil, tablet, desktop)
-
-### Frontend-Vendedor
-- Dashboard con métricas en tiempo real
-- Interfaz de gestión completa
-- Calendario interactivo
-- Reportes y exportación
-
-## 🛠️ Desarrollo
-
-### Estructura de Aliases
-
-Todos los frontends usan aliases consistentes:
-
-```javascript
-@shared    → ../shared/src
-@components → ./src/components
-@utils     → ./src/utils
-```
-
-### Convenciones de Código
-
-- **Componentes**: PascalCase (ej: `ModalPlanPago.jsx`)
-- **Utilidades**: camelCase (ej: `eventNames.js`)
-- **Rutas**: kebab-case (ej: `/crear-oferta`)
-- **Variables**: camelCase
-- **Constantes**: UPPER_SNAKE_CASE
-
-### Testing
-
-```bash
-# Backend
-cd backend
-npm test
-
-# Frontend (cuando esté configurado)
-cd frontend-vendedor
-npm test
-```
-
-## 📊 Estado del Proyecto
-
-**Versión**: 2.0.0  
-**Estado**: ✅ **Producción Ready**  
-**Última actualización**: Enero 2025
-
-### Completado ✅
-- [x] Arquitectura de micro-frontends
-- [x] Backend completo con todas las rutas
-- [x] Base de datos optimizada
-- [x] Autenticación multi-rol
-- [x] Sistema de pagos
-- [x] Portal del cliente
-- [x] Portal del vendedor
-- [x] Portal del manager
-- [x] Portal del gerente
-- [x] Generación de PDFs
-- [x] Chat cliente-vendedor
-- [x] Optimizaciones de performance
-
-### En Desarrollo 🔄
-- [ ] Emails automáticos
-- [ ] Firma digital
-- [ ] App móvil (Android/iOS)
-
 ## 🤝 Contribuir
 
 1. Fork el proyecto
@@ -514,286 +658,7 @@ Para dudas o problemas:
 - Revisar la documentación en cada carpeta
 - Consultar los logs del servidor
 - Verificar las variables de entorno
-
-## 📄 Licencia
-
-ISC License
-
----
-
-⭐ **¡Gracias por usar DiamondSistem!** ⭐
-
-**Desarrollado con 💎 para gestionar eventos especiales**
-
-- [Optimizaciones Implementadas](OPTIMIZACIONES_IMPLEMENTADAS.md)
-
-## 🔌 Endpoints Principales
-
-### Autenticación
-```
-POST /api/auth/login/vendedor    # Login vendedor
-POST /api/auth/login/cliente      # Login cliente
-POST /api/auth/login/manager      # Login manager
-POST /api/auth/login/gerente      # Login gerente
-GET  /api/auth/me                 # Usuario actual
-```
-
-### Ofertas
-```
-GET  /api/ofertas                 # Listar ofertas (paginado)
-POST /api/ofertas/calcular        # Calcular precio
-POST /api/ofertas                 # Crear oferta
-PUT  /api/ofertas/:id             # Editar oferta
-PUT  /api/ofertas/:id/aceptar      # Aceptar oferta
-```
-
-### Contratos
-```
-GET  /api/contratos               # Listar contratos (paginado)
-POST /api/contratos               # Crear contrato
-GET  /api/contratos/:id           # Detalle de contrato
-GET  /api/contratos/:id/pdf       # PDF del contrato
-```
-
-### Pagos
-```
-GET  /api/pagos                   # Listar pagos (paginado)
-POST /api/pagos                   # Registrar pago
-PUT  /api/pagos/:id/anular        # Anular pago
-```
-
-### Ajustes del Evento
-```
-GET  /api/ajustes/contrato/:id    # Obtener ajustes
-PUT  /api/ajustes/contrato/:id    # Actualizar ajustes
-GET  /api/ajustes/contrato/:id/pdf # PDF de ajustes
-```
-
-## 🎨 Características de Diseño
-
-### Frontend-Cliente
-- Diseño minimalista y profesional
-- Visualización optimizada de imágenes
-- UX intuitiva y moderna
-- Responsive design (móvil, tablet, desktop)
-
-### Frontend-Vendedor
-- Dashboard con métricas en tiempo real
-- Interfaz de gestión completa
-- Calendario interactivo
-- Reportes y exportación
-
-## 🛠️ Desarrollo
-
-### Estructura de Aliases
-
-Todos los frontends usan aliases consistentes:
-
-```javascript
-@shared    → ../shared/src
-@components → ./src/components
-@utils     → ./src/utils
-```
-
-### Convenciones de Código
-
-- **Componentes**: PascalCase (ej: `ModalPlanPago.jsx`)
-- **Utilidades**: camelCase (ej: `eventNames.js`)
-- **Rutas**: kebab-case (ej: `/crear-oferta`)
-- **Variables**: camelCase
-- **Constantes**: UPPER_SNAKE_CASE
-
-### Testing
-
-```bash
-# Backend
-cd backend
-npm test
-
-# Frontend (cuando esté configurado)
-cd frontend-vendedor
-npm test
-```
-
-## 📊 Estado del Proyecto
-
-**Versión**: 2.0.0  
-**Estado**: ✅ **Producción Ready**  
-**Última actualización**: Enero 2025
-
-### Completado ✅
-- [x] Arquitectura de micro-frontends
-- [x] Backend completo con todas las rutas
-- [x] Base de datos optimizada
-- [x] Autenticación multi-rol
-- [x] Sistema de pagos
-- [x] Portal del cliente
-- [x] Portal del vendedor
-- [x] Portal del manager
-- [x] Portal del gerente
-- [x] Generación de PDFs
-- [x] Chat cliente-vendedor
-- [x] Optimizaciones de performance
-
-### En Desarrollo 🔄
-- [ ] Emails automáticos
-- [ ] Firma digital
-- [ ] App móvil (Android/iOS)
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📞 Soporte
-
-Para dudas o problemas:
-- Revisar la documentación en cada carpeta
-- Consultar los logs del servidor
-- Verificar las variables de entorno
-
-## 📄 Licencia
-
-ISC License
-
----
-
-⭐ **¡Gracias por usar DiamondSistem!** ⭐
-
-**Desarrollado con 💎 para gestionar eventos especiales**
-
-- [Optimizaciones Implementadas](OPTIMIZACIONES_IMPLEMENTADAS.md)
-
-## 🔌 Endpoints Principales
-
-### Autenticación
-```
-POST /api/auth/login/vendedor    # Login vendedor
-POST /api/auth/login/cliente      # Login cliente
-POST /api/auth/login/manager      # Login manager
-POST /api/auth/login/gerente      # Login gerente
-GET  /api/auth/me                 # Usuario actual
-```
-
-### Ofertas
-```
-GET  /api/ofertas                 # Listar ofertas (paginado)
-POST /api/ofertas/calcular        # Calcular precio
-POST /api/ofertas                 # Crear oferta
-PUT  /api/ofertas/:id             # Editar oferta
-PUT  /api/ofertas/:id/aceptar      # Aceptar oferta
-```
-
-### Contratos
-```
-GET  /api/contratos               # Listar contratos (paginado)
-POST /api/contratos               # Crear contrato
-GET  /api/contratos/:id           # Detalle de contrato
-GET  /api/contratos/:id/pdf       # PDF del contrato
-```
-
-### Pagos
-```
-GET  /api/pagos                   # Listar pagos (paginado)
-POST /api/pagos                   # Registrar pago
-PUT  /api/pagos/:id/anular        # Anular pago
-```
-
-### Ajustes del Evento
-```
-GET  /api/ajustes/contrato/:id    # Obtener ajustes
-PUT  /api/ajustes/contrato/:id    # Actualizar ajustes
-GET  /api/ajustes/contrato/:id/pdf # PDF de ajustes
-```
-
-## 🎨 Características de Diseño
-
-### Frontend-Cliente
-- Diseño minimalista y profesional
-- Visualización optimizada de imágenes
-- UX intuitiva y moderna
-- Responsive design (móvil, tablet, desktop)
-
-### Frontend-Vendedor
-- Dashboard con métricas en tiempo real
-- Interfaz de gestión completa
-- Calendario interactivo
-- Reportes y exportación
-
-## 🛠️ Desarrollo
-
-### Estructura de Aliases
-
-Todos los frontends usan aliases consistentes:
-
-```javascript
-@shared    → ../shared/src
-@components → ./src/components
-@utils     → ./src/utils
-```
-
-### Convenciones de Código
-
-- **Componentes**: PascalCase (ej: `ModalPlanPago.jsx`)
-- **Utilidades**: camelCase (ej: `eventNames.js`)
-- **Rutas**: kebab-case (ej: `/crear-oferta`)
-- **Variables**: camelCase
-- **Constantes**: UPPER_SNAKE_CASE
-
-### Testing
-
-```bash
-# Backend
-cd backend
-npm test
-
-# Frontend (cuando esté configurado)
-cd frontend-vendedor
-npm test
-```
-
-## 📊 Estado del Proyecto
-
-**Versión**: 2.0.0  
-**Estado**: ✅ **Producción Ready**  
-**Última actualización**: Enero 2025
-
-### Completado ✅
-- [x] Arquitectura de micro-frontends
-- [x] Backend completo con todas las rutas
-- [x] Base de datos optimizada
-- [x] Autenticación multi-rol
-- [x] Sistema de pagos
-- [x] Portal del cliente
-- [x] Portal del vendedor
-- [x] Portal del manager
-- [x] Portal del gerente
-- [x] Generación de PDFs
-- [x] Chat cliente-vendedor
-- [x] Optimizaciones de performance
-
-### En Desarrollo 🔄
-- [ ] Emails automáticos
-- [ ] Firma digital
-- [ ] App móvil (Android/iOS)
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📞 Soporte
-
-Para dudas o problemas:
-- Revisar la documentación en cada carpeta
-- Consultar los logs del servidor
-- Verificar las variables de entorno
+- Revisar [SETUP_INVENTARIO.md](SETUP_INVENTARIO.md) para problemas de inventario
 
 ## 📄 Licencia
 
