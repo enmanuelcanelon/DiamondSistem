@@ -406,7 +406,7 @@ function Ofertas() {
                       <Clock className="w-4 h-4" />
                       <span className="font-medium">
                         {formatearHora(oferta.hora_inicio)} / {formatearHora(oferta.hora_fin)}
-                        {(() => {
+                      {(() => {
                           const duracion = calcularDuracion(oferta.hora_inicio, oferta.hora_fin);
                           if (duracion > 0) {
                             const horasEnteras = Math.floor(duracion);
@@ -417,7 +417,7 @@ function Ofertas() {
                             return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
                           }
                           return '';
-                        })()}
+                      })()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">

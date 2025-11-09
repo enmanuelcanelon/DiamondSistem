@@ -318,6 +318,16 @@ router.post('/', authenticate, async (req, res, next) => {
       };
     });
 
+    // NUEVO: Recalcular comisiones del vendedor después de registrar el pago
+    // (después de que se complete la transacción)
+    try {
+      const { calcularComisionesVendedor } = require('../utils/comisionCalculator');
+      await calcularComisionesVendedor(contratoIdSanitizado);
+    } catch (comisionError) {
+      // No fallar la respuesta si hay error en comisiones (solo loguear)
+      console.error('Error al calcular comisiones después del pago:', comisionError);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Pago registrado exitosamente. Nueva versión del contrato generada.',

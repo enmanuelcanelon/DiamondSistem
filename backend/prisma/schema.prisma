@@ -15,6 +15,7 @@ model vendedores {
   telefono            String?   @db.VarChar(20)
   password_hash       String    @db.VarChar(255)
   comision_porcentaje Decimal?  @default(10.00) @db.Decimal(5, 2)
+  salario_base        Decimal?  @default(0.00) @db.Decimal(10, 2)  // Salario base mensual para todos los vendedores
   total_ventas        Decimal?  @default(0.00) @db.Decimal(10, 2)
   total_comisiones    Decimal?  @default(0.00) @db.Decimal(10, 2)
   activo              Boolean?  @default(true)
@@ -234,8 +235,16 @@ model contratos {
   fecha_firma           DateTime? @default(now()) @db.Timestamp(6)
   fecha_actualizacion   DateTime? @default(now()) @db.Timestamp(6)
   terminos_aceptados    Boolean?  @default(true)
-  comision_calculada    Decimal?  @db.Decimal(10, 2)
-  comision_pagada       Boolean?  @default(false)
+  fecha_creacion_contrato DateTime? @default(now()) @db.Timestamp(6)  // Fecha cuando se creó el contrato (primer pago de $500)
+  comision_calculada    Decimal?  @db.Decimal(10, 2)  // Deprecated: usar comision_total_calculada
+  comision_pagada       Boolean?  @default(false)  // Deprecated: usar comision_primera_mitad_pagada y comision_segunda_mitad_pagada
+  comision_total_calculada    Decimal?  @db.Decimal(10, 2)  // 3% del total del contrato
+  comision_primera_mitad      Decimal?  @db.Decimal(10, 2)  // 1.5% del total
+  comision_segunda_mitad      Decimal?  @db.Decimal(10, 2)  // 1.5% del total
+  comision_primera_mitad_pagada Boolean? @default(false)
+  comision_segunda_mitad_pagada Boolean? @default(false)
+  fecha_pago_comision_primera  DateTime? @db.Timestamp(6)
+  fecha_pago_comision_segunda  DateTime? @db.Timestamp(6)
   numero_plazos         Int?
   plan_pagos            Json?
   salon_id              Int?

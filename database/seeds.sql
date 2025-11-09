@@ -95,7 +95,7 @@ INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, 
 INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, requiere_seleccion, opciones_disponibles, activo) VALUES
 ('Comida', 'Primer y segundo plato a escoger', 0.00, 'fijo', 'Comida', TRUE, '["Primer plato: Ensalada César", "Primer plato: Crema de vegetales", "Segundo plato: Pollo al horno", "Segundo plato: Carne asada", "Segundo plato: Pescado a la plancha", "Segundo plato: Pasta"]', TRUE),
 ('Mesa de Quesos', 'Mesa de quesos variados', 4.20, 'por_persona', 'Comida', FALSE, NULL, TRUE),
-('Pasapalos', 'Variedad de pasapalos fríos y calientes', 3.00, 'por_persona', 'Comida', TRUE, '["Tequeños", "Mini empanadas", "Brochetas", "Canapés", "Mini hamburguesas"]', TRUE),
+('Pasapalos', 'Variedad de pasapalos fríos y calientes', 6.00, 'por_persona', 'Comida', TRUE, '["Tequeños", "Mini empanadas", "Brochetas", "Canapés", "Mini hamburguesas"]', TRUE),
 ('Mini Dulces', 'Paquete de 12 mini dulces', 3.00, 'por_unidad', 'Comida', FALSE, NULL, TRUE),
 ('Cake', 'Torta de 2 sabores', 0.00, 'fijo', 'Comida', TRUE, '["Marmoleado", "Vainilla"]', TRUE),
 ('Utensilios', 'Platos, cubiertos, vasos y servilletas', 0.00, 'fijo', 'Comida', FALSE, NULL, TRUE);
@@ -273,14 +273,23 @@ FROM servicios WHERE nombre = 'Mini Dulces';
 -- Este paquete no tiene servicios incluidos por defecto
 
 -- ============================================
--- 6. VENDEDOR DE PRUEBA (PARA DESARROLLO)
--- Password para todos: Admin123! (hash bcrypt)
+-- 6. VENDEDORES
 -- ============================================
-
-INSERT INTO vendedores (nombre_completo, codigo_vendedor, email, telefono, password_hash, comision_porcentaje, activo) VALUES
-('Administrador Sistema', 'ADMIN001', 'admin@diamondsistem.com', '+1-305-555-0100', '$2b$10$z7tX1nVdjEZiSQRUPDVHDOA.gxorHrRZTXB2ZyGB79QA1PvjbdC/W', 10.00, TRUE),
-('Carlos Rodríguez', 'VEND001', 'carlos@diamondsistem.com', '+1-305-555-0101', '$2b$10$z7tX1nVdjEZiSQRUPDVHDOA.gxorHrRZTXB2ZyGB79QA1PvjbdC/W', 10.00, TRUE),
-('María González', 'VEND002', 'maria@diamondsistem.com', '+1-305-555-0102', '$2b$10$z7tX1nVdjEZiSQRUPDVHDOA.gxorHrRZTXB2ZyGB79QA1PvjbdC/W', 12.00, TRUE);
+-- NOTA: El vendedor de prueba "Administrador Sistema" (ADMIN001) ha sido eliminado
+-- 
+-- Vendedor temporal de prueba:
+-- Usuario: Prueba
+-- Código: PRUEBA001
+-- Email: prueba@diamondsistem.com
+-- Password: prueba123 (hash bcrypt)
+-- 
+-- Para agregar más vendedores reales, usar el formato:
+-- INSERT INTO vendedores (nombre_completo, codigo_vendedor, email, telefono, password_hash, comision_porcentaje, activo) VALUES
+-- ('Nombre Completo', 'CODIGO', 'email@ejemplo.com', 'telefono', 'password_hash_bcrypt', comision, TRUE);
+--
+-- Para generar el password_hash, usar bcrypt con costo 10
+-- Ejemplo: bcrypt.hash('password123', 10)
+-- ============================================
 
 -- ============================================
 -- Fin de Seeds

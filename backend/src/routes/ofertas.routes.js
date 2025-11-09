@@ -113,6 +113,22 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
         }
       });
 
+      // Validar restricciones de salón (Kendall no permite Máquina de Chispas)
+      if (salon_id) {
+        const salon = await prisma.salones.findUnique({
+          where: { id: parseInt(salon_id) }
+        });
+        
+        if (salon && salon.nombre === 'Kendall') {
+          const maquinaChispas = serviciosData.find(s => 
+            s.nombre.toLowerCase().includes('chispas')
+          );
+          if (maquinaChispas) {
+            throw new ValidationError('La Máquina de Chispas no está disponible en el salón Kendall');
+          }
+        }
+      }
+
       servicios = serviciosData.map(servicio => {
         const servicioRequest = servicios_adicionales.find(s => 
           (s.servicio_id || s.id) === servicio.id
@@ -402,6 +418,22 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         }
       });
 
+      // Validar restricciones de salón (Kendall no permite Máquina de Chispas)
+      if (datos.salon_id) {
+        const salon = await prisma.salones.findUnique({
+          where: { id: parseInt(datos.salon_id) }
+        });
+        
+        if (salon && salon.nombre === 'Kendall') {
+          const maquinaChispas = serviciosData.find(s => 
+            s.nombre.toLowerCase().includes('chispas')
+          );
+          if (maquinaChispas) {
+            throw new ValidationError('La Máquina de Chispas no está disponible en el salón Kendall');
+          }
+        }
+      }
+
       servicios = serviciosData.map(servicio => {
         const servicioInput = datos.servicios_adicionales.find(s => 
           (s.servicio_id || s.id) === servicio.id
@@ -641,6 +673,22 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
           activo: true
         }
       });
+
+      // Validar restricciones de salón (Kendall no permite Máquina de Chispas)
+      if (datos.salon_id) {
+        const salon = await prisma.salones.findUnique({
+          where: { id: parseInt(datos.salon_id) }
+        });
+        
+        if (salon && salon.nombre === 'Kendall') {
+          const maquinaChispas = serviciosData.find(s => 
+            s.nombre.toLowerCase().includes('chispas')
+          );
+          if (maquinaChispas) {
+            throw new ValidationError('La Máquina de Chispas no está disponible en el salón Kendall');
+          }
+        }
+      }
 
       servicios = serviciosData.map(servicio => {
         const servicioInput = datos.servicios_adicionales.find(s => 

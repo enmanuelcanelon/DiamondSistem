@@ -200,7 +200,8 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       meses_financiamiento,
       nombre_evento,
       numero_plazos,
-      plan_pagos
+      plan_pagos,
+      pago_reserva_id  // ID del pago de reserva de $500
     } = req.body;
 
     // Sanitizar y validar
@@ -262,6 +263,36 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       throw new ValidationError('Ya existe un contrato para esta oferta');
     }
 
+    // NUEVO: Validar que existe un pago de reserva de $500 antes de crear el contrato
+    if (!pago_reserva_id) {
+      throw new ValidationError('Se requiere un pago de reserva de $500 para crear el contrato. Por favor, registre el pago primero y proporcione el ID del pago.');
+    }
+
+    // Validar que el pago existe, es de al menos $500, no tiene contrato_id, y es del vendedor correcto
+    const pagoReserva = await prisma.pagos.findUnique({
+      where: { id: parseInt(pago_reserva_id) }
+    });
+
+    if (!pagoReserva) {
+      throw new NotFoundError('Pago de reserva no encontrado');
+    }
+
+    if (pagoReserva.contrato_id) {
+      throw new ValidationError('Este pago ya está vinculado a otro contrato');
+    }
+
+    if (pagoReserva.registrado_por !== oferta.vendedor_id) {
+      throw new ValidationError('El pago de reserva no pertenece al vendedor de esta oferta');
+    }
+
+    const montoReserva = parseFloat(pagoReserva.monto_total || 0);
+    if (montoReserva < 500) {
+      throw new ValidationError('El pago de reserva debe ser de al menos $500');
+    }
+
+    // La fecha de creación del contrato será la fecha del pago de reserva
+    const fechaCreacionContrato = new Date(pagoReserva.fecha_pago);
+
     // Generar códigos
     const ultimoContrato = await prisma.contratos.findFirst({
       orderBy: { id: 'desc' }
@@ -282,10 +313,17 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       pago_mensual = financiamiento.pagoMensual;
     }
 
-    // Calcular comisión del vendedor
+    // Calcular comisiones del vendedor (3% total, dividido en dos mitades de 1.5%)
+    const totalContrato = parseFloat(oferta.total_final);
+    const porcentajeComision = 3; // 3% total
+    const comisionTotal = (totalContrato * porcentajeComision) / 100;
+    const comisionPrimeraMitad = (totalContrato * 1.5) / 100;
+    const comisionSegundaMitad = (totalContrato * 1.5) / 100;
+
+    // Mantener comision_calculada para compatibilidad (deprecated)
     const comision = calcularComisionVendedor(
-      parseFloat(oferta.total_final),
-      oferta.vendedores.comision_porcentaje
+      totalContrato,
+      porcentajeComision
     );
 
     // Crear contrato en transacción
@@ -304,16 +342,28 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           hora_inicio: oferta.hora_inicio,
           hora_fin: oferta.hora_fin,
           cantidad_invitados: oferta.cantidad_invitados,
-          total_contrato: parseFloat(oferta.total_final),
+          total_contrato: totalContrato,
           tipo_pago,
           meses_financiamiento: mesesFinanciamientoSanitizado,
           pago_mensual,
           plan_pagos: plan_pagos || null,
-          saldo_pendiente: parseFloat(oferta.total_final),
+          saldo_pendiente: totalContrato,
           codigo_acceso_cliente: codigo_acceso_temp,
-          comision_calculada: comision.comision,
+          fecha_creacion_contrato: fechaCreacionContrato, // Fecha del primer pago de $500
+          comision_calculada: comision.comision, // Deprecated: mantener para compatibilidad
+          comision_total_calculada: parseFloat(comisionTotal.toFixed(2)),
+          comision_primera_mitad: parseFloat(comisionPrimeraMitad.toFixed(2)),
+          comision_segunda_mitad: parseFloat(comisionSegundaMitad.toFixed(2)),
+          comision_primera_mitad_pagada: false,
+          comision_segunda_mitad_pagada: false,
           homenajeado: oferta.homenajeado || null
         }
+      });
+
+      // Vincular el pago de reserva al contrato
+      await prisma.pagos.update({
+        where: { id: parseInt(pago_reserva_id) },
+        data: { contrato_id: nuevoContrato.id }
       });
 
       // Copiar servicios de la oferta al contrato

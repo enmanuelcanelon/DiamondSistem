@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor } = require('../middleware/auth');
+const { NotFoundError } = require('../middleware/errorHandler');
 
 const prisma = getPrismaClient();
 
@@ -31,6 +32,15 @@ router.get('/:salonId/paquetes', authenticate, requireVendedor, async (req, res,
   try {
     const { salonId } = req.params;
 
+    // Obtener información del salón
+    const salon = await prisma.salones.findUnique({
+      where: { id: parseInt(salonId) }
+    });
+
+    if (!salon) {
+      throw new NotFoundError('Salón no encontrado');
+    }
+
     const paquetes = await prisma.paquetes_salones.findMany({
       where: {
         salon_id: parseInt(salonId),
@@ -50,12 +60,23 @@ router.get('/:salonId/paquetes', authenticate, requireVendedor, async (req, res,
     });
 
     // Formatear respuesta para incluir precio específico del salón
-    const paquetesFormateados = paquetes.map(ps => ({
-      ...ps.paquetes,
-      precio_base_salon: ps.precio_base,
-      invitados_minimo_salon: ps.invitados_minimo,
-      disponible_salon: ps.disponible
-    }));
+    const paquetesFormateados = paquetes.map(ps => {
+      // Si el salón es Kendall, filtrar la Máquina de Chispas de los servicios incluidos
+      let serviciosIncluidos = ps.paquetes.paquetes_servicios || [];
+      if (salon.nombre === 'Kendall') {
+        serviciosIncluidos = serviciosIncluidos.filter(ps_serv => 
+          !ps_serv.servicios?.nombre?.toLowerCase().includes('chispas')
+        );
+      }
+      
+      return {
+        ...ps.paquetes,
+        precio_base_salon: ps.precio_base,
+        invitados_minimo_salon: ps.invitados_minimo,
+        disponible_salon: ps.disponible,
+        paquetes_servicios: serviciosIncluidos
+      };
+    });
 
     res.json({
       success: true,

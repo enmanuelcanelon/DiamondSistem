@@ -146,8 +146,9 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
       return sum + parseFloat(contrato.total_contrato || 0);
     }, 0);
 
-    // Calcular total de comisiones (3% del total de ventas)
-    const comisionPorcentaje = parseFloat(vendedor.comision_porcentaje || 3.0);
+    // Calcular total de comisiones (3% fijo del total de ventas)
+    // NOTA: El porcentaje de comisión es siempre 3% según la nueva lógica implementada
+    const comisionPorcentaje = 3.0; // Porcentaje fijo
     const totalComisiones = totalVentas * (comisionPorcentaje / 100);
 
     // Calcular tasa de conversión
@@ -440,8 +441,9 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       return sum + parseFloat(contrato.total_contrato || 0);
     }, 0);
 
-    // Calcular comisiones del mes
-    const comisionPorcentaje = parseFloat(vendedor.comision_porcentaje || 3.0);
+    // Calcular comisiones del mes (3% fijo)
+    // NOTA: El porcentaje de comisión es siempre 3% según la nueva lógica implementada
+    const comisionPorcentaje = 3.0; // Porcentaje fijo
     const totalComisionesMes = totalVentasMes * (comisionPorcentaje / 100);
 
     // Tasa de conversión del mes
@@ -803,7 +805,9 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
       return sum + parseFloat(contrato.total_contrato || 0);
     }, 0);
 
-    const comisionPorcentaje = parseFloat(vendedor.comision_porcentaje || 3.0);
+    // Calcular comisiones del mes (3% fijo)
+    // NOTA: El porcentaje de comisión es siempre 3% según la nueva lógica implementada
+    const comisionPorcentaje = 3.0; // Porcentaje fijo
     const totalComisionesMes = totalVentasMes * (comisionPorcentaje / 100);
 
     // Preparar datos de estadísticas

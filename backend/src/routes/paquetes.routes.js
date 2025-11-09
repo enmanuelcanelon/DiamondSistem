@@ -86,12 +86,26 @@ router.get('/:id/servicios', optionalAuth, async (req, res, next) => {
     }
 
     // Obtener servicios del paquete
-    const servicios = await prisma.paquetes_servicios.findMany({
+    let servicios = await prisma.paquetes_servicios.findMany({
       where: { paquete_id: parseInt(id) },
       include: {
         servicios: true
       }
     });
+
+    // Si se proporciona salon_id, filtrar servicios restringidos (Kendall no permite Máquina de Chispas)
+    const { salon_id } = req.query;
+    if (salon_id) {
+      const salon = await prisma.salones.findUnique({
+        where: { id: parseInt(salon_id) }
+      });
+      
+      if (salon && salon.nombre === 'Kendall') {
+        servicios = servicios.filter(ps => 
+          !ps.servicios.nombre.toLowerCase().includes('chispas')
+        );
+      }
+    }
 
     res.json({
       success: true,
