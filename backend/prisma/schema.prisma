@@ -76,6 +76,8 @@ model salones {
   contratos        contratos[]
   ofertas          ofertas[]
   paquetes_salones paquetes_salones[]
+  inventario_salones inventario_salones[]
+  asignaciones_inventario asignaciones_inventario[]
 }
 
 model paquetes_salones {
@@ -270,6 +272,8 @@ model contratos {
   playlist_canciones           playlist_canciones[]
   mensajes                     mensajes[]
   checklist_servicios_externos checklist_servicios_externos[]
+  asignaciones_inventario      asignaciones_inventario[]
+  movimientos_inventario       movimientos_inventario[]
 
   @@index([salon_id], map: "idx_contratos_salon")
   @@index([tipo_pago], map: "idx_contratos_tipo_pago")
@@ -608,5 +612,125 @@ model checklist_servicios_externos {
   @@index([contrato_id], map: "idx_checklist_contrato")
   @@index([estado], map: "idx_checklist_estado")
   @@index([manager_id], map: "idx_checklist_manager")
+}
+
+// ============================================
+// MODELOS DE INVENTARIO
+// ============================================
+
+model usuarios_inventario {
+  id                  Int       @id @default(autoincrement())
+  nombre_completo     String    @db.VarChar(255)
+  codigo_usuario      String    @unique @db.VarChar(50)
+  email               String    @unique @db.VarChar(255)
+  telefono            String?   @db.VarChar(20)
+  password_hash       String    @db.VarChar(255)
+  activo              Boolean?  @default(true)
+  fecha_registro      DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  movimientos_inventario movimientos_inventario[]
+}
+
+model inventario_items {
+  id              Int       @id @default(autoincrement())
+  nombre          String    @db.VarChar(255)
+  unidad_medida   String    @db.VarChar(50) // botella, paquete, libra, unidad, etc.
+  categoria       String?   @db.VarChar(100) // bebidas, vajilla, decoracion, comida, etc.
+  descripcion     String?
+  activo          Boolean?  @default(true)
+  fecha_creacion   DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  inventario_central      inventario_central[]
+  inventario_salones      inventario_salones[]
+  asignaciones_inventario asignaciones_inventario[]
+  movimientos_inventario  movimientos_inventario[]
+
+  @@index([categoria], map: "idx_inventario_items_categoria")
+  @@index([activo], map: "idx_inventario_items_activo")
+}
+
+model inventario_central {
+  id                  Int       @id @default(autoincrement())
+  item_id             Int
+  cantidad_actual     Decimal   @db.Decimal(10, 2)
+  cantidad_minima     Decimal?  @default(20.00) @db.Decimal(10, 2) // Alerta cuando baja de esto
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  inventario_items inventario_items @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([item_id])
+  @@index([cantidad_actual], map: "idx_inventario_central_cantidad")
+}
+
+model inventario_salones {
+  id                  Int       @id @default(autoincrement())
+  salon_id            Int
+  item_id             Int
+  cantidad_actual     Decimal   @db.Decimal(10, 2)
+  cantidad_minima     Decimal?  @default(10.00) @db.Decimal(10, 2)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  salones          salones          @relation(fields: [salon_id], references: [id], onDelete: Cascade)
+  inventario_items inventario_items @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([salon_id, item_id])
+  @@index([salon_id], map: "idx_inventario_salones_salon")
+  @@index([item_id], map: "idx_inventario_salones_item")
+}
+
+model asignaciones_inventario {
+  id                  Int       @id @default(autoincrement())
+  contrato_id         Int
+  item_id             Int
+  salon_id            Int
+  cantidad_asignada   Decimal   @db.Decimal(10, 2)
+  cantidad_utilizada  Decimal?  @db.Decimal(10, 2) // Se actualiza después del evento
+  fuente              String    @db.VarChar(50) // "central" o "salon"
+  estado              String?   @default("asignado") @db.VarChar(50) // asignado, utilizado, cancelado
+  fecha_asignacion    DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+  notas                String?
+
+  // Relaciones
+  contratos       contratos       @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+  inventario_items inventario_items @relation(fields: [item_id], references: [id])
+  salones         salones         @relation(fields: [salon_id], references: [id])
+  movimientos_inventario movimientos_inventario[]
+
+  @@index([contrato_id], map: "idx_asignaciones_contrato")
+  @@index([salon_id], map: "idx_asignaciones_salon")
+  @@index([estado], map: "idx_asignaciones_estado")
+  @@index([fecha_asignacion], map: "idx_asignaciones_fecha")
+}
+
+model movimientos_inventario {
+  id                  Int       @id @default(autoincrement())
+  item_id             Int
+  tipo_movimiento     String    @db.VarChar(50) // "entrada", "salida", "transferencia", "asignacion", "devolucion"
+  origen              String?   @db.VarChar(50) // "central", "diamond", "kendall", "doral"
+  destino             String?   @db.VarChar(50) // "central", "diamond", "kendall", "doral"
+  cantidad            Decimal   @db.Decimal(10, 2)
+  motivo              String?   @db.VarChar(255)
+  contrato_id         Int?
+  asignacion_id       Int?
+  usuario_id          Int?
+  fecha_movimiento     DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  inventario_items      inventario_items?      @relation(fields: [item_id], references: [id])
+  contratos             contratos?             @relation(fields: [contrato_id], references: [id])
+  asignaciones_inventario asignaciones_inventario? @relation(fields: [asignacion_id], references: [id])
+  usuarios_inventario   usuarios_inventario?   @relation(fields: [usuario_id], references: [id])
+
+  @@index([item_id], map: "idx_movimientos_item")
+  @@index([tipo_movimiento], map: "idx_movimientos_tipo")
+  @@index([fecha_movimiento], map: "idx_movimientos_fecha")
+  @@index([contrato_id], map: "idx_movimientos_contrato")
 }
 

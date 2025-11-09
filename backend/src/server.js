@@ -38,6 +38,11 @@ const authRoutes = require('./routes/auth.routes');
 const fotosRoutes = require('./routes/fotos.routes');
 const managersRoutes = require('./routes/managers.routes');
 const gerentesRoutes = require('./routes/gerentes.routes');
+const inventarioRoutes = require('./routes/inventario.routes');
+
+// Jobs
+const cron = require('node-cron');
+const { asignarInventarioAutomatico } = require('./jobs/inventarioAutoAsignacion');
 
 // Middleware personalizado
 const { errorHandler } = require('./middleware/errorHandler');
@@ -80,7 +85,7 @@ app.use(helmet({
 const corsOptions = {
   origin: (origin, callback) => {
     // En desarrollo, permitir localhost y IPs locales para pruebas multi-dispositivo
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
       const allowedOrigins = process.env.CORS_ORIGINS 
         ? process.env.CORS_ORIGINS.split(',')
         : [
@@ -89,11 +94,13 @@ const corsOptions = {
             'http://localhost:5174', // frontend-cliente
             'http://localhost:5175', // frontend-manager
             'http://localhost:5176', // frontend-gerente
+            'http://localhost:5177', // frontend-inventario
             'http://localhost:3000',
             'http://127.0.0.1:5173',
             'http://127.0.0.1:5174',
             'http://127.0.0.1:5175',
             'http://127.0.0.1:5176',
+            'http://127.0.0.1:5177',
             'http://127.0.0.1:3000',
             // Permitir IPs locales (10.x.x.x, 192.168.x.x) en cualquier puerto
             /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
@@ -117,6 +124,14 @@ const corsOptions = {
         callback(null, true);
       } else {
         logger.warn(`CORS bloqueado: ${origin}`);
+        logger.warn(`NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
+        logger.warn(`Orígenes permitidos (strings): ${JSON.stringify(allowedOrigins.filter(a => typeof a === 'string'))}`);
+        logger.warn(`Total orígenes: ${allowedOrigins.length}`);
+        // Permitir temporalmente para debug
+        if (origin && origin.includes('localhost:5177')) {
+          logger.warn(`⚠️ PERMITIENDO ${origin} TEMPORALMENTE PARA DEBUG`);
+          return callback(null, true);
+        }
         callback(new Error('No permitido por CORS'));
       }
     } else {
@@ -227,7 +242,8 @@ app.get('/', (req, res) => {
       mesas: '/api/mesas',
       invitados: '/api/invitados',
       playlist: '/api/playlist',
-      ajustes: '/api/ajustes'
+      ajustes: '/api/ajustes',
+      inventario: '/api/inventario'
     }
   });
 });
@@ -278,6 +294,7 @@ app.use('/api/salones', salonesRoutes);
 app.use('/api/fotos', fotosLimiter, fotosRoutes);
 app.use('/api/managers', managersRoutes);
 app.use('/api/gerentes', gerentesRoutes);
+app.use('/api/inventario', inventarioRoutes);
 
 // Ruta 404 - Debe ir al final de todas las rutas
 app.use((req, res) => {
@@ -302,6 +319,22 @@ const startServer = async () => {
     // Verificar conexión a la base de datos (ya está conectado por el singleton)
     await prisma.$queryRaw`SELECT 1`;
     logger.info('✅ Conexión a la base de datos establecida');
+
+    // Configurar job de asignación automática de inventario
+    // Se ejecuta diariamente a las 2:00 AM
+    cron.schedule('0 2 * * *', async () => {
+      logger.info('🔄 Ejecutando asignación automática de inventario...');
+      try {
+        const resultado = await asignarInventarioAutomatico();
+        logger.info(`✅ Asignación automática completada: ${resultado.asignados} contratos asignados`);
+      } catch (error) {
+        logger.error('❌ Error en asignación automática de inventario:', error);
+      }
+    }, {
+      scheduled: true,
+      timezone: "America/New_York" // Ajustar según tu zona horaria
+    });
+    logger.info('✅ Job de asignación automática de inventario configurado (diario a las 2:00 AM)');
 
     // Iniciar el servidor
     app.listen(PORT, '0.0.0.0', () => {

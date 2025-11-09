@@ -395,7 +395,7 @@ function DashboardCliente() {
       </div>
 
       {/* Services Included */}
-      {(() => {
+            {(() => {
         // Función helper para obtener el nombre del servicio ajustado según el salón
         const obtenerNombreServicio = (nombreServicio) => {
           if (!nombreServicio) return nombreServicio;
@@ -507,7 +507,7 @@ function DashboardCliente() {
               nombre: obtenerNombreServicio(cs.servicios?.nombre || ''),
               cantidad: cs.cantidad || 1
             });
-          });
+              });
         }
 
         // Si no hay paquete ni servicios adicionales, no mostrar la sección
@@ -516,7 +516,7 @@ function DashboardCliente() {
           return null;
         }
 
-        return (
+                return (
           <div className="card">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Mi Paquete y Servicios
@@ -552,7 +552,7 @@ function DashboardCliente() {
                           <span>
                             {formatearServicioConCantidad({ nombre: servicio.nombre }, servicio.cantidad)}
                           </span>
-                        </li>
+                  </li>
                       ))}
                     </ul>
                   </div>
@@ -569,16 +569,16 @@ function DashboardCliente() {
                 <ul className="space-y-2">
                   {serviciosAdicionales.map((servicio) => (
                     <li key={servicio.id} className="flex items-center justify-between border-b pb-2 last:border-b-0">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-gray-700" />
-                        <span className="text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-gray-700" />
+                    <span className="text-gray-700">
                           {formatearServicioConCantidad({ nombre: servicio.nombre }, servicio.cantidad)}
-                        </span>
-                      </div>
-                      <span className="font-medium text-gray-900">
+                    </span>
+                  </div>
+                  <span className="font-medium text-gray-900">
                         {servicio.cantidad > 1 ? `x${servicio.cantidad}` : ''}
-                      </span>
-                    </li>
+                  </span>
+                </li>
                   ))}
                 </ul>
               </div>
@@ -589,7 +589,7 @@ function DashboardCliente() {
             )}
           </div>
         );
-      })()}
+            })()}
 
       {/* Historial de Pagos */}
       {pagosData?.pagos && pagosData.pagos.length > 0 && (

@@ -406,7 +406,7 @@ function Ofertas() {
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       <span className="font-medium">
-                        {(() => {
+                      {(() => {
                           const horasAdicionales = obtenerHorasAdicionales(oferta.ofertas_servicios_adicionales);
                           const horaFinConExtras = calcularHoraFinConExtras(oferta.hora_fin, horasAdicionales);
                           const duracion = calcularDuracion(oferta.hora_inicio, horaFinConExtras);
@@ -424,7 +424,7 @@ function Ofertas() {
                               })()}
                             </>
                           );
-                        })()}
+                      })()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">

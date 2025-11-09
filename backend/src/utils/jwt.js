@@ -84,6 +84,18 @@ const generateGerenteToken = (gerente) => {
   });
 };
 
+/**
+ * Generar token para usuario de inventario
+ */
+const generateInventarioToken = (usuario) => {
+  return generateToken({
+    id: usuario.id,
+    tipo: 'inventario',
+    codigoUsuario: usuario.codigo_usuario,
+    email: usuario.email
+  });
+};
+
 module.exports = {
   generateToken,
   verifyToken,
@@ -91,5 +103,6 @@ module.exports = {
   generateVendedorToken,
   generateClienteToken,
   generateManagerToken,
-  generateGerenteToken
+  generateGerenteToken,
+  generateInventarioToken
 };

@@ -188,14 +188,14 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato, ofertaId, cl
               </p>
             </div>
             {pagoReservaRegistrado && (
-              <div className="border-t border-blue-300 pt-3">
+            <div className="border-t border-blue-300 pt-3">
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span className="text-gray-600">💎 Pago de Reserva:</span>
                   <span className="font-bold text-green-700">
                     -${parseFloat(pagoReservaRegistrado.monto_total || pagoReservaRegistrado.monto).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600 font-semibold">Total Restante:</span>
                   <span className="font-bold text-indigo-700 text-lg">
                     ${(parseFloat(totalContrato) - parseFloat(pagoReservaRegistrado.monto_total || pagoReservaRegistrado.monto)).toLocaleString()}

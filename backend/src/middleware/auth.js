@@ -122,6 +122,26 @@ const requireGerente = (req, res, next) => {
 };
 
 /**
+ * Verificar que el usuario sea de inventario
+ */
+const requireInventario = (req, res, next) => {
+  if (req.user.tipo !== 'inventario') {
+    return next(new UnauthorizedError('Acceso solo para usuarios de inventario'));
+  }
+  next();
+};
+
+/**
+ * Verificar que el usuario sea vendedor o de inventario
+ */
+const requireVendedorOrInventario = (req, res, next) => {
+  if (req.user.tipo !== 'vendedor' && req.user.tipo !== 'inventario') {
+    return next(new UnauthorizedError('Acceso solo para vendedores o usuarios de inventario'));
+  }
+  next();
+};
+
+/**
  * Verificar que el usuario sea el propietario del recurso o vendedor
  */
 const requireOwnerOrVendedor = (paramName = 'id') => {
@@ -175,6 +195,8 @@ module.exports = {
   requireCliente,
   requireManager,
   requireGerente,
+  requireInventario,
+  requireVendedorOrInventario,
   requireOwnerOrVendedor,
   optionalAuth
 };

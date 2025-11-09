@@ -619,7 +619,7 @@ function DetalleContrato() {
                 </p>
               </div>
 
-              {(() => {
+                    {(() => {
                 // Función helper para obtener el nombre del servicio ajustado según el salón
                 const obtenerNombreServicio = (nombreServicio) => {
                   if (!nombreServicio) return nombreServicio;
@@ -664,50 +664,50 @@ function DetalleContrato() {
 
                 // Obtener servicios adicionales del contrato
                 if (contrato?.contratos_servicios) {
-                  // Filtrar servicios mutuamente excluyentes (solo mostrar un Photobooth)
-                  const serviciosFiltrados = [];
-                  let photoboothConPrecio = null;
-                  let photoboothSinPrecio = null;
-                  
-                  for (const cs of contrato.contratos_servicios) {
+                      // Filtrar servicios mutuamente excluyentes (solo mostrar un Photobooth)
+                      const serviciosFiltrados = [];
+                      let photoboothConPrecio = null;
+                      let photoboothSinPrecio = null;
+                      
+                      for (const cs of contrato.contratos_servicios) {
                     // Solo procesar servicios adicionales (no incluidos en paquete)
                     if (cs.incluido_en_paquete) {
                       continue;
                     }
                     
-                    const nombreServicio = cs.servicios?.nombre || '';
-                    const subtotal = parseFloat(cs.subtotal || 0);
-                    const precioUnitario = parseFloat(cs.precio_unitario || 0);
+                        const nombreServicio = cs.servicios?.nombre || '';
+                        const subtotal = parseFloat(cs.subtotal || 0);
+                        const precioUnitario = parseFloat(cs.precio_unitario || 0);
                     
                     // Filtrar Máquina de Chispas si el salón es Kendall
                     if (salonNombre === 'Kendall' && nombreServicio?.toLowerCase().includes('chispas')) {
                       continue; // No mostrar este servicio
                     }
-                    
-                    if (nombreServicio.includes('Photobooth')) {
-                      // Priorizar el que tiene precio/subtotal > 0 (el realmente seleccionado)
-                      if (subtotal > 0 || precioUnitario > 0) {
-                        photoboothConPrecio = cs;
-                      } else {
-                        // Guardar como respaldo si no hay uno con precio
-                        if (!photoboothSinPrecio) {
-                          photoboothSinPrecio = cs;
+                        
+                        if (nombreServicio.includes('Photobooth')) {
+                          // Priorizar el que tiene precio/subtotal > 0 (el realmente seleccionado)
+                          if (subtotal > 0 || precioUnitario > 0) {
+                            photoboothConPrecio = cs;
+                          } else {
+                            // Guardar como respaldo si no hay uno con precio
+                            if (!photoboothSinPrecio) {
+                              photoboothSinPrecio = cs;
+                            }
+                          }
+                          continue;
                         }
+                        
+                        // Para otros servicios, agregar normalmente
+                        serviciosFiltrados.push(cs);
                       }
-                      continue;
-                    }
-                    
-                    // Para otros servicios, agregar normalmente
-                    serviciosFiltrados.push(cs);
-                  }
-                  
-                  // Agregar el Photobooth seleccionado (priorizar el que tiene precio)
-                  if (photoboothConPrecio) {
-                    serviciosFiltrados.push(photoboothConPrecio);
-                  } else if (photoboothSinPrecio) {
-                    serviciosFiltrados.push(photoboothSinPrecio);
-                  }
-                  
+                      
+                      // Agregar el Photobooth seleccionado (priorizar el que tiene precio)
+                      if (photoboothConPrecio) {
+                        serviciosFiltrados.push(photoboothConPrecio);
+                      } else if (photoboothSinPrecio) {
+                        serviciosFiltrados.push(photoboothSinPrecio);
+                      }
+                      
                   serviciosFiltrados.forEach((cs) => {
                     serviciosAdicionales.push({
                       id: cs.id,
@@ -728,7 +728,7 @@ function DetalleContrato() {
                         <ul className="space-y-2">
                           {serviciosIncluidos.map((servicio) => (
                             <li key={servicio.id} className="flex justify-between text-sm">
-                              <span className="text-gray-700">
+                          <span className="text-gray-700">
                                 ✓ {servicio.nombre}
                               </span>
                               <span className="text-gray-500 text-xs">Incluido</span>
@@ -752,15 +752,15 @@ function DetalleContrato() {
                                     (x{servicio.cantidad})
                                   </span>
                                 )}
-                              </span>
-                              <span className="font-medium">
+                          </span>
+                          <span className="font-medium">
                                 ${servicio.subtotal.toLocaleString()}
-                              </span>
-                            </li>
+                          </span>
+                        </li>
                           ))}
-                        </ul>
-                      </div>
-                    )}
+                  </ul>
+                </div>
+              )}
 
                     {serviciosIncluidos.length === 0 && serviciosAdicionales.length === 0 && (
                       <p className="text-sm text-gray-500">No hay servicios registrados</p>
@@ -768,8 +768,8 @@ function DetalleContrato() {
                   </>
                 );
               })()}
+              </div>
             </div>
-          </div>
  
             {/* Notas Internas del Vendedor */}
             <div className="bg-white rounded-xl shadow-sm border p-6">

@@ -288,7 +288,7 @@ function Contratos() {
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
                         <span className="font-medium">
-                          {(() => {
+                        {(() => {
                             const horasAdicionales = obtenerHorasAdicionales(contrato.contratos_servicios);
                             const horaFinConExtras = calcularHoraFinConExtras(contrato.hora_fin, horasAdicionales);
                             const duracion = calcularDuracion(contrato.hora_inicio, horaFinConExtras);
@@ -306,7 +306,7 @@ function Contratos() {
                                 })()}
                               </>
                             );
-                          })()}
+                        })()}
                         </span>
                       </div>
                     )}

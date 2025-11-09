@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getPrismaClient } = require('../config/database');
-const { authenticate, requireVendedor } = require('../middleware/auth');
+const { authenticate, requireVendedor, requireVendedorOrInventario } = require('../middleware/auth');
 const { NotFoundError } = require('../middleware/errorHandler');
 
 const prisma = getPrismaClient();
@@ -9,7 +9,7 @@ const prisma = getPrismaClient();
 // ====================================
 // OBTENER TODOS LOS SALONES ACTIVOS
 // ====================================
-router.get('/', authenticate, requireVendedor, async (req, res, next) => {
+router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next) => {
   try {
     const salones = await prisma.salones.findMany({
       where: { activo: true },

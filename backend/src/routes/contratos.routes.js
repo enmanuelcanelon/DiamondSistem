@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { getPrismaClient } = require('../config/database');
-const { authenticate, requireVendedor, requireCliente, requireOwnerOrVendedor } = require('../middleware/auth');
+const { authenticate, requireVendedor, requireCliente, requireOwnerOrVendedor, requireVendedorOrInventario } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const { generarCodigoContrato, generarCodigoAccesoCliente } = require('../utils/codeGenerator');
 const { calcularComisionVendedor, calcularPagosFinanciamiento } = require('../utils/priceCalculator');
@@ -17,16 +17,17 @@ const prisma = getPrismaClient();
 /**
  * @route   GET /api/contratos
  * @desc    Listar contratos
- * @access  Private (Vendedor)
+ * @access  Private (Vendedor o Inventario)
  */
-router.get('/', authenticate, requireVendedor, async (req, res, next) => {
+router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next) => {
   try {
-    const { cliente_id, estado, estado_pago, fecha_desde, fecha_hasta, search } = req.query;
+    const { cliente_id, estado, estado_pago, fecha_desde, fecha_hasta, search, salon_id, alerta_30_dias } = req.query;
 
-    // CRÍTICO: Forzar que el vendedor solo vea SUS contratos
-    const where = {
-      vendedor_id: req.user.id // Solo contratos del vendedor autenticado
-    };
+    // Si es vendedor, solo ver sus contratos. Si es inventario, ver todos
+    const where = {};
+    if (req.user.tipo === 'vendedor') {
+      where.vendedor_id = req.user.id; // Solo contratos del vendedor autenticado
+    }
 
     // Permitir filtros adicionales
     if (cliente_id) {
@@ -39,6 +40,25 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
 
     if (estado_pago) {
       where.estado_pago = estado_pago;
+    }
+
+    // Filtro por salón
+    if (salon_id) {
+      where.salon_id = parseInt(salon_id);
+    }
+
+    // Filtro para alertas de 30 días (contratos que están a 30 días o menos)
+    if (alerta_30_dias === 'true') {
+      const fechaLimite = new Date();
+      fechaLimite.setDate(fechaLimite.getDate() + 30);
+      const fechaHoy = new Date();
+      fechaHoy.setHours(0, 0, 0, 0);
+      
+      where.fecha_evento = {
+        gte: fechaHoy,
+        lte: fechaLimite
+      };
+      where.estado = 'activo';
     }
 
     // Filtro por fecha del evento
@@ -111,6 +131,15 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
                 nombre: true
               }
             }
+          }
+        },
+        asignaciones_inventario: {
+          where: {
+            estado: { not: 'cancelado' }
+          },
+          select: {
+            id: true,
+            estado: true
           }
         }
       },

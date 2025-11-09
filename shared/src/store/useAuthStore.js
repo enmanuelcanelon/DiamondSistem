@@ -116,6 +116,42 @@ const useAuthStore = create((set) => ({
     }
   },
 
+  // Login de inventario
+  loginInventario: async (codigo_usuario, password) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.post('/auth/login/inventario', {
+        codigo_usuario,
+        password,
+      });
+
+      const { token, user } = response.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify({ ...user, tipo: 'inventario' }));
+
+      set({
+        user: { ...user, tipo: 'inventario' },
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Error al iniciar sesión';
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: errorMessage,
+      });
+      return { success: false, error: errorMessage };
+    }
+  },
+
   // Login directo con token y datos (para cliente)
   loginWithToken: (token, userData) => {
     localStorage.setItem('token', token);

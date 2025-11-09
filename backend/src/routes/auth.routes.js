@@ -6,8 +6,8 @@ const express = require('express');
 const router = express.Router();
 const { getPrismaClient } = require('../config/database');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
-const { generateVendedorToken, generateClienteToken, generateManagerToken, generateGerenteToken } = require('../utils/jwt');
-const { authenticate, requireVendedor, requireManager, requireGerente } = require('../middleware/auth');
+const { generateVendedorToken, generateClienteToken, generateManagerToken, generateGerenteToken, generateInventarioToken } = require('../utils/jwt');
+const { authenticate, requireVendedor, requireManager, requireGerente, requireInventario } = require('../middleware/auth');
 const { UnauthorizedError, ValidationError, NotFoundError } = require('../middleware/errorHandler');
 
 const prisma = getPrismaClient();
@@ -244,6 +244,59 @@ router.post('/login/gerente', async (req, res, next) => {
       message: 'Login exitoso',
       token,
       user: gerenteData
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/auth/login/inventario
+ * @desc    Login de usuario de inventario
+ * @access  Public
+ */
+router.post('/login/inventario', async (req, res, next) => {
+  try {
+    const { codigo_usuario, password } = req.body;
+
+    // Validar datos
+    if (!codigo_usuario || !password) {
+      throw new ValidationError('Código de usuario y contraseña son requeridos');
+    }
+
+    // Buscar usuario de inventario
+    const usuario = await prisma.usuarios_inventario.findUnique({
+      where: { codigo_usuario }
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    // Verificar si está activo
+    if (!usuario.activo) {
+      throw new UnauthorizedError('Cuenta de usuario desactivada');
+    }
+
+    // Verificar password
+    const isValidPassword = await comparePassword(password, usuario.password_hash);
+    
+    if (!isValidPassword) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    // Generar token
+    const token = generateInventarioToken(usuario);
+
+    // Remover password del response
+    const { password_hash, ...usuarioData } = usuario;
+
+    res.json({
+      success: true,
+      message: 'Login exitoso',
+      token,
+      user: usuarioData
     });
 
   } catch (error) {

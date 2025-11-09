@@ -111,7 +111,7 @@ function EditarOferta() {
     queryKey: ['clientes'],
     queryFn: async () => {
       try {
-        const response = await api.get('/clientes');
+      const response = await api.get('/clientes');
         return response.data?.data || [];
       } catch (error) {
         console.error('Error al cargar clientes:', error);
@@ -481,7 +481,7 @@ function EditarOferta() {
   useEffect(() => {
     // Solo calcular si tenemos los datos mínimos necesarios
     if (formData.paquete_id && formData.cantidad_invitados) {
-      calcularPrecio();
+    calcularPrecio();
     }
   }, [
     formData.paquete_id,
@@ -869,8 +869,8 @@ function EditarOferta() {
       
       if (servicioData.nombre === 'Licor Premium' && tieneLicorBasico) {
         alert(`No puedes seleccionar "Licor Premium" porque ya tienes "Licor Básico" ${tieneLicorBasicoEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
-        return;
-      }
+          return;
+        }
       if (servicioData.nombre === 'Licor Básico' && tieneLicorPremium) {
         alert(`No puedes seleccionar "Licor Básico" porque ya tienes "Licor Premium" ${tieneLicorPremiumEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
         return;
@@ -942,8 +942,8 @@ function EditarOferta() {
         } else {
           // Si es el mismo servicio que está en el paquete, sí es excluyente
           tieneExcluyenteEnPaquete = paqueteSeleccionado?.paquetes_servicios?.some(ps => {
-            return ps.servicios && nombresExcluyentes.includes(ps.servicios.nombre);
-          });
+        return ps.servicios && nombresExcluyentes.includes(ps.servicios.nombre);
+      });
         }
       } else if (esSidraOChampana) {
         // Detectar qué servicio está seleccionado en el paquete usando getServiciosPaqueteSeleccionados
@@ -1115,11 +1115,11 @@ function EditarOferta() {
     }
 
     // Validar que la fecha no sea pasada
-    const fechaSeleccionada = new Date(formData.fecha_evento);
-    const fechaHoy = new Date();
-    fechaHoy.setHours(0, 0, 0, 0);
+      const fechaSeleccionada = new Date(formData.fecha_evento);
+      const fechaHoy = new Date();
+      fechaHoy.setHours(0, 0, 0, 0);
 
-    if (fechaSeleccionada < fechaHoy) {
+      if (fechaSeleccionada < fechaHoy) {
       setErrorFecha('No se puede seleccionar una fecha pasada. Por favor, elige una fecha presente o futura.');
       alert('⚠️ No se puede seleccionar una fecha pasada.');
       return false;
@@ -1262,7 +1262,7 @@ function EditarOferta() {
       alert('⚠️ Por favor, completa todos los pasos obligatorios antes de guardar los cambios.');
       return;
     }
-
+    
     const dataToSubmit = {
       cliente_id: parseInt(formData.cliente_id),
       paquete_id: parseInt(formData.paquete_id),
@@ -1331,9 +1331,9 @@ function EditarOferta() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
-            <p className="text-gray-600">Cargando oferta...</p>
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-600">Cargando oferta...</p>
           </div>
         </div>
       </div>
@@ -1502,17 +1502,17 @@ function EditarOferta() {
                   Fecha del Evento *
                 </label>
                 <div className="relative">
-                  <input
-                    type="date"
-                    name="fecha_evento"
-                    value={formData.fecha_evento}
-                    onChange={handleChange}
-                    min={obtenerFechaMinima()}
-                    required
+                <input
+                  type="date"
+                  name="fecha_evento"
+                  value={formData.fecha_evento}
+                  onChange={handleChange}
+                  min={obtenerFechaMinima()}
+                  required
                     disabled={!formData.salon_id || formData.salon_id === ''}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorFecha ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '') ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
-                    }`}
+                  }`}
                     placeholder="Selecciona una fecha"
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
@@ -1546,14 +1546,14 @@ function EditarOferta() {
                   Cantidad de Invitados *
                 </label>
                 <div className="relative">
-                  <input
-                    type="number"
-                    name="cantidad_invitados"
-                    value={formData.cantidad_invitados}
-                    onChange={handleChange}
-                    min="1"
+                <input
+                  type="number"
+                  name="cantidad_invitados"
+                  value={formData.cantidad_invitados}
+                  onChange={handleChange}
+                  min="1"
                     step="1"
-                    required
+                  required
                     placeholder="Ej: 50"
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       excedeCapacidad ? 'border-amber-400 bg-amber-50' : 'border-gray-300 hover:border-gray-400'
@@ -1595,7 +1595,7 @@ function EditarOferta() {
                       const nuevaHora = hora ? `${hora}:${minutos}` : '';
                       handleChange({ target: { name: 'hora_inicio', value: nuevaHora } });
                     }}
-                    required
+                  required
                     disabled={!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento}
                     className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
@@ -1628,7 +1628,7 @@ function EditarOferta() {
                     }}
                     className={`w-24 px-3 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorHorario ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-gray-400'
-                    }`}
+                  }`}
                   >
                     <option value="00">:00</option>
                     <option value="15">:15</option>
@@ -1637,7 +1637,7 @@ function EditarOferta() {
                   </select>
                 </div>
                 {(!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? (
-                  <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                     ⚠️ Primero selecciona el lugar y la fecha del evento
                   </p>
                 ) : cargandoHorasOcupadas ? (
@@ -1658,7 +1658,7 @@ function EditarOferta() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Horario permitido: desde las 10:00 AM
-                  </p>
+                </p>
                 )}
               </div>
 
@@ -1677,7 +1677,7 @@ function EditarOferta() {
                       const nuevaHora = hora ? `${hora}:${minutos}` : '';
                       handleChange({ target: { name: 'hora_fin', value: nuevaHora } });
                     }}
-                    required
+                  required
                     disabled={!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento || !formData.hora_inicio}
                     className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento || !formData.hora_inicio) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
@@ -1720,7 +1720,7 @@ function EditarOferta() {
                     }}
                     className={`w-24 px-3 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorHorario ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-gray-400'
-                    }`}
+                  }`}
                   >
                     <option value="00">:00</option>
                     <option value="15">:15</option>
@@ -2138,16 +2138,16 @@ function EditarOferta() {
                     <>
                       {/* Servicios normales (no excluyentes) */}
                       {serviciosNormales.map((ps) => (
-                        <div key={ps.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div key={ps.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                             <span className="font-medium text-gray-900">{obtenerNombreServicio(ps.servicios?.nombre)}</span>
-                          </div>
-                          <span className="text-sm text-green-700 font-medium">
+                    </div>
+                    <span className="text-sm text-green-700 font-medium">
                             ✓ Incluido
-                          </span>
-                        </div>
-                      ))}
+                    </span>
+                  </div>
+                ))}
                       
                       {/* Grupos de servicios excluyentes (con selector) */}
                       {gruposExcluyentes.map((grupo, idx) => {
@@ -2501,9 +2501,9 @@ function EditarOferta() {
                               // Para otros servicios, aplicar la lógica normal
                               tieneExcluyenteEnPaquete = !(esPaqueteEspecialOPersonalizado && esSidraOChampana) &&
                                 serviciosExcluyentes[servicio.nombre] &&
-                                paqueteSeleccionado?.paquetes_servicios?.some(ps => {
-                                  return ps.servicios && serviciosExcluyentes[servicio.nombre].includes(ps.servicios.nombre);
-                                });
+                              paqueteSeleccionado?.paquetes_servicios?.some(ps => {
+                                return ps.servicios && serviciosExcluyentes[servicio.nombre].includes(ps.servicios.nombre);
+                              });
                             }
                             
                             // NUEVA LÓGICA: Permitir upgrade según reglas del paquete
@@ -2800,7 +2800,7 @@ function EditarOferta() {
           {/* Botones de Navegación del Wizard */}
           <div className="flex gap-3 pt-4 border-t">
             {pasoActual > 1 && (
-              <button
+            <button
                 type="button"
                 onClick={retrocederPaso}
                 className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
@@ -2823,21 +2823,21 @@ function EditarOferta() {
               <button
                 type="button"
                 onClick={handleSubmitFinal}
-                disabled={mutation.isPending}
+              disabled={mutation.isPending}
                 className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {mutation.isPending ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Guardando cambios...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Guardar Cambios
-                  </>
-                )}
-              </button>
+            >
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Guardando cambios...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  Guardar Cambios
+                </>
+              )}
+            </button>
             )}
             <button
               onClick={() => navigate('/ofertas')}

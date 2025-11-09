@@ -135,7 +135,7 @@ function CrearOferta() {
     queryKey: ['clientes'],
     queryFn: async () => {
       try {
-        const response = await api.get('/clientes');
+      const response = await api.get('/clientes');
         // El endpoint retorna { data: [...], total, page, ... }
         return response.data?.data || [];
       } catch (error) {
@@ -151,7 +151,7 @@ function CrearOferta() {
     queryKey: ['salones'],
     queryFn: async () => {
       try {
-        const response = await api.get('/salones');
+      const response = await api.get('/salones');
         return response.data?.salones || response.data?.data || [];
       } catch (error) {
         console.error('Error al cargar salones:', error);
@@ -165,13 +165,13 @@ function CrearOferta() {
     queryKey: ['paquetes-salon', formData.salon_id],
     queryFn: async () => {
       try {
-        if (!formData.salon_id) {
-          // Si no hay salón, obtener todos los paquetes
-          const response = await api.get('/paquetes');
+      if (!formData.salon_id) {
+        // Si no hay salón, obtener todos los paquetes
+        const response = await api.get('/paquetes');
           return response.data?.paquetes || response.data?.data || [];
-        }
-        // Si hay salón, obtener paquetes de ese salón con precios personalizados
-        const response = await api.get(`/salones/${formData.salon_id}/paquetes`);
+      }
+      // Si hay salón, obtener paquetes de ese salón con precios personalizados
+      const response = await api.get(`/salones/${formData.salon_id}/paquetes`);
         return response.data?.paquetes || response.data?.data || [];
       } catch (error) {
         console.error('Error al cargar paquetes:', error);
@@ -185,7 +185,7 @@ function CrearOferta() {
     queryKey: ['temporadas'],
     queryFn: async () => {
       try {
-        const response = await api.get('/temporadas');
+      const response = await api.get('/temporadas');
         return response.data?.temporadas || response.data?.data || [];
       } catch (error) {
         console.error('Error al cargar temporadas:', error);
@@ -198,7 +198,7 @@ function CrearOferta() {
     queryKey: ['servicios'],
     queryFn: async () => {
       try {
-        const response = await api.get('/servicios');
+      const response = await api.get('/servicios');
         return response.data?.servicios || response.data?.data || [];
       } catch (error) {
         console.error('Error al cargar servicios:', error);
@@ -212,7 +212,7 @@ function CrearOferta() {
     queryKey: ['paquete', formData.paquete_id],
     queryFn: async () => {
       try {
-        const response = await api.get(`/paquetes/${formData.paquete_id}`);
+      const response = await api.get(`/paquetes/${formData.paquete_id}`);
         return response.data?.paquete || null;
       } catch (error) {
         console.error('Error al cargar detalles del paquete:', error);
@@ -915,8 +915,8 @@ function CrearOferta() {
       
       if (servicioData.nombre === 'Licor Premium' && tieneLicorBasico) {
         alert(`No puedes seleccionar "Licor Premium" porque ya tienes "Licor Básico" ${tieneLicorBasicoEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
-        return;
-      }
+          return;
+        }
       if (servicioData.nombre === 'Licor Básico' && tieneLicorPremium) {
         alert(`No puedes seleccionar "Licor Básico" porque ya tienes "Licor Premium" ${tieneLicorPremiumEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
         return;
@@ -988,8 +988,8 @@ function CrearOferta() {
         } else {
           // Si es el mismo servicio que está en el paquete, sí es excluyente
           tieneExcluyenteEnPaquete = serviciosPaquete.some(ps => {
-            return ps.servicios && nombresExcluyentes.includes(ps.servicios.nombre);
-          });
+        return ps.servicios && nombresExcluyentes.includes(ps.servicios.nombre);
+      });
         }
       } else if (esSidraOChampana) {
         // Detectar qué servicio está seleccionado en el paquete
@@ -1588,17 +1588,17 @@ function CrearOferta() {
                   Fecha del Evento *
                 </label>
                 <div className="relative">
-                  <input
-                    type="date"
-                    name="fecha_evento"
-                    value={formData.fecha_evento}
-                    onChange={handleChange}
-                    min={obtenerFechaMinima()}
-                    required
+                <input
+                  type="date"
+                  name="fecha_evento"
+                  value={formData.fecha_evento}
+                  onChange={handleChange}
+                  min={obtenerFechaMinima()}
+                  required
                     disabled={!formData.salon_id || formData.salon_id === ''}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorFecha ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '') ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
-                    }`}
+                  }`}
                     placeholder="Selecciona una fecha"
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
@@ -1632,19 +1632,19 @@ function CrearOferta() {
                   Cantidad de Invitados *
                 </label>
                 <div className="relative">
-                  <input
-                    type="number"
-                    name="cantidad_invitados"
-                    value={formData.cantidad_invitados}
-                    onChange={handleChange}
-                    min="1"
+                <input
+                  type="number"
+                  name="cantidad_invitados"
+                  value={formData.cantidad_invitados}
+                  onChange={handleChange}
+                  min="1"
                     step="1"
-                    required
+                  required
                     placeholder="Ej: 50"
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       excedeCapacidad ? 'border-amber-400 bg-amber-50' : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  />
+                  }`}
+                />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
                     <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -1681,7 +1681,7 @@ function CrearOferta() {
                       const nuevaHora = hora ? `${hora}:${minutos}` : '';
                       handleChange({ target: { name: 'hora_inicio', value: nuevaHora } });
                     }}
-                    required
+                  required
                     disabled={!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento}
                     className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
@@ -1714,7 +1714,7 @@ function CrearOferta() {
                     }}
                     className={`w-24 px-3 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorHorario ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-gray-400'
-                    }`}
+                  }`}
                   >
                     <option value="00">:00</option>
                     <option value="15">:15</option>
@@ -1723,7 +1723,7 @@ function CrearOferta() {
                   </select>
                 </div>
                 {(!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? (
-                  <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                     ⚠️ Primero selecciona el lugar y la fecha del evento
                   </p>
                 ) : cargandoHorasOcupadas ? (
@@ -1744,7 +1744,7 @@ function CrearOferta() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Horario permitido: desde las 10:00 AM
-                  </p>
+                </p>
                 )}
               </div>
 
@@ -1763,7 +1763,7 @@ function CrearOferta() {
                       const nuevaHora = hora ? `${hora}:${minutos}` : '';
                       handleChange({ target: { name: 'hora_fin', value: nuevaHora } });
                     }}
-                    required
+                  required
                     disabled={!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento || !formData.hora_inicio}
                     className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento || !formData.hora_inicio) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
@@ -1806,7 +1806,7 @@ function CrearOferta() {
                     }}
                     className={`w-24 px-3 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorHorario ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-gray-400'
-                    }`}
+                  }`}
                   >
                     <option value="00">:00</option>
                     <option value="15">:15</option>
@@ -1862,7 +1862,7 @@ function CrearOferta() {
 
               {/* Mensaje de verificación de disponibilidad - Solo cuando hay salón, fecha y horas */}
               {formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento && formData.hora_inicio && formData.hora_fin && !errorHorario && (
-                <div className="md:col-span-2">
+              <div className="md:col-span-2">
                   {verificandoDisponibilidad && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-600 flex items-center gap-2">
@@ -1885,9 +1885,9 @@ function CrearOferta() {
                             ⚠️ No podrás continuar hasta que selecciones un horario disponible.
                           </span>
                         </span>
-                      </p>
-                    </div>
-                  )}
+                    </p>
+                  </div>
+                )}
                   
                   {!errorDisponibilidad && !verificandoDisponibilidad && formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento && formData.hora_inicio && formData.hora_fin && (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -1895,7 +1895,7 @@ function CrearOferta() {
                         <CheckCircle2 className="w-4 h-4" />
                         <span>✓ El salón está disponible en este horario</span>
                       </p>
-                    </div>
+              </div>
                   )}
                 </div>
               )}
@@ -2621,9 +2621,9 @@ function CrearOferta() {
                               // Para otros servicios, aplicar la lógica normal
                               tieneExcluyenteEnPaquete = !(esPaqueteEspecialOPersonalizado && esSidraOChampana) &&
                                 serviciosExcluyentes[servicio.nombre] &&
-                                serviciosPaquete.some(ps => {
-                                  return ps.servicios && serviciosExcluyentes[servicio.nombre].includes(ps.servicios.nombre);
-                                });
+                              serviciosPaquete.some(ps => {
+                                return ps.servicios && serviciosExcluyentes[servicio.nombre].includes(ps.servicios.nombre);
+                              });
                             }
                             
                             // NUEVA LÓGICA: Permitir upgrade según reglas del paquete
@@ -2932,7 +2932,7 @@ function CrearOferta() {
           {/* Botones de Navegación del Wizard */}
           <div className="flex gap-3 pt-4 border-t">
             {pasoActual > 1 && (
-              <button
+            <button
                 type="button"
                 onClick={retrocederPaso}
                 className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
@@ -2955,21 +2955,21 @@ function CrearOferta() {
               <button
                 type="button"
                 onClick={handleSubmitFinal}
-                disabled={mutation.isPending}
+              disabled={mutation.isPending}
                 className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {mutation.isPending ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Creando oferta...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Crear Oferta
-                  </>
-                )}
-              </button>
+            >
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Creando oferta...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  Crear Oferta
+                </>
+              )}
+            </button>
             )}
             <Link
               to="/ofertas"
