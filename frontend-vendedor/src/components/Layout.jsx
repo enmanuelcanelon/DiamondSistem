@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Diamond, 
   LayoutDashboard, 
@@ -61,11 +61,13 @@ function Layout() {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
-                  <Link
+                  <button
                     key={item.name}
-                    to={item.href}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    onClick={() => {
+                      navigate(item.href);
+                      setSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
                       active
                         ? 'bg-indigo-50 text-indigo-600'
                         : 'text-gray-700 hover:bg-gray-50'
@@ -73,7 +75,7 @@ function Layout() {
                   >
                     <Icon className="w-5 h-5" />
                     <span className="font-medium">{item.name}</span>
-                  </Link>
+                  </button>
                 );
               })}
             </nav>
@@ -93,10 +95,10 @@ function Layout() {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <Link
+                <button
                   key={item.name}
-                  to={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                  onClick={() => navigate(item.href)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
                     active
                       ? 'bg-indigo-50 text-indigo-600'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -104,7 +106,7 @@ function Layout() {
                 >
                   <Icon className="w-5 h-5" />
                   <span className="font-medium">{item.name}</span>
-                </Link>
+                </button>
               );
             })}
           </nav>

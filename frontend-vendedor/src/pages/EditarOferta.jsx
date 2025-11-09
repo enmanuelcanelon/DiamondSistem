@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, X, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import ModalCrearCliente from '../components/ModalCrearCliente';
 
 function EditarOferta() {
   const navigate = useNavigate();
@@ -39,8 +40,14 @@ function EditarOferta() {
   const [mostrarAjusteTemporada, setMostrarAjusteTemporada] = useState(false);
   const [mostrarAjustePrecioBase, setMostrarAjustePrecioBase] = useState(false);
   const [mostrarAjusteServicios, setMostrarAjusteServicios] = useState(false);
+  const [modalClienteOpen, setModalClienteOpen] = useState(false);
   const [errorFecha, setErrorFecha] = useState('');
+  const [excedeCapacidad, setExcedeCapacidad] = useState(false);
+  const [mostrarModalCapacidad, setMostrarModalCapacidad] = useState(false);
   const [errorHorario, setErrorHorario] = useState('');
+  const [mostrarModalHorasExtras, setMostrarModalHorasExtras] = useState(false);
+  const [horasExtrasFaltantes, setHorasExtrasFaltantes] = useState(0);
+  
   // Estado para servicios excluyentes del paquete (ej: Photobooth 360 o Print, Sidra o Champaña)
   const [serviciosExcluyentesSeleccionados, setServiciosExcluyentesSeleccionados] = useState({});
 
@@ -206,6 +213,9 @@ function EditarOferta() {
         setServiciosSeleccionados(serviciosAdicionales);
       }
 
+      // Nota: Los servicios excluyentes se cargarán en un useEffect separado
+      // después de que el paquete y los servicios estén disponibles
+
       // Cargar ajustes personalizados si existen
       if (ofertaExistente.precio_base_ajustado) {
         setPrecioBaseAjustado(ofertaExistente.precio_base_ajustado.toString());
@@ -257,6 +267,69 @@ function EditarOferta() {
       }
     }
   }, [ofertaExistente, navigate]);
+
+  // Cargar servicios excluyentes seleccionados después de que el paquete y servicios estén disponibles
+  useEffect(() => {
+    if (ofertaExistente && paqueteSeleccionado && servicios && servicios.length > 0) {
+      let grupoIdx = 0;
+      const serviciosExcluyentesTemp = {};
+      
+      // Buscar Photobooth 360 o Print en los servicios del paquete
+      const tienePhotobooth360 = paqueteSeleccionado.paquetes_servicios?.some(ps => ps.servicios?.nombre === 'Photobooth 360');
+      const tienePhotoboothPrint = paqueteSeleccionado.paquetes_servicios?.some(ps => ps.servicios?.nombre === 'Photobooth Print');
+      
+      if (tienePhotobooth360 || tienePhotoboothPrint) {
+        // Verificar cuál está en los servicios adicionales (si alguno fue cambiado)
+        const photoboothEnAdicionales = ofertaExistente.ofertas_servicios_adicionales?.find(
+          os => os.servicios?.nombre === 'Photobooth 360' || os.servicios?.nombre === 'Photobooth Print'
+        );
+        
+        if (photoboothEnAdicionales) {
+          // Si hay un Photobooth en adicionales, significa que se cambió del original
+          serviciosExcluyentesTemp[`grupo_${grupoIdx}`] = photoboothEnAdicionales.servicio_id;
+        } else {
+          // Usar el que está en el paquete
+          const photobooth360Servicio = servicios.find(s => s.nombre === 'Photobooth 360');
+          const photoboothPrintServicio = servicios.find(s => s.nombre === 'Photobooth Print');
+          
+          if (tienePhotobooth360 && photobooth360Servicio) {
+            serviciosExcluyentesTemp[`grupo_${grupoIdx}`] = photobooth360Servicio.id;
+          } else if (tienePhotoboothPrint && photoboothPrintServicio) {
+            serviciosExcluyentesTemp[`grupo_${grupoIdx}`] = photoboothPrintServicio.id;
+          }
+        }
+        grupoIdx++;
+      }
+      
+      // Buscar Sidra o Champaña en los servicios del paquete
+      const tieneSidra = paqueteSeleccionado.paquetes_servicios?.some(ps => ps.servicios?.nombre === 'Sidra');
+      const tieneChampana = paqueteSeleccionado.paquetes_servicios?.some(ps => ps.servicios?.nombre === 'Champaña');
+      
+      if (tieneSidra || tieneChampana) {
+        // Verificar cuál está en los servicios adicionales (si alguno fue cambiado)
+        const sidraChampanaEnAdicionales = ofertaExistente.ofertas_servicios_adicionales?.find(
+          os => os.servicios?.nombre === 'Sidra' || os.servicios?.nombre === 'Champaña'
+        );
+        
+        if (sidraChampanaEnAdicionales) {
+          // Si hay Sidra/Champaña en adicionales, significa que se cambió del original
+          serviciosExcluyentesTemp[`grupo_${grupoIdx}`] = sidraChampanaEnAdicionales.servicio_id;
+        } else {
+          // Usar el que está en el paquete
+          const sidraServicio = servicios.find(s => s.nombre === 'Sidra');
+          const champanaServicio = servicios.find(s => s.nombre === 'Champaña');
+          
+          if (tieneSidra && sidraServicio) {
+            serviciosExcluyentesTemp[`grupo_${grupoIdx}`] = sidraServicio.id;
+          } else if (tieneChampana && champanaServicio) {
+            serviciosExcluyentesTemp[`grupo_${grupoIdx}`] = champanaServicio.id;
+          }
+        }
+      }
+      
+      setServiciosExcluyentesSeleccionados(serviciosExcluyentesTemp);
+    }
+  }, [ofertaExistente, paqueteSeleccionado, servicios]);
 
   // Detectar temporada automáticamente cuando cambia la fecha
   useEffect(() => {
@@ -1087,17 +1160,6 @@ function EditarOferta() {
     handleSubmitFinal();
   };
 
-  if (cargandoOferta) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-gray-600">Cargando oferta...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Función para verificar si un paso está completo
   const pasoCompleto = (paso) => {
     switch (paso) {
@@ -1129,13 +1191,31 @@ function EditarOferta() {
     'Descuento'
   ];
 
+  // Mostrar loading si está cargando
+  if (cargandoOferta) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+            <p className="text-gray-600">Cargando oferta...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to="/ofertas" className="p-2 hover:bg-gray-100 rounded-lg transition">
+        <button
+          onClick={() => navigate('/ofertas')}
+          className="p-2 hover:bg-gray-100 rounded-lg transition"
+          type="button"
+        >
           <ArrowLeft className="w-6 h-6" />
-        </Link>
+        </button>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Editar Oferta</h1>
           <p className="text-gray-600 mt-1">Modifica la propuesta comercial - {ofertaExistente?.codigo_oferta}</p>
@@ -2466,12 +2546,13 @@ function EditarOferta() {
                 )}
               </button>
             )}
-            <Link
-              to="/ofertas"
+            <button
+              onClick={() => navigate('/ofertas')}
+              type="button"
               className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
             >
               Cancelar
-            </Link>
+            </button>
           </div>
         </div>
 
