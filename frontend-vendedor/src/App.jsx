@@ -21,15 +21,7 @@ import ChatVendedor from './pages/ChatVendedor';
 import AjustesEventoVendedor from './pages/AjustesEventoVendedor';
 import CalendarioMensual from './pages/CalendarioMensual';
 
-// Pages - Cliente
-import LoginCliente from './pages/cliente/LoginCliente';
-import DashboardCliente from './pages/cliente/DashboardCliente';
-import AjustesEvento from './pages/cliente/AjustesEvento';
-import ChatCliente from './pages/cliente/ChatCliente';
-import MisSolicitudes from './pages/cliente/MisSolicitudes';
-import SolicitarCambios from './pages/cliente/SolicitarCambios';
-import MisContratos from './pages/cliente/MisContratos';
-import MiPerfil from './pages/cliente/MiPerfil';
+// Pages - Cliente (ELIMINADAS - Ahora están en frontend-cliente)
 
 // Pages - Manager (TEMPORALMENTE DESACTIVADO)
 // import LoginManager from './pages/manager/LoginManager';
@@ -47,7 +39,6 @@ import MiPerfil from './pages/cliente/MiPerfil';
 
 // Layout
 import Layout from './components/Layout';
-import LayoutCliente from './components/LayoutCliente';
 // import LayoutManager from './components/LayoutManager';
 // import LayoutGerente from './components/LayoutGerente';
 
@@ -74,27 +65,15 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   
+  // Si es cliente, no debería estar aquí (debe usar frontend-cliente en puerto 5174)
   if (user?.tipo === 'cliente') {
-    return <Navigate to="/cliente/dashboard" replace />;
+    return <Navigate to="/login" replace />;
   }
   
   return children;
 };
 
-// Protected Route Component (Clientes)
-const ProtectedRouteCliente = ({ children }) => {
-  const { isAuthenticated, user } = useAuthStore();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/cliente/login" replace />;
-  }
-  
-  if (user?.tipo !== 'cliente') {
-    return <Navigate to="/" replace />;
-  }
-  
-  return children;
-};
+// Protected Route Component (Clientes) - ELIMINADO (ahora está en frontend-cliente)
 
 // Protected Route Component (Managers) - TEMPORALMENTE DESACTIVADO
 // const ProtectedRouteManager = ({ children }) => {
@@ -160,28 +139,7 @@ function App() {
             <Route path="ajustes/:contratoId" element={<AjustesEventoVendedor />} />
           </Route>
 
-          {/* Cliente Routes */}
-          <Route path="/cliente/login" element={<LoginCliente />} />
-          
-          <Route
-            path="/cliente"
-            element={
-              <ProtectedRouteCliente>
-                <LayoutCliente />
-              </ProtectedRouteCliente>
-            }
-          >
-            <Route path="dashboard" element={<DashboardCliente />} />
-            <Route path="solicitudes" element={<MisSolicitudes />} />
-            <Route path="solicitar-cambios" element={<SolicitarCambios />} />
-            <Route path="versiones" element={<Navigate to="/cliente/contratos" replace />} />
-            <Route path="playlist/:id" element={<PlaylistMusical />} />
-            <Route path="mesas/:id" element={<AsignacionMesas />} />
-            <Route path="ajustes" element={<AjustesEvento />} />
-            <Route path="chat" element={<ChatCliente />} />
-            <Route path="contratos" element={<MisContratos />} />
-            <Route path="perfil" element={<MiPerfil />} />
-          </Route>
+          {/* Cliente Routes - ELIMINADAS (ahora están en frontend-cliente en puerto 5174) */}
 
           {/* Manager Routes - TEMPORALMENTE DESACTIVADO */}
           {/* <Route path="/manager/login" element={<LoginManager />} />

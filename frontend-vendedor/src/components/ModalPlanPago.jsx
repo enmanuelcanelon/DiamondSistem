@@ -1,10 +1,40 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, DollarSign, CreditCard, Check } from 'lucide-react';
+import { X, Calendar, DollarSign, CreditCard, Check, Loader2 } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import api from '../config/api';
 
-function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato }) {
+function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato, ofertaId, clienteId }) {
   const [tipoPago, setTipoPago] = useState('unico'); // 'unico' o 'plazos'
   const [numeroPlazos, setNumeroPlazos] = useState(6);
   const [planGenerado, setPlanGenerado] = useState(null);
+  const [pagoReservaRegistrado, setPagoReservaRegistrado] = useState(null);
+  const [mostrarFormularioPago, setMostrarFormularioPago] = useState(true);
+  const [formPagoReserva, setFormPagoReserva] = useState({
+    monto: 500,
+    metodo_pago: 'Efectivo',
+    tipo_tarjeta: '',
+    numero_referencia: '',
+    notas: ''
+  });
+
+  // Mutation para registrar pago de reserva
+  const registrarPagoReservaMutation = useMutation({
+    mutationFn: async (datosPago) => {
+      const response = await api.post('/pagos/reserva', {
+        oferta_id: ofertaId,
+        cliente_id: clienteId,
+        ...datosPago
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setPagoReservaRegistrado(data.pago);
+      setMostrarFormularioPago(false);
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || 'Error al registrar el pago de reserva');
+    }
+  });
 
   useEffect(() => {
     if (tipoPago === 'plazos') {
@@ -12,28 +42,47 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato }) {
     } else {
       setPlanGenerado(null);
     }
-  }, [tipoPago, numeroPlazos, totalContrato]);
+  }, [tipoPago, numeroPlazos, totalContrato, pagoReservaRegistrado]);
+
+  // Resetear estado cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setPagoReservaRegistrado(null);
+      setMostrarFormularioPago(true);
+      setFormPagoReserva({
+        monto: 500,
+        metodo_pago: 'Efectivo',
+        tipo_tarjeta: '',
+        numero_referencia: '',
+        notas: ''
+      });
+    }
+  }, [isOpen]);
 
   const generarPlanPagos = () => {
     const total = parseFloat(totalContrato);
     
-    // Depósito de reserva (separado, adicional)
-    const depositoReserva = 500;
+    // Depósito de reserva (se resta del total)
+    const depositoReserva = pagoReservaRegistrado ? parseFloat(pagoReservaRegistrado.monto_total || pagoReservaRegistrado.monto) : 500;
     
-    // Pagos obligatorios sobre el total del contrato
-    const pagoInicial = 1000;
+    // Total restante después de la reserva
+    const totalRestante = total - depositoReserva;
+    
+    // Pagos obligatorios sobre el total restante
+    const pagoInicial = Math.min(1000, totalRestante);
     
     // Saldo restante después del pago inicial
-    const saldoRestante = total - pagoInicial;
+    const saldoRestante = totalRestante - pagoInicial;
     
     if (saldoRestante <= 0) {
-      // Si el total es menor que el pago inicial, solo cobrar el total
+      // Si el total restante es menor que el pago inicial, solo cobrar el total restante
       setPlanGenerado({
         depositoReserva,
-        pagoInicial: Math.min(pagoInicial, total),
+        pagoInicial: Math.min(pagoInicial, totalRestante),
         pagos: [],
         totalContrato: total,
-        totalConDeposito: total + depositoReserva
+        totalRestante: totalRestante,
+        totalConDeposito: total
       });
       return;
     }
@@ -63,21 +112,43 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato }) {
       pagoInicial,
       pagos,
       totalContrato: total,
-      totalConDeposito: total + depositoReserva
+      totalRestante: totalRestante,
+      totalConDeposito: total
     });
   };
 
+  const handleRegistrarPagoReserva = () => {
+    if (formPagoReserva.monto < 500) {
+      alert('El pago de reserva debe ser de al menos $500');
+      return;
+    }
+
+    if (formPagoReserva.metodo_pago === 'Tarjeta' && !formPagoReserva.tipo_tarjeta) {
+      alert('Debe seleccionar el tipo de tarjeta');
+      return;
+    }
+
+    registrarPagoReservaMutation.mutate(formPagoReserva);
+  };
+
   const handleConfirm = () => {
+    if (!pagoReservaRegistrado) {
+      alert('Debe registrar el pago de reserva primero');
+      return;
+    }
+
     if (tipoPago === 'unico') {
       onConfirm({
         tipo_pago: 'unico',
-        plan_pagos: null
+        plan_pagos: null,
+        pago_reserva_id: pagoReservaRegistrado.id
       });
     } else {
       onConfirm({
         tipo_pago: 'plazos',
         numero_plazos: numeroPlazos,
-        plan_pagos: planGenerado
+        plan_pagos: planGenerado,
+        pago_reserva_id: pagoReservaRegistrado.id
       });
     }
   };
@@ -116,16 +187,152 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato }) {
                 ${parseFloat(totalContrato).toLocaleString()}
               </p>
             </div>
-            <div className="border-t border-blue-300 pt-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">💎 Depósito de Reserva:</span>
-                <span className="font-bold text-green-700">$500 (separado)</span>
+            {pagoReservaRegistrado && (
+              <div className="border-t border-blue-300 pt-3">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-gray-600">💎 Pago de Reserva:</span>
+                  <span className="font-bold text-green-700">
+                    -${parseFloat(pagoReservaRegistrado.monto_total || pagoReservaRegistrado.monto).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 font-semibold">Total Restante:</span>
+                  <span className="font-bold text-indigo-700 text-lg">
+                    ${(parseFloat(totalContrato) - parseFloat(pagoReservaRegistrado.monto_total || pagoReservaRegistrado.monto)).toLocaleString()}
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                El depósito de $500 es adicional y se paga al confirmar la reserva.
-              </p>
-            </div>
+            )}
           </div>
+
+          {/* Formulario de Pago de Reserva */}
+          {mostrarFormularioPago && !pagoReservaRegistrado && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-6 space-y-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Pago de Reserva</h3>
+                  <p className="text-sm text-gray-600">Registre el pago de reserva de $500 antes de crear el contrato</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Monto *
+                  </label>
+                  <input
+                    type="number"
+                    min="500"
+                    step="0.01"
+                    value={formPagoReserva.monto}
+                    onChange={(e) => setFormPagoReserva({ ...formPagoReserva, monto: parseFloat(e.target.value) || 500 })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Mínimo $500</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Método de Pago *
+                  </label>
+                  <select
+                    value={formPagoReserva.metodo_pago}
+                    onChange={(e) => setFormPagoReserva({ ...formPagoReserva, metodo_pago: e.target.value, tipo_tarjeta: e.target.value === 'Tarjeta' ? '' : formPagoReserva.tipo_tarjeta })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Zelle">Zelle</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Cheque">Cheque</option>
+                  </select>
+                </div>
+
+                {formPagoReserva.metodo_pago === 'Tarjeta' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de Tarjeta *
+                    </label>
+                    <select
+                      value={formPagoReserva.tipo_tarjeta}
+                      onChange={(e) => setFormPagoReserva({ ...formPagoReserva, tipo_tarjeta: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="">Seleccione...</option>
+                      <option value="Visa">Visa</option>
+                      <option value="MasterCard">MasterCard</option>
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Número de Referencia
+                  </label>
+                  <input
+                    type="text"
+                    value={formPagoReserva.numero_referencia}
+                    onChange={(e) => setFormPagoReserva({ ...formPagoReserva, numero_referencia: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="Opcional"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notas
+                </label>
+                <textarea
+                  value={formPagoReserva.notas}
+                  onChange={(e) => setFormPagoReserva({ ...formPagoReserva, notas: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  rows="2"
+                  placeholder="Notas adicionales (opcional)"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRegistrarPagoReserva}
+                disabled={registrarPagoReservaMutation.isPending}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold disabled:opacity-50"
+              >
+                {registrarPagoReservaMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Registrando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5" />
+                    Registrar Pago de Reserva
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Confirmación de Pago Registrado */}
+          {pagoReservaRegistrado && (
+            <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+              <div className="flex items-center gap-3">
+                <Check className="w-6 h-6 text-green-600" />
+                <div>
+                  <p className="font-semibold text-green-900">Pago de Reserva Registrado</p>
+                  <p className="text-sm text-green-700">
+                    ${parseFloat(pagoReservaRegistrado.monto_total || pagoReservaRegistrado.monto).toLocaleString()} - {formPagoReserva.metodo_pago}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Opciones de Pago */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -276,14 +483,14 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato }) {
                       </span>
                     </div>
                     
-                    {/* Total con Depósito */}
+                    {/* Total Final */}
                     <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 rounded-lg">
                       <div>
-                        <span className="text-lg font-bold text-gray-900">💰 TOTAL A PAGAR:</span>
-                        <p className="text-xs text-gray-600 mt-1">(Incluye depósito de $500)</p>
+                        <span className="text-lg font-bold text-gray-900">💰 TOTAL RESTANTE:</span>
+                        <p className="text-xs text-gray-600 mt-1">(Después del pago de reserva)</p>
                       </div>
                       <span className="text-2xl font-bold text-amber-700">
-                        ${parseFloat(planGenerado.totalConDeposito).toLocaleString()}
+                        ${parseFloat(planGenerado.totalRestante).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -317,10 +524,11 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato }) {
             <button
               type="button"
               onClick={handleConfirm}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold text-lg shadow-md"
+              disabled={!pagoReservaRegistrado}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold text-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check className="w-5 h-5" />
-              Confirmar y Crear Contrato
+              {pagoReservaRegistrado ? 'Confirmar y Crear Contrato' : 'Registre el pago de reserva primero'}
             </button>
             <button
               type="button"

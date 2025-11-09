@@ -95,10 +95,10 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
     if (ajuste_temporada_custom !== null && ajuste_temporada_custom !== undefined && ajuste_temporada_custom !== '') {
       const ajusteCustom = parseFloat(ajuste_temporada_custom);
       if (!isNaN(ajusteCustom)) {
-        temporada = {
-          ...temporada,
+      temporada = {
+        ...temporada,
           ajuste_precio: ajusteCustom
-        };
+      };
       }
     }
 
@@ -156,13 +156,13 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
     let calculo;
     try {
       calculo = calcularPrecioTotal({
-        paquete,
-        temporada,
-        serviciosAdicionales: servicios,
-        cantidadInvitados: parseInt(cantidad_invitados),
-        descuento: parseFloat(descuento) || 0,
-        configuracion
-      });
+      paquete,
+      temporada,
+      serviciosAdicionales: servicios,
+      cantidadInvitados: parseInt(cantidad_invitados),
+      descuento: parseFloat(descuento) || 0,
+      configuracion
+    });
     } catch (error) {
       // Si el error es sobre descuento/total negativo, lanzar ValidationError
       if (error.message.includes('descuento') || error.message.includes('negativo')) {
@@ -268,6 +268,16 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
             select: {
               id: true,
               nombre: true
+            }
+          },
+          ofertas_servicios_adicionales: {
+            include: {
+              servicios: {
+                select: {
+                  id: true,
+                  nombre: true
+                }
+              }
             }
           }
         },
@@ -459,13 +469,13 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     let calculo;
     try {
       calculo = calcularPrecioTotal({
-        paquete,
-        temporada,
-        serviciosAdicionales: servicios,
-        cantidadInvitados: parseInt(datos.cantidad_invitados),
-        descuento: parseFloat(datos.descuento || datos.descuento_porcentaje) || 0,
-        configuracion
-      });
+      paquete,
+      temporada,
+      serviciosAdicionales: servicios,
+      cantidadInvitados: parseInt(datos.cantidad_invitados),
+      descuento: parseFloat(datos.descuento || datos.descuento_porcentaje) || 0,
+      configuracion
+    });
     } catch (error) {
       // Si el error es sobre descuento/total negativo, lanzar ValidationError
       if (error.message.includes('descuento') || error.message.includes('negativo')) {
@@ -501,9 +511,9 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
            hora_fin: new Date(`1970-01-01T${datos.hora_fin || '23:00'}:00Z`),
            cantidad_invitados: parseInt(datos.cantidad_invitados),
            lugar_evento: datos.lugar_evento || null,
-          lugar_salon: datos.lugar_evento || null,
-          homenajeado: datos.homenajeado || null,
-          temporada_id: temporada.id,
+           lugar_salon: datos.lugar_evento || null,
+           homenajeado: datos.homenajeado || null,
+           temporada_id: temporada.id,
           precio_paquete_base: parseFloat(calculo.desglose.paquete.precioBase),
           precio_base_ajustado: datos.precio_base_ajustado && datos.precio_base_ajustado !== '' ? parseFloat(datos.precio_base_ajustado) : null,
           ajuste_temporada: parseFloat(calculo.desglose.paquete.ajusteTemporada),
@@ -656,10 +666,10 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
     if (datos.ajuste_temporada_custom !== null && datos.ajuste_temporada_custom !== undefined && datos.ajuste_temporada_custom !== '') {
       const ajusteCustom = parseFloat(datos.ajuste_temporada_custom);
       if (!isNaN(ajusteCustom)) {
-        temporada = {
-          ...temporada,
+      temporada = {
+        ...temporada,
           ajuste_precio: ajusteCustom
-        };
+      };
       }
     }
 
@@ -715,13 +725,13 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
     let calculo;
     try {
       calculo = calcularPrecioTotal({
-        paquete,
-        temporada,
-        serviciosAdicionales: servicios,
-        cantidadInvitados: parseInt(datos.cantidad_invitados),
-        descuento: parseFloat(datos.descuento || datos.descuento_porcentaje) || 0,
-        configuracion
-      });
+      paquete,
+      temporada,
+      serviciosAdicionales: servicios,
+      cantidadInvitados: parseInt(datos.cantidad_invitados),
+      descuento: parseFloat(datos.descuento || datos.descuento_porcentaje) || 0,
+      configuracion
+    });
     } catch (error) {
       // Si el error es sobre descuento/total negativo, lanzar ValidationError
       if (error.message.includes('descuento') || error.message.includes('negativo')) {

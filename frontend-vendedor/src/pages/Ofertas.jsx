@@ -3,7 +3,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Filter, Edit2, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
-import { formatearHora, calcularDuracion } from '../utils/formatters';
+import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 import ModalPlanPago from '../components/ModalPlanPago';
 
 function Ofertas() {
@@ -147,7 +147,8 @@ function Ofertas() {
         numero_plazos: planPago.numero_plazos,
         plan_pagos: planPago.plan_pagos,
         meses_financiamiento: planPago.tipo_pago === 'plazos' ? planPago.numero_plazos : 1,
-        nombre_evento: 'Evento'
+        nombre_evento: 'Evento',
+        pago_reserva_id: planPago.pago_reserva_id
       });
       return response.data;
     },
@@ -405,19 +406,25 @@ function Ofertas() {
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       <span className="font-medium">
-                        {formatearHora(oferta.hora_inicio)} / {formatearHora(oferta.hora_fin)}
-                      {(() => {
-                          const duracion = calcularDuracion(oferta.hora_inicio, oferta.hora_fin);
-                          if (duracion > 0) {
-                            const horasEnteras = Math.floor(duracion);
-                            const minutos = Math.round((duracion - horasEnteras) * 60);
-                            if (minutos > 0 && minutos < 60) {
-                              return ` • ${horasEnteras}h ${minutos}m`;
-                            }
-                            return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
-                          }
-                          return '';
-                      })()}
+                        {(() => {
+                          const horasAdicionales = obtenerHorasAdicionales(oferta.ofertas_servicios_adicionales);
+                          const horaFinConExtras = calcularHoraFinConExtras(oferta.hora_fin, horasAdicionales);
+                          const duracion = calcularDuracion(oferta.hora_inicio, horaFinConExtras);
+                          
+                          return (
+                            <>
+                              {formatearHora(oferta.hora_inicio)} / {formatearHora(horaFinConExtras)}
+                              {duracion > 0 && (() => {
+                                const horasEnteras = Math.floor(duracion);
+                                const minutos = Math.round((duracion - horasEnteras) * 60);
+                                if (minutos > 0 && minutos < 60) {
+                                  return ` • ${horasEnteras}h ${minutos}m`;
+                                }
+                                return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
+                              })()}
+                            </>
+                          );
+                        })()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -543,6 +550,8 @@ function Ofertas() {
         }}
         onConfirm={handleConfirmarPlanPago}
         totalContrato={ofertaSeleccionada?.total_final ? parseFloat(ofertaSeleccionada.total_final) : 0}
+        ofertaId={ofertaSeleccionada?.id}
+        clienteId={ofertaSeleccionada?.cliente_id}
       />
     </div>
   );

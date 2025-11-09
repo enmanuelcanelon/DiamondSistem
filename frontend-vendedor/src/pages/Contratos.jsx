@@ -4,7 +4,7 @@ import { Search, FileCheck, Calendar, Clock, DollarSign, Eye, Download, Filter, 
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
-import { formatearHora, calcularDuracion } from '../utils/formatters';
+import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 
 function Contratos() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,7 +12,7 @@ function Contratos() {
   const clienteIdFromUrl = searchParams.get('cliente_id');
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [filtroDias, setFiltroDias] = useState('30'); // Por defecto: últimos 30 días
+  const [filtroDias, setFiltroDias] = useState('todos'); // Por defecto: todos los contratos
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || ''); // Calcular fechas basadas en el filtro de días
@@ -53,15 +53,13 @@ function Contratos() {
     isLoading,
     isRefetching,
   } = useInfiniteQuery({
-    queryKey: ['contratos', searchTerm, fechaDesde, fechaHasta, clienteFiltro],
+    queryKey: ['contratos', searchTerm, clienteFiltro],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         page: pageParam,
         limit: 50,
         // Enviar filtros al backend
         ...(searchTerm && { search: searchTerm }),
-        ...(fechaDesde && { fecha_desde: fechaDesde }),
-        ...(fechaHasta && { fecha_hasta: fechaHasta }),
         ...(clienteFiltro && { cliente_id: clienteFiltro }),
       };
       const response = await api.get('/contratos', { params });
@@ -205,73 +203,6 @@ function Contratos() {
             </div>
             {/* ELIMINADOS: Selects de Estado de Pago y Estado */}
           </div>
-          {/* Filtros de fecha del evento */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-700 font-medium">Fecha del Evento:</span>
-            </div>
-            
-            {/* Selector rápido de días */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Mostrar:</label>
-              <select
-                value={filtroDias}
-                onChange={(e) => {
-                  setFiltroDias(e.target.value);
-                  if (e.target.value === 'todos') {
-                    setFechaDesde('');
-                    setFechaHasta('');
-                  }
-                }}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm bg-white"
-              >
-                <option value="7">Últimos 7 días</option>
-                <option value="30">Últimos 30 días</option>
-                <option value="60">Últimos 60 días</option>
-                <option value="90">Últimos 90 días</option>
-                <option value="todos">Todos</option>
-              </select>
-            </div>
-
-            {/* Filtros de fecha manuales */}
-            <div className="flex gap-2 items-center">
-              <label className="text-sm text-gray-600">Desde:</label>
-              <input
-                type="date"
-                value={fechaDesde}
-                onChange={(e) => {
-                  setFechaDesde(e.target.value);
-                  setFiltroDias('personalizado');
-                }}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
-              />
-            </div>
-            <div className="flex gap-2 items-center">
-              <label className="text-sm text-gray-600">Hasta:</label>
-              <input
-                type="date"
-                value={fechaHasta}
-                onChange={(e) => {
-                  setFechaHasta(e.target.value);
-                  setFiltroDias('personalizado');
-                }}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
-              />
-            </div>
-            {(fechaDesde || fechaHasta) && (
-              <button
-                onClick={() => {
-                  setFechaDesde('');
-                  setFechaHasta('');
-                  setFiltroDias('30'); // Volver al valor por defecto
-                }}
-                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-              >
-                Limpiar
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
@@ -294,12 +225,12 @@ function Contratos() {
             <FileCheck className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {searchTerm || fechaDesde || fechaHasta ? 'No se encontraron contratos' : 'No hay contratos'}
+            {searchTerm ? 'No se encontraron contratos' : 'No hay contratos'}
           </h3>
           <p className="text-gray-600 mb-6">
-            {searchTerm || fechaDesde || fechaHasta ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
+            {searchTerm ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
           </p>
-          {!searchTerm && !fechaDesde && !fechaHasta && (
+          {!searchTerm && (
             <Link
               to="/ofertas"
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -357,18 +288,24 @@ function Contratos() {
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
                         <span className="font-medium">
-                          {formatearHora(contrato.hora_inicio)} / {formatearHora(contrato.hora_fin)}
                           {(() => {
-                            const duracion = calcularDuracion(contrato.hora_inicio, contrato.hora_fin);
-                            if (duracion > 0) {
-                              const horasEnteras = Math.floor(duracion);
-                              const minutos = Math.round((duracion - horasEnteras) * 60);
-                              if (minutos > 0 && minutos < 60) {
-                                return ` • ${horasEnteras}h ${minutos}m`;
-                              }
-                              return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
-                            }
-                            return '';
+                            const horasAdicionales = obtenerHorasAdicionales(contrato.contratos_servicios);
+                            const horaFinConExtras = calcularHoraFinConExtras(contrato.hora_fin, horasAdicionales);
+                            const duracion = calcularDuracion(contrato.hora_inicio, horaFinConExtras);
+                            
+                            return (
+                              <>
+                                {formatearHora(contrato.hora_inicio)} / {formatearHora(horaFinConExtras)}
+                                {duracion > 0 && (() => {
+                                  const horasEnteras = Math.floor(duracion);
+                                  const minutos = Math.round((duracion - horasEnteras) * 60);
+                                  if (minutos > 0 && minutos < 60) {
+                                    return ` • ${horasEnteras}h ${minutos}m`;
+                                  }
+                                  return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
+                                })()}
+                              </>
+                            );
                           })()}
                         </span>
                       </div>

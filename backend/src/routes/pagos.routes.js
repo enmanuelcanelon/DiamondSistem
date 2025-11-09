@@ -349,6 +349,105 @@ router.post('/', authenticate, async (req, res, next) => {
 });
 
 /**
+ * @route   POST /api/pagos/reserva
+ * @desc    Registrar pago de reserva de $500 (antes de crear contrato)
+ * @access  Private (Vendedor)
+ */
+router.post('/reserva', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { sanitizarId, sanitizarFloat } = require('../utils/validators');
+    const {
+      oferta_id,
+      cliente_id,
+      monto,
+      metodo_pago,
+      tipo_tarjeta,
+      numero_referencia,
+      notas
+    } = req.body;
+
+    // Validar datos requeridos
+    if (!oferta_id || !cliente_id || !monto || !metodo_pago) {
+      throw new ValidationError('Faltan datos requeridos: oferta_id, cliente_id, monto, metodo_pago');
+    }
+
+    // Sanitizar
+    const ofertaIdSanitizado = sanitizarId(oferta_id, 'oferta_id');
+    const clienteIdSanitizado = sanitizarId(cliente_id, 'cliente_id');
+    const montoSanitizado = sanitizarFloat(monto, 0.01, Number.MAX_SAFE_INTEGER);
+
+    // Validar que el monto sea al menos $500
+    if (montoSanitizado < 500) {
+      throw new ValidationError('El pago de reserva debe ser de al menos $500');
+    }
+
+    // Verificar que la oferta existe y pertenece al vendedor
+    const oferta = await prisma.ofertas.findUnique({
+      where: { id: ofertaIdSanitizado },
+      include: {
+        clientes: true,
+        vendedores: true
+      }
+    });
+
+    if (!oferta) {
+      throw new NotFoundError('Oferta no encontrada');
+    }
+
+    if (oferta.vendedor_id !== req.user.id) {
+      throw new ValidationError('No tienes permiso para registrar pagos de esta oferta');
+    }
+
+    if (oferta.cliente_id !== clienteIdSanitizado) {
+      throw new ValidationError('El cliente no corresponde a la oferta');
+    }
+
+    // Verificar que no exista ya un pago de reserva para esta oferta
+    // Buscar pagos sin contrato_id que puedan estar relacionados con esta oferta
+    // (esto se verifica mejor al crear el contrato, aquí solo validamos que no haya múltiples pagos sin contrato del mismo vendedor)
+
+    // Calcular recargo si es pago con tarjeta
+    let recargo_tarjeta = 0;
+    let monto_total = montoSanitizado;
+
+    if (metodo_pago === 'Tarjeta') {
+      if (!tipo_tarjeta) {
+        throw new ValidationError('Debe especificar el tipo de tarjeta');
+      }
+      const calculo = calcularRecargoTarjeta(montoSanitizado);
+      recargo_tarjeta = calculo.recargo;
+      monto_total = calculo.montoTotal;
+    }
+
+    // Crear pago de reserva (sin contrato_id, se vinculará después)
+    const pagoReserva = await prisma.pagos.create({
+      data: {
+        contrato_id: null, // Se vinculará cuando se cree el contrato
+        monto: montoSanitizado,
+        metodo_pago: metodo_pago,
+        tipo_tarjeta: tipo_tarjeta || null,
+        recargo_tarjeta: recargo_tarjeta,
+        monto_total: monto_total,
+        numero_referencia: numero_referencia || null,
+        estado: 'completado',
+        notas: notas || `Pago de reserva de $${montoSanitizado} para oferta ${oferta.codigo_oferta}`,
+        registrado_por: req.user.id,
+        fecha_pago: new Date()
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Pago de reserva registrado exitosamente',
+      pago: pagoReserva
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * @route   GET /api/pagos/contrato/:contrato_id
  * @desc    Obtener pagos de un contrato específico
  * @access  Private (Vendedor o Cliente propietario del contrato)

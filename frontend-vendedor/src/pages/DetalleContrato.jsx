@@ -22,7 +22,7 @@ import {
   Mail,
 } from 'lucide-react';
 import api from '../config/api';
-import { formatearHora, calcularDuracion } from '../utils/formatters';
+import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
 import ModalConfirmacionPago from '../components/ModalConfirmacionPago';
 import ModalAnularPago from '../components/ModalAnularPago';
@@ -553,18 +553,24 @@ function DetalleContrato() {
                 <div>
                   <p className="text-sm text-gray-600">Horario</p>
                   <p className="font-medium">
-                    {formatearHora(contrato?.hora_inicio)} / {formatearHora(contrato?.hora_fin)}
                     {(() => {
-                      const duracion = calcularDuracion(contrato?.hora_inicio, contrato?.hora_fin);
-                      if (duracion > 0) {
-                        const horasEnteras = Math.floor(duracion);
-                        const minutos = Math.round((duracion - horasEnteras) * 60);
-                        if (minutos > 0) {
-                          return ` • ${horasEnteras}h ${minutos}m`;
-                        }
-                        return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
-                      }
-                      return '';
+                      const horasAdicionales = obtenerHorasAdicionales(contrato?.contratos_servicios);
+                      const horaFinConExtras = calcularHoraFinConExtras(contrato?.hora_fin, horasAdicionales);
+                      const duracion = calcularDuracion(contrato?.hora_inicio, horaFinConExtras);
+                      
+                      return (
+                        <>
+                          {formatearHora(contrato?.hora_inicio)} / {formatearHora(horaFinConExtras)}
+                          {duracion > 0 && (() => {
+                            const horasEnteras = Math.floor(duracion);
+                            const minutos = Math.round((duracion - horasEnteras) * 60);
+                            if (minutos > 0) {
+                              return ` • ${horasEnteras}h ${minutos}m`;
+                            }
+                            return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
+                          })()}
+                        </>
+                      );
                     })()}
                   </p>
                 </div>
@@ -613,62 +619,157 @@ function DetalleContrato() {
                 </p>
               </div>
 
-              {contrato?.contratos_servicios?.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Servicios Adicionales:</h4>
-                  <ul className="space-y-2">
-                    {(() => {
-                      // Filtrar servicios mutuamente excluyentes (solo mostrar un Photobooth)
-                      const serviciosFiltrados = [];
-                      let photoboothConPrecio = null;
-                      let photoboothSinPrecio = null;
-                      
-                      // Separar servicios normales y Photobooths
-                      for (const cs of contrato.contratos_servicios) {
-                        const nombreServicio = cs.servicios?.nombre || '';
-                        const subtotal = parseFloat(cs.subtotal || 0);
-                        const precioUnitario = parseFloat(cs.precio_unitario || 0);
-                        
-                        if (nombreServicio.includes('Photobooth')) {
-                          // Priorizar el que tiene precio/subtotal > 0 (el realmente seleccionado)
-                          if (subtotal > 0 || precioUnitario > 0) {
-                            photoboothConPrecio = cs;
-                          } else {
-                            // Guardar como respaldo si no hay uno con precio
-                            if (!photoboothSinPrecio) {
-                              photoboothSinPrecio = cs;
-                            }
-                          }
-                          continue;
+              {(() => {
+                // Función helper para obtener el nombre del servicio ajustado según el salón
+                const obtenerNombreServicio = (nombreServicio) => {
+                  if (!nombreServicio) return nombreServicio;
+                  
+                  const salonNombre = contrato?.salones?.nombre || contrato?.lugar_salon || '';
+                  
+                  // Reemplazar Pantalla LED por Pantalla TV en Doral
+                  if (salonNombre === 'Doral' && nombreServicio === 'Pantalla LED') {
+                    return 'Pantalla TV';
+                  }
+                  
+                  // Agregar información de millas a Limosina
+                  if (nombreServicio === 'Limosina') {
+                    return 'Limosina (15 Millas)';
+                  }
+                  
+                  return nombreServicio;
+                };
+
+                // Separar servicios incluidos en el paquete de servicios adicionales
+                const serviciosIncluidos = [];
+                const serviciosAdicionales = [];
+                const salonNombre = contrato?.salones?.nombre || contrato?.lugar_salon || '';
+
+                // Obtener servicios del paquete
+                if (contrato?.paquetes?.paquetes_servicios) {
+                  contrato.paquetes.paquetes_servicios.forEach((ps) => {
+                    const nombreServicio = ps.servicios?.nombre || '';
+                    
+                    // Filtrar Máquina de Chispas si el salón es Kendall
+                    if (salonNombre === 'Kendall' && nombreServicio?.toLowerCase().includes('chispas')) {
+                      return; // No mostrar este servicio
+                    }
+                    
+                    serviciosIncluidos.push({
+                      id: `paquete-${ps.servicio_id}`,
+                      nombre: obtenerNombreServicio(nombreServicio),
+                      incluido: true
+                    });
+                  });
+                }
+
+                // Obtener servicios adicionales del contrato
+                if (contrato?.contratos_servicios) {
+                  // Filtrar servicios mutuamente excluyentes (solo mostrar un Photobooth)
+                  const serviciosFiltrados = [];
+                  let photoboothConPrecio = null;
+                  let photoboothSinPrecio = null;
+                  
+                  for (const cs of contrato.contratos_servicios) {
+                    // Solo procesar servicios adicionales (no incluidos en paquete)
+                    if (cs.incluido_en_paquete) {
+                      continue;
+                    }
+                    
+                    const nombreServicio = cs.servicios?.nombre || '';
+                    const subtotal = parseFloat(cs.subtotal || 0);
+                    const precioUnitario = parseFloat(cs.precio_unitario || 0);
+                    
+                    // Filtrar Máquina de Chispas si el salón es Kendall
+                    if (salonNombre === 'Kendall' && nombreServicio?.toLowerCase().includes('chispas')) {
+                      continue; // No mostrar este servicio
+                    }
+                    
+                    if (nombreServicio.includes('Photobooth')) {
+                      // Priorizar el que tiene precio/subtotal > 0 (el realmente seleccionado)
+                      if (subtotal > 0 || precioUnitario > 0) {
+                        photoboothConPrecio = cs;
+                      } else {
+                        // Guardar como respaldo si no hay uno con precio
+                        if (!photoboothSinPrecio) {
+                          photoboothSinPrecio = cs;
                         }
-                        
-                        // Para otros servicios, agregar normalmente
-                        serviciosFiltrados.push(cs);
                       }
-                      
-                      // Agregar el Photobooth seleccionado (priorizar el que tiene precio)
-                      if (photoboothConPrecio) {
-                        serviciosFiltrados.push(photoboothConPrecio);
-                      } else if (photoboothSinPrecio) {
-                        serviciosFiltrados.push(photoboothSinPrecio);
-                      }
-                      
-                      return serviciosFiltrados.map((cs) => (
-                        <li key={cs.id} className="flex justify-between text-sm">
-                          <span className="text-gray-700">
-                            {cs.servicios?.nombre || 'Servicio'}
-                          </span>
-                          <span className="font-medium">
-                            ${parseFloat(cs.subtotal || 0).toLocaleString()}
-                          </span>
-                        </li>
-                      ));
-                    })()}
-                  </ul>
-                </div>
-              )}
-              </div>
+                      continue;
+                    }
+                    
+                    // Para otros servicios, agregar normalmente
+                    serviciosFiltrados.push(cs);
+                  }
+                  
+                  // Agregar el Photobooth seleccionado (priorizar el que tiene precio)
+                  if (photoboothConPrecio) {
+                    serviciosFiltrados.push(photoboothConPrecio);
+                  } else if (photoboothSinPrecio) {
+                    serviciosFiltrados.push(photoboothSinPrecio);
+                  }
+                  
+                  serviciosFiltrados.forEach((cs) => {
+                    serviciosAdicionales.push({
+                      id: cs.id,
+                      nombre: obtenerNombreServicio(cs.servicios?.nombre || ''),
+                      subtotal: parseFloat(cs.subtotal || 0),
+                      cantidad: cs.cantidad || 1,
+                      precio_unitario: parseFloat(cs.precio_unitario || 0)
+                    });
+                  });
+                }
+
+                return (
+                  <>
+                    {/* Servicios Incluidos en el Paquete */}
+                    {serviciosIncluidos.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Servicios Incluidos en el Paquete:</h4>
+                        <ul className="space-y-2">
+                          {serviciosIncluidos.map((servicio) => (
+                            <li key={servicio.id} className="flex justify-between text-sm">
+                              <span className="text-gray-700">
+                                ✓ {servicio.nombre}
+                              </span>
+                              <span className="text-gray-500 text-xs">Incluido</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Servicios Adicionales */}
+                    {serviciosAdicionales.length > 0 && (
+                      <div className={serviciosIncluidos.length > 0 ? 'mt-4' : ''}>
+                        <h4 className="font-medium text-gray-900 mb-2">Servicios Adicionales:</h4>
+                        <ul className="space-y-2">
+                          {serviciosAdicionales.map((servicio) => (
+                            <li key={servicio.id} className="flex justify-between text-sm">
+                              <span className="text-gray-700">
+                                {servicio.nombre}
+                                {servicio.cantidad > 1 && (
+                                  <span className="text-gray-500 text-xs ml-1">
+                                    (x{servicio.cantidad})
+                                  </span>
+                                )}
+                              </span>
+                              <span className="font-medium">
+                                ${servicio.subtotal.toLocaleString()}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {serviciosIncluidos.length === 0 && serviciosAdicionales.length === 0 && (
+                      <p className="text-sm text-gray-500">No hay servicios registrados</p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
+          </div>
  
             {/* Notas Internas del Vendedor */}
             <div className="bg-white rounded-xl shadow-sm border p-6">

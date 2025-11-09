@@ -176,5 +176,96 @@ export const formatearFechaHora = (dateString) => {
   });
 };
 
+/**
+ * Calcula la hora de fin incluyendo horas adicionales
+ * @param {string} horaFinOriginal - Hora de fin original en formato HH:MM o ISO
+ * @param {number} horasAdicionales - Cantidad de horas adicionales a sumar
+ * @returns {string} Nueva hora de fin en formato HH:MM
+ */
+export const calcularHoraFinConExtras = (horaFinOriginal, horasAdicionales = 0) => {
+  if (!horaFinOriginal || horasAdicionales === 0) {
+    return horaFinOriginal;
+  }
 
+  try {
+    // Extraer hora y minutos
+    let horaFinStr;
+    if (horaFinOriginal instanceof Date) {
+      const h = horaFinOriginal.getHours();
+      const m = horaFinOriginal.getMinutes();
+      horaFinStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    } else if (typeof horaFinOriginal === 'string') {
+      if (horaFinOriginal.includes('T')) {
+        const match = horaFinOriginal.match(/(\d{2}):(\d{2})/);
+        if (match) {
+          horaFinStr = `${match[1]}:${match[2]}`;
+        } else {
+          horaFinStr = horaFinOriginal.slice(0, 5);
+        }
+      } else {
+        horaFinStr = horaFinOriginal.slice(0, 5);
+      }
+    } else {
+      return horaFinOriginal;
+    }
+
+    const [horaFin, minutoFin] = horaFinStr.split(':').map(Number);
+
+    // Convertir a minutos desde medianoche para facilitar el cálculo
+    // Si la hora es 0-2 AM, asumimos que es del día siguiente (24-26 horas)
+    let minutosDesdeMedianoche = horaFin * 60 + minutoFin;
+    
+    // Si es 0, 1 o 2 AM, tratarlo como 24, 25 o 26 horas
+    if (horaFin <= 2) {
+      minutosDesdeMedianoche = (horaFin + 24) * 60 + minutoFin;
+    }
+
+    // Sumar las horas adicionales (convertir a minutos)
+    const minutosAdicionales = horasAdicionales * 60;
+    const nuevaHoraEnMinutos = minutosDesdeMedianoche + minutosAdicionales;
+
+    // Convertir de vuelta a horas y minutos
+    let nuevaHora = Math.floor(nuevaHoraEnMinutos / 60);
+    const nuevoMinuto = nuevaHoraEnMinutos % 60;
+
+    // Si la hora es >= 24, convertirla al formato correcto (0-2 AM del día siguiente)
+    // 24 = 0, 25 = 1, 26 = 2, etc.
+    if (nuevaHora >= 24) {
+      nuevaHora = nuevaHora % 24;
+    }
+
+    // Formatear la nueva hora
+    const nuevaHoraFormateada = `${String(nuevaHora).padStart(2, '0')}:${String(nuevoMinuto).padStart(2, '0')}`;
+
+    return nuevaHoraFormateada;
+  } catch (error) {
+    console.error('Error calculando hora fin con extras:', error);
+    return horaFinOriginal;
+  }
+};
+
+/**
+ * Obtiene la cantidad de horas adicionales de un servicio "Hora Extra"
+ * @param {Array} serviciosAdicionales - Array de servicios adicionales
+ * @returns {number} Cantidad de horas adicionales
+ */
+export const obtenerHorasAdicionales = (serviciosAdicionales = []) => {
+  if (!serviciosAdicionales || serviciosAdicionales.length === 0) {
+    return 0;
+  }
+
+  // Buscar el servicio "Hora Extra"
+  const horaExtra = serviciosAdicionales.find(
+    servicio => servicio.servicios?.nombre === 'Hora Extra' || 
+                servicio.servicio?.nombre === 'Hora Extra' ||
+                servicio.nombre === 'Hora Extra'
+  );
+
+  if (!horaExtra) {
+    return 0;
+  }
+
+  // Retornar la cantidad (puede estar en diferentes propiedades)
+  return horaExtra.cantidad || horaExtra.cantidad_servicio || 0;
+};
 

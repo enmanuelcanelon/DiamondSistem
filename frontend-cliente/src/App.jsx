@@ -60,7 +60,7 @@ function App() {
               </ProtectedRouteCliente>
             }
           >
-            <Route index element={<DashboardCliente />} />
+            <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardCliente />} />
             <Route path="solicitudes" element={<MisSolicitudes />} />
             <Route path="solicitar-cambios" element={<SolicitarCambios />} />

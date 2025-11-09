@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173, // Puerto específico para vendedor
+    strictPort: true, // Falla si el puerto está ocupado en lugar de buscar otro
   },
   resolve: {
     alias: {

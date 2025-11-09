@@ -51,7 +51,7 @@ function MisSolicitudes() {
         </p>
       </div>
 
-      {/* Bot�n para nueva solicitud */}
+      {/* Botón para nueva solicitud */}
       <Link
         to="/solicitar-cambios"
         className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium shadow-sm"
@@ -60,7 +60,7 @@ function MisSolicitudes() {
         Nueva Solicitud
       </Link>
 
-      {/* Estad�sticas */}
+      {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <div className="flex items-center justify-between">
@@ -107,7 +107,7 @@ function MisSolicitudes() {
             No tienes solicitudes
           </h3>
           <p className="text-gray-600 mb-6">
-            A�n no has solicitado cambios a tu evento
+            Aún no has solicitado cambios a tu evento
           </p>
           <Link
             to="/solicitar-cambios"
@@ -228,7 +228,7 @@ function SolicitudCard({ solicitud }) {
         {solicitud.estado === 'aprobada' && (
           <div className="p-4 bg-green-50 border border-green-300 rounded-lg">
             <p className="text-sm text-green-700 font-bold">
-              ? �Tu solicitud fue aprobada!
+              ¡Tu solicitud fue aprobada!
             </p>
             {solicitud.fecha_respuesta && (
               <p className="text-xs text-green-600 mt-1">
@@ -242,7 +242,7 @@ function SolicitudCard({ solicitud }) {
         {solicitud.estado === 'rechazada' && solicitud.motivo_rechazo && (
           <div className="p-4 bg-red-50 border border-red-300 rounded-lg">
             <p className="text-sm text-red-700 font-bold mb-2">
-              ? Solicitud Rechazada
+              Solicitud Rechazada
             </p>
             <p className="text-sm text-gray-700">
               <strong>Motivo:</strong> {solicitud.motivo_rechazo}
@@ -259,7 +259,7 @@ function SolicitudCard({ solicitud }) {
         {solicitud.estado === 'pendiente' && (
           <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
             <p className="text-sm text-gray-700">
-              ? Tu vendedor est� revisando esta solicitud. Te notificaremos
+              Tu vendedor está revisando esta solicitud. Te notificaremos
               cuando responda.
             </p>
           </div>
@@ -270,6 +270,3 @@ function SolicitudCard({ solicitud }) {
 }
 
 export default MisSolicitudes;
-
-
-

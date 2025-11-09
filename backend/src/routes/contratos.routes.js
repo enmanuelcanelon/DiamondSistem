@@ -102,6 +102,16 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
             nombre_evento: true,
             estado: true
           }
+        },
+        contratos_servicios: {
+          include: {
+            servicios: {
+              select: {
+                id: true,
+                nombre: true
+              }
+            }
+          }
         }
       },
       orderBy: { fecha_firma: 'desc' },
@@ -141,7 +151,15 @@ router.get('/:id', authenticate, async (req, res, next) => {
             telefono: true
           }
         },
-        paquetes: true,
+        paquetes: {
+          include: {
+            paquetes_servicios: {
+              include: {
+                servicios: true
+              }
+            }
+          }
+        },
         salones: true,
         ofertas: {
           include: {
@@ -347,7 +365,9 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           meses_financiamiento: mesesFinanciamientoSanitizado,
           pago_mensual,
           plan_pagos: plan_pagos || null,
-          saldo_pendiente: totalContrato,
+          // El saldo pendiente es el total menos el pago de reserva
+          total_pagado: montoReserva,
+          saldo_pendiente: totalContrato - montoReserva,
           codigo_acceso_cliente: codigo_acceso_temp,
           fecha_creacion_contrato: fechaCreacionContrato, // Fecha del primer pago de $500
           comision_calculada: comision.comision, // Deprecated: mantener para compatibilidad

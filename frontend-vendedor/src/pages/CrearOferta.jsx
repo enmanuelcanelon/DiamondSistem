@@ -4,6 +4,7 @@ import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, Chevron
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import ModalCrearCliente from '../components/ModalCrearCliente';
+import { calcularDuracion, formatearHora } from '../utils/formatters';
 
 function CrearOferta() {
   const navigate = useNavigate();
@@ -48,6 +49,11 @@ function CrearOferta() {
   const [errorHorario, setErrorHorario] = useState('');
   const [mostrarModalHorasExtras, setMostrarModalHorasExtras] = useState(false);
   const [horasExtrasFaltantes, setHorasExtrasFaltantes] = useState(0);
+  const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false);
+  const [errorDisponibilidad, setErrorDisponibilidad] = useState('');
+  const [conflictosDisponibilidad, setConflictosDisponibilidad] = useState(null);
+  const [horasOcupadas, setHorasOcupadas] = useState([]);
+  const [cargandoHorasOcupadas, setCargandoHorasOcupadas] = useState(false);
   
   // Estado para servicios excluyentes del paquete (ej: Photobooth 360 o Print)
   const [serviciosExcluyentesSeleccionados, setServiciosExcluyentesSeleccionados] = useState({});
@@ -427,6 +433,62 @@ function CrearOferta() {
     serviciosSeleccionados,
   ]);
 
+  // Función para verificar disponibilidad del salón
+  const verificarDisponibilidad = async (salonId, fechaEvento, horaInicio, horaFin) => {
+    if (!salonId || salonId === 'otro' || !fechaEvento || !horaInicio || !horaFin) {
+      setErrorDisponibilidad('');
+      setConflictosDisponibilidad(null);
+      return;
+    }
+
+    setVerificandoDisponibilidad(true);
+    setErrorDisponibilidad('');
+    setConflictosDisponibilidad(null);
+
+    try {
+      const response = await api.post('/salones/disponibilidad', {
+        salon_id: parseInt(salonId),
+        fecha_evento: fechaEvento,
+        hora_inicio: horaInicio,
+        hora_fin: horaFin
+      });
+
+      if (!response.data.disponible) {
+        const conflictos = response.data.conflictos;
+        const totalConflictos = (conflictos.contratos?.length || 0) + (conflictos.ofertas?.length || 0);
+        
+        if (totalConflictos > 0) {
+          let mensaje = `⚠️ El salón no está disponible en este horario.\n\n`;
+          
+          if (conflictos.contratos?.length > 0) {
+            mensaje += `Contratos existentes:\n`;
+            conflictos.contratos.forEach(c => {
+              mensaje += `- ${c.codigo} (${c.cliente}): ${c.hora_inicio} - ${c.hora_fin}\n`;
+            });
+          }
+          
+          if (conflictos.ofertas?.length > 0) {
+            mensaje += `Ofertas aceptadas:\n`;
+            conflictos.ofertas.forEach(o => {
+              mensaje += `- ${o.codigo} (${o.cliente}): ${o.hora_inicio} - ${o.hora_fin}\n`;
+            });
+          }
+          
+          setErrorDisponibilidad(mensaje);
+          setConflictosDisponibilidad(conflictos);
+        }
+      } else {
+        setErrorDisponibilidad('');
+        setConflictosDisponibilidad(null);
+      }
+    } catch (error) {
+      console.error('Error al verificar disponibilidad:', error);
+      // No mostrar error al usuario si falla la verificación, solo loguear
+    } finally {
+      setVerificandoDisponibilidad(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -458,6 +520,66 @@ function CrearOferta() {
       [name]: value,
     });
   };
+
+  // Función para obtener horas ocupadas
+  const obtenerHorasOcupadas = async (salonId, fechaEvento) => {
+    if (!salonId || salonId === 'otro' || !fechaEvento) {
+      setHorasOcupadas([]);
+      return;
+    }
+
+    try {
+      setCargandoHorasOcupadas(true);
+      const response = await api.get('/salones/horarios-ocupados', {
+        params: {
+          salon_id: salonId,
+          fecha_evento: fechaEvento
+        }
+      });
+
+      if (response.data.success) {
+        setHorasOcupadas(response.data.horasOcupadas || []);
+      }
+    } catch (error) {
+      console.error('Error al obtener horas ocupadas:', error);
+      setHorasOcupadas([]);
+    } finally {
+      setCargandoHorasOcupadas(false);
+    }
+  };
+
+  // Effect para obtener horas ocupadas cuando cambian salón o fecha
+  useEffect(() => {
+    if (formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento) {
+      const timeoutId = setTimeout(() => {
+        obtenerHorasOcupadas(formData.salon_id, formData.fecha_evento);
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      setHorasOcupadas([]);
+    }
+  }, [formData.salon_id, formData.fecha_evento]);
+
+  // Effect para verificar disponibilidad cuando cambian fecha, hora o salón
+  // Solo verificar cuando hay salón, fecha Y horas completas
+  useEffect(() => {
+    if (formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento && formData.hora_inicio && formData.hora_fin && !errorHorario) {
+      // Esperar un poco para evitar múltiples llamadas mientras el usuario está escribiendo
+      const timeoutId = setTimeout(() => {
+        verificarDisponibilidad(formData.salon_id, formData.fecha_evento, formData.hora_inicio, formData.hora_fin);
+      }, 800); // Debounce de 800ms para evitar falsos positivos
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      // Limpiar errores si falta algún campo
+      if (!formData.salon_id || formData.salon_id === 'otro' || !formData.fecha_evento || !formData.hora_inicio || !formData.hora_fin) {
+        setErrorDisponibilidad('');
+        setConflictosDisponibilidad(null);
+        setVerificandoDisponibilidad(false);
+      }
+    }
+  }, [formData.salon_id, formData.fecha_evento, formData.hora_inicio, formData.hora_fin, errorHorario]);
 
   // Definir servicios mutuamente excluyentes por nombre
   // NOTA: Las reglas varían según el paquete (ver función obtenerReglasExclusionPorPaquete)
@@ -707,43 +829,48 @@ function CrearOferta() {
     
     // ⚠️ VALIDACIÓN ESPECIAL PARA HORA EXTRA
     if (servicioData?.nombre === 'Hora Extra') {
-      const { necesarias, duracionEvento, duracionTotal } = calcularHorasExtras();
       const cantidadActual = servicioExistente?.cantidad || 0;
       const nuevaCantidad = cantidadActual + 1;
       
       // Calcular hora de fin con las horas extras que se quieren agregar
+      // Basarse en la hora de fin actual del evento, no en la hora de inicio
       if (formData.hora_inicio && formData.hora_fin) {
-        const [horaInicio, minInicio] = formData.hora_inicio.split(':').map(Number);
-        const duracionTotalConExtras = duracionTotal + nuevaCantidad;
+        const [horaFinH, horaFinM] = formData.hora_fin.split(':').map(Number);
+        const [horaInicioH] = formData.hora_inicio.split(':').map(Number);
         
-        // Calcular hora de fin resultante
-        let horaFinResultante = horaInicio + Math.floor(duracionTotalConExtras);
-        const minFinResultante = minInicio + ((duracionTotalConExtras % 1) * 60);
+        // Determinar si la hora de fin está en el día siguiente (cruza medianoche)
+        const cruzaMedianoche = horaFinH < horaInicioH || (horaFinH <= 2 && horaInicioH >= 10);
         
-        if (minFinResultante >= 60) {
-          horaFinResultante += 1;
+        // Calcular la hora de fin en formato 24h continuo (desde medianoche del día anterior)
+        let horaFinEn24hContinuo = horaFinH;
+        if (cruzaMedianoche) {
+          // Si cruza medianoche: 00 = 24, 01 = 25, 02 = 26
+          horaFinEn24hContinuo = horaFinH === 0 ? 24 : (horaFinH === 1 ? 25 : (horaFinH === 2 ? 26 : horaFinH));
+        } else {
+          // Si no cruza medianoche, pero al agregar horas extras podría cruzar
+          // Por ahora mantener la hora normal (0-23)
+          horaFinEn24hContinuo = horaFinH;
         }
         
-        // Si la hora resultante excede las 2:00 AM (26:00 en formato 24h del día siguiente)
-        if (horaFinResultante > 26 || (horaFinResultante === 26 && minFinResultante > 0)) {
+        // Calcular la nueva hora de fin agregando las horas extras
+        let nuevaHoraFinEn24hContinuo = horaFinEn24hContinuo + nuevaCantidad;
+        
+        // Si la nueva hora cruza medianoche (pasa de 23 a 24+), ajustar
+        if (!cruzaMedianoche && nuevaHoraFinEn24hContinuo >= 24) {
+          // Convertir a formato continuo: 24 = 24, 25 = 25, 26 = 26
+          nuevaHoraFinEn24hContinuo = nuevaHoraFinEn24hContinuo;
+        }
+        
+        // Verificar si excede las 2:00 AM (26:00 en formato 24h continuo)
+        // El límite es 26 (2:00 AM del día siguiente)
+        // Si la nueva hora es mayor a 26, o es 26 pero con minutos, excede el límite
+        if (nuevaHoraFinEn24hContinuo > 26 || (nuevaHoraFinEn24hContinuo === 26 && horaFinM > 0)) {
           alert(
             `⚠️ NO PUEDES AGREGAR MÁS HORAS EXTRAS\n\n` +
-            `Tu evento dura ${duracionEvento.toFixed(1)} horas.\n` +
-            `El paquete incluye ${duracionTotal} horas.\n` +
+            `Tu evento termina a las ${formatearHora(formData.hora_fin)}.\n` +
             `Ya tienes ${cantidadActual} hora(s) extra agregada(s).\n\n` +
             `🚫 Si agregas ${nuevaCantidad} hora(s) extra, tu evento terminaría después de las 2:00 AM, lo cual NO está permitido por restricciones legales.\n\n` +
             `Máximo de horas extras permitidas: ${cantidadActual}`
-          );
-          return;
-        }
-        
-        // Validación adicional: no permitir más horas extras de las necesarias
-        if (nuevaCantidad > necesarias) {
-          alert(
-            `⚠️ NO NECESITAS MÁS HORAS EXTRAS\n\n` +
-            `Tu evento requiere exactamente ${necesarias} hora(s) extra.\n` +
-            `Ya tienes ${cantidadActual} hora(s) agregada(s).\n\n` +
-            `No es necesario agregar más.`
           );
           return;
         }
@@ -1120,6 +1247,12 @@ function CrearOferta() {
       return false;
     }
 
+    // Validar disponibilidad del salón (solo si no es "otro")
+    if (formData.salon_id !== 'otro' && errorDisponibilidad) {
+      alert('⚠️ El salón no está disponible en este horario. Por favor, selecciona otra fecha u hora.');
+      return false;
+    }
+
     return true;
   };
 
@@ -1406,7 +1539,50 @@ function CrearOferta() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Fecha del Evento */}
+              {/* Lugar del Evento - PRIMERO */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Lugar del Evento *
+                </label>
+                <select
+                  name="salon_id"
+                  value={formData.salon_id}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                >
+                  <option value="">Seleccione un lugar</option>
+                  {salones?.map((salon) => (
+                    <option key={salon.id} value={salon.id}>
+                      {salon.nombre} - Capacidad: {salon.capacidad_maxima} invitados
+                    </option>
+                  ))}
+                  <option value="otro">Otro (Sede Externa - Sin cargo de salón)</option>
+                </select>
+                {salonSeleccionado && formData.salon_id !== 'otro' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ℹ️ Capacidad máxima: {salonSeleccionado.capacidad_maxima} invitados
+                  </p>
+                )}
+                {formData.salon_id === 'otro' && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      value={lugarPersonalizado}
+                      onChange={(e) => setLugarPersonalizado(e.target.value)}
+                      placeholder="Especifica el lugar (ej: Universidad de Miami, Auditorio XYZ)"
+                      required
+                      className="w-full px-4 py-2 border border-amber-300 bg-amber-50 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                      maxLength={255}
+                    />
+                    <p className="text-xs text-amber-700 mt-1 flex items-center gap-1">
+                      <span className="font-semibold">💡 Importante:</span> Para sedes externas NO se cobra el salón. Solo se cobran los servicios.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Fecha del Evento - SEGUNDO */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Fecha del Evento *
@@ -1419,8 +1595,9 @@ function CrearOferta() {
                     onChange={handleChange}
                     min={obtenerFechaMinima()}
                     required
+                    disabled={!formData.salon_id || formData.salon_id === ''}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
-                      errorFecha ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+                      errorFecha ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '') ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
                     }`}
                     placeholder="Selecciona una fecha"
                   />
@@ -1430,7 +1607,11 @@ function CrearOferta() {
                     </svg>
                   </div>
                 </div>
-                {errorFecha ? (
+                {!formData.salon_id || formData.salon_id === '' ? (
+                  <p className="mt-1 text-xs text-gray-500">
+                    ⚠️ Primero selecciona un lugar para el evento
+                  </p>
+                ) : errorFecha ? (
                   <p className="mt-2 text-sm text-red-600 flex items-start gap-2 bg-red-50 border border-red-200 rounded p-2">
                     <span className="text-red-500 font-bold text-base">⚠</span>
                     <span>{errorFecha}</span>
@@ -1485,7 +1666,7 @@ function CrearOferta() {
                 )}
               </div>
 
-              {/* Hora Inicio - Selector mejorado */}
+              {/* Hora Inicio - Selector mejorado - TERCERO */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Hora Inicio *
@@ -1501,16 +1682,23 @@ function CrearOferta() {
                       handleChange({ target: { name: 'hora_inicio', value: nuevaHora } });
                     }}
                     required
+                    disabled={!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento}
                     className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
-                      errorHorario ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+                      errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
                     <option value="">Hora</option>
                     {Array.from({ length: 15 }, (_, i) => {
                       const hora = 10 + i; // Desde las 10:00 AM hasta las 12:00 AM (medianoche)
+                      const horaOcupada = horasOcupadas.includes(hora);
                       return hora < 24 ? (
-                        <option key={hora} value={hora.toString().padStart(2, '0')}>
+                        <option 
+                          key={hora} 
+                          value={hora.toString().padStart(2, '0')}
+                          disabled={horaOcupada}
+                        >
                           {hora === 0 ? '12:00 AM' : hora < 12 ? `${hora}:00 AM` : hora === 12 ? '12:00 PM' : `${hora - 12}:00 PM`}
+                          {horaOcupada ? ' (Ocupada)' : ''}
                         </option>
                       ) : null;
                     })}
@@ -1534,15 +1722,33 @@ function CrearOferta() {
                     <option value="45">:45</option>
                   </select>
                 </div>
-                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Horario permitido: desde las 10:00 AM
-                </p>
+                {(!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ⚠️ Primero selecciona el lugar y la fecha del evento
+                  </p>
+                ) : cargandoHorasOcupadas ? (
+                  <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Verificando horarios ocupados...
+                  </p>
+                ) : horasOcupadas.length > 0 ? (
+                  <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    ⚠️ Algunas horas están ocupadas y no están disponibles
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Horario permitido: desde las 10:00 AM
+                  </p>
+                )}
               </div>
 
-              {/* Hora Fin - Selector mejorado */}
+              {/* Hora Fin - Selector mejorado - TERCERO */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Hora Fin *
@@ -1558,23 +1764,36 @@ function CrearOferta() {
                       handleChange({ target: { name: 'hora_fin', value: nuevaHora } });
                     }}
                     required
+                    disabled={!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento || !formData.hora_inicio}
                     className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
-                      errorHorario ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+                      errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento || !formData.hora_inicio) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
                     <option value="">Hora</option>
                     {Array.from({ length: 12 }, (_, i) => {
                       const hora = 12 + i; // Desde las 12:00 PM (12) hasta las 11:00 PM (23)
+                      const horaOcupada = horasOcupadas.includes(hora);
                       return (
-                        <option key={hora} value={hora.toString().padStart(2, '0')}>
+                        <option 
+                          key={hora} 
+                          value={hora.toString().padStart(2, '0')}
+                          disabled={horaOcupada}
+                        >
                           {hora === 12 ? '12:00 PM' : `${hora - 12}:00 PM`}
+                          {horaOcupada ? ' (Ocupada)' : ''}
                         </option>
                       );
                     })}
                     {/* Horas después de medianoche permitidas */}
-                    <option value="00">12:00 AM (día siguiente)</option>
-                    <option value="01">1:00 AM (día siguiente)</option>
-                    <option value="02">2:00 AM (día siguiente)</option>
+                    <option value="00" disabled={horasOcupadas.includes(0)}>
+                      12:00 AM (día siguiente){horasOcupadas.includes(0) ? ' (Ocupada)' : ''}
+                    </option>
+                    <option value="01" disabled={horasOcupadas.includes(1)}>
+                      1:00 AM (día siguiente){horasOcupadas.includes(1) ? ' (Ocupada)' : ''}
+                    </option>
+                    <option value="02" disabled={horasOcupadas.includes(2)}>
+                      2:00 AM (día siguiente){horasOcupadas.includes(2) ? ' (Ocupada)' : ''}
+                    </option>
                   </select>
                   <select
                     name="hora_fin_m"
@@ -1601,6 +1820,29 @@ function CrearOferta() {
                   </svg>
                   Máximo permitido: 2:00 AM (restricción legal)
                 </p>
+                {/* Mostrar duración del evento */}
+                {formData.hora_inicio && formData.hora_fin && !errorHorario && (() => {
+                  const duracion = calcularDuracion(formData.hora_inicio, formData.hora_fin);
+                  if (duracion > 0) {
+                    const horasEnteras = Math.floor(duracion);
+                    const minutos = Math.round((duracion - horasEnteras) * 60);
+                    let duracionTexto = '';
+                    if (minutos > 0 && minutos < 60) {
+                      duracionTexto = `${horasEnteras}h ${minutos}m`;
+                    } else {
+                      duracionTexto = `${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
+                    }
+                    return (
+                      <p className="text-sm text-indigo-600 mt-2 font-medium flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Duración del evento: <span className="font-bold">{formatearHora(formData.hora_inicio)} / {formatearHora(formData.hora_fin)} = {duracionTexto}</span>
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {errorHorario && (
@@ -1618,47 +1860,46 @@ function CrearOferta() {
                 </div>
               )}
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lugar del Evento *
-                </label>
-                <select
-                  name="salon_id"
-                  value={formData.salon_id}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                >
-                  <option value="">Seleccione un lugar</option>
-                  {salones?.map((salon) => (
-                    <option key={salon.id} value={salon.id}>
-                      {salon.nombre} - Capacidad: {salon.capacidad_maxima} invitados
-                    </option>
-                  ))}
-                  <option value="otro">Otro (Sede Externa - Sin cargo de salón)</option>
-                </select>
-                {salonSeleccionado && formData.salon_id !== 'otro' && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ℹ️ Capacidad máxima: {salonSeleccionado.capacidad_maxima} invitados
-                  </p>
-                )}
-                {formData.salon_id === 'otro' && (
-                  <div className="mt-3">
-                    <input
-                      type="text"
-                      value={lugarPersonalizado}
-                      onChange={(e) => setLugarPersonalizado(e.target.value)}
-                      placeholder="Especifica el lugar (ej: Universidad de Miami, Auditorio XYZ)"
-                      required
-                      className="w-full px-4 py-2 border border-amber-300 bg-amber-50 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
-                      maxLength={255}
-                    />
-                    <p className="text-xs text-amber-700 mt-1 flex items-center gap-1">
-                      <span className="font-semibold">💡 Importante:</span> Para sedes externas NO se cobra el salón. Solo se cobran los servicios.
-                    </p>
-                  </div>
-                )}
-              </div>
+              {/* Mensaje de verificación de disponibilidad - Solo cuando hay salón, fecha y horas */}
+              {formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento && formData.hora_inicio && formData.hora_fin && !errorHorario && (
+                <div className="md:col-span-2">
+                  {verificandoDisponibilidad && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-600 flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Verificando disponibilidad del salón...</span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  {errorDisponibilidad && !verificandoDisponibilidad && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <p className="text-sm text-red-600 flex items-start gap-2">
+                        <span className="text-red-500 font-bold text-lg">🚫</span>
+                        <span className="flex-1">
+                          <strong>Salón no disponible:</strong>
+                          <pre className="mt-2 text-xs whitespace-pre-wrap font-mono bg-red-100 p-2 rounded border border-red-300">
+                            {errorDisponibilidad}
+                          </pre>
+                          <span className="text-xs mt-2 block text-red-700">
+                            ⚠️ No podrás continuar hasta que selecciones un horario disponible.
+                          </span>
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!errorDisponibilidad && !verificandoDisponibilidad && formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento && formData.hora_inicio && formData.hora_fin && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-sm text-green-600 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>✓ El salón está disponible en este horario</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
 
             </div>
           </div>
@@ -2203,13 +2444,22 @@ function CrearOferta() {
                 // Obtener servicios del paquete
                 const serviciosPaquete = getServiciosPaqueteSeleccionados();
                 
-                // REGLA ESPECÍFICA: Deluxe y Diamond - NO mostrar Foto y Video 3h si ya está incluida
-                if ((paqueteSeleccionado?.nombre?.toLowerCase().includes('deluxe') || 
-                     paqueteSeleccionado?.nombre?.toLowerCase().includes('diamond')) &&
+                // REGLA ESPECÍFICA: Deluxe - NO mostrar Foto y Video 3h si el paquete tiene Foto y Video 5h (5h es mejor)
+                if (paqueteSeleccionado?.nombre?.toLowerCase().includes('deluxe') &&
+                    s.nombre === 'Foto y Video 3 Horas') {
+                  const tieneFoto5h = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Foto y Video 5 Horas');
+                  if (tieneFoto5h) {
+                    return false; // NO mostrar Foto 3h si el paquete tiene 5h (5h es mejor)
+                  }
+                }
+                
+                // REGLA ESPECÍFICA: Diamond - NO mostrar Foto y Video 3h si ya está incluida
+                if (paqueteSeleccionado?.nombre?.toLowerCase().includes('diamond') &&
+                    !paqueteSeleccionado?.nombre?.toLowerCase().includes('deluxe') &&
                     s.nombre === 'Foto y Video 3 Horas') {
                   const tieneFoto3h = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Foto y Video 3 Horas');
                   if (tieneFoto3h) {
-                    return false; // NO mostrar Foto 3h si ya está en el paquete (5h es mejor)
+                    return false; // NO mostrar Foto 3h si ya está en el paquete
                   }
                 }
                 

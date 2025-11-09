@@ -45,28 +45,28 @@ function LoginCliente() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo/Header Minimalista */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-900 rounded-xl mb-4">
-            <Calendar className="w-8 h-8 text-white" />
+        {/* Logo/Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full mb-4 shadow-lg">
+            <Calendar className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Portal del Cliente
           </h1>
-          <p className="text-sm text-gray-600">
+          <p className="text-gray-600">
             Accede a los detalles de tu evento especial
           </p>
         </div>
 
-        {/* Login Form Minimalista */}
-        <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Login Form */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
                 htmlFor="codigo_acceso"
-                className="block text-sm font-medium text-gray-900 mb-2"
+                className="block text-sm font-medium text-gray-700 mb-2"
               >
                 Código de Acceso
               </label>
@@ -81,7 +81,7 @@ function LoginCliente() {
                   onChange={(e) => setCodigoAcceso(e.target.value)}
                   placeholder="Ingresa tu código único"
                   required
-                  className="input pl-10"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
                   disabled={loading}
                 />
               </div>
@@ -91,15 +91,15 @@ function LoginCliente() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-4 rounded-lg hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? (
                 <>
@@ -113,11 +113,11 @@ function LoginCliente() {
           </form>
 
           {/* Help Text */}
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <p className="text-xs text-gray-600 text-center">
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-sm text-gray-600 text-center">
               ¿No tienes tu código de acceso?
               <br />
-              <span className="text-gray-900 font-medium">
+              <span className="text-purple-600 font-medium">
                 Contacta a tu asesor de eventos
               </span>
             </p>
@@ -129,4 +129,3 @@ function LoginCliente() {
 }
 
 export default LoginCliente;
-
