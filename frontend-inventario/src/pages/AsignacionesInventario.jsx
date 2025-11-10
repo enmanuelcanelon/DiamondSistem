@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Building2, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Building2, AlertTriangle, ArrowRight, Package, CheckCircle, RotateCcw, ArrowUp } from 'lucide-react';
 import api from '@shared/config/api';
 
 function AsignacionesInventario() {
@@ -34,57 +34,43 @@ function AsignacionesInventario() {
       </div>
 
       {/* Lista de Salones */}
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {salones.length > 0 ? (
           salones.map((salon) => {
             const itemsBajoStock = salon.items.filter(item => item.necesita_reposicion);
+            const nombreSalon = salon.salon_nombre.toLowerCase();
             
             return (
-              <div
+              <button
                 key={salon.salon_id}
-                className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden"
+                onClick={() => navigate(`/${nombreSalon}`)}
+                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition border-2 border-transparent hover:border-blue-500 text-left w-full"
               >
-                {/* Header del Salón */}
-                <div className="p-6 flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1">
-                    <Building2 className="w-6 h-6 text-blue-600" />
-                    <div className="flex-1">
-                      <h2 className="text-xl font-semibold text-gray-900">{salon.salon_nombre}</h2>
-                      <p className="text-sm text-gray-500">
-                        {salon.items.length} items en inventario
-                        {itemsBajoStock.length > 0 && (
-                          <span className="ml-2 text-red-600 font-medium">
-                            • {itemsBajoStock.length} bajo stock
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {itemsBajoStock.length > 0 && (
-                      <div className="flex items-center gap-2 text-red-600">
-                        <AlertTriangle className="w-5 h-5" />
-                        <span className="text-sm font-medium">{itemsBajoStock.length} alertas</span>
-                      </div>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const nombreSalon = salon.salon_nombre.toLowerCase();
-                        navigate(`/${nombreSalon}`);
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                    >
-                      Ver Detalles
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                <div className="flex items-center gap-4 mb-4">
+                  <Building2 className="w-12 h-12 text-blue-600" />
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">{salon.salon_nombre}</h3>
+                    <p className="text-sm text-gray-600">Salón</p>
                   </div>
                 </div>
-              </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Items en inventario:</span>
+                    <span className="font-semibold text-gray-900">{salon.items.length}</span>
+                  </div>
+                  {itemsBajoStock.length > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-red-600">Items bajo stock:</span>
+                      <span className="font-semibold text-red-600">{itemsBajoStock.length}</span>
+                    </div>
+                  )}
+                </div>
+              </button>
             );
           })
         ) : (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
+          <div className="col-span-3 bg-white rounded-lg shadow p-12 text-center">
             <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500 text-lg">No hay inventario en los salones</p>
             <p className="text-gray-400 text-sm mt-2">

@@ -5,7 +5,8 @@ import {
   Menu,
   X,
   Home,
-  Building2
+  Building2,
+  History
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '@shared/store/useAuthStore';
@@ -22,8 +23,9 @@ function LayoutInventario() {
   };
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Inventario Central', href: '/', icon: Home },
     { name: 'Inventario por Salones', href: '/asignaciones', icon: Building2 },
+    { name: 'Historial de Movimientos', href: '/movimientos', icon: History },
   ];
 
   const isActive = (path) => {

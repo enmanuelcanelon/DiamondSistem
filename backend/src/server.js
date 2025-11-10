@@ -127,9 +127,9 @@ const corsOptions = {
         logger.warn(`NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
         logger.warn(`Orígenes permitidos (strings): ${JSON.stringify(allowedOrigins.filter(a => typeof a === 'string'))}`);
         logger.warn(`Total orígenes: ${allowedOrigins.length}`);
-        // Permitir temporalmente para debug
-        if (origin && origin.includes('localhost:5177')) {
-          logger.warn(`⚠️ PERMITIENDO ${origin} TEMPORALMENTE PARA DEBUG`);
+        // Si el origen incluye localhost:5177 pero no está en la lista, agregarlo
+        if (origin && origin.includes('localhost:5177') && !isAllowed) {
+          logger.warn(`⚠️ PERMITIENDO ${origin} (frontend-inventario)`);
           return callback(null, true);
         }
         callback(new Error('No permitido por CORS'));

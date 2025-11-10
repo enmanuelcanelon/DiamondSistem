@@ -11,6 +11,7 @@ const { generarCodigoContrato, generarCodigoAccesoCliente } = require('../utils/
 const { calcularComisionVendedor, calcularPagosFinanciamiento } = require('../utils/priceCalculator');
 const { generarPDFContrato } = require('../utils/pdfContrato');
 const { generarFacturaProforma } = require('../utils/pdfFactura');
+const { generarFacturaProformaHTML } = require('../utils/pdfFacturaHTML');
 
 const prisma = getPrismaClient();
 
@@ -27,6 +28,10 @@ router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next
     const where = {};
     if (req.user.tipo === 'vendedor') {
       where.vendedor_id = req.user.id; // Solo contratos del vendedor autenticado
+    }
+    // Si es inventario y no se especifica estado, mostrar solo activos por defecto
+    if (req.user.tipo === 'inventario' && !estado) {
+      where.estado = 'activo';
     }
 
     // Permitir filtros adicionales
@@ -726,7 +731,22 @@ router.get('/:id/pdf-factura', authenticate, async (req, res, next) => {
       where: { id: parseInt(id) },
       include: {
         clientes: true,
-        paquetes: true,
+        vendedores: {
+          select: {
+            id: true,
+            nombre_completo: true,
+            codigo_vendedor: true
+          }
+        },
+        paquetes: {
+          include: {
+            paquetes_servicios: {
+              include: {
+                servicios: true
+              }
+            }
+          }
+        },
         ofertas: true,
         contratos_servicios: {
           include: {
@@ -750,16 +770,15 @@ router.get('/:id/pdf-factura', authenticate, async (req, res, next) => {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
-    // Generar PDF
-    const doc = generarFacturaProforma(contrato, 'contrato');
+    // Generar PDF usando HTML + Puppeteer
+    const pdfBuffer = await generarFacturaProformaHTML(contrato, 'contrato');
 
     // Configurar headers para descarga
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Factura-${contrato.codigo_contrato}.pdf`);
 
     // Enviar el PDF
-    doc.pipe(res);
-    doc.end();
+    res.send(pdfBuffer);
 
   } catch (error) {
     next(error);
@@ -1081,6 +1100,57 @@ router.get('/:id/versiones/:version_numero/pdf', authenticate, async (req, res, 
 
     doc.pipe(res);
     doc.end();
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   PUT /api/contratos/:id/notas
+ * @desc    Actualizar notas del vendedor en un contrato
+ * @access  Private (Vendedor propietario del contrato)
+ */
+router.put('/:id/notas', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { notas_vendedor } = req.body;
+
+    // Verificar que el contrato existe
+    const contrato = await prisma.contratos.findUnique({
+      where: { id: parseInt(id) },
+      select: {
+        id: true,
+        vendedor_id: true,
+      },
+    });
+
+    if (!contrato) {
+      throw new NotFoundError('Contrato no encontrado');
+    }
+
+    // Verificar que el vendedor es el propietario del contrato
+    if (contrato.vendedor_id !== req.user.id) {
+      throw new ValidationError('No tienes permiso para actualizar las notas de este contrato');
+    }
+
+    // Actualizar las notas
+    const contratoActualizado = await prisma.contratos.update({
+      where: { id: parseInt(id) },
+      data: {
+        notas_vendedor: notas_vendedor || null,
+      },
+      select: {
+        id: true,
+        notas_vendedor: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Notas actualizadas exitosamente',
+      contrato: contratoActualizado,
+    });
+
   } catch (error) {
     next(error);
   }

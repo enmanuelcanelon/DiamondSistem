@@ -15,6 +15,7 @@ const {
 } = require('../utils/priceCalculator');
 const { generarCodigoOferta } = require('../utils/codeGenerator');
 const { generarFacturaProforma } = require('../utils/pdfFactura');
+const { generarFacturaProformaHTML } = require('../utils/pdfFacturaHTML');
 const logger = require('../utils/logger');
 
 const prisma = getPrismaClient();
@@ -929,7 +930,15 @@ router.get('/:id/pdf-factura', authenticate, requireVendedor, async (req, res, n
       where: { id: parseInt(id) },
       include: {
         clientes: true,
-        paquetes: true,
+        paquetes: {
+          include: {
+            paquetes_servicios: {
+              include: {
+                servicios: true
+              }
+            }
+          }
+        },
         temporadas: true,
         vendedores: {
           select: {
@@ -950,16 +959,15 @@ router.get('/:id/pdf-factura', authenticate, requireVendedor, async (req, res, n
       throw new NotFoundError('Oferta no encontrada');
     }
 
-    // Generar PDF
-    const doc = generarFacturaProforma(oferta, 'oferta');
+    // Generar PDF usando HTML + Puppeteer
+    const pdfBuffer = await generarFacturaProformaHTML(oferta, 'oferta');
 
     // Configurar headers para descarga
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Oferta-${oferta.codigo_oferta}.pdf`);
 
     // Enviar el PDF
-    doc.pipe(res);
-    doc.end();
+    res.send(pdfBuffer);
 
   } catch (error) {
     next(error);

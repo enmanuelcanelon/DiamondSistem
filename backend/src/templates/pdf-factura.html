@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diamond Venue - Factura Proforma</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica', Arial, sans-serif;
+            background-color: #3A103A;
+            color: #DFD9BE;
+            width: 8.5in;
+            height: 11in;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page {
+            width: 8.5in;
+            height: 11in;
+            position: relative;
+            page-break-after: always;
+            background-color: #3A103A;
+        }
+
+        /* PÁGINA 1 - PORTADA */
+        .page-1 {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 50px 0;
+            background-color: #3A103A;
+        }
+
+        .header-top {
+            text-align: center;
+            width: 100%;
+        }
+
+        .header-top h1 {
+            font-size: 36px;
+            font-weight: bold;
+            color: #DFD9BE;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+        }
+
+        .header-top h2 {
+            font-size: 14px;
+            font-weight: normal;
+            color: #DFD9BE;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .contact-info {
+            font-size: 10px;
+            color: #DFD9BE;
+            line-height: 1.8;
+        }
+
+        .package-title {
+            font-size: 48px;
+            font-style: italic;
+            color: #D4AF37;
+            text-align: center;
+            margin: 100px 0;
+            font-weight: normal;
+        }
+
+        .package-banner {
+            width: 500px;
+            height: 40px;
+            background-color: #5A2A5A;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        .package-banner span {
+            font-size: 18px;
+            font-weight: bold;
+            color: #DFD9BE;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        /* PÁGINA 2 - DETALLES DEL PAQUETE */
+        .page-2 {
+            padding: 50px;
+        }
+
+        .page-2-top {
+            background-color: #3A103A;
+            padding: 30px 50px;
+            min-height: 480px;
+        }
+
+        .page-2-bottom {
+            background-color: #FFFFFF;
+            padding: 30px 50px;
+            color: #2A0A2A;
+        }
+
+        .page-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #D4AF37;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .service-section {
+            margin-bottom: 25px;
+        }
+
+        .service-section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #D4AF37;
+            text-decoration: underline;
+            margin-bottom: 8px;
+        }
+
+        .service-item {
+            font-size: 11px;
+            color: #DFD9BE;
+            line-height: 1.6;
+            margin-left: 0;
+        }
+
+        .page-2-bottom .service-item {
+            color: #2A0A2A;
+        }
+
+        .page-2-bottom .service-section-title {
+            color: #D4AF37;
+        }
+
+        /* PÁGINA 3 - EVENT DETAILS Y PRICING */
+        .page-3 {
+            background-color: #3A103A;
+            padding: 50px;
+            color: #DFD9BE;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-style: italic;
+            color: #D4AF37;
+            text-align: center;
+            text-decoration: underline;
+            margin-bottom: 30px;
+        }
+
+        .event-details {
+            margin-bottom: 40px;
+        }
+
+        .detail-row {
+            display: flex;
+            margin-bottom: 12px;
+            font-size: 11px;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            width: 150px;
+            flex-shrink: 0;
+        }
+
+        .detail-value {
+            flex: 1;
+        }
+
+        .pricing-table {
+            width: 100%;
+            margin-top: 30px;
+        }
+
+        .pricing-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 11px;
+        }
+
+        .pricing-label {
+            font-weight: bold;
+        }
+
+        .pricing-value {
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .pricing-total {
+            font-size: 13px;
+        }
+
+        .pricing-note {
+            font-size: 10px;
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        /* PÁGINA 4 - TÉRMINOS Y CONDICIONES */
+        .page-4 {
+            background-color: #3A103A;
+            padding: 50px;
+            color: #DFD9BE;
+        }
+
+        .terms-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #D4AF37;
+            text-align: center;
+            text-decoration: underline;
+            margin-bottom: 20px;
+        }
+
+        .terms-subtitle {
+            font-size: 16px;
+            font-weight: bold;
+            color: #D4AF37;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .terms-intro {
+            font-size: 11px;
+            line-height: 1.8;
+            margin-bottom: 25px;
+            text-align: justify;
+        }
+
+        .term-item {
+            margin-bottom: 15px;
+        }
+
+        .term-number {
+            font-size: 11px;
+            font-weight: bold;
+            color: #D4AF37;
+        }
+
+        .term-text {
+            font-size: 9px;
+            line-height: 1.6;
+            margin-top: 5px;
+        }
+
+        .signature-section {
+            margin-top: 40px;
+        }
+
+        .signature-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #D4AF37;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .signature-note {
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .signature-fields {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .signature-box {
+            width: 240px;
+        }
+
+        .signature-line {
+            border-top: 1px solid #DFD9BE;
+            margin-bottom: 5px;
+            padding-top: 5px;
+        }
+
+        .signature-label {
+            font-size: 9px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page page-1">
+        <div class="header-top">
+            <h1>DIAMOND</h1>
+            <h2>VENUE AT DORAL</h2>
+            <div class="contact-info">
+                <div>(786) 332-7065</div>
+                <div>diamondvenuedoral</div>
+                <div>www.diamondvenuedoral.com</div>
+            </div>
+        </div>
+        
+        <div class="package-title">{{PACKAGE_NAME}}</div>
+        
+        <div class="package-banner">
+            <span>PACKAGE</span>
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: DETALLES DEL PAQUETE -->
+    <div class="page page-2">
+        <div class="page-2-top">
+            <div class="page-title">Deluxe Package</div>
+            
+            <div class="service-section">
+                <div class="service-section-title">Venue</div>
+                <div class="service-item">{{VENUE_SERVICES}}</div>
+            </div>
+            
+            <div class="service-section">
+                <div class="service-section-title">Cake</div>
+                <div class="service-item">{{CAKE_SERVICES}}</div>
+            </div>
+            
+            <div class="service-section">
+                <div class="service-section-title">Decoration</div>
+                <div class="service-item">{{DECORATION_SERVICES}}</div>
+            </div>
+            
+            <div class="service-section">
+                <div class="service-section-title">Specials</div>
+                <div class="service-item">{{SPECIALS_SERVICES}}</div>
+            </div>
+            
+            <div class="service-section">
+                <div class="service-section-title">Bar Service</div>
+                <div class="service-item">{{BAR_SERVICES}}</div>
+            </div>
+            
+            <div class="service-section">
+                <div class="service-section-title">Catering</div>
+                <div class="service-item">{{CATERING_SERVICES}}</div>
+            </div>
+        </div>
+        
+        <div class="page-2-bottom">
+            <div class="service-section">
+                <div class="service-section-title">Service Coord & Design</div>
+                <div class="service-item">{{SERVICE_COORD_SERVICES}}</div>
+            </div>
+            
+            <div class="service-section">
+                <div class="service-section-title">Fees</div>
+                <div class="service-item">Package prices subject to 7% tax & 18% service fee</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: EVENT DETAILS Y PRICING -->
+    <div class="page page-3">
+        <div class="section-title">Event Details</div>
+        
+        <div class="event-details">
+            <div class="detail-row">
+                <div class="detail-label">Name:</div>
+                <div class="detail-value">{{CLIENT_NAME}} (Attended by {{VENDEDOR_NAME}})</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Event:</div>
+                <div class="detail-value">{{EVENT_TYPE}}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Location:</div>
+                <div class="detail-value">Diamond Venue at Doral, 4747 NW 79th Ave 2nd Floor, Doral, FL 33166</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Date:</div>
+                <div class="detail-value">{{EVENT_DATE}}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Time:</div>
+                <div class="detail-value">{{EVENT_TIME}}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Number of Guests:</div>
+                <div class="detail-value">{{GUEST_COUNT}}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Email:</div>
+                <div class="detail-value">{{CLIENT_EMAIL}}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Phone:</div>
+                <div class="detail-value">{{CLIENT_PHONE}}</div>
+            </div>
+        </div>
+        
+        <div class="section-title">Pricing</div>
+        
+        <div class="pricing-table">
+            <div class="pricing-row">
+                <div class="pricing-label">Package Price:</div>
+                <div class="pricing-value">{{PACKAGE_PRICE}}</div>
+            </div>
+            <div class="pricing-row">
+                <div class="pricing-label">TEMP PRICE:</div>
+                <div class="pricing-value">{{TEMP_PRICE}}</div>
+            </div>
+            <div class="pricing-row">
+                <div class="pricing-label">7% Tax:</div>
+                <div class="pricing-value">{{TAX_AMOUNT}}</div>
+            </div>
+            <div class="pricing-row">
+                <div class="pricing-label">18% Service fee:</div>
+                <div class="pricing-value">{{SERVICE_FEE}}</div>
+            </div>
+            <div class="pricing-row pricing-total">
+                <div class="pricing-label"><strong>TOTAL TO PAY:</strong></div>
+                <div class="pricing-value"><strong>{{TOTAL_TO_PAY}}</strong></div>
+            </div>
+            <div class="pricing-row">
+                <div class="pricing-label">1º Payment ({{FIRST_PAYMENT_DATE}}):</div>
+                <div class="pricing-value">-{{FIRST_PAYMENT_AMOUNT}} (zelle)</div>
+            </div>
+            <div class="pricing-row pricing-total">
+                <div class="pricing-label"><strong>TOTAL REMAINING TO PAY:</strong></div>
+                <div class="pricing-value"><strong>{{TOTAL_REMAINING}}</strong></div>
+            </div>
+        </div>
+        
+        <div class="pricing-note">
+            **The total amount is required to be paid at least 15 days prior to the event's date.**
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: TÉRMINOS Y CONDICIONES -->
+    <div class="page page-4">
+        <div class="terms-title">BANQUET HALL SERVICE AGREEMENT</div>
+        
+        <div class="terms-subtitle">TERMS AND CONDITIONS OF THE CONTRACT</div>
+        
+        <div class="terms-intro">
+            "Company" refers to the entity that provides the services for the execution of the contracted event, and "Client" refers to the person or entity that hires the services for the realization of their event. "Contract" refers to the set of Terms and Conditions contained in this document, which both parties—the Company and the Client—agree to comply with.
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">1. RESERVATION, DEPOSIT, AND PAYMENT TERMS</div>
+            <div class="term-text">A non-refundable deposit of $500 is required to reserve the event date. A payment of $1,000 must be completed within ten (10) days after the reservation. Monthly payments of at least $500 are required thereafter until the total balance is paid. The full payment must be completed at least fifteen (15) business days before the event. Visa and MasterCard payments are accepted only up to 30 days prior to the event date with a 3.8% fee. American Express is not accepted. <strong>All payments are non-refundable.</strong></div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">2. EVENT CANCELLATION POLICY</div>
+            <div class="term-text">All cancellations must be submitted in writing via email. The Client forfeits all payments made and agrees not to dispute or reverse any payment. No refunds will be issued under any circumstances.</div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">3. THIRD-PARTY SERVICES</div>
+            <div class="term-text">The Company is not responsible for failures or delays of services subcontracted to third-party vendors such as limousines, photographers, videographers, dancers, or entertainers. All additional services must be arranged through the Company's approved vendors.</div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">4. CLIENT RESPONSIBILITY FOR DAMAGES</div>
+            <div class="term-text">The Client assumes full responsibility for any damage to the property, furniture, or infrastructure caused by guests, family members, or external vendors. Repair costs will be invoiced to the Client and must be paid promptly.</div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">5. DECORATION AND SUPPLIES POLICY</div>
+            <div class="term-text">All decorations or materials brought by the Client require prior approval. Delivery is only allowed on Wednesdays between 2:00 PM and 5:00 PM. The Company is not responsible for lost or damaged personal items. Staff time for setup or removal may be charged to the Client.</div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">6. EVENT SCHEDULE AND ACCESS</div>
+            <div class="term-text">Client and guests may only enter the venue at the time stated in the event contract. Changes to event details are allowed only up to ten (10) days before the event. External entertainers or vendors not approved by the Company are prohibited for insurance reasons.</div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">7. MEDIA RELEASE AUTHORIZATION</div>
+            <div class="term-text">The Client authorizes the Company to take photos and videos of the event and use them for promotional purposes on social media, websites, or other marketing materials.</div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">8. FORCE MAJEURE</div>
+            <div class="term-text">The Company is not liable for non-performance caused by events beyond its control, including natural disasters, power outages, pandemics, or government restrictions.</div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">9. LIMITATION OF LIABILITY</div>
+            <div class="term-text">The Company's total liability shall not exceed the total amount paid by the Client. The Company shall not be liable for indirect or consequential damages.</div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">10. GOVERNING LAW</div>
+            <div class="term-text">This Agreement shall be governed by the laws of the State of Florida. Any disputes shall be resolved in Miami-Dade County courts.</div>
+        </div>
+        
+        <div class="term-item">
+            <div class="term-number">11. Non-Refundable and No Chargeback Agreement</div>
+            <div class="term-text">The Client agrees and accepts that all payments made to Revolution Party Venues are final and non-refundable, under any circumstances, including event cancellation, postponement, or dissatisfaction with services. For payments made with credit cards, the cardholder further agrees not to dispute, cancel, or request any chargeback through the issuing bank or credit card company for any reason related to this transaction. Any disputes will be handled directly with the company according to the signed event agreement.</div>
+        </div>
+        
+        <div class="signature-section">
+            <div class="signature-title">ACCEPTANCE AND SIGNATURE</div>
+            <div class="signature-note"><strong>**By signing below or confirming via email, the Client agrees to all terms and conditions of this Agreement.**</strong></div>
+            
+            <div style="font-size: 11px; font-weight: bold; color: #D4AF37; margin-bottom: 10px;">REQUIRED FIELDS:</div>
+            <div style="font-size: 11px; margin-bottom: 20px;">CLIENT NAME: ________________________________</div>
+            
+            <div class="signature-fields">
+                <div class="signature-box">
+                    <div class="signature-line" style="height: 30px;"></div>
+                    <div class="signature-label">Client Signature</div>
+                    <div class="signature-line" style="height: 30px; margin-top: 10px;"></div>
+                    <div class="signature-label">Date of signature</div>
+                </div>
+                <div class="signature-box">
+                    <div class="signature-line" style="height: 30px;"></div>
+                    <div class="signature-label">Company representative</div>
+                    <div class="signature-line" style="height: 30px; margin-top: 10px;"></div>
+                    <div class="signature-label">Date</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
