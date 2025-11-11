@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Filter, Edit2, Loader2 } from 'lucide-react';
+import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Edit2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
@@ -8,39 +8,58 @@ import ModalPlanPago from '../components/ModalPlanPago';
 
 function Ofertas() {
   const queryClient = useQueryClient();
+  const fechaActual = new Date();
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('');
-  const [filtroDias, setFiltroDias] = useState('30'); // Por defecto: últimos 30 días
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
+  const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
+  const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
   const [modalPlanPagoOpen, setModalPlanPagoOpen] = useState(false);
   const [ofertaSeleccionada, setOfertaSeleccionada] = useState(null);
 
-  // Calcular fechas basadas en el filtro de días
-  const calcularFechasPorDias = (dias) => {
-    if (dias === 'todos') {
-      return { desde: '', hasta: '' };
-    }
-    const hoy = new Date();
-    const fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-    const fechaDesde = new Date(hoy);
-    fechaDesde.setDate(fechaDesde.getDate() - parseInt(dias));
+  // Nombres de los meses
+  const nombresMeses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  // Calcular fechas basadas en mes y año seleccionado
+  const calcularFechasPorMes = (mes, año) => {
+    const fechaInicio = new Date(año, mes - 1, 1);
+    const fechaFin = new Date(año, mes, 0, 23, 59, 59);
     
     return {
-      desde: fechaDesde.toISOString().split('T')[0],
-      hasta: fechaHasta.toISOString().split('T')[0]
+      desde: fechaInicio.toISOString().split('T')[0],
+      hasta: fechaFin.toISOString().split('T')[0]
     };
   };
 
-  // Actualizar fechas cuando cambia el filtro de días
-  useEffect(() => {
-    if (filtroDias !== 'personalizado') {
-      const fechas = calcularFechasPorDias(filtroDias);
-      setFechaDesde(fechas.desde);
-      setFechaHasta(fechas.hasta);
+  // Calcular fechas del mes seleccionado
+  const { desde: fechaDesde, hasta: fechaHasta } = calcularFechasPorMes(mesSeleccionado, añoSeleccionado);
+
+  // Cambiar mes
+  const cambiarMes = (direccion) => {
+    if (direccion === 'anterior') {
+      if (mesSeleccionado === 1) {
+        setMesSeleccionado(12);
+        setAñoSeleccionado(añoSeleccionado - 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado - 1);
+      }
+    } else {
+      if (mesSeleccionado === 12) {
+        setMesSeleccionado(1);
+        setAñoSeleccionado(añoSeleccionado + 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado + 1);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroDias]);
+  };
+
+  // Volver al mes actual
+  const resetearMes = () => {
+    setMesSeleccionado(fechaActual.getMonth() + 1);
+    setAñoSeleccionado(fechaActual.getFullYear());
+  };
   
   // Scroll infinito con useInfiniteQuery
   const {
@@ -50,7 +69,7 @@ function Ofertas() {
     isFetchingNextPage,
     isLoading,
   } = useInfiniteQuery({
-    queryKey: ['ofertas', searchTerm, estadoFiltro, fechaDesde, fechaHasta],
+    queryKey: ['ofertas', searchTerm, estadoFiltro, mesSeleccionado, añoSeleccionado],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         page: pageParam,
@@ -265,72 +284,61 @@ function Ofertas() {
               <option value="rechazada">Rechazada</option>
             </select>
           </div>
-          {/* Filtros de fecha de creación */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          {/* Filtro por Mes y Año */}
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-700 font-medium">Fecha de creación de la oferta:</span>
+              <span className="text-sm text-gray-700 font-medium">Filtrar por mes:</span>
             </div>
             
-            {/* Selector rápido de días */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Mostrar:</label>
-              <select
-                value={filtroDias}
-                onChange={(e) => {
-                  setFiltroDias(e.target.value);
-                  if (e.target.value === 'todos') {
-                    setFechaDesde('');
-                    setFechaHasta('');
-                  }
-                }}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm bg-white"
-              >
-                <option value="7">Últimos 7 días</option>
-                <option value="30">Últimos 30 días</option>
-                <option value="60">Últimos 60 días</option>
-                <option value="90">Últimos 90 días</option>
-                <option value="todos">Todos</option>
-              </select>
-            </div>
-
-            {/* Filtros de fecha manuales */}
-            <div className="flex gap-2 items-center">
-              <label className="text-sm text-gray-600">Desde:</label>
-              <input
-                type="date"
-                value={fechaDesde}
-                onChange={(e) => {
-                  setFechaDesde(e.target.value);
-                  setFiltroDias('personalizado');
-                }}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
-              />
-            </div>
-            <div className="flex gap-2 items-center">
-              <label className="text-sm text-gray-600">Hasta:</label>
-              <input
-                type="date"
-                value={fechaHasta}
-                onChange={(e) => {
-                  setFechaHasta(e.target.value);
-                  setFiltroDias('personalizado');
-                }}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
-              />
-            </div>
-            {(fechaDesde || fechaHasta) && (
+            <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-indigo-200 p-2">
               <button
-                onClick={() => {
-                  setFechaDesde('');
-                  setFechaHasta('');
-                  setFiltroDias('30'); // Volver al valor por defecto
-                }}
-                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                onClick={() => cambiarMes('anterior')}
+                className="p-1 hover:bg-indigo-50 rounded transition"
+                title="Mes anterior"
               >
-                Limpiar
+                <ChevronLeft className="w-5 h-5 text-indigo-600" />
               </button>
-            )}
+              
+              <div className="flex items-center gap-2 px-3">
+                <select
+                  value={mesSeleccionado}
+                  onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
+                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {nombresMeses.map((mes, index) => (
+                    <option key={index} value={index + 1}>{mes}</option>
+                  ))}
+                </select>
+                <select
+                  value={añoSeleccionado}
+                  onChange={(e) => setAñoSeleccionado(parseInt(e.target.value))}
+                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                    <option key={año} value={año}>{año}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={() => cambiarMes('siguiente')}
+                className="p-1 hover:bg-indigo-50 rounded transition"
+                title="Mes siguiente"
+              >
+                <ChevronRight className="w-5 h-5 text-indigo-600" />
+              </button>
+
+              {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+                <button
+                  onClick={resetearMes}
+                  className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded transition"
+                  title="Volver al mes actual"
+                >
+                  Hoy
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

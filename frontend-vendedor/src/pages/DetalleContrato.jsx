@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -24,28 +24,11 @@ import {
 import api from '../config/api';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
-import ModalConfirmacionPago from '../components/ModalConfirmacionPago';
-import ModalAnularPago from '../components/ModalAnularPago';
 import toast, { Toaster } from 'react-hot-toast';
 
 function DetalleContrato() {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const showPagoForm = searchParams.get('action') === 'pago';
-
-  const [formPago, setFormPago] = useState({
-    monto: '',
-    metodo_pago: 'efectivo',
-    tipo_tarjeta: '',
-    numero_referencia: '',
-    notas: '',
-  });
-
-  // Estados para los modales
-  const [modalConfirmacionOpen, setModalConfirmacionOpen] = useState(false);
-  const [modalAnularOpen, setModalAnularOpen] = useState(false);
-  const [pagoAAnular, setPagoAAnular] = useState(null);
   const [mostrarCodigoAcceso, setMostrarCodigoAcceso] = useState(false);
   
   // Estado para notas internas
@@ -83,72 +66,6 @@ function DetalleContrato() {
     },
   });
 
-  // Mutation para registrar pago
-  const mutationPago = useMutation({
-    mutationFn: async (data) => {
-      const response = await api.post('/pagos', {
-        ...data,
-        contrato_id: parseInt(id),
-        monto: parseFloat(data.monto),
-      });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['contrato', id]);
-      queryClient.invalidateQueries(['pagos-contrato', id]);
-      queryClient.invalidateQueries(['contratos']);
-      queryClient.invalidateQueries(['versiones-contrato', id]);
-      setFormPago({
-        monto: '',
-        metodo_pago: 'efectivo',
-        tipo_tarjeta: '',
-        numero_referencia: '',
-        notas: '',
-      });
-      setModalConfirmacionOpen(false);
-      
-      // Mostrar mensaje con información de la nueva versión
-      const mensaje = data?.version_contrato 
-        ? `✅ Pago registrado exitosamente\n📄 ${data.version_contrato.mensaje}`
-        : '✅ Pago registrado exitosamente';
-      
-      toast.success(mensaje, {
-        duration: 5000,
-        icon: '💰',
-      });
-    },
-    onError: (error) => {
-      console.error('Error al registrar pago:', error);
-      const errorMsg = error.response?.data?.message || error.response?.data?.errors?.join(', ') || 'Error al registrar pago';
-      toast.error(errorMsg, { duration: 4000 });
-      setModalConfirmacionOpen(false);
-    },
-  });
-
-  // Mutation para anular pago
-  const mutationAnularPago = useMutation({
-    mutationFn: async ({ pagoId, motivo }) => {
-      const response = await api.put(`/pagos/${pagoId}/anular`, { motivo });
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['contrato', id]);
-      queryClient.invalidateQueries(['pagos-contrato', id]);
-      queryClient.invalidateQueries(['contratos']);
-      setModalAnularOpen(false);
-      setPagoAAnular(null);
-      toast.success('✅ Pago anulado exitosamente', {
-        duration: 3000,
-        icon: '🔄',
-      });
-    },
-    onError: (error) => {
-      console.error('Error al anular pago:', error);
-      const errorMsg = error.response?.data?.message || 'Error al anular pago';
-      toast.error(errorMsg, { duration: 4000 });
-      setModalAnularOpen(false);
-    },
-  });
 
   // Mutation para actualizar notas internas
   const mutationNotasInternas = useMutation({
@@ -171,52 +88,6 @@ function DetalleContrato() {
     },
   });
 
-  const handlePagoSubmit = (e) => {
-    e.preventDefault();
-    
-    // Validar monto
-    if (!formPago.monto || parseFloat(formPago.monto) <= 0) {
-      toast.error('Por favor ingresa un monto válido');
-      return;
-    }
-    
-    // Abrir modal de confirmación en lugar de enviar directamente
-    setModalConfirmacionOpen(true);
-  };
-
-  const handleConfirmarPago = () => {
-    // Capitalizar el método de pago para que coincida con el backend
-    const dataToSubmit = {
-      ...formPago,
-      metodo_pago: formPago.metodo_pago.charAt(0).toUpperCase() + formPago.metodo_pago.slice(1)
-    };
-    
-    mutationPago.mutate(dataToSubmit);
-  };
-
-  const handleAbrirModalAnular = (pago) => {
-    setPagoAAnular(pago);
-    setModalAnularOpen(true);
-  };
-
-  const handleConfirmarAnulacion = (pagoId, motivo) => {
-    mutationAnularPago.mutate({ pagoId, motivo });
-  };
-
-  const handlePagoChange = (e) => {
-    setFormPago({
-      ...formPago,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const metodosPago = [
-    { value: 'efectivo', label: 'Efectivo' },
-    { value: 'tarjeta', label: 'Tarjeta' },
-    { value: 'transferencia', label: 'Transferencia' },
-    { value: 'cheque', label: 'Cheque' },
-    { value: 'otro', label: 'Otro' },
-  ];
 
   const handleDescargarContrato = async () => {
     try {
@@ -276,21 +147,6 @@ function DetalleContrato() {
     }
   };
 
-  const handleEnviarRecordatorioPago = async () => {
-    const confirmacion = window.confirm(
-      `¿Enviar recordatorio de pago a ${contrato?.clientes?.email}?\n\nSaldo pendiente: $${parseFloat(contrato?.saldo_pendiente || 0).toLocaleString()}`
-    );
-    
-    if (!confirmacion) return;
-
-    try {
-      await api.post(`/emails/recordatorio-pago/${id}`);
-      alert(`✅ Recordatorio enviado exitosamente a ${contrato?.clientes?.email}`);
-    } catch (error) {
-      console.error('Error al enviar recordatorio:', error);
-      alert('❌ Error al enviar el recordatorio: ' + (error.response?.data?.message || error.message));
-    }
-  };
 
   const handleGuardarNotas = () => {
     mutationNotasInternas.mutate(notasInternas);
@@ -314,7 +170,7 @@ function DetalleContrato() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link 
-          to={showPagoForm ? `/contratos/${id}` : "/contratos"} 
+          to="/contratos" 
           className="p-2 hover:bg-gray-100 rounded-lg transition"
         >
           <ArrowLeft className="w-6 h-6" />
@@ -333,143 +189,28 @@ function DetalleContrato() {
             </p>
           </div>
         </div>
-        {!showPagoForm && (
-          <div className="flex gap-2">
-            <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-              contrato?.estado === 'activo' ? 'bg-green-100 text-green-800' :
-              contrato?.estado === 'completado' ? 'bg-blue-100 text-blue-800' :
-              'bg-red-100 text-red-800'
-            }`}>
-              {contrato?.estado}
-            </span>
-            <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-              contrato?.estado_pago === 'pagado' ? 'bg-green-100 text-green-800' :
-              contrato?.estado_pago === 'parcial' ? 'bg-blue-100 text-blue-800' :
-              'bg-yellow-100 text-yellow-800'
-            }`}>
-              {contrato?.estado_pago === 'pagado' ? 'Pagado Completo' :
-               contrato?.estado_pago === 'parcial' ? 'Pago Parcial' :
-               'Pendiente de Pago'}
-            </span>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+            contrato?.estado === 'activo' ? 'bg-green-100 text-green-800' :
+            contrato?.estado === 'completado' ? 'bg-blue-100 text-blue-800' :
+            'bg-red-100 text-red-800'
+          }`}>
+            {contrato?.estado}
+          </span>
+          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+            contrato?.estado_pago === 'pagado' ? 'bg-green-100 text-green-800' :
+            contrato?.estado_pago === 'parcial' ? 'bg-blue-100 text-blue-800' :
+            'bg-yellow-100 text-yellow-800'
+          }`}>
+            {contrato?.estado_pago === 'pagado' ? 'Pagado Completo' :
+             contrato?.estado_pago === 'parcial' ? 'Pago Parcial' :
+             'Pendiente de Pago'}
+          </span>
+        </div>
       </div>
 
-      {/* Formulario de Pago (Solo cuando showPagoForm es true) */}
-      {showPagoForm && contrato?.estado_pago !== 'pagado' && (
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Registrar Pago</h2>
-          <form onSubmit={handlePagoSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Monto *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                <input
-                  type="number"
-                  name="monto"
-                  value={formPago.monto}
-                  onChange={handlePagoChange}
-                  step="0.01"
-                  min="0.01"
-                  max={parseFloat(contrato?.saldo_pendiente || 0)}
-                  required
-                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Saldo pendiente: ${parseFloat(contrato?.saldo_pendiente || 0).toLocaleString()}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Método de Pago *
-              </label>
-              <select
-                name="metodo_pago"
-                value={formPago.metodo_pago}
-                onChange={handlePagoChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              >
-                <option value="efectivo">💵 Efectivo</option>
-                <option value="transferencia">🏦 Transferencia</option>
-                <option value="tarjeta">💳 Tarjeta</option>
-                <option value="cheque">📝 Cheque</option>
-              </select>
-            </div>
-
-            {formPago.metodo_pago === 'tarjeta' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Tarjeta *
-                </label>
-                <select
-                  name="tipo_tarjeta"
-                  value={formPago.tipo_tarjeta}
-                  onChange={handlePagoChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                >
-                  <option value="">Seleccione tipo de tarjeta</option>
-                  <option value="Débito">Débito</option>
-                  <option value="Crédito">Crédito</option>
-                </select>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Número de Referencia
-              </label>
-              <input
-                type="text"
-                name="numero_referencia"
-                value={formPago.numero_referencia}
-                onChange={handlePagoChange}
-                placeholder="Ej: TRF-20250103-001"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notas
-              </label>
-              <textarea
-                name="notas"
-                value={formPago.notas}
-                onChange={handlePagoChange}
-                rows="3"
-                placeholder="Información adicional sobre el pago..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Link
-                to={`/contratos/${id}`}
-                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-center"
-              >
-                Cancelar
-              </Link>
-              <button
-                type="submit"
-                disabled={mutationPago.isLoading}
-                className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {mutationPago.isLoading ? 'Registrando...' : 'Registrar Pago'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Todo el resto del contenido (Solo cuando NO estás en modo pago) */}
-      {!showPagoForm && (
-        <>
+      {/* Contenido del contrato */}
+      <>
           {/* Botones de Descarga de PDFs y Acciones */}
           <div className="bg-white rounded-xl shadow-sm border p-4">
         <div className="flex flex-wrap gap-3">
@@ -515,15 +256,6 @@ function DetalleContrato() {
             <Mail className="w-5 h-5" />
             Enviar por Email
           </button>
-          {parseFloat(contrato?.saldo_pendiente || 0) > 0 && (
-            <button
-              onClick={handleEnviarRecordatorioPago}
-              className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium"
-            >
-              <Mail className="w-5 h-5" />
-              Recordatorio de Pago
-            </button>
-          )}
         </div>
       </div>
 
@@ -898,16 +630,6 @@ function DetalleContrato() {
                         )}
                       </div>
                     </div>
-                    {pago.estado !== 'anulado' && (
-                      <button
-                        onClick={() => handleAbrirModalAnular(pago)}
-                        className="ml-2 px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition text-sm font-medium flex items-center gap-1"
-                        title="Anular pago"
-                      >
-                        <X className="w-4 h-4" />
-                        <span className="hidden sm:inline">Anular</span>
-                      </button>
-                    )}
                   </div>
                 ))}
               </div>
@@ -1126,30 +848,7 @@ function DetalleContrato() {
           </div>
         </div>
       </div>
-        </>
-      )}
-
-      {/* Modales (siempre disponibles) */}
-      <ModalConfirmacionPago
-        isOpen={modalConfirmacionOpen}
-        onClose={() => setModalConfirmacionOpen(false)}
-        datosPago={formPago}
-        contrato={contrato}
-        onConfirm={handleConfirmarPago}
-        loading={mutationPago.isPending}
-      />
-
-      <ModalAnularPago
-        isOpen={modalAnularOpen}
-        onClose={() => {
-          setModalAnularOpen(false);
-          setPagoAAnular(null);
-        }}
-        pago={pagoAAnular}
-        contrato={contrato}
-        onConfirm={handleConfirmarAnulacion}
-        loading={mutationAnularPago.isPending}
-      />
+      </>
 
       <Toaster position="top-right" />
     </div>

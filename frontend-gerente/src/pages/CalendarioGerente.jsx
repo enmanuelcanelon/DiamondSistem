@@ -300,22 +300,22 @@ function CalendarioGerente() {
                       </span>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
+                  <div>
                         <p className="text-xs text-gray-600 mb-1">Fecha del Evento</p>
-                        <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900">
                           {contratosData.fecha_evento || contratosData.eventos?.fecha_evento
                             ? format(new Date(contratosData.fecha_evento || contratosData.eventos.fecha_evento), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })
                             : '-'}
-                        </p>
-                      </div>
-                      <div>
+                    </p>
+                  </div>
+                  <div>
                         <p className="text-xs text-gray-600 mb-1">Horario</p>
-                        <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900">
                           {contratosData.eventos?.hora_inicio && contratosData.eventos?.hora_fin
                             ? `${contratosData.eventos.hora_inicio} - ${contratosData.eventos.hora_fin}`
-                            : '-'}
-                        </p>
-                      </div>
+                        : '-'}
+                    </p>
+                  </div>
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Invitados</p>
                         <p className="font-semibold text-gray-900">
@@ -327,8 +327,8 @@ function CalendarioGerente() {
                         <p className="font-semibold text-gray-900">
                           {contratosData.salones?.nombre || eventoSeleccionado.salon}
                         </p>
-                      </div>
-                    </div>
+                </div>
+              </div>
                   </div>
 
                   {/* Información Principal */}
@@ -348,7 +348,7 @@ function CalendarioGerente() {
                           </div>
                         )}
                         {contratosData.clientes.telefono && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Phone className="w-4 h-4" />
                             <span>{contratosData.clientes.telefono}</span>
                           </div>
@@ -380,8 +380,8 @@ function CalendarioGerente() {
                       <p className="text-sm text-gray-600">
                         Precio Base: ${parseFloat(contratosData.paquetes.precio_base || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
-                    </div>
-                  )}
+                </div>
+              )}
 
                   {/* Información Financiera */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -439,8 +439,8 @@ function CalendarioGerente() {
                           </span>
                         ))}
                       </div>
-                    </div>
-                  )}
+                </div>
+              )}
 
                   {/* Historial de Pagos */}
                   {contratosData.pagos && contratosData.pagos.length > 0 && (
@@ -470,11 +470,11 @@ function CalendarioGerente() {
                                 {pago.metodo_pago} {pago.tipo_tarjeta && `- ${pago.tipo_tarjeta}`}
                                 {pago.numero_referencia && ` | Ref: ${pago.numero_referencia}`}
                               </div>
-                            </div>
+                  </div>
                             <div className="text-right">
                               <p className="text-lg font-bold text-green-600">
                                 ${parseFloat(pago.monto_total || pago.monto || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </p>
+                  </p>
                             </div>
                           </div>
                         ))}

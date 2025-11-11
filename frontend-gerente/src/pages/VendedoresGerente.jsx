@@ -232,34 +232,34 @@ function VendedoresGerente() {
                 vendedoresData?.map((vendedor) => (
                   <React.Fragment key={vendedor.id}>
                     <tr className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{vendedor.nombre_completo}</div>
-                          <div className="text-sm text-gray-500">{vendedor.codigo_vendedor}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {vendedor.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {vendedor.telefono || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {parseFloat(vendedor.comision_porcentaje || 0).toFixed(2)}%
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {vendedor.activo ? (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 flex items-center gap-1 w-fit">
-                            <UserCheck className="w-3 h-3" />
-                            Activo
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 flex items-center gap-1 w-fit">
-                            <UserX className="w-3 h-3" />
-                            Inactivo
-                          </span>
-                        )}
-                      </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{vendedor.nombre_completo}</div>
+                        <div className="text-sm text-gray-500">{vendedor.codigo_vendedor}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {vendedor.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {vendedor.telefono || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {parseFloat(vendedor.comision_porcentaje || 0).toFixed(2)}%
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {vendedor.activo ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 flex items-center gap-1 w-fit">
+                          <UserCheck className="w-3 h-3" />
+                          Activo
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 flex items-center gap-1 w-fit">
+                          <UserX className="w-3 h-3" />
+                          Inactivo
+                        </span>
+                      )}
+                    </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => setVendedoresExpandidos(prev => ({
@@ -282,28 +282,28 @@ function VendedoresGerente() {
                           )}
                         </button>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => handleEditar(vendedor)}
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="Editar"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleCambiarPassword(vendedor)}
-                          className="text-yellow-600 hover:text-yellow-900"
-                          title="Cambiar contraseña"
-                        >
-                          <Key className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => toggleActivo(vendedor)}
-                          className={vendedor.activo ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
-                          title={vendedor.activo ? "Desactivar" : "Activar"}
-                        >
-                          {vendedor.activo ? <UserX className="w-5 h-5" /> : <UserCheck className="w-5 h-5" />}
-                        </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <button
+                        onClick={() => handleEditar(vendedor)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                        title="Editar"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleCambiarPassword(vendedor)}
+                        className="text-yellow-600 hover:text-yellow-900"
+                        title="Cambiar contraseña"
+                      >
+                        <Key className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => toggleActivo(vendedor)}
+                        className={vendedor.activo ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
+                        title={vendedor.activo ? "Desactivar" : "Activar"}
+                      >
+                        {vendedor.activo ? <UserX className="w-5 h-5" /> : <UserCheck className="w-5 h-5" />}
+                      </button>
                         <button
                           onClick={() => setVendedorAEliminar(vendedor)}
                           className="text-red-600 hover:text-red-900"
@@ -363,8 +363,8 @@ function VendedoresGerente() {
                               </div>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                    </td>
+                  </tr>
                     )}
                   </React.Fragment>
                 ))
@@ -553,7 +553,7 @@ function VendedoresGerente() {
                   )}
                 </button>
               </div>
-          </form>
+            </form>
         </div>
       </div>
       )}

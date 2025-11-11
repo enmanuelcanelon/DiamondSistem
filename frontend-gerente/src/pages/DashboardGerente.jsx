@@ -77,7 +77,7 @@ function DashboardGerente() {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Gerencia</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Gerencia</h1>
             <p className="text-gray-600">
               Vista general de {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
             </p>
@@ -210,9 +210,9 @@ function DashboardGerente() {
                       {stat.ofertas.total} total
                     </p>
                     <div className="flex gap-2 mt-1">
-                      <p className="text-xs text-yellow-600">
-                        {stat.ofertas.pendientes} pendientes
-                      </p>
+                    <p className="text-xs text-yellow-600">
+                      {stat.ofertas.pendientes} pendientes
+                    </p>
                       <p className="text-xs text-red-600">
                         {stat.ofertas.rechazadas} rechazadas
                       </p>

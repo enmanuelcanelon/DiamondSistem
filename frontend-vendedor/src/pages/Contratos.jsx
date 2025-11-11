@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Search, FileCheck, Calendar, Clock, DollarSign, Eye, Download, Filter, X, Loader2 } from 'lucide-react';
+import { Search, FileCheck, Calendar, Clock, DollarSign, Eye, Download, X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
@@ -10,36 +10,59 @@ function Contratos() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const clienteIdFromUrl = searchParams.get('cliente_id');
+  const fechaActual = new Date();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [filtroDias, setFiltroDias] = useState('todos'); // Por defecto: todos los contratos
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
-  const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || ''); // Calcular fechas basadas en el filtro de días
-  const calcularFechasPorDias = (dias) => {
-    if (dias === 'todos') {
-      return { desde: '', hasta: '' };
-    }
-    const hoy = new Date();
-    const fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-    const fechaDesde = new Date(hoy);
-    fechaDesde.setDate(fechaDesde.getDate() - parseInt(dias));
+  const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
+  const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
+  const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || '');
+
+  // Nombres de los meses
+  const nombresMeses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  // Calcular fechas basadas en mes y año seleccionado
+  const calcularFechasPorMes = (mes, año) => {
+    const fechaInicio = new Date(año, mes - 1, 1);
+    const fechaFin = new Date(año, mes, 0, 23, 59, 59);
     
     return {
-      desde: fechaDesde.toISOString().split('T')[0],
-      hasta: fechaHasta.toISOString().split('T')[0]
+      desde: fechaInicio.toISOString().split('T')[0],
+      hasta: fechaFin.toISOString().split('T')[0]
     };
   };
 
-  // Actualizar fechas cuando cambia el filtro de días
-  useEffect(() => {
-    if (filtroDias !== 'personalizado') {
-      const fechas = calcularFechasPorDias(filtroDias);
-      setFechaDesde(fechas.desde);
-      setFechaHasta(fechas.hasta);
+  // Calcular fechas del mes seleccionado
+  const { desde: fechaDesde, hasta: fechaHasta } = calcularFechasPorMes(mesSeleccionado, añoSeleccionado);
+
+  // Cambiar mes
+  const cambiarMes = (direccion) => {
+    if (direccion === 'anterior') {
+      if (mesSeleccionado === 1) {
+        setMesSeleccionado(12);
+        setAñoSeleccionado(añoSeleccionado - 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado - 1);
+      }
+    } else {
+      if (mesSeleccionado === 12) {
+        setMesSeleccionado(1);
+        setAñoSeleccionado(añoSeleccionado + 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado + 1);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroDias]); // Sincronizar filtro de cliente con URL
+  };
+
+  // Volver al mes actual
+  const resetearMes = () => {
+    setMesSeleccionado(fechaActual.getMonth() + 1);
+    setAñoSeleccionado(fechaActual.getFullYear());
+  };
+
+  // Sincronizar filtro de cliente con URL
   useEffect(() => {
     if (clienteIdFromUrl) {
       setClienteFiltro(clienteIdFromUrl);
@@ -53,7 +76,7 @@ function Contratos() {
     isLoading,
     isRefetching,
   } = useInfiniteQuery({
-    queryKey: ['contratos', searchTerm, clienteFiltro],
+    queryKey: ['contratos', searchTerm, clienteFiltro, mesSeleccionado, añoSeleccionado],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         page: pageParam,
@@ -61,6 +84,8 @@ function Contratos() {
         // Enviar filtros al backend
         ...(searchTerm && { search: searchTerm }),
         ...(clienteFiltro && { cliente_id: clienteFiltro }),
+        ...(fechaDesde && { fecha_desde: fechaDesde }),
+        ...(fechaHasta && { fecha_hasta: fechaHasta }),
       };
       const response = await api.get('/contratos', { params });
       return response.data; // Retorna { data: [...], total, page, hasNextPage, ... }
@@ -201,7 +226,63 @@ function Contratos() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
               />
             </div>
-            {/* ELIMINADOS: Selects de Estado de Pago y Estado */}
+          </div>
+          
+          {/* Filtro por Mes y Año */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-700 font-medium">Filtrar por mes:</span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-indigo-200 p-2">
+              <button
+                onClick={() => cambiarMes('anterior')}
+                className="p-1 hover:bg-indigo-50 rounded transition"
+                title="Mes anterior"
+              >
+                <ChevronLeft className="w-5 h-5 text-indigo-600" />
+              </button>
+              
+              <div className="flex items-center gap-2 px-3">
+                <select
+                  value={mesSeleccionado}
+                  onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
+                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {nombresMeses.map((mes, index) => (
+                    <option key={index} value={index + 1}>{mes}</option>
+                  ))}
+                </select>
+                <select
+                  value={añoSeleccionado}
+                  onChange={(e) => setAñoSeleccionado(parseInt(e.target.value))}
+                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                    <option key={año} value={año}>{año}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={() => cambiarMes('siguiente')}
+                className="p-1 hover:bg-indigo-50 rounded transition"
+                title="Mes siguiente"
+              >
+                <ChevronRight className="w-5 h-5 text-indigo-600" />
+              </button>
+
+              {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+                <button
+                  onClick={resetearMes}
+                  className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded transition"
+                  title="Volver al mes actual"
+                >
+                  Hoy
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -378,33 +459,21 @@ function Contratos() {
               </div>
 
               {/* Acciones */}
-              <div className="mt-4 pt-4 border-t space-y-3">
-                <div className="flex gap-3">
-                  <Link
-                    to={`/contratos/${contrato.id}`}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Ver Detalles
-                  </Link>
-                  {contrato.estado_pago !== 'pagado' && (
-                    <Link
-                      to={`/contratos/${contrato.id}?action=pago`}
-                      className="flex-1 px-4 py-2 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition text-sm font-medium text-center"
-                    >
-                      Registrar Pago
-                    </Link>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleDescargarContrato(contrato.id, contrato.codigo_contrato)}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition text-xs font-medium"
-                  >
-                    <Download className="w-3 h-3" />
-                    Descargar Contrato PDF
-                  </button>
-                </div>
+              <div className="mt-4 pt-4 border-t space-y-2">
+                <Link
+                  to={`/contratos/${contrato.id}`}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
+                >
+                  <Eye className="w-4 h-4" />
+                  Ver Detalles
+                </Link>
+                <button
+                  onClick={() => handleDescargarContrato(contrato.id, contrato.codigo_contrato)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition text-xs font-medium"
+                >
+                  <Download className="w-3 h-3" />
+                  Descargar Contrato PDF
+                </button>
               </div>
             </div>
           ))}
