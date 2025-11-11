@@ -15,7 +15,9 @@ import {
   CheckCircle2,
   Clock,
   Search,
-  Mail
+  Mail,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import api from '@shared/config/api';
 import toast from 'react-hot-toast';
@@ -34,6 +36,20 @@ function PagosAdministracion() {
     tipo_tarjeta: '',
     numero_referencia: '',
     notas: ''
+  });
+
+  // Obtener todos los contratos del mes para el calendario (sin filtrar por salón)
+  const { data: calendarioData, isLoading: loadingCalendario } = useQuery({
+    queryKey: ['admin-calendario-contratos', mesSeleccionado, anioSeleccionado],
+    queryFn: async () => {
+      const params = {
+        mes: mesSeleccionado,
+        anio: anioSeleccionado
+      };
+      const response = await api.get('/inventario/contratos', { params });
+      return response.data;
+    },
+    enabled: !!mesSeleccionado && !!anioSeleccionado
   });
 
   // Obtener contratos filtrados
@@ -205,6 +221,65 @@ function PagosAdministracion() {
     aniosDisponibles.push(anioActual + i);
   }
 
+  // Funciones para el calendario
+  const cambiarMes = (direccion) => {
+    if (direccion === 'anterior') {
+      if (mesSeleccionado === 1) {
+        setMesSeleccionado(12);
+        setAnioSeleccionado(anioSeleccionado - 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado - 1);
+      }
+    } else {
+      if (mesSeleccionado === 12) {
+        setMesSeleccionado(1);
+        setAnioSeleccionado(anioSeleccionado + 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado + 1);
+      }
+    }
+  };
+
+  const obtenerDiasDelMes = () => {
+    const primerDia = new Date(anioSeleccionado, mesSeleccionado - 1, 1);
+    const ultimoDia = new Date(anioSeleccionado, mesSeleccionado, 0);
+    const diasEnMes = ultimoDia.getDate();
+    const diaInicioSemana = primerDia.getDay();
+    return { diasEnMes, diaInicioSemana };
+  };
+
+  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const fechaActual = new Date();
+  
+  // Procesar eventos del calendario
+  const contratosCalendario = calendarioData?.contratos || [];
+  const eventosPorDia = {};
+  
+  contratosCalendario.forEach(contrato => {
+    const fechaEvento = new Date(contrato.fecha_evento || contrato.eventos?.fecha_evento);
+    if (fechaEvento.getMonth() + 1 === mesSeleccionado && 
+        fechaEvento.getFullYear() === anioSeleccionado) {
+      const dia = fechaEvento.getDate();
+      if (!eventosPorDia[dia]) {
+        eventosPorDia[dia] = [];
+      }
+      eventosPorDia[dia].push(contrato);
+    }
+  });
+
+  // Función para determinar si un contrato está pagado
+  const estaPagado = (contrato) => {
+    const totalPagado = parseFloat(contrato.total_pagado || 0);
+    const totalContrato = parseFloat(contrato.total_contrato || 0);
+    return totalPagado >= totalContrato;
+  };
+
+  const estaParcialmentePagado = (contrato) => {
+    const totalPagado = parseFloat(contrato.total_pagado || 0);
+    const totalContrato = parseFloat(contrato.total_contrato || 0);
+    return totalPagado > 0 && totalPagado < totalContrato;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -224,27 +299,141 @@ function PagosAdministracion() {
   }
 
   if (!salonSeleccionado) {
+    const { diasEnMes, diaInicioSemana } = obtenerDiasDelMes();
+    const nombreMes = meses.find(m => m.valor === mesSeleccionado)?.nombre || '';
+
     return (
       <div className="space-y-6">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Pagos</h1>
-          <p className="text-gray-600">Selecciona un salón para ver los contratos y registrar pagos</p>
+          <p className="text-gray-600">Selecciona un salón para gestionar pagos y visualiza los eventos del mes</p>
         </div>
 
         {/* Botones de Salones */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {['Diamond', 'Kendall', 'Doral'].map((salon) => (
-            <button
-              key={salon}
-              onClick={() => setSalonSeleccionado(salon)}
-              className="bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-900 rounded-lg shadow-md p-8 transition-all transform hover:scale-105"
-            >
-              <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-700" />
-              <h2 className="text-2xl font-bold mb-2 text-gray-900">{salon}</h2>
-              <p className="text-gray-600 text-sm">Ver contratos de {salon}</p>
-            </button>
-          ))}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Seleccionar Salón</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {['Diamond', 'Kendall', 'Doral'].map((salon) => (
+              <button
+                key={salon}
+                onClick={() => setSalonSeleccionado(salon)}
+                className="bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-900 rounded-lg shadow-md p-8 transition-all transform hover:scale-105"
+              >
+                <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-700" />
+                <h2 className="text-2xl font-bold mb-2 text-gray-900">{salon}</h2>
+                <p className="text-gray-600 text-sm">Ver contratos de {salon}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Calendario */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          {/* Controles del calendario */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => cambiarMes('anterior')}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="text-center min-w-[200px]">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {nombreMes} {anioSeleccionado}
+                </h2>
+              </div>
+              <button
+                onClick={() => cambiarMes('siguiente')}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                <span className="text-gray-600">Pagado</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                <span className="text-gray-600">Parcial</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-500 rounded"></div>
+                <span className="text-gray-600">Pendiente</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Grid del calendario */}
+          <div className="grid grid-cols-7 gap-2 mb-2">
+            {diasSemana.map((dia) => (
+              <div key={dia} className="text-center font-semibold text-gray-700 py-2">
+                {dia}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-2">
+            {/* Días vacíos al inicio */}
+            {Array.from({ length: diaInicioSemana }).map((_, i) => (
+              <div key={`empty-${i}`} className="h-24 bg-gray-50 border border-gray-200 rounded-lg"></div>
+            ))}
+            
+            {/* Días del mes */}
+            {Array.from({ length: diasEnMes }).map((_, i) => {
+              const dia = i + 1;
+              const eventosDelDia = eventosPorDia[dia] || [];
+              const esHoy = dia === fechaActual.getDate() && 
+                           mesSeleccionado === fechaActual.getMonth() + 1 && 
+                           anioSeleccionado === fechaActual.getFullYear();
+
+              return (
+                <div
+                  key={dia}
+                  className={`h-24 border rounded-lg p-1 overflow-y-auto ${
+                    esHoy 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-200 bg-white hover:bg-gray-50'
+                  }`}
+                >
+                  <div className={`text-sm font-semibold mb-1 ${esHoy ? 'text-blue-600' : 'text-gray-700'}`}>
+                    {dia}
+                  </div>
+                  <div className="space-y-1">
+                    {eventosDelDia.slice(0, 3).map((evento, idx) => {
+                      const pagado = estaPagado(evento);
+                      const parcial = estaParcialmentePagado(evento);
+                      const color = pagado ? 'bg-green-500' : parcial ? 'bg-yellow-500' : 'bg-red-500';
+                      
+                      return (
+                        <div
+                          key={idx}
+                          className={`${color} text-white text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80`}
+                          title={`${evento.codigo_contrato} - ${evento.clientes?.nombre_completo || 'Sin cliente'}`}
+                          onClick={() => {
+                            // Determinar el salón del evento
+                            const salonEvento = evento.salones?.nombre || evento.lugar_salon || 'Diamond';
+                            setSalonSeleccionado(salonEvento);
+                            setMesSeleccionado(mesSeleccionado);
+                            setAnioSeleccionado(anioSeleccionado);
+                          }}
+                        >
+                          {evento.codigo_contrato}
+                        </div>
+                      );
+                    })}
+                    {eventosDelDia.length > 3 && (
+                      <div className="text-xs text-gray-500 text-center">
+                        +{eventosDelDia.length - 3} más
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
