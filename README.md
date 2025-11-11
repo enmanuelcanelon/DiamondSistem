@@ -32,9 +32,9 @@ El sistema está dividido en **5 aplicaciones frontend independientes**, cada un
 |------------|--------|-----|-------------|
 | **frontend-vendedor** | 5173 | Vendedor | Gestión completa de clientes, ofertas, contratos y pagos |
 | **frontend-cliente** | 5174 | Cliente | Portal personalizado para gestionar su evento |
-| **frontend-manager** | 5175 | Manager | Checklist de servicios externos (limosina, hora loca, etc.) |
+| **frontend-manager** | 5175 | Manager | Checklist de servicios externos (foto/video, DJ, comida, cake, limosina, hora loca, animador, maestro de ceremonia) |
 | **frontend-gerente** | 5176 | Gerente | Dashboard ejecutivo y gestión global del sistema |
-| **frontend-inventario** | 5177 | Inventario | Gestión de inventario, asignaciones y abastecimiento de salones |
+| **frontend-inventario** | 5177 | Administración | Gestión de inventario, asignaciones, abastecimiento de salones, historial y pagos |
 
 ### Biblioteca Compartida
 
@@ -124,12 +124,13 @@ DiamondSistem/
 │   │   └── components/        # Componentes específicos
 │   └── vite.config.js
 │
-├── frontend-inventario/        # App para inventario (Puerto 5177)
+├── frontend-inventario/        # App de Administración (Puerto 5177)
 │   ├── src/
-│   │   ├── pages/             # Páginas de inventario
-│   │   │   ├── DashboardInventario.jsx
-│   │   │   ├── AsignacionesInventario.jsx
-│   │   │   ├── SalonInventario.jsx
+│   │   ├── pages/             # Páginas de administración
+│   │   │   ├── DashboardInventario.jsx  # Inventario Central
+│   │   │   ├── SalonInventario.jsx      # Inventario por Salones
+│   │   │   ├── MovimientosInventario.jsx # Historial
+│   │   │   ├── PagosAdministracion.jsx  # Gestión de Pagos
 │   │   │   └── LoginInventario.jsx
 │   │   ├── components/        # Componentes específicos
 │   │   └── utils/             # Utilidades específicas
@@ -205,30 +206,63 @@ DiamondSistem/
 - ✅ Validación de disponibilidad en tiempo real
 
 #### Portal del Manager
-- ✅ Checklist de servicios externos
-- ✅ Seguimiento de limosina, hora loca, animador, chef
-- ✅ Resumen de estados y progreso
-- ✅ Gestión de contactos y notas
+- ✅ Checklist de servicios externos por evento
+- ✅ Gestión de 9 servicios: Foto y Video, DJ, Comida, Cake, Mini Postres, Limosina, Hora Loca, Animador, Maestro de Ceremonia
+- ✅ Seguimiento de estado (Pendiente/Completado)
+- ✅ Registro de fecha de contacto y fecha de pago
+- ✅ Notas adicionales por servicio
+- ✅ Hora de recogida para servicio de limosina
+- ✅ Filtrado por salón (Diamond, Kendall, Doral) y mes
+- ✅ Vista expandible de detalles del evento
 
 #### Portal del Gerente
 - ✅ Dashboard ejecutivo con métricas globales
 - ✅ Gestión de vendedores
 - ✅ Visualización de todos los contratos y ofertas
+- ✅ Vista de trabajo de managers por salón y mes
+- ✅ Seguimiento de servicios externos (pendientes/completados)
 - ✅ Reportes de pagos
 - ✅ Calendario de eventos
 
-#### Sistema de Inventario (NUEVO)
-- ✅ Gestión de inventario central y por salones
-- ✅ Catálogo completo de items (bebidas, vajilla, decoración, etc.)
-- ✅ Cálculo automático de inventario necesario por evento
-- ✅ Asignación automática de inventario (30 días antes del evento)
-- ✅ Abastecimiento masivo de salones desde almacén central
-- ✅ Alertas de stock bajo
-- ✅ Páginas de detalles por salón (Diamond, Kendall, Doral)
-- ✅ Gestión de asignaciones por contrato
-- ✅ Edición manual de asignaciones
-- ✅ Historial de movimientos de inventario
-- ✅ Tareas programadas (node-cron) para asignación automática
+#### Sistema de Administración (App Administración)
+- ✅ **Inventario Central**: Gestión completa del almacén central
+  - Catálogo completo de items (bebidas, vajilla, decoración, etc.)
+  - Añadir, editar y eliminar items
+  - Edición de cantidades mínimas (central y por salón)
+  - Descarga de PDFs de inventario (Central, Diamond, Kendall, Doral)
+  - Alertas de stock bajo
+  - Transferencias a salones
+  - Abastecimiento masivo
+
+- ✅ **Inventario por Salones**: Gestión por salón individual
+  - Vista detallada por salón (Diamond, Kendall, Doral)
+  - Filtrado por mes y año
+  - Asignación de inventario a eventos
+  - Devolución de inventario desde eventos
+  - Retorno de inventario a central
+  - Edición manual de asignaciones
+  - Cancelación de asignaciones
+
+- ✅ **Historial**: Registro completo de movimientos
+  - Filtrado por salón y mes/año
+  - Vista de Inventario Central (asignaciones, devoluciones, compras, modificaciones)
+  - Vista por Salón (asignaciones a eventos, transferencias)
+  - Agrupación por tipo de movimiento (colapsable)
+  - Detalles de cada movimiento (item, cantidad, motivo, usuario, fecha)
+
+- ✅ **Gestión de Pagos**: Administración de pagos de contratos
+  - Vista de contratos por salón (Diamond, Kendall, Doral)
+  - Filtrado por mes y año
+  - Registro de pagos
+  - Envío de contratos por email
+  - Recordatorios de pago
+  - Historial de pagos por contrato
+  - Cálculo de saldos pendientes
+
+- ✅ **Funcionalidades Automáticas**:
+  - Cálculo automático de inventario necesario por evento
+  - Asignación automática de inventario (30 días antes del evento)
+  - Tareas programadas (node-cron) para asignación automática
 
 #### Optimizaciones
 - ✅ Connection pooling para PostgreSQL
@@ -426,7 +460,7 @@ npm run dev
 ```
 Disponible en: **http://localhost:5176**
 
-**Inventario:**
+**Administración:**
 ```bash
 cd frontend-inventario
 npm run dev
@@ -465,7 +499,7 @@ Código: GER001
 Password: [Configurado en base de datos]
 ```
 
-### Inventario
+### Administración
 ```
 Código: INV001
 Password: Inventario123!
@@ -479,7 +513,7 @@ POST /api/auth/login/vendedor      # Login vendedor
 POST /api/auth/login/cliente        # Login cliente
 POST /api/auth/login/manager        # Login manager
 POST /api/auth/login/gerente        # Login gerente
-POST /api/auth/login/inventario     # Login inventario
+POST /api/auth/login/inventario     # Login administración
 GET  /api/auth/me                   # Usuario actual
 ```
 
@@ -566,9 +600,11 @@ GET  /api/salones/:id               # Detalle de salón
 - Wizard paso a paso para ofertas
 - Reportes y exportación
 
-### Frontend-Inventario
-- Dashboard con inventario central y alertas
-- Gestión por salones con páginas de detalles
+### Frontend-Administración
+- **Central**: Dashboard con inventario central, alertas, gestión de items y PDFs
+- **Salones**: Gestión por salón con asignaciones, devoluciones y retornos
+- **Historial**: Registro completo de movimientos con filtros avanzados
+- **Pagos**: Gestión de pagos de contratos con envío de emails y recordatorios
 - Abastecimiento masivo con selección múltiple
 - Cálculo y asignación automática de inventario
 - Interfaz limpia y organizada
@@ -619,9 +655,9 @@ npm test
 - [x] Sistema de pagos completo
 - [x] Portal del cliente
 - [x] Portal del vendedor
-- [x] Portal del manager
+- [x] Portal del manager (checklist de servicios externos)
 - [x] Portal del gerente
-- [x] **Sistema de inventario completo** 🆕
+- [x] **Sistema de administración completo** 🆕 (Inventario, Historial, Pagos)
 - [x] Generación de PDFs
 - [x] Chat cliente-vendedor
 - [x] Wizard paso a paso para ofertas
