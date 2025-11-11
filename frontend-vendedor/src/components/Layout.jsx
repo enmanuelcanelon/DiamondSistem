@@ -8,7 +8,8 @@ import {
   LogOut,
   Menu,
   X,
-  Calendar
+  Calendar,
+  CreditCard
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '../store/useAuthStore';
@@ -31,6 +32,7 @@ function Layout() {
     { name: 'Contratos', href: '/contratos', icon: FileCheck },
     { name: 'Calendario', href: '/calendario', icon: Calendar },
     { name: 'Gestión de Eventos', href: '/eventos', icon: Calendar },
+    { name: 'Comisiones', href: '/comisiones', icon: CreditCard },
   ];
 
   const isActive = (path) => {

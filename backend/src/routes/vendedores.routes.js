@@ -8,6 +8,8 @@ const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const { calcularComisionesDesbloqueadasVendedor } = require('../utils/comisionCalculator');
+const { generarResumenComisionesPDF } = require('../utils/pdfComisiones');
+const logger = require('../utils/logger');
 
 const prisma = getPrismaClient();
 
@@ -926,6 +928,487 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
     doc.end();
 
   } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/vendedores/:id/comisiones
+ * @desc    Obtener comisiones del vendedor (pendientes y pagadas)
+ * @access  Private (Vendedor - solo puede ver sus propias comisiones)
+ */
+router.get('/:id/comisiones', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const vendedorId = parseInt(req.params.id);
+    const { mes, año } = req.query;
+
+    // Verificar que el vendedor solo pueda ver sus propias comisiones
+    if (req.user.id !== vendedorId) {
+      throw new ValidationError('No tienes permiso para ver estas comisiones');
+    }
+
+    // Construir filtro de fecha si se proporciona
+    let fechaFiltro = null;
+    if (mes && año) {
+      const mesNum = parseInt(mes);
+      const añoNum = parseInt(año);
+      const fechaInicio = new Date(añoNum, mesNum - 1, 1);
+      const fechaFin = new Date(añoNum, mesNum, 0, 23, 59, 59);
+      fechaFiltro = {
+        gte: fechaInicio,
+        lte: fechaFin
+      };
+    }
+
+    // Obtener vendedor
+    const vendedor = await prisma.vendedores.findUnique({
+      where: { id: vendedorId },
+      select: {
+        id: true,
+        nombre_completo: true,
+        codigo_vendedor: true,
+        email: true
+      }
+    });
+
+    if (!vendedor) {
+      throw new NotFoundError('Vendedor no encontrado');
+    }
+
+    // Calcular comisiones desbloqueadas
+    const comisionesData = await calcularComisionesDesbloqueadasVendedor(
+      vendedorId,
+      fechaFiltro ? { gte: fechaFiltro.gte, lte: fechaFiltro.lte } : null
+    );
+
+    // Obtener contratos con pagos
+    const contratos = await prisma.contratos.findMany({
+      where: { vendedor_id: vendedorId },
+      include: {
+        clientes: {
+          select: {
+            nombre_completo: true
+          }
+        },
+        pagos: {
+          where: { estado: 'completado' },
+          orderBy: { fecha_pago: 'asc' }
+        }
+      },
+      orderBy: { fecha_creacion_contrato: 'desc' }
+    });
+
+    // Obtener montos pagados y fechas de pago usando SQL directo
+    const contratosConMontosPagados = await Promise.all(
+      contratos.map(async (contrato) => {
+        const montos = await prisma.$queryRaw`
+          SELECT 
+            COALESCE(comision_primera_mitad_pagada_monto, 0) as comision_primera_mitad_pagada_monto,
+            COALESCE(comision_segunda_mitad_pagada_monto, 0) as comision_segunda_mitad_pagada_monto,
+            fecha_pago_comision_primera,
+            fecha_pago_comision_segunda
+          FROM contratos
+          WHERE id = ${contrato.id}
+        `;
+        return {
+          ...contrato,
+          comision_primera_mitad_pagada_monto: parseFloat(montos[0]?.comision_primera_mitad_pagada_monto || 0),
+          comision_segunda_mitad_pagada_monto: parseFloat(montos[0]?.comision_segunda_mitad_pagada_monto || 0),
+          fecha_pago_comision_primera: montos[0]?.fecha_pago_comision_primera || contrato.fecha_pago_comision_primera,
+          fecha_pago_comision_segunda: montos[0]?.fecha_pago_comision_segunda || contrato.fecha_pago_comision_segunda
+        };
+      })
+    );
+
+    // Calcular comisiones pendientes y pagadas
+    const comisionesPendientes = [];
+    const comisionesPagadas = [];
+
+    for (const contrato of contratosConMontosPagados) {
+      const totalContrato = parseFloat(contrato.total_contrato || 0);
+      const totalPagado = contrato.pagos.reduce((sum, p) => sum + parseFloat(p.monto_total || 0), 0);
+      const porcentajePagado = totalContrato > 0 ? (totalPagado / totalContrato) * 100 : 0;
+
+      // Verificar primera mitad
+      let primeraMitadCumplida = false;
+      if (contrato.fecha_creacion_contrato && contrato.pagos.length > 0) {
+        const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
+        const primerPago = contrato.pagos[0];
+        const montoPrimerPago = parseFloat(primerPago.monto_total || 0);
+        
+        if (montoPrimerPago >= 500) {
+          const fechaLimite = new Date(fechaCreacion);
+          fechaLimite.setDate(fechaLimite.getDate() + 10);
+          
+          const pagosEnPlazo = contrato.pagos.filter((pago, index) => {
+            if (index === 0) return false;
+            const fechaPago = new Date(pago.fecha_pago);
+            return fechaPago > fechaCreacion && 
+                   fechaPago <= fechaLimite &&
+                   parseFloat(pago.monto_total) >= 500;
+          });
+
+          if (pagosEnPlazo.length > 0) {
+            const montoEnPlazo = pagosEnPlazo.reduce((sum, p) => 
+              sum + parseFloat(p.monto_total), 0
+            );
+            
+            if (montoEnPlazo >= 500 && (montoPrimerPago + montoEnPlazo) >= 1000) {
+              primeraMitadCumplida = true;
+            }
+          }
+        }
+      }
+
+      const segundaMitadCumplida = porcentajePagado >= 50;
+      const comisionPrimeraMitad = (totalContrato * 1.5) / 100;
+      const comisionSegundaMitad = (totalContrato * 1.5) / 100;
+
+      const montoPagadoPrimera = contrato.comision_primera_mitad_pagada_monto;
+      const montoPagadoSegunda = contrato.comision_segunda_mitad_pagada_monto;
+      const estaCompletamentePagadaPrimera = montoPagadoPrimera >= comisionPrimeraMitad;
+      const estaCompletamentePagadaSegunda = montoPagadoSegunda >= comisionSegundaMitad;
+
+      // Primera mitad
+      if (primeraMitadCumplida) {
+        if (estaCompletamentePagadaPrimera) {
+          // Verificar si la fecha de pago está dentro del filtro (si hay filtro)
+          const fechaPagoPrimera = contrato.fecha_pago_comision_primera ? new Date(contrato.fecha_pago_comision_primera) : null;
+          const cumpleFiltroFecha = !fechaFiltro || (fechaPagoPrimera && 
+            fechaPagoPrimera >= fechaFiltro.gte && 
+            fechaPagoPrimera <= fechaFiltro.lte);
+          
+          if (cumpleFiltroFecha) {
+            comisionesPagadas.push({
+              contrato_id: contrato.id,
+              codigo_contrato: contrato.codigo_contrato,
+              tipo: 'primera_mitad',
+              total_contrato: totalContrato,
+              monto_total: comisionPrimeraMitad,
+              monto_pagado: montoPagadoPrimera,
+              monto_pendiente: 0,
+              pagada: true,
+              fecha_pago: contrato.fecha_pago_comision_primera,
+              cliente: contrato.clientes.nombre_completo
+            });
+          }
+        } else {
+          comisionesPendientes.push({
+            contrato_id: contrato.id,
+            codigo_contrato: contrato.codigo_contrato,
+            tipo: 'primera_mitad',
+            total_contrato: totalContrato,
+            monto_total: comisionPrimeraMitad,
+            monto_pagado: montoPagadoPrimera,
+            monto_pendiente: comisionPrimeraMitad - montoPagadoPrimera,
+            pagada: false,
+            cliente: contrato.clientes.nombre_completo
+          });
+        }
+      }
+
+      // Segunda mitad
+      if (segundaMitadCumplida) {
+        if (estaCompletamentePagadaSegunda) {
+          // Verificar si la fecha de pago está dentro del filtro (si hay filtro)
+          const fechaPagoSegunda = contrato.fecha_pago_comision_segunda ? new Date(contrato.fecha_pago_comision_segunda) : null;
+          const cumpleFiltroFecha = !fechaFiltro || (fechaPagoSegunda && 
+            fechaPagoSegunda >= fechaFiltro.gte && 
+            fechaPagoSegunda <= fechaFiltro.lte);
+          
+          if (cumpleFiltroFecha) {
+            comisionesPagadas.push({
+              contrato_id: contrato.id,
+              codigo_contrato: contrato.codigo_contrato,
+              tipo: 'segunda_mitad',
+              total_contrato: totalContrato,
+              monto_total: comisionSegundaMitad,
+              monto_pagado: montoPagadoSegunda,
+              monto_pendiente: 0,
+              pagada: true,
+              fecha_pago: contrato.fecha_pago_comision_segunda,
+              cliente: contrato.clientes.nombre_completo
+            });
+          }
+        } else {
+          comisionesPendientes.push({
+            contrato_id: contrato.id,
+            codigo_contrato: contrato.codigo_contrato,
+            tipo: 'segunda_mitad',
+            total_contrato: totalContrato,
+            monto_total: comisionSegundaMitad,
+            monto_pagado: montoPagadoSegunda,
+            monto_pendiente: comisionSegundaMitad - montoPagadoSegunda,
+            pagada: false,
+            cliente: contrato.clientes.nombre_completo
+          });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      vendedor: {
+        id: vendedor.id,
+        nombre_completo: vendedor.nombre_completo,
+        codigo_vendedor: vendedor.codigo_vendedor,
+        email: vendedor.email
+      },
+      comisiones: {
+        total_desbloqueadas: comisionesData.totalComisionesDesbloqueadas,
+        total: comisionesData.totalComisiones,
+        pendientes: comisionesPendientes.reduce((sum, c) => sum + c.monto_pendiente, 0),
+        pagadas: comisionesPagadas.reduce((sum, c) => sum + c.monto_pagado, 0)
+      },
+      comisiones_pendientes: comisionesPendientes,
+      comisiones_pagadas: comisionesPagadas
+    });
+  } catch (error) {
+    logger.error('Error al obtener comisiones del vendedor:', error);
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/vendedores/:id/comisiones/resumen-pdf
+ * @desc    Descargar PDF de resumen de pagos de comisiones del vendedor
+ * @access  Private (Vendedor - solo puede descargar sus propias comisiones)
+ */
+router.get('/:id/comisiones/resumen-pdf', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const vendedorId = parseInt(req.params.id);
+    const { mes, año } = req.query;
+
+    // Verificar que el vendedor solo pueda descargar sus propias comisiones
+    if (req.user.id !== vendedorId) {
+      throw new ValidationError('No tienes permiso para descargar estas comisiones');
+    }
+
+    if (!mes || !año) {
+      throw new ValidationError('Debe proporcionar mes y año');
+    }
+
+    const mesNum = parseInt(mes);
+    const añoNum = parseInt(año);
+
+    // Obtener datos de comisiones (reutilizar lógica del endpoint anterior)
+    const fechaInicio = new Date(añoNum, mesNum - 1, 1);
+    const fechaFin = new Date(añoNum, mesNum, 0, 23, 59, 59);
+
+    const vendedor = await prisma.vendedores.findUnique({
+      where: { id: vendedorId },
+      select: {
+        id: true,
+        nombre_completo: true,
+        codigo_vendedor: true,
+        email: true
+      }
+    });
+
+    if (!vendedor) {
+      throw new NotFoundError('Vendedor no encontrado');
+    }
+
+    // Obtener datos de comisiones (similar al endpoint anterior)
+    const comisionesData = await calcularComisionesDesbloqueadasVendedor(
+      vendedorId,
+      { gte: fechaInicio, lte: fechaFin }
+    );
+
+    const contratos = await prisma.contratos.findMany({
+      where: { vendedor_id: vendedorId },
+      include: {
+        clientes: {
+          select: {
+            nombre_completo: true
+          }
+        },
+        pagos: {
+          where: { estado: 'completado' },
+          orderBy: { fecha_pago: 'asc' }
+        }
+      },
+      orderBy: { fecha_creacion_contrato: 'desc' }
+    });
+
+    const contratosConMontosPagados = await Promise.all(
+      contratos.map(async (contrato) => {
+        const montos = await prisma.$queryRaw`
+          SELECT 
+            COALESCE(comision_primera_mitad_pagada_monto, 0) as comision_primera_mitad_pagada_monto,
+            COALESCE(comision_segunda_mitad_pagada_monto, 0) as comision_segunda_mitad_pagada_monto,
+            fecha_pago_comision_primera,
+            fecha_pago_comision_segunda
+          FROM contratos
+          WHERE id = ${contrato.id}
+        `;
+        return {
+          ...contrato,
+          comision_primera_mitad_pagada_monto: parseFloat(montos[0]?.comision_primera_mitad_pagada_monto || 0),
+          comision_segunda_mitad_pagada_monto: parseFloat(montos[0]?.comision_segunda_mitad_pagada_monto || 0),
+          fecha_pago_comision_primera: montos[0]?.fecha_pago_comision_primera || contrato.fecha_pago_comision_primera,
+          fecha_pago_comision_segunda: montos[0]?.fecha_pago_comision_segunda || contrato.fecha_pago_comision_segunda
+        };
+      })
+    );
+
+    const comisionesPendientes = [];
+    const comisionesPagadas = [];
+
+    for (const contrato of contratosConMontosPagados) {
+      const totalContrato = parseFloat(contrato.total_contrato || 0);
+      const totalPagado = contrato.pagos.reduce((sum, p) => sum + parseFloat(p.monto_total || 0), 0);
+      const porcentajePagado = totalContrato > 0 ? (totalPagado / totalContrato) * 100 : 0;
+
+      let primeraMitadCumplida = false;
+      if (contrato.fecha_creacion_contrato && contrato.pagos.length > 0) {
+        const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
+        const primerPago = contrato.pagos[0];
+        const montoPrimerPago = parseFloat(primerPago.monto_total || 0);
+        
+        if (montoPrimerPago >= 500) {
+          const fechaLimite = new Date(fechaCreacion);
+          fechaLimite.setDate(fechaLimite.getDate() + 10);
+          
+          const pagosEnPlazo = contrato.pagos.filter((pago, index) => {
+            if (index === 0) return false;
+            const fechaPago = new Date(pago.fecha_pago);
+            return fechaPago > fechaCreacion && 
+                   fechaPago <= fechaLimite &&
+                   parseFloat(pago.monto_total) >= 500;
+          });
+
+          if (pagosEnPlazo.length > 0) {
+            const montoEnPlazo = pagosEnPlazo.reduce((sum, p) => 
+              sum + parseFloat(p.monto_total), 0
+            );
+            
+            if (montoEnPlazo >= 500 && (montoPrimerPago + montoEnPlazo) >= 1000) {
+              primeraMitadCumplida = true;
+            }
+          }
+        }
+      }
+
+      const segundaMitadCumplida = porcentajePagado >= 50;
+      const comisionPrimeraMitad = (totalContrato * 1.5) / 100;
+      const comisionSegundaMitad = (totalContrato * 1.5) / 100;
+
+      const montoPagadoPrimera = contrato.comision_primera_mitad_pagada_monto;
+      const montoPagadoSegunda = contrato.comision_segunda_mitad_pagada_monto;
+      const estaCompletamentePagadaPrimera = montoPagadoPrimera >= comisionPrimeraMitad;
+      const estaCompletamentePagadaSegunda = montoPagadoSegunda >= comisionSegundaMitad;
+
+      if (primeraMitadCumplida) {
+        if (estaCompletamentePagadaPrimera) {
+          // Verificar si la fecha de pago está dentro del filtro (si hay filtro)
+          const fechaPagoPrimera = contrato.fecha_pago_comision_primera ? new Date(contrato.fecha_pago_comision_primera) : null;
+          const fechaFiltroPDF = { gte: fechaInicio, lte: fechaFin };
+          const cumpleFiltroFecha = !fechaPagoPrimera || (fechaPagoPrimera >= fechaFiltroPDF.gte && 
+            fechaPagoPrimera <= fechaFiltroPDF.lte);
+          
+          if (cumpleFiltroFecha) {
+            comisionesPagadas.push({
+              contrato_id: contrato.id,
+              codigo_contrato: contrato.codigo_contrato,
+              tipo: 'primera_mitad',
+              total_contrato: totalContrato,
+              monto_total: comisionPrimeraMitad,
+              monto_pagado: montoPagadoPrimera,
+              monto_pendiente: 0,
+              pagada: true,
+              fecha_pago: contrato.fecha_pago_comision_primera,
+              cliente: contrato.clientes.nombre_completo
+            });
+          }
+        } else {
+          comisionesPendientes.push({
+            contrato_id: contrato.id,
+            codigo_contrato: contrato.codigo_contrato,
+            tipo: 'primera_mitad',
+            total_contrato: totalContrato,
+            monto_total: comisionPrimeraMitad,
+            monto_pagado: montoPagadoPrimera,
+            monto_pendiente: comisionPrimeraMitad - montoPagadoPrimera,
+            pagada: false,
+            cliente: contrato.clientes.nombre_completo
+          });
+        }
+      }
+
+      if (segundaMitadCumplida) {
+        if (estaCompletamentePagadaSegunda) {
+          // Verificar si la fecha de pago está dentro del filtro (si hay filtro)
+          const fechaPagoSegunda = contrato.fecha_pago_comision_segunda ? new Date(contrato.fecha_pago_comision_segunda) : null;
+          const fechaFiltroPDF = { gte: fechaInicio, lte: fechaFin };
+          const cumpleFiltroFecha = !fechaPagoSegunda || (fechaPagoSegunda >= fechaFiltroPDF.gte && 
+            fechaPagoSegunda <= fechaFiltroPDF.lte);
+          
+          if (cumpleFiltroFecha) {
+            comisionesPagadas.push({
+              contrato_id: contrato.id,
+              codigo_contrato: contrato.codigo_contrato,
+              tipo: 'segunda_mitad',
+              total_contrato: totalContrato,
+              monto_total: comisionSegundaMitad,
+              monto_pagado: montoPagadoSegunda,
+              monto_pendiente: 0,
+              pagada: true,
+              fecha_pago: contrato.fecha_pago_comision_segunda,
+              cliente: contrato.clientes.nombre_completo
+            });
+          }
+        } else {
+          comisionesPendientes.push({
+            contrato_id: contrato.id,
+            codigo_contrato: contrato.codigo_contrato,
+            tipo: 'segunda_mitad',
+            total_contrato: totalContrato,
+            monto_total: comisionSegundaMitad,
+            monto_pagado: montoPagadoSegunda,
+            monto_pendiente: comisionSegundaMitad - montoPagadoSegunda,
+            pagada: false,
+            cliente: contrato.clientes.nombre_completo
+          });
+        }
+      }
+    }
+
+    // Preparar datos para el PDF (formato similar al de gerente pero con un solo vendedor)
+    const vendedorConComisiones = {
+      vendedor: {
+        id: vendedor.id,
+        nombre_completo: vendedor.nombre_completo,
+        codigo_vendedor: vendedor.codigo_vendedor,
+        email: vendedor.email
+      },
+      comisiones: {
+        total_desbloqueadas: comisionesData.totalComisionesDesbloqueadas,
+        total: comisionesData.totalComisiones,
+        pendientes: comisionesPendientes.reduce((sum, c) => sum + c.monto_pendiente, 0),
+        pagadas: comisionesPagadas.reduce((sum, c) => sum + c.monto_pagado, 0)
+      },
+      comisiones_pendientes: comisionesPendientes,
+      comisiones_pagadas: comisionesPagadas
+    };
+
+    const pdfBuffer = await generarResumenComisionesPDF([vendedorConComisiones], mesNum, añoNum);
+
+    const nombresMeses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    const nombreMes = nombresMeses[mesNum - 1];
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Resumen-Comisiones-${nombreMes}-${añoNum}.pdf`
+    );
+
+    res.send(pdfBuffer);
+  } catch (error) {
+    logger.error('Error al generar PDF de comisiones del vendedor:', error);
     next(error);
   }
 });

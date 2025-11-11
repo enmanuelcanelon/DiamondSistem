@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
 import useAuthStore from './store/useAuthStore';
 
 // Pages - Vendedor
@@ -20,6 +21,7 @@ import DetalleSolicitud from './pages/DetalleSolicitud';
 import ChatVendedor from './pages/ChatVendedor';
 import AjustesEventoVendedor from './pages/AjustesEventoVendedor';
 import CalendarioMensual from './pages/CalendarioMensual';
+import ComisionesVendedor from './pages/ComisionesVendedor';
 
 // Pages - Cliente (ELIMINADAS - Ahora están en frontend-cliente)
 
@@ -108,6 +110,7 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster position="top-right" />
       <Router>
         <Routes>
           {/* Vendedor Routes */}
@@ -134,6 +137,7 @@ function App() {
             <Route path="contratos/:id/playlist" element={<PlaylistMusical />} />
             <Route path="eventos" element={<GestionEventos />} />
             <Route path="calendario" element={<CalendarioMensual />} />
+            <Route path="comisiones" element={<ComisionesVendedor />} />
             <Route path="solicitudes/:id" element={<DetalleSolicitud />} />
             <Route path="chat/:contratoId" element={<ChatVendedor />} />
             <Route path="ajustes/:contratoId" element={<AjustesEventoVendedor />} />
