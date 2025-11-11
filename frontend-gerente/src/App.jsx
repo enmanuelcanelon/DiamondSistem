@@ -10,6 +10,7 @@ import ContratosGerente from './pages/ContratosGerente';
 import OfertasGerente from './pages/OfertasGerente';
 import PagosGerente from './pages/PagosGerente';
 import CalendarioGerente from './pages/CalendarioGerente';
+import TrabajoManagersGerente from './pages/TrabajoManagersGerente';
 
 // Layout
 import LayoutGerente from './components/LayoutGerente';
@@ -63,6 +64,7 @@ function App() {
             <Route path="ofertas" element={<OfertasGerente />} />
             <Route path="pagos" element={<PagosGerente />} />
             <Route path="calendario" element={<CalendarioGerente />} />
+            <Route path="managers" element={<TrabajoManagersGerente />} />
           </Route>
         </Routes>
       </Router>

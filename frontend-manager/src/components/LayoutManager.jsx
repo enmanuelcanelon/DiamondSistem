@@ -3,10 +3,7 @@ import {
   ClipboardCheck, 
   LogOut,
   Menu,
-  X,
-  Calendar,
-  CheckCircle2,
-  AlertCircle
+  X
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '@shared/store/useAuthStore';
@@ -24,7 +21,6 @@ function LayoutManager() {
 
   const navigation = [
     { name: 'Checklist de Servicios', href: '/', icon: ClipboardCheck },
-    { name: 'Resumen', href: '/resumen', icon: CheckCircle2 },
   ];
 
   const isActive = (path) => {

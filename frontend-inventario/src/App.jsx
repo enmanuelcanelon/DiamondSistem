@@ -9,6 +9,7 @@ import DashboardInventario from './pages/DashboardInventario';
 import AsignacionesInventario from './pages/AsignacionesInventario';
 import SalonInventario from './pages/SalonInventario';
 import MovimientosInventario from './pages/MovimientosInventario';
+import PagosAdministracion from './pages/PagosAdministracion';
 
 // Layout
 import LayoutInventario from './components/LayoutInventario';
@@ -59,6 +60,7 @@ function App() {
             <Route index element={<DashboardInventario />} />
             <Route path="asignaciones" element={<AsignacionesInventario />} />
             <Route path="movimientos" element={<MovimientosInventario />} />
+            <Route path="pagos" element={<PagosAdministracion />} />
             <Route path=":salonNombre" element={<SalonInventario />} />
           </Route>
         </Routes>

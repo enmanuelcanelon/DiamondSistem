@@ -6,7 +6,8 @@ import {
   X,
   Home,
   Building2,
-  History
+  History,
+  DollarSign
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '@shared/store/useAuthStore';
@@ -23,9 +24,10 @@ function LayoutInventario() {
   };
 
   const navigation = [
-    { name: 'Inventario Central', href: '/', icon: Home },
-    { name: 'Inventario por Salones', href: '/asignaciones', icon: Building2 },
-    { name: 'Historial de Movimientos', href: '/movimientos', icon: History },
+    { name: 'Central', href: '/', icon: Home },
+    { name: 'Salones', href: '/asignaciones', icon: Building2 },
+    { name: 'Historial', href: '/movimientos', icon: History },
+    { name: 'Pagos', href: '/pagos', icon: DollarSign },
   ];
 
   const isActive = (path) => {
@@ -45,7 +47,7 @@ function LayoutInventario() {
             <div className="flex h-16 items-center justify-between px-4 border-b">
               <div className="flex items-center gap-2">
                 <Package className="w-8 h-8 text-blue-600" />
-                <span className="text-xl font-bold text-gray-900">Inventario</span>
+                <span className="text-xl font-bold text-gray-900">Administración</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
                 <X className="w-5 h-5" />
@@ -90,7 +92,7 @@ function LayoutInventario() {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex items-center h-16 px-4 border-b border-gray-200">
             <Package className="w-8 h-8 text-blue-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900">Inventario</span>
+            <span className="ml-2 text-xl font-bold text-gray-900">Administración</span>
           </div>
           <nav className="flex-1 px-3 py-4 space-y-1">
             {navigation.map((item) => {
@@ -140,7 +142,7 @@ function LayoutInventario() {
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex flex-1 justify-between px-4 items-center">
-            <h1 className="text-lg font-semibold text-gray-900">Sistema de Inventario</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Sistema de Administración</h1>
             <div className="flex items-center gap-4">
               <div className="hidden sm:block text-sm text-gray-600">
                 {user?.nombre_completo}

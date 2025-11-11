@@ -15,9 +15,10 @@ import {
   ArrowLeft,
   RefreshCw,
   ChevronDown,
-  RotateCcw,
   ArrowUp,
-  Info
+  Info,
+  Filter,
+  Trash2
 } from 'lucide-react';
 import api from '@shared/config/api';
 import toast from 'react-hot-toast';
@@ -29,12 +30,16 @@ function SalonInventario() {
   const [selectedContrato, setSelectedContrato] = useState(null);
   const [calculadoData, setCalculadoData] = useState(null);
   const [editingAsignacion, setEditingAsignacion] = useState(null);
-  const [editData, setEditData] = useState({ cantidad_asignada: '', cantidad_utilizada: '', estado: '', notas: '' });
+  const [editData, setEditData] = useState({ cantidad_asignada: '', cantidad_utilizada: '' });
   const [categoriasExpandidas, setCategoriasExpandidas] = useState({});
+  const [categoriasExpandidasCalculados, setCategoriasExpandidasCalculados] = useState({});
+  const [categoriasExpandidasAsignaciones, setCategoriasExpandidasAsignaciones] = useState({});
   const [showModalAccion, setShowModalAccion] = useState(null); // 'asignacion', 'devolucion', 'retorno'
   const [contratoSeleccionadoAccion, setContratoSeleccionadoAccion] = useState(null);
   const [itemsSeleccionadosRetorno, setItemsSeleccionadosRetorno] = useState({});
   const [categoriasExpandidasRetorno, setCategoriasExpandidasRetorno] = useState({});
+  const [mesSeleccionado, setMesSeleccionado] = useState(new Date().getMonth() + 1);
+  const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear());
 
   // Normalizar nombre del salón
   const salonNombreNormalizado = salonNombre?.toLowerCase();
@@ -86,12 +91,26 @@ function SalonInventario() {
     enabled: !!salonId
   });
 
-  // Query para contratos del salón
+  // Query para contratos del salón filtrados por mes y año
   const { data: contratosData, isLoading: loadingContratos } = useQuery({
-    queryKey: ['contratos-salon', salonId],
+    queryKey: ['contratos-salon', salonId, mesSeleccionado, anioSeleccionado],
     queryFn: async () => {
-      const url = `/contratos?salon_id=${salonId}&estado=activo&limit=100`;
+      if (!salonId) return { data: [], contratos: [] };
+      
+      // Construir URL con filtros de mes y año
+      const fechaInicio = new Date(anioSeleccionado, mesSeleccionado - 1, 1);
+      fechaInicio.setHours(0, 0, 0, 0);
+      const fechaFin = new Date(anioSeleccionado, mesSeleccionado, 0);
+      fechaFin.setHours(23, 59, 59, 999);
+      
+      // Formatear fechas para la URL - el backend espera formato YYYY-MM-DD
+      // y agrega T23:59:59 automáticamente a fecha_hasta
+      const fechaDesdeStr = fechaInicio.toISOString().split('T')[0];
+      const fechaHastaStr = fechaFin.toISOString().split('T')[0];
+      
+      const url = `/contratos?salon_id=${salonId}&estado=activo&limit=100&fecha_desde=${fechaDesdeStr}&fecha_hasta=${fechaHastaStr}`;
       console.log('Buscando contratos con URL:', url);
+      console.log('Fecha desde:', fechaDesdeStr, 'Fecha hasta:', fechaHastaStr);
       const response = await api.get(url);
       console.log('Contratos recibidos:', response.data);
       return response.data;
@@ -190,6 +209,24 @@ function SalonInventario() {
     }
   });
 
+  // Mutation para cancelar/desasignar una asignación
+  const cancelarAsignacionMutation = useMutation({
+    mutationFn: async (asignacionId) => {
+      const response = await api.put(`/inventario/asignaciones/${asignacionId}`, {
+        estado: 'cancelado'
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['asignaciones-contrato', selectedContrato]);
+      queryClient.invalidateQueries(['inventario-salon', salonId]);
+      toast.success('Asignación cancelada correctamente. El inventario ha sido devuelto al salón.');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Error al cancelar asignación');
+    }
+  });
+
   // Mutation para retornar items a central
   const retornarCentralMutation = useMutation({
     mutationFn: async ({ salon_id, items, motivo }) => {
@@ -236,6 +273,46 @@ function SalonInventario() {
 
   const toggleCategoriaRetorno = (categoria) => {
     setCategoriasExpandidasRetorno(prev => ({
+      ...prev,
+      [categoria]: !prev[categoria]
+    }));
+  };
+
+  // Helper para agrupar items calculados por categoría
+  const agruparItemsCalculadosPorCategoria = (items) => {
+    const agrupados = {};
+    items.forEach(item => {
+      const categoria = item.categoria || item.item_categoria || 'Sin categoría';
+      if (!agrupados[categoria]) {
+        agrupados[categoria] = [];
+      }
+      agrupados[categoria].push(item);
+    });
+    return agrupados;
+  };
+
+  // Helper para agrupar asignaciones por categoría
+  const agruparAsignacionesPorCategoria = (asignaciones) => {
+    const agrupados = {};
+    asignaciones.forEach(asignacion => {
+      const categoria = asignacion.inventario_items?.categoria || 'Sin categoría';
+      if (!agrupados[categoria]) {
+        agrupados[categoria] = [];
+      }
+      agrupados[categoria].push(asignacion);
+    });
+    return agrupados;
+  };
+
+  const toggleCategoriaCalculados = (categoria) => {
+    setCategoriasExpandidasCalculados(prev => ({
+      ...prev,
+      [categoria]: !prev[categoria]
+    }));
+  };
+
+  const toggleCategoriaAsignaciones = (categoria) => {
+    setCategoriasExpandidasAsignaciones(prev => ({
       ...prev,
       [categoria]: !prev[categoria]
     }));
@@ -305,18 +382,14 @@ function SalonInventario() {
     setEditingAsignacion(asignacion.id);
     setEditData({
       cantidad_asignada: asignacion.cantidad_asignada.toString(),
-      cantidad_utilizada: asignacion.cantidad_utilizada?.toString() || '',
-      estado: asignacion.estado || 'asignado',
-      notas: asignacion.notas || ''
+      cantidad_utilizada: asignacion.cantidad_utilizada?.toString() || ''
     });
   };
 
   const handleSave = (id) => {
     const data = {
       cantidad_asignada: parseFloat(editData.cantidad_asignada),
-      cantidad_utilizada: editData.cantidad_utilizada ? parseFloat(editData.cantidad_utilizada) : null,
-      estado: editData.estado,
-      notas: editData.notas
+      cantidad_utilizada: editData.cantidad_utilizada ? parseFloat(editData.cantidad_utilizada) : null
     };
     updateAsignacionMutation.mutate({ id, data });
   };
@@ -334,13 +407,13 @@ function SalonInventario() {
           </button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Salón {salon.nombre}</h1>
-            <p className="text-gray-600 mt-1">Inventario y eventos de este salón</p>
+            <p className="text-gray-600 mt-1">Inventario y asignaciones del salón</p>
           </div>
         </div>
         <button
           onClick={() => {
             queryClient.invalidateQueries(['inventario-salon', salonId]);
-            queryClient.invalidateQueries(['contratos-salon', salonId]);
+            queryClient.invalidateQueries(['contratos-salon', salonId, mesSeleccionado, anioSeleccionado]);
             toast.success('Datos actualizados');
           }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -389,6 +462,50 @@ function SalonInventario() {
         </div>
       </div>
 
+      {/* Filtros de Mes y Año */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Filter className="w-5 h-5 text-gray-600" />
+          <span className="font-medium text-gray-700">Filtrar eventos por:</span>
+          <select
+            value={mesSeleccionado}
+            onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value={1}>Enero</option>
+            <option value={2}>Febrero</option>
+            <option value={3}>Marzo</option>
+            <option value={4}>Abril</option>
+            <option value={5}>Mayo</option>
+            <option value={6}>Junio</option>
+            <option value={7}>Julio</option>
+            <option value={8}>Agosto</option>
+            <option value={9}>Septiembre</option>
+            <option value={10}>Octubre</option>
+            <option value={11}>Noviembre</option>
+            <option value={12}>Diciembre</option>
+          </select>
+          <select
+            value={anioSeleccionado}
+            onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            {(() => {
+              const anios = [];
+              const anioActual = new Date().getFullYear();
+              for (let i = 0; i < 5; i++) {
+                anios.push(anioActual - i);
+              }
+              return anios.map((anio) => (
+                <option key={anio} value={anio}>
+                  {anio}
+                </option>
+              ));
+            })()}
+          </select>
+        </div>
+      </div>
+
       {/* Botones de Acción */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Acciones de Inventario</h2>
@@ -413,12 +530,12 @@ function SalonInventario() {
             </button>
           </div>
 
-          {/* Botón Devolución */}
+          {/* Botón Devolución de Evento */}
           <div className="border border-gray-200 rounded-lg p-4 hover:border-yellow-500 transition">
             <div className="flex items-start gap-3 mb-3">
-              <RotateCcw className="w-5 h-5 text-yellow-600 mt-0.5" />
+              <RefreshCw className="w-5 h-5 text-yellow-600 mt-0.5" />
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 mb-1">Devolución</h3>
+                <h3 className="font-semibold text-gray-900 mb-1">Devolución de Evento</h3>
                 <p className="text-sm text-gray-600">
                   Devolver items de un evento asignado de vuelta al inventario del salón
                 </p>
@@ -428,7 +545,7 @@ function SalonInventario() {
               onClick={() => setShowModalAccion('devolucion')}
               className="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition flex items-center justify-center gap-2"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RefreshCw className="w-4 h-4" />
               Devolver de Evento
             </button>
           </div>
@@ -578,12 +695,9 @@ function SalonInventario() {
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Eventos Programados</h2>
-            <p className="text-sm text-gray-600 mt-1">{contratos.length} eventos</p>
-            {salonId && (
-              <p className="text-xs text-gray-500 mt-1">
-                Salón ID: {salonId} | Buscando contratos con salon_id={salonId} y estado=activo
-              </p>
-            )}
+            <p className="text-sm text-gray-600 mt-1">
+              {loadingContratos ? 'Cargando...' : `${contratos.length} eventos en ${new Date(anioSeleccionado, mesSeleccionado - 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`}
+            </p>
           </div>
           <div className="p-6 max-h-[600px] overflow-y-auto">
             {loadingContratos ? (
@@ -721,33 +835,71 @@ function SalonInventario() {
                 </div>
 
                 {/* Resultado del Cálculo */}
-                {calculadoData && (
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">
-                      Items Calculados ({calculadoData.items_calculados?.length || 0})
-                    </h4>
-                    <div className="max-h-64 overflow-y-auto">
-                      <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50 sticky top-0">
-                          <tr>
-                            <th className="px-3 py-2 text-left">Item</th>
-                            <th className="px-3 py-2 text-left">Cantidad</th>
-                            <th className="px-3 py-2 text-left">Unidad</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {calculadoData.items_calculados?.map((item, idx) => (
-                            <tr key={idx}>
-                              <td className="px-3 py-2">{item.item_nombre}</td>
-                              <td className="px-3 py-2">{item.cantidad_necesaria.toFixed(2)}</td>
-                              <td className="px-3 py-2">{item.unidad_medida}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                {calculadoData && (() => {
+                  const itemsCalculados = calculadoData.items_calculados || [];
+                  const itemsPorCategoriaCalculados = agruparItemsCalculadosPorCategoria(itemsCalculados);
+                  const categoriasCalculados = Object.keys(itemsPorCategoriaCalculados).sort();
+                  
+                  // Inicializar categorías expandidas si es necesario
+                  if (Object.keys(categoriasExpandidasCalculados).length === 0 && categoriasCalculados.length > 0) {
+                    const todasExpandidas = {};
+                    categoriasCalculados.forEach(cat => {
+                      todasExpandidas[cat] = true;
+                    });
+                    setCategoriasExpandidasCalculados(todasExpandidas);
+                  }
+
+                  return (
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3">
+                        Items Calculados ({itemsCalculados.length})
+                      </h4>
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {categoriasCalculados.map((categoria) => {
+                          const itemsCategoria = itemsPorCategoriaCalculados[categoria];
+                          const estaExpandida = categoriasExpandidasCalculados[categoria] !== false;
+                          
+                          return (
+                            <div key={categoria} className="border border-gray-200 rounded overflow-hidden">
+                              <button
+                                onClick={() => toggleCategoriaCalculados(categoria)}
+                                className="w-full bg-gray-100 px-3 py-2 hover:bg-gray-200 transition flex items-center justify-between text-sm"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <ChevronDown 
+                                    className={`w-4 h-4 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`} 
+                                  />
+                                  <span className="font-semibold text-gray-900">{categoria}</span>
+                                  <span className="text-gray-600">({itemsCategoria.length} items)</span>
+                                </div>
+                              </button>
+                              {estaExpandida && (
+                                <table className="min-w-full text-sm">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left">Item</th>
+                                      <th className="px-3 py-2 text-left">Cantidad</th>
+                                      <th className="px-3 py-2 text-left">Unidad</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-200">
+                                    {itemsCategoria.map((item, idx) => (
+                                      <tr key={idx}>
+                                        <td className="px-3 py-2">{item.item_nombre}</td>
+                                        <td className="px-3 py-2">{item.cantidad_necesaria.toFixed(2)}</td>
+                                        <td className="px-3 py-2">{item.unidad_medida}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               {/* Asignaciones Existentes */}
@@ -755,9 +907,42 @@ function SalonInventario() {
                 <h3 className="font-semibold text-gray-900">
                   Asignaciones de Inventario ({asignaciones.length})
                 </h3>
-                {asignaciones.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {asignaciones.map((asignacion) => (
+                {asignaciones.length > 0 ? (() => {
+                  const itemsPorCategoriaAsignaciones = agruparAsignacionesPorCategoria(asignaciones);
+                  const categoriasAsignaciones = Object.keys(itemsPorCategoriaAsignaciones).sort();
+                  
+                  // Inicializar categorías expandidas si es necesario
+                  if (Object.keys(categoriasExpandidasAsignaciones).length === 0 && categoriasAsignaciones.length > 0) {
+                    const todasExpandidas = {};
+                    categoriasAsignaciones.forEach(cat => {
+                      todasExpandidas[cat] = true;
+                    });
+                    setCategoriasExpandidasAsignaciones(todasExpandidas);
+                  }
+
+                  return (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {categoriasAsignaciones.map((categoria) => {
+                        const asignacionesCategoria = itemsPorCategoriaAsignaciones[categoria];
+                        const estaExpandida = categoriasExpandidasAsignaciones[categoria] !== false;
+                        
+                        return (
+                          <div key={categoria} className="border border-gray-200 rounded overflow-hidden">
+                            <button
+                              onClick={() => toggleCategoriaAsignaciones(categoria)}
+                              className="w-full bg-gray-100 px-3 py-2 hover:bg-gray-200 transition flex items-center justify-between text-sm"
+                            >
+                              <div className="flex items-center gap-2">
+                                <ChevronDown 
+                                  className={`w-4 h-4 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`} 
+                                />
+                                <span className="font-semibold text-gray-900">{categoria}</span>
+                                <span className="text-gray-600">({asignacionesCategoria.length} items)</span>
+                              </div>
+                            </button>
+                            {estaExpandida && (
+                              <div className="space-y-3 p-3 bg-white">
+                                {asignacionesCategoria.map((asignacion) => (
                       <div
                         key={asignacion.id}
                         className="border border-gray-200 rounded-lg p-4 bg-gray-50"
@@ -787,7 +972,7 @@ function SalonInventario() {
                               <button
                                 onClick={() => {
                                   setEditingAsignacion(null);
-                                  setEditData({ cantidad_asignada: '', cantidad_utilizada: '', estado: '', notas: '' });
+                                  setEditData({ cantidad_asignada: '', cantidad_utilizada: '' });
                                 }}
                                 className="text-red-600 hover:text-red-700"
                               >
@@ -795,12 +980,33 @@ function SalonInventario() {
                               </button>
                             </div>
                           ) : (
-                            <button
-                              onClick={() => handleEdit(asignacion)}
-                              className="text-blue-600 hover:text-blue-700"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEdit(asignacion)}
+                                className="text-blue-600 hover:text-blue-700"
+                                title="Editar asignación"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              {asignacion.estado !== 'cancelado' && (
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm(`¿Estás seguro que deseas cancelar la asignación de ${asignacion.inventario_items?.nombre}? El inventario será devuelto al salón.`)) {
+                                      cancelarAsignacionMutation.mutate(asignacion.id);
+                                    }
+                                  }}
+                                  className="text-red-600 hover:text-red-700"
+                                  disabled={cancelarAsignacionMutation.isPending}
+                                  title="Cancelar asignación"
+                                >
+                                  {cancelarAsignacionMutation.isPending ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                         <div className="mt-3 space-y-2 text-sm">
@@ -844,36 +1050,16 @@ function SalonInventario() {
                             Fuente: {asignacion.fuente}
                           </div>
                         </div>
-                        {editingAsignacion === asignacion.id && (
-                          <div className="mt-3 space-y-2 pt-3 border-t border-gray-200">
-                            <div>
-                              <label className="text-xs text-gray-600">Estado:</label>
-                              <select
-                                value={editData.estado}
-                                onChange={(e) => setEditData({ ...editData, estado: e.target.value })}
-                                className="ml-2 px-2 py-1 border border-gray-300 rounded text-sm"
-                              >
-                                <option value="asignado">Asignado</option>
-                                <option value="utilizado">Utilizado</option>
-                                <option value="cancelado">Cancelado</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-600">Notas:</label>
-                              <input
-                                type="text"
-                                value={editData.notas}
-                                onChange={(e) => setEditData({ ...editData, notas: e.target.value })}
-                                placeholder="Notas adicionales"
-                                className="ml-2 px-2 py-1 border border-gray-300 rounded text-sm w-full"
-                              />
-                            </div>
-                          </div>
-                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })() : (
                   <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-lg">
                     <Package className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                     <p>No hay asignaciones de inventario para este contrato</p>
@@ -970,9 +1156,40 @@ function SalonInventario() {
                         .map((contrato) => (
                           <button
                             key={contrato.id}
-                            onClick={() => {
-                              // TODO: Implementar devolución
-                              toast.success('Funcionalidad de devolución en desarrollo');
+                            onClick={async () => {
+                              try {
+                                // Obtener todas las asignaciones del contrato
+                                const asignacionesResponse = await api.get(`/inventario/asignaciones?contrato_id=${contrato.id}`);
+                                const asignaciones = asignacionesResponse.data?.asignaciones || [];
+                                
+                                // Cancelar todas las asignaciones activas
+                                const asignacionesActivas = asignaciones.filter(a => a.estado !== 'cancelado');
+                                
+                                if (asignacionesActivas.length === 0) {
+                                  toast.error('Este evento no tiene asignaciones activas para devolver');
+                                  return;
+                                }
+
+                                // Confirmar acción
+                                if (window.confirm(`¿Estás seguro que deseas devolver ${asignacionesActivas.length} items asignados del evento ${contrato.codigo_contrato} al inventario del salón?`)) {
+                                  // Cancelar todas las asignaciones
+                                  const promesas = asignacionesActivas.map(asignacion => 
+                                    api.put(`/inventario/asignaciones/${asignacion.id}`, {
+                                      estado: 'cancelado'
+                                    })
+                                  );
+                                  
+                                  await Promise.all(promesas);
+                                  
+                                  toast.success(`Se devolvieron ${asignacionesActivas.length} items al inventario del salón`);
+                                  queryClient.invalidateQueries(['asignaciones-contrato']);
+                                  queryClient.invalidateQueries(['inventario-salon', salonId]);
+                                  queryClient.invalidateQueries(['contratos-salon', salonId, mesSeleccionado, anioSeleccionado]);
+                                  setShowModalAccion(null);
+                                }
+                              } catch (error) {
+                                toast.error(error.response?.data?.message || 'Error al devolver inventario del evento');
+                              }
                             }}
                             className="w-full text-left p-4 hover:bg-yellow-50 transition"
                           >

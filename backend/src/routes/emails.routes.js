@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { getPrismaClient } = require('../config/database');
-const { authenticate, requireVendedor } = require('../middleware/auth');
+const { authenticate, requireVendedor, requireInventario } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const emailService = require('../services/emailService');
 const { generarPDFContrato } = require('../utils/pdfContrato');
@@ -15,10 +15,15 @@ const prisma = getPrismaClient();
 /**
  * @route   POST /api/emails/contrato/:id
  * @desc    Enviar contrato por email
- * @access  Private (Vendedor)
+ * @access  Private (Vendedor o Inventario/Administración)
  */
-router.post('/contrato/:id', authenticate, requireVendedor, async (req, res, next) => {
+router.post('/contrato/:id', authenticate, async (req, res, next) => {
   try {
+    // Verificar permisos: vendedor o inventario
+    if (req.user.tipo !== 'vendedor' && req.user.tipo !== 'inventario') {
+      throw new ValidationError('Solo vendedores y administración pueden enviar contratos por email');
+    }
+
     const { id } = req.params;
     const email_destino = req.body?.email_destino; // Opcional
 
@@ -46,8 +51,8 @@ router.post('/contrato/:id', authenticate, requireVendedor, async (req, res, nex
       throw new NotFoundError('Contrato no encontrado');
     }
 
-    // Verificar que el vendedor tenga acceso
-    if (contrato.vendedor_id !== req.user.id) {
+    // Verificar que el vendedor tenga acceso (solo si es vendedor, inventario puede ver todos)
+    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
@@ -88,10 +93,15 @@ router.post('/contrato/:id', authenticate, requireVendedor, async (req, res, nex
 /**
  * @route   POST /api/emails/recordatorio-pago/:id
  * @desc    Enviar recordatorio de pago
- * @access  Private (Vendedor)
+ * @access  Private (Vendedor o Inventario/Administración)
  */
-router.post('/recordatorio-pago/:id', authenticate, requireVendedor, async (req, res, next) => {
+router.post('/recordatorio-pago/:id', authenticate, async (req, res, next) => {
   try {
+    // Verificar permisos: vendedor o inventario
+    if (req.user.tipo !== 'vendedor' && req.user.tipo !== 'inventario') {
+      throw new ValidationError('Solo vendedores y administración pueden enviar recordatorios de pago');
+    }
+
     const { id } = req.params;
 
     // Obtener contrato
@@ -106,8 +116,8 @@ router.post('/recordatorio-pago/:id', authenticate, requireVendedor, async (req,
       throw new NotFoundError('Contrato no encontrado');
     }
 
-    // Verificar que el vendedor tenga acceso
-    if (contrato.vendedor_id !== req.user.id) {
+    // Verificar que el vendedor tenga acceso (solo si es vendedor, inventario puede ver todos)
+    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 

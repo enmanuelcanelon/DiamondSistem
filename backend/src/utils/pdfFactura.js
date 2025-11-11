@@ -292,7 +292,7 @@ function generarFacturaProforma(datos, tipo = 'oferta') {
   // Parte superior con fondo morado (aproximadamente 60% de la página)
   const alturaFondoMorado = 480;
   dibujarFondoMorado(alturaFondoMorado);
-  
+
   // Parte inferior con fondo blanco
   dibujarFondoBlanco(alturaFondoMorado, 792 - alturaFondoMorado);
   
@@ -483,7 +483,7 @@ function generarFacturaProforma(datos, tipo = 'oferta') {
       .font(fontStyle)
       .text(precio.label, xLabel, doc.y, { width: 350 })
       .text(precio.value, xValue, doc.y, { width: 150, align: 'right' });
-    
+
     doc.moveDown(0.5);
   });
 
@@ -642,7 +642,7 @@ function generarFacturaProforma(datos, tipo = 'oferta') {
     .text('Client Signature', 50, doc.y, { width: 240 })
     .text('Company representative', 322, doc.y, { width: 240 });
 
-  doc.moveDown(0.5);
+    doc.moveDown(0.5);
 
   doc.fontSize(tamanosTexto.normal)
     .fillColor(colores.textoClaro)

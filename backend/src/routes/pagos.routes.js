@@ -178,13 +178,13 @@ router.post('/', authenticate, async (req, res, next) => {
       throw new NotFoundError('Contrato no encontrado');
     }
 
-    // Verificar permisos: vendedor o cliente propietario del contrato
+    // Verificar permisos: vendedor, cliente propietario del contrato, o inventario (administración)
     if (req.user.tipo === 'cliente') {
       if (contrato.cliente_id !== req.user.id) {
         throw new ValidationError('No tienes permiso para registrar pagos en este contrato');
       }
-    } else if (req.user.tipo !== 'vendedor') {
-      throw new ValidationError('Solo vendedores y clientes pueden registrar pagos');
+    } else if (req.user.tipo !== 'vendedor' && req.user.tipo !== 'inventario') {
+      throw new ValidationError('Solo vendedores, clientes y administración pueden registrar pagos');
     }
 
     // Verificar que el contrato no esté completado
@@ -230,7 +230,7 @@ router.post('/', authenticate, async (req, res, next) => {
           numero_referencia: datos.numero_referencia || null,
           estado: 'completado',
           notas: datos.notas || null,
-          registrado_por: req.user.tipo === 'vendedor' ? req.user.id : null
+          registrado_por: req.user.tipo === 'vendedor' ? req.user.id : (req.user.tipo === 'inventario' ? req.user.id : null)
         }
       });
 

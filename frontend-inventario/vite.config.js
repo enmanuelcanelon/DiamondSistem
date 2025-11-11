@@ -6,7 +6,7 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5177, // Puerto específico para inventario
+    port: 5177, // Puerto específico para administración
     strictPort: true, // Falla si el puerto está ocupado en lugar de buscar otro
   },
   resolve: {

@@ -9,7 +9,8 @@ import {
   DollarSign,
   Calendar,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  ClipboardCheck
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '@shared/store/useAuthStore';
@@ -32,6 +33,7 @@ function LayoutGerente() {
     { name: 'Ofertas', href: '/ofertas', icon: TrendingUp },
     { name: 'Pagos', href: '/pagos', icon: DollarSign },
     { name: 'Calendario', href: '/calendario', icon: Calendar },
+    { name: 'Trabajo Managers', href: '/managers', icon: ClipboardCheck },
   ];
 
   const isActive = (path) => {

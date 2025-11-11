@@ -10,6 +10,7 @@ const { NotFoundError, ValidationError } = require('../middleware/errorHandler')
 const { calcularInventarioParaContrato, asignarInventarioAContrato } = require('../utils/inventarioCalculator');
 const { obtenerAlertasStock, asignarInventarioAutomatico } = require('../jobs/inventarioAutoAsignacion');
 const { generarListaCompraPDF } = require('../utils/pdfListaCompra');
+const { generarInventarioPDF } = require('../utils/pdfInventario');
 const logger = require('../utils/logger');
 
 const prisma = getPrismaClient();
@@ -26,6 +27,11 @@ const prisma = getPrismaClient();
 router.get('/central', authenticate, requireInventario, async (req, res, next) => {
   try {
     const inventario = await prisma.inventario_central.findMany({
+      where: {
+        inventario_items: {
+          activo: true
+        }
+      },
       include: {
         inventario_items: true
       },
@@ -139,13 +145,17 @@ router.put('/central/:itemId', authenticate, requireInventario, async (req, res,
 
     // Registrar movimiento solo si hay cambio
     if (diferencia !== 0) {
+      const motivo = diferencia > 0 
+        ? `Actualización manual de inventario central - Incremento de ${Math.abs(diferencia).toFixed(2)}`
+        : `Actualización manual de inventario central - Decremento de ${Math.abs(diferencia).toFixed(2)}`;
+      
       await prisma.movimientos_inventario.create({
         data: {
           item_id: parseInt(itemId),
-          tipo_movimiento: diferencia > 0 ? 'entrada' : 'salida',
+          tipo_movimiento: 'entrada', // Siempre entrada para ediciones de central
           origen: 'central',
           cantidad: Math.abs(diferencia),
-          motivo: 'Actualización manual de inventario',
+          motivo: motivo,
           usuario_id: req.user.id
         }
       });
@@ -531,6 +541,19 @@ router.put('/asignaciones/:id', authenticate, requireInventario, async (req, res
     const { id } = req.params;
     const { cantidad_asignada, cantidad_utilizada, estado, notas } = req.body;
 
+    // Obtener la asignación actual antes de actualizar
+    const asignacionAnterior = await prisma.asignaciones_inventario.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        salones: true,
+        inventario_items: true
+      }
+    });
+
+    if (!asignacionAnterior) {
+      throw new NotFoundError('Asignación no encontrada');
+    }
+
     const updateData = {
       fecha_actualizacion: new Date()
     };
@@ -549,6 +572,156 @@ router.put('/asignaciones/:id', authenticate, requireInventario, async (req, res
 
     if (notas !== undefined) {
       updateData.notas = notas;
+    }
+
+    // Si se está cancelando la asignación, devolver el inventario al salón
+    if (estado === 'cancelado' && asignacionAnterior.estado !== 'cancelado') {
+      const cantidadADevolver = parseFloat(asignacionAnterior.cantidad_asignada);
+      
+      // Verificar que el inventario del salón existe
+      const inventarioSalon = await prisma.inventario_salones.findUnique({
+        where: {
+          salon_id_item_id: {
+            salon_id: asignacionAnterior.salon_id,
+            item_id: asignacionAnterior.item_id
+          }
+        }
+      });
+
+      if (inventarioSalon) {
+        // Devolver la cantidad asignada al inventario del salón
+        await prisma.inventario_salones.update({
+          where: {
+            salon_id_item_id: {
+              salon_id: asignacionAnterior.salon_id,
+              item_id: asignacionAnterior.item_id
+            }
+          },
+          data: {
+            cantidad_actual: {
+              increment: cantidadADevolver
+            },
+            fecha_actualizacion: new Date()
+          }
+        });
+
+        // Registrar movimiento de devolución
+        await prisma.movimientos_inventario.create({
+          data: {
+            item_id: asignacionAnterior.item_id,
+            tipo_movimiento: 'devolucion',
+            origen: `evento-${asignacionAnterior.contrato_id}`,
+            destino: asignacionAnterior.salones.nombre.toLowerCase(),
+            cantidad: cantidadADevolver,
+            motivo: `Cancelación de asignación - Devolución de inventario al salón`,
+            contrato_id: asignacionAnterior.contrato_id,
+            asignacion_id: parseInt(id),
+            usuario_id: req.user.id
+          }
+        });
+      }
+    }
+
+    // Si se está modificando la cantidad asignada, ajustar el inventario del salón
+    if (cantidad_asignada !== undefined) {
+      const cantidadAnterior = parseFloat(asignacionAnterior.cantidad_asignada);
+      const cantidadNueva = parseFloat(cantidad_asignada);
+      const diferencia = cantidadNueva - cantidadAnterior;
+
+      // Solo ajustar si hay diferencia y la asignación está activa
+      if (diferencia !== 0 && asignacionAnterior.estado !== 'cancelado') {
+        // Verificar que el inventario del salón existe
+        const inventarioSalon = await prisma.inventario_salones.findUnique({
+          where: {
+            salon_id_item_id: {
+              salon_id: asignacionAnterior.salon_id,
+              item_id: asignacionAnterior.item_id
+            }
+          }
+        });
+
+        if (inventarioSalon) {
+          if (diferencia > 0) {
+            // Se está aumentando la cantidad asignada, restar del inventario
+            // Verificar que hay suficiente stock
+            const stockDisponible = parseFloat(inventarioSalon.cantidad_actual);
+            if (stockDisponible < diferencia) {
+              throw new ValidationError(
+                `Stock insuficiente. Disponible: ${stockDisponible.toFixed(2)}, Necesario: ${diferencia.toFixed(2)}`
+              );
+            }
+
+            // Restar la diferencia del inventario del salón
+            await prisma.inventario_salones.update({
+              where: {
+                salon_id_item_id: {
+                  salon_id: asignacionAnterior.salon_id,
+                  item_id: asignacionAnterior.item_id
+                }
+              },
+              data: {
+                cantidad_actual: {
+                  decrement: diferencia
+                },
+                fecha_actualizacion: new Date()
+              }
+            });
+
+            // Registrar movimiento
+            await prisma.movimientos_inventario.create({
+              data: {
+                item_id: asignacionAnterior.item_id,
+                tipo_movimiento: 'asignacion',
+                origen: asignacionAnterior.salones.nombre.toLowerCase(),
+                destino: `evento-${asignacionAnterior.contrato_id}`,
+                cantidad: diferencia,
+                motivo: `Ajuste de asignación - Aumento de cantidad asignada`,
+                contrato_id: asignacionAnterior.contrato_id,
+                asignacion_id: parseInt(id),
+                usuario_id: req.user.id
+              }
+            });
+          } else {
+            // Se está disminuyendo la cantidad asignada, devolver al inventario
+            const cantidadADevolver = Math.abs(diferencia);
+
+            await prisma.inventario_salones.update({
+              where: {
+                salon_id_item_id: {
+                  salon_id: asignacionAnterior.salon_id,
+                  item_id: asignacionAnterior.item_id
+                }
+              },
+              data: {
+                cantidad_actual: {
+                  increment: cantidadADevolver
+                },
+                fecha_actualizacion: new Date()
+              }
+            });
+
+            // Registrar movimiento
+            await prisma.movimientos_inventario.create({
+              data: {
+                item_id: asignacionAnterior.item_id,
+                tipo_movimiento: 'devolucion',
+                origen: `evento-${asignacionAnterior.contrato_id}`,
+                destino: asignacionAnterior.salones.nombre.toLowerCase(),
+                cantidad: cantidadADevolver,
+                motivo: `Ajuste de asignación - Disminución de cantidad asignada`,
+                contrato_id: asignacionAnterior.contrato_id,
+                asignacion_id: parseInt(id),
+                usuario_id: req.user.id
+              }
+            });
+          }
+        } else {
+          // Si no existe inventario del salón y se está aumentando, no se puede asignar
+          if (diferencia > 0) {
+            throw new ValidationError('No hay inventario disponible en el salón para este item');
+          }
+        }
+      }
     }
 
     const asignacion = await prisma.asignaciones_inventario.update({
@@ -694,28 +867,50 @@ router.post('/asignar/:contratoId', authenticate, requireInventario, async (req,
 
 /**
  * @route   GET /api/inventario/movimientos
- * @desc    Obtener historial de movimientos
+ * @desc    Obtener historial de movimientos filtrado por salón, mes y año
  * @access  Private (Inventario)
  */
 router.get('/movimientos', authenticate, requireInventario, async (req, res, next) => {
   try {
-    const { item_id, tipo_movimiento, fecha_desde, fecha_hasta } = req.query;
+    const { salon_nombre, mes, anio } = req.query;
 
     const where = {};
-    if (item_id) {
-      where.item_id = parseInt(item_id);
-    }
-    if (tipo_movimiento) {
-      where.tipo_movimiento = tipo_movimiento;
-    }
-    if (fecha_desde || fecha_hasta) {
-      where.fecha_movimiento = {};
-      if (fecha_desde) {
-        where.fecha_movimiento.gte = new Date(fecha_desde);
+
+    // Filtrar por salón o inventario central
+    if (salon_nombre) {
+      const salonNombreLower = salon_nombre.toLowerCase();
+      
+      if (salonNombreLower === 'central') {
+        // Para inventario central, incluir:
+        // 1. Transferencias de central a salones (origen: 'central')
+        // 2. Retornos de salones a central (destino: 'central')
+        // 3. Compras entrantes (origen: 'compra')
+        // 4. Ediciones de cantidad central (origen: 'central', sin destino)
+        where.OR = [
+          { origen: { equals: 'central', mode: 'insensitive' } },
+          { destino: { equals: 'central', mode: 'insensitive' } },
+          { origen: { equals: 'compra', mode: 'insensitive' } }
+        ];
+      } else {
+        // Para salones, filtrar por origen o destino
+        where.OR = [
+          { origen: { equals: salonNombreLower, mode: 'insensitive' } },
+          { destino: { equals: salonNombreLower, mode: 'insensitive' } }
+        ];
       }
-      if (fecha_hasta) {
-        where.fecha_movimiento.lte = new Date(fecha_hasta);
-      }
+    }
+
+    // Filtrar por mes y año
+    if (mes && anio) {
+      const mesNum = parseInt(mes);
+      const anioNum = parseInt(anio);
+      const fechaInicio = new Date(anioNum, mesNum - 1, 1);
+      const fechaFin = new Date(anioNum, mesNum, 0, 23, 59, 59, 999);
+      
+      where.fecha_movimiento = {
+        gte: fechaInicio,
+        lte: fechaFin
+      };
     }
 
     const movimientos = await prisma.movimientos_inventario.findMany({
@@ -724,7 +919,8 @@ router.get('/movimientos', authenticate, requireInventario, async (req, res, nex
         inventario_items: true,
         contratos: {
           include: {
-            clientes: true
+            clientes: true,
+            salones: true
           }
         },
         usuarios_inventario: true
@@ -732,7 +928,6 @@ router.get('/movimientos', authenticate, requireInventario, async (req, res, nex
       orderBy: {
         fecha_movimiento: 'desc'
       }
-      // Sin límite para ver todos los movimientos
     });
 
     res.json({
@@ -777,6 +972,280 @@ router.get('/items', authenticate, requireInventario, async (req, res, next) => 
       success: true,
       items,
       total: items.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/inventario/categorias
+ * @desc    Obtener todas las categorías existentes de items
+ * @access  Private (Inventario)
+ */
+router.get('/categorias', authenticate, requireInventario, async (req, res, next) => {
+  try {
+    const items = await prisma.inventario_items.findMany({
+      where: {
+        categoria: { not: null },
+        activo: true
+      },
+      select: {
+        categoria: true
+      },
+      distinct: ['categoria']
+    });
+
+    const categorias = items
+      .map(item => item.categoria)
+      .filter(Boolean)
+      .sort();
+
+    res.json({
+      success: true,
+      categorias
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/inventario/items
+ * @desc    Crear un nuevo item de inventario
+ * @access  Private (Inventario)
+ */
+router.post('/items', authenticate, requireInventario, async (req, res, next) => {
+  try {
+    const { nombre, categoria, unidad_medida, descripcion, cantidad_inicial, cantidad_minima_central, cantidad_minima_salones } = req.body;
+    
+    // cantidad_minima_salones puede ser un objeto { diamond, kendall, doral } o un número (para compatibilidad)
+
+    if (!nombre || !categoria || !unidad_medida) {
+      throw new ValidationError('Nombre, categoría y unidad de medida son requeridos');
+    }
+
+    // Verificar si el item ya existe
+    const itemExistente = await prisma.inventario_items.findFirst({
+      where: {
+        nombre: {
+          equals: nombre,
+          mode: 'insensitive'
+        },
+        activo: true
+      }
+    });
+
+    if (itemExistente) {
+      throw new ValidationError('Ya existe un item con ese nombre');
+    }
+
+    // Crear el item
+    const nuevoItem = await prisma.inventario_items.create({
+      data: {
+        nombre: nombre.trim(),
+        categoria: categoria.trim(),
+        unidad_medida: unidad_medida.trim(),
+        descripcion: descripcion?.trim() || null,
+        activo: true
+      }
+    });
+
+    // Crear registro en inventario central
+    const cantidadInicial = parseFloat(cantidad_inicial || 0);
+    const cantidadMinimaCentral = parseFloat(cantidad_minima_central || 20);
+
+    await prisma.inventario_central.create({
+      data: {
+        item_id: nuevoItem.id,
+        cantidad_actual: cantidadInicial,
+        cantidad_minima: cantidadMinimaCentral,
+        fecha_actualizacion: new Date()
+      }
+    });
+
+    // Crear registros en inventario de salones con cantidades mínimas específicas por salón
+    const salones = await prisma.salones.findMany({
+      where: { activo: true }
+    });
+
+    for (const salon of salones) {
+      let cantidadMinima = 10; // Valor por defecto
+      
+      // Si cantidad_minima_salones es un objeto, usar el valor específico del salón
+      if (cantidad_minima_salones && typeof cantidad_minima_salones === 'object') {
+        const salonNombreLower = salon.nombre.toLowerCase();
+        if (salonNombreLower === 'diamond' && cantidad_minima_salones.diamond !== undefined) {
+          cantidadMinima = parseFloat(cantidad_minima_salones.diamond || 10);
+        } else if (salonNombreLower === 'kendall' && cantidad_minima_salones.kendall !== undefined) {
+          cantidadMinima = parseFloat(cantidad_minima_salones.kendall || 10);
+        } else if (salonNombreLower === 'doral' && cantidad_minima_salones.doral !== undefined) {
+          cantidadMinima = parseFloat(cantidad_minima_salones.doral || 10);
+        } else {
+          cantidadMinima = parseFloat(cantidad_minima_salones[salonNombreLower] || 10);
+        }
+      } else if (cantidad_minima_salones !== undefined) {
+        // Compatibilidad: si es un número, usar ese valor para todos
+        cantidadMinima = parseFloat(cantidad_minima_salones || 10);
+      }
+
+      await prisma.inventario_salones.create({
+        data: {
+          salon_id: salon.id,
+          item_id: nuevoItem.id,
+          cantidad_actual: 0,
+          cantidad_minima: cantidadMinima,
+          fecha_actualizacion: new Date()
+        }
+      });
+    }
+
+    // Registrar movimiento
+    if (cantidadInicial > 0) {
+      await prisma.movimientos_inventario.create({
+        data: {
+          item_id: nuevoItem.id,
+          tipo_movimiento: 'entrada',
+          origen: 'central',
+          cantidad: cantidadInicial,
+          motivo: 'Creación de nuevo item',
+          usuario_id: req.user.id
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Item creado exitosamente',
+      item: nuevoItem
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   PUT /api/inventario/salones/:salonId/:itemId/cantidad-minima
+ * @desc    Actualizar cantidad mínima de un item en inventario de salón
+ * @access  Private (Inventario)
+ */
+router.put('/salones/:salonId/:itemId/cantidad-minima', authenticate, requireInventario, async (req, res, next) => {
+  try {
+    const { salonId, itemId } = req.params;
+    const { cantidad_minima } = req.body;
+
+    if (cantidad_minima === undefined || cantidad_minima < 0) {
+      throw new ValidationError('La cantidad mínima debe ser un número válido mayor o igual a 0');
+    }
+
+    // Verificar que el registro existe
+    const itemSalon = await prisma.inventario_salones.findUnique({
+      where: {
+        salon_id_item_id: {
+          salon_id: parseInt(salonId),
+          item_id: parseInt(itemId)
+        }
+      },
+      include: {
+        inventario_items: true,
+        salones: true
+      }
+    });
+
+    if (!itemSalon) {
+      throw new NotFoundError('Item no encontrado en el inventario del salón');
+    }
+
+    // Actualizar cantidad mínima
+    const itemActualizado = await prisma.inventario_salones.update({
+      where: {
+        salon_id_item_id: {
+          salon_id: parseInt(salonId),
+          item_id: parseInt(itemId)
+        }
+      },
+      data: {
+        cantidad_minima: parseFloat(cantidad_minima),
+        fecha_actualizacion: new Date()
+      },
+      include: {
+        inventario_items: true,
+        salones: true
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Cantidad mínima actualizada correctamente',
+      item: {
+        ...itemActualizado,
+        necesita_reposicion: parseFloat(itemActualizado.cantidad_actual) < parseFloat(itemActualizado.cantidad_minima)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   DELETE /api/inventario/items/:itemId
+ * @desc    Eliminar (desactivar) un item de inventario
+ * @access  Private (Inventario)
+ */
+router.delete('/items/:itemId', authenticate, requireInventario, async (req, res, next) => {
+  try {
+    const { itemId } = req.params;
+
+    // Verificar que el item existe
+    const item = await prisma.inventario_items.findUnique({
+      where: { id: parseInt(itemId) },
+      include: {
+        inventario_central: true,
+        inventario_salones: true
+      }
+    });
+
+    if (!item) {
+      throw new NotFoundError('Item no encontrado');
+    }
+
+    // Verificar si tiene inventario asignado
+    const tieneInventarioCentral = item.inventario_central && item.inventario_central.length > 0;
+    const tieneInventarioSalones = item.inventario_salones && item.inventario_salones.length > 0;
+    const tieneCantidad = tieneInventarioCentral && 
+      item.inventario_central.some(ic => parseFloat(ic.cantidad_actual) > 0) ||
+      tieneInventarioSalones && 
+      item.inventario_salones.some(is => parseFloat(is.cantidad_actual) > 0);
+
+    if (tieneCantidad) {
+      throw new ValidationError('No se puede eliminar un item que tiene inventario asignado. Primero debe transferir o eliminar todo el inventario.');
+    }
+
+    // Marcar como inactivo en lugar de eliminar físicamente (soft delete)
+    await prisma.inventario_items.update({
+      where: { id: parseInt(itemId) },
+      data: {
+        activo: false,
+        fecha_actualizacion: new Date()
+      }
+    });
+
+    // Eliminar registros de inventario central y salones si existen
+    if (tieneInventarioCentral) {
+      await prisma.inventario_central.deleteMany({
+        where: { item_id: parseInt(itemId) }
+      });
+    }
+
+    if (tieneInventarioSalones) {
+      await prisma.inventario_salones.deleteMany({
+        where: { item_id: parseInt(itemId) }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Item eliminado correctamente'
     });
   } catch (error) {
     next(error);
@@ -1393,6 +1862,190 @@ router.post('/recibir-compra', authenticate, requireInventario, async (req, res,
       errores: errores.length > 0 ? errores : undefined
     });
   } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/inventario/contratos
+ * @desc    Obtener contratos filtrados por salón y fecha (para administración de pagos)
+ * @access  Private (Inventario)
+ */
+router.get('/contratos', authenticate, requireInventario, async (req, res, next) => {
+  try {
+    const { salon_nombre, mes, anio } = req.query;
+
+    const where = {
+      estado: 'activo'
+    };
+
+    // Filtro por salón (por nombre)
+    if (salon_nombre) {
+      where.OR = [
+        { salones: { nombre: { equals: salon_nombre, mode: 'insensitive' } } },
+        { lugar_salon: { equals: salon_nombre, mode: 'insensitive' } }
+      ];
+    }
+
+    // Filtro por mes y año
+    if (mes && anio) {
+      const mesNum = parseInt(mes);
+      const anioNum = parseInt(anio);
+      const fechaInicio = new Date(anioNum, mesNum - 1, 1);
+      const fechaFin = new Date(anioNum, mesNum, 0, 23, 59, 59);
+      
+      where.fecha_evento = {
+        gte: fechaInicio,
+        lte: fechaFin
+      };
+    }
+
+    const contratos = await prisma.contratos.findMany({
+      where,
+      include: {
+        clientes: {
+          select: {
+            id: true,
+            nombre_completo: true,
+            email: true,
+            telefono: true
+          }
+        },
+        vendedores: {
+          select: {
+            id: true,
+            nombre_completo: true,
+            codigo_vendedor: true
+          }
+        },
+        paquetes: {
+          select: {
+            id: true,
+            nombre: true,
+            precio_base: true
+          }
+        },
+        salones: {
+          select: {
+            id: true,
+            nombre: true
+          }
+        },
+        eventos: {
+          select: {
+            id: true,
+            nombre_evento: true,
+            fecha_evento: true,
+            hora_inicio: true,
+            hora_fin: true,
+            cantidad_invitados_confirmados: true
+          }
+        },
+        pagos: {
+          select: {
+            id: true,
+            monto: true,
+            monto_total: true,
+            metodo_pago: true,
+            tipo_tarjeta: true,
+            numero_referencia: true,
+            fecha_pago: true,
+            estado: true
+          },
+          orderBy: {
+            fecha_pago: 'desc'
+          }
+        }
+      },
+      orderBy: {
+        fecha_evento: 'asc'
+      }
+    });
+
+    res.json({
+      success: true,
+      count: contratos.length,
+      contratos
+    });
+  } catch (error) {
+    logger.error('Error al obtener contratos para administración:', error);
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/inventario/pdf/central
+ * @desc    Generar PDF del inventario central
+ * @access  Private (Inventario)
+ */
+router.get('/pdf/central', authenticate, requireInventario, async (req, res, next) => {
+  try {
+    const inventario = await prisma.inventario_central.findMany({
+      include: {
+        inventario_items: true
+      },
+      orderBy: {
+        inventario_items: {
+          nombre: 'asc'
+        }
+      }
+    });
+
+    const pdfBuffer = await generarInventarioPDF(inventario, 'central');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Inventario-Central-${new Date().toISOString().split('T')[0]}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    logger.error('Error al generar PDF de inventario central:', error);
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/inventario/pdf/salon/:salonNombre
+ * @desc    Generar PDF del inventario de un salón específico
+ * @access  Private (Inventario)
+ */
+router.get('/pdf/salon/:salonNombre', authenticate, requireInventario, async (req, res, next) => {
+  try {
+    const { salonNombre } = req.params;
+
+    // Buscar el salón por nombre
+    const salon = await prisma.salones.findFirst({
+      where: {
+        nombre: {
+          equals: salonNombre,
+          mode: 'insensitive'
+        }
+      }
+    });
+
+    if (!salon) {
+      throw new NotFoundError(`Salón "${salonNombre}" no encontrado`);
+    }
+
+    const inventario = await prisma.inventario_salones.findMany({
+      where: {
+        salon_id: salon.id
+      },
+      include: {
+        inventario_items: true
+      },
+      orderBy: {
+        inventario_items: {
+          nombre: 'asc'
+        }
+      }
+    });
+
+    const pdfBuffer = await generarInventarioPDF(inventario, salonNombre);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Inventario-${salonNombre}-${new Date().toISOString().split('T')[0]}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    logger.error(`Error al generar PDF de inventario del salón ${req.params.salonNombre}:`, error);
     next(error);
   }
 });

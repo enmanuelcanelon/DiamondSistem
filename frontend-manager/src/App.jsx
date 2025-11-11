@@ -5,7 +5,6 @@ import useAuthStore from '@shared/store/useAuthStore';
 // Pages - Manager
 import LoginManager from './pages/LoginManager';
 import ChecklistManager from './pages/ChecklistManager';
-import ResumenManager from './pages/ResumenManager';
 
 // Layout
 import LayoutManager from './components/LayoutManager';
@@ -54,7 +53,6 @@ function App() {
             }
           >
             <Route index element={<ChecklistManager />} />
-            <Route path="resumen" element={<ResumenManager />} />
           </Route>
         </Routes>
       </Router>

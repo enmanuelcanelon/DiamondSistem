@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, AlertTriangle, Warehouse, Building2, Search, Edit2, Save, X, Filter, RefreshCw, ArrowRightLeft, Truck, CheckSquare, FileText, ShoppingCart, ChevronDown } from 'lucide-react';
+import { Package, AlertTriangle, Warehouse, Building2, Search, Edit2, Save, X, Filter, RefreshCw, ArrowRightLeft, Truck, CheckSquare, FileText, ShoppingCart, ChevronDown, Download, Plus, Settings, Trash2 } from 'lucide-react';
 import api from '@shared/config/api';
 import toast from 'react-hot-toast';
 
@@ -24,6 +24,25 @@ function DashboardInventario() {
   const [categoriasExpandidasListaCompra, setCategoriasExpandidasListaCompra] = useState({});
   const [categoriasExpandidasAbastecer, setCategoriasExpandidasAbastecer] = useState({});
   const [categoriasExpandidasRecibir, setCategoriasExpandidasRecibir] = useState({});
+  const [mostrarModalPDFs, setMostrarModalPDFs] = useState(false);
+  const [mostrarModalNuevoItem, setMostrarModalNuevoItem] = useState(false);
+  const [editandoCantidadMinima, setEditandoCantidadMinima] = useState(null);
+  const [cantidadMinimaEdit, setCantidadMinimaEdit] = useState('');
+  const [itemAEliminar, setItemAEliminar] = useState(null);
+  const [confirmarEdicion, setConfirmarEdicion] = useState(null);
+  const [nuevoItem, setNuevoItem] = useState({
+    nombre: '',
+    categoria: '',
+    unidad_medida: '',
+    descripcion: '',
+    cantidad_inicial: '0',
+    cantidad_minima_central: '20',
+    cantidad_minima_salones: {
+      diamond: '10',
+      kendall: '10',
+      doral: '10'
+    }
+  });
 
   // Query para inventario central
   const { data: inventarioCentral, isLoading: loadingCentral } = useQuery({
@@ -52,6 +71,15 @@ function DashboardInventario() {
     }
   });
 
+  // Query para categorías existentes
+  const { data: categoriasData } = useQuery({
+    queryKey: ['categorias-inventario'],
+    queryFn: async () => {
+      const response = await api.get('/inventario/categorias');
+      return response.data;
+    }
+  });
+
   // Query para última lista de compra
   const { data: ultimaListaData, refetch: refetchUltimaLista } = useQuery({
     queryKey: ['ultima-lista-compra'],
@@ -65,19 +93,95 @@ function DashboardInventario() {
 
   // Mutation para actualizar inventario central
   const updateInventarioMutation = useMutation({
-    mutationFn: async ({ itemId, cantidad }) => {
-      const response = await api.put(`/inventario/central/${itemId}`, {
-        cantidad_actual: parseFloat(cantidad)
-      });
+    mutationFn: async ({ itemId, cantidad, cantidadMinima }) => {
+      const data = {};
+      if (cantidad !== undefined) {
+        data.cantidad_actual = parseFloat(cantidad);
+      }
+      if (cantidadMinima !== undefined) {
+        data.cantidad_minima = parseFloat(cantidadMinima);
+      }
+      const response = await api.put(`/inventario/central/${itemId}`, data);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['inventario-central']);
       toast.success('Inventario actualizado correctamente');
       setEditingItem(null);
+      setEditandoCantidadMinima(null);
+      setCantidadMinimaEdit('');
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Error al actualizar inventario');
+    }
+  });
+
+  // Mutation para crear nuevo item
+  const crearItemMutation = useMutation({
+    mutationFn: async (itemData) => {
+      const response = await api.post('/inventario/items', itemData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['inventario-central']);
+      queryClient.invalidateQueries(['inventario-salones']);
+      queryClient.invalidateQueries(['categorias-inventario']);
+      toast.success('Item creado exitosamente');
+      setMostrarModalNuevoItem(false);
+      setNuevoItem({
+        nombre: '',
+        categoria: '',
+        unidad_medida: '',
+        descripcion: '',
+        cantidad_inicial: '0',
+        cantidad_minima_central: '20',
+        cantidad_minima_salones: {
+          diamond: '10',
+          kendall: '10',
+          doral: '10'
+        }
+      });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Error al crear el item');
+    }
+  });
+
+  // Mutation para eliminar item
+  const eliminarItemMutation = useMutation({
+    mutationFn: async (itemId) => {
+      const response = await api.delete(`/inventario/items/${itemId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['inventario-central']);
+      queryClient.invalidateQueries(['inventario-salones']);
+      queryClient.invalidateQueries(['categorias-inventario']);
+      toast.success('Item eliminado exitosamente');
+      setItemAEliminar(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Error al eliminar el item');
+      setItemAEliminar(null);
+    }
+  });
+
+  // Mutation para actualizar cantidad mínima de salón
+  const updateCantidadMinimaSalonMutation = useMutation({
+    mutationFn: async ({ salonId, itemId, cantidadMinima }) => {
+      const response = await api.put(`/inventario/salones/${salonId}/${itemId}/cantidad-minima`, {
+        cantidad_minima: parseFloat(cantidadMinima)
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['inventario-salones']);
+      toast.success('Cantidad mínima actualizada correctamente');
+      setEditandoCantidadMinima(null);
+      setCantidadMinimaEdit('');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Error al actualizar cantidad mínima');
     }
   });
 
@@ -293,12 +397,56 @@ function DashboardInventario() {
     setEditCantidad(item.cantidad_actual.toString());
   };
 
-  const handleSave = (itemId) => {
+  const handleSave = (itemId, cantidadAnterior) => {
     if (!editCantidad || parseFloat(editCantidad) < 0) {
       toast.error('La cantidad debe ser un número válido mayor o igual a 0');
       return;
     }
-    updateInventarioMutation.mutate({ itemId, cantidad: editCantidad });
+    
+    const cantidadNueva = parseFloat(editCantidad);
+    const cantidadAnt = parseFloat(cantidadAnterior);
+    const diferencia = cantidadNueva - cantidadAnt;
+    
+    // Mostrar confirmación con información de la diferencia
+    setConfirmarEdicion({
+      itemId,
+      cantidadAnterior: cantidadAnt,
+      cantidadNueva,
+      diferencia,
+      item: inventarioCentral?.inventario?.find(i => i.item_id === itemId)
+    });
+  };
+
+  const confirmarGuardar = () => {
+    if (!confirmarEdicion) return;
+    
+    const { itemId, cantidadNueva } = confirmarEdicion;
+    updateInventarioMutation.mutate({ itemId, cantidad: cantidadNueva.toString() });
+    setConfirmarEdicion(null);
+  };
+
+  const handleSaveCantidadMinimaCentral = (itemId) => {
+    if (!cantidadMinimaEdit || parseFloat(cantidadMinimaEdit) < 0) {
+      toast.error('La cantidad mínima debe ser un número válido mayor o igual a 0');
+      return;
+    }
+    updateInventarioMutation.mutate({ itemId, cantidadMinima: cantidadMinimaEdit });
+  };
+
+  const handleSaveCantidadMinimaSalon = (salonId, itemId) => {
+    if (!cantidadMinimaEdit || parseFloat(cantidadMinimaEdit) < 0) {
+      toast.error('La cantidad mínima debe ser un número válido mayor o igual a 0');
+      return;
+    }
+    updateCantidadMinimaSalonMutation.mutate({ salonId, itemId, cantidadMinima: cantidadMinimaEdit });
+  };
+
+  const handleCrearItem = () => {
+    if (!nuevoItem.nombre || !nuevoItem.categoria || !nuevoItem.unidad_medida) {
+      toast.error('Nombre, categoría y unidad de medida son requeridos');
+      return;
+    }
+    crearItemMutation.mutate(nuevoItem);
   };
 
   const handleTransferir = (item) => {
@@ -319,10 +467,26 @@ function DashboardInventario() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventario Central</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Administración Central</h1>
           <p className="text-gray-600 mt-1">Gestión del almacén central</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          {/* Botón de Descarga de PDFs */}
+          <button
+            onClick={() => setMostrarModalPDFs(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+          >
+            <Download className="w-4 h-4" />
+            Descargar PDFs
+          </button>
+          {/* Botón para Añadir Item */}
+          <button
+            onClick={() => setMostrarModalNuevoItem(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+          >
+            <Plus className="w-4 h-4" />
+            Añadir Item
+          </button>
           {ultimaListaData?.tiene_lista && (
             <button
               onClick={() => {
@@ -545,7 +709,49 @@ function DashboardInventario() {
                                   )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {parseFloat(item.cantidad_minima || 20).toFixed(2)}
+                                  {editandoCantidadMinima === item.item_id ? (
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="number"
+                                        value={cantidadMinimaEdit}
+                                        onChange={(e) => setCantidadMinimaEdit(e.target.value)}
+                                        min="0"
+                                        step="0.01"
+                                        className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                        autoFocus
+                                      />
+                                      <button
+                                        onClick={() => handleSaveCantidadMinimaCentral(item.item_id)}
+                                        className="text-green-600 hover:text-green-700"
+                                        disabled={updateInventarioMutation.isPending}
+                                      >
+                                        <Save className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEditandoCantidadMinima(null);
+                                          setCantidadMinimaEdit('');
+                                        }}
+                                        className="text-red-600 hover:text-red-700"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <span>{parseFloat(item.cantidad_minima || 20).toFixed(2)}</span>
+                                      <button
+                                        onClick={() => {
+                                          setEditandoCantidadMinima(item.item_id);
+                                          setCantidadMinimaEdit(item.cantidad_minima?.toString() || '20');
+                                        }}
+                                        className="text-blue-600 hover:text-blue-700"
+                                        title="Editar cantidad mínima"
+                                      >
+                                        <Settings className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   {item.necesita_reposicion ? (
@@ -562,7 +768,7 @@ function DashboardInventario() {
                                   {editingItem === item.item_id ? (
                                     <div className="flex items-center gap-2">
                                       <button
-                                        onClick={() => handleSave(item.item_id)}
+                                        onClick={() => handleSave(item.item_id, item.cantidad_actual)}
                                         className="text-green-600 hover:text-green-700"
                                         disabled={updateInventarioMutation.isPending}
                                       >
@@ -593,6 +799,13 @@ function DashboardInventario() {
                                         title="Transferir a salón"
                                       >
                                         <ArrowRightLeft className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => setItemAEliminar(item)}
+                                        className="text-red-600 hover:text-red-700"
+                                        title="Eliminar item"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
                                       </button>
                                     </div>
                                   )}
@@ -1450,6 +1663,549 @@ function DashboardInventario() {
           </div>
         </div>
       )}
+
+      {/* Modal de Selección de PDF */}
+      {mostrarModalPDFs && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-lg">
+              <h2 className="text-xl font-semibold text-gray-900">Descargar PDF de Inventario</h2>
+              <button
+                onClick={() => setMostrarModalPDFs(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-6 text-center">
+                Selecciona el inventario que deseas descargar:
+              </p>
+
+              <div className="space-y-3">
+                {/* Opción Central */}
+                <button
+                  onClick={async () => {
+                    try {
+                      setMostrarModalPDFs(false);
+                      const response = await api.get('/inventario/pdf/central', {
+                        responseType: 'blob'
+                      });
+                      const url = window.URL.createObjectURL(new Blob([response.data]));
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `Inventario-Central-${new Date().toISOString().split('T')[0]}.pdf`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      window.URL.revokeObjectURL(url);
+                      toast.success('PDF de Inventario Central descargado exitosamente');
+                    } catch (error) {
+                      toast.error('Error al descargar el PDF');
+                      console.error(error);
+                    }
+                  }}
+                  className="w-full flex items-center gap-4 px-4 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-2 border-blue-200 hover:border-blue-300 rounded-lg transition-all transform hover:scale-[1.02]"
+                >
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                    1
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-gray-900">Inventario Central</p>
+                    <p className="text-sm text-gray-600">Almacén central completo</p>
+                  </div>
+                  <Download className="w-5 h-5 text-blue-600" />
+                </button>
+
+                {/* Opción Doral */}
+                <button
+                  onClick={async () => {
+                    try {
+                      setMostrarModalPDFs(false);
+                      const response = await api.get('/inventario/pdf/salon/Doral', {
+                        responseType: 'blob'
+                      });
+                      const url = window.URL.createObjectURL(new Blob([response.data]));
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `Inventario-Doral-${new Date().toISOString().split('T')[0]}.pdf`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      window.URL.revokeObjectURL(url);
+                      toast.success('PDF de Inventario Doral descargado exitosamente');
+                    } catch (error) {
+                      toast.error('Error al descargar el PDF de Doral');
+                      console.error(error);
+                    }
+                  }}
+                  className="w-full flex items-center gap-4 px-4 py-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200 hover:border-purple-300 rounded-lg transition-all transform hover:scale-[1.02]"
+                >
+                  <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                    2
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-gray-900">Inventario Doral</p>
+                    <p className="text-sm text-gray-600">Salón Doral</p>
+                  </div>
+                  <Download className="w-5 h-5 text-purple-600" />
+                </button>
+
+                {/* Opción Diamond */}
+                <button
+                  onClick={async () => {
+                    try {
+                      setMostrarModalPDFs(false);
+                      const response = await api.get('/inventario/pdf/salon/Diamond', {
+                        responseType: 'blob'
+                      });
+                      const url = window.URL.createObjectURL(new Blob([response.data]));
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `Inventario-Diamond-${new Date().toISOString().split('T')[0]}.pdf`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      window.URL.revokeObjectURL(url);
+                      toast.success('PDF de Inventario Diamond descargado exitosamente');
+                    } catch (error) {
+                      toast.error('Error al descargar el PDF de Diamond');
+                      console.error(error);
+                    }
+                  }}
+                  className="w-full flex items-center gap-4 px-4 py-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 hover:border-amber-300 rounded-lg transition-all transform hover:scale-[1.02]"
+                >
+                  <div className="w-10 h-10 bg-amber-600 rounded-lg flex items-center justify-center text-white font-bold">
+                    3
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-gray-900">Inventario Diamond</p>
+                    <p className="text-sm text-gray-600">Salón Diamond</p>
+                  </div>
+                  <Download className="w-5 h-5 text-amber-600" />
+                </button>
+
+                {/* Opción Kendall */}
+                <button
+                  onClick={async () => {
+                    try {
+                      setMostrarModalPDFs(false);
+                      const response = await api.get('/inventario/pdf/salon/Kendall', {
+                        responseType: 'blob'
+                      });
+                      const url = window.URL.createObjectURL(new Blob([response.data]));
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `Inventario-Kendall-${new Date().toISOString().split('T')[0]}.pdf`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      window.URL.revokeObjectURL(url);
+                      toast.success('PDF de Inventario Kendall descargado exitosamente');
+                    } catch (error) {
+                      toast.error('Error al descargar el PDF de Kendall');
+                      console.error(error);
+                    }
+                  }}
+                  className="w-full flex items-center gap-4 px-4 py-4 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-2 border-green-200 hover:border-green-300 rounded-lg transition-all transform hover:scale-[1.02]"
+                >
+                  <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold">
+                    4
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-gray-900">Inventario Kendall</p>
+                    <p className="text-sm text-gray-600">Salón Kendall</p>
+                  </div>
+                  <Download className="w-5 h-5 text-green-600" />
+                </button>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setMostrarModalPDFs(false)}
+                  className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      {itemAEliminar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">¿Estás seguro?</h2>
+                  <p className="text-sm text-gray-600">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-700 mb-2">
+                  Estás a punto de eliminar el item:
+                </p>
+                <p className="font-semibold text-gray-900 bg-gray-50 p-3 rounded-lg">
+                  {itemAEliminar.inventario_items?.nombre}
+                </p>
+                {parseFloat(itemAEliminar.cantidad_actual) > 0 && (
+                  <p className="text-sm text-red-600 mt-2">
+                    ⚠️ Este item tiene {parseFloat(itemAEliminar.cantidad_actual).toFixed(2)} unidades en inventario. 
+                    Debes transferir o eliminar todo el inventario antes de eliminar el item.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    eliminarItemMutation.mutate(itemAEliminar.inventario_items?.id || itemAEliminar.item_id);
+                  }}
+                  disabled={eliminarItemMutation.isPending || parseFloat(itemAEliminar.cantidad_actual) > 0}
+                  className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {eliminarItemMutation.isPending ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Eliminando...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Sí, eliminar
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setItemAEliminar(null)}
+                  disabled={eliminarItemMutation.isPending}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Nuevo Item */}
+      {mostrarModalNuevoItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-lg">
+              <h2 className="text-xl font-semibold text-gray-900">Añadir Nuevo Item</h2>
+              <button
+                onClick={() => {
+                  setMostrarModalNuevoItem(false);
+                  setNuevoItem({
+                    nombre: '',
+                    categoria: '',
+                    unidad_medida: '',
+                    descripcion: '',
+                    cantidad_inicial: '0',
+                    cantidad_minima_central: '20',
+                    cantidad_minima_salones: '10'
+                  });
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del Item <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={nuevoItem.nombre}
+                  onChange={(e) => setNuevoItem({ ...nuevoItem, nombre: e.target.value })}
+                  placeholder="Ej: Blue Curaçao"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Categoría <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={nuevoItem.categoria}
+                    onChange={(e) => setNuevoItem({ ...nuevoItem, categoria: e.target.value })}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="">Selecciona una categoría</option>
+                    {categoriasData?.categorias?.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={nuevoItem.categoria}
+                    onChange={(e) => setNuevoItem({ ...nuevoItem, categoria: e.target.value })}
+                    placeholder="O escribe una nueva categoría"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unidad de Medida <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={nuevoItem.unidad_medida}
+                  onChange={(e) => setNuevoItem({ ...nuevoItem, unidad_medida: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="">Selecciona unidad</option>
+                  <option value="botella">Botella</option>
+                  <option value="paquete">Paquete</option>
+                  <option value="libra">Libra</option>
+                  <option value="unidad">Unidad</option>
+                  <option value="litro">Litro</option>
+                  <option value="galon">Galón</option>
+                  <option value="caja">Caja</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descripción (opcional)
+                </label>
+                <textarea
+                  value={nuevoItem.descripcion}
+                  onChange={(e) => setNuevoItem({ ...nuevoItem, descripcion: e.target.value })}
+                  placeholder="Descripción del item..."
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Cantidad Inicial
+                  </label>
+                  <input
+                    type="number"
+                    value={nuevoItem.cantidad_inicial}
+                    onChange={(e) => setNuevoItem({ ...nuevoItem, cantidad_inicial: e.target.value })}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Cant. Mínima Central
+                  </label>
+                  <input
+                    type="number"
+                    value={nuevoItem.cantidad_minima_central}
+                    onChange={(e) => setNuevoItem({ ...nuevoItem, cantidad_minima_central: e.target.value })}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cant. Mínima por Salón
+                  </label>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Diamond</label>
+                      <input
+                        type="number"
+                        value={nuevoItem.cantidad_minima_salones.diamond}
+                        onChange={(e) => setNuevoItem({ 
+                          ...nuevoItem, 
+                          cantidad_minima_salones: {
+                            ...nuevoItem.cantidad_minima_salones,
+                            diamond: e.target.value
+                          }
+                        })}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Kendall</label>
+                      <input
+                        type="number"
+                        value={nuevoItem.cantidad_minima_salones.kendall}
+                        onChange={(e) => setNuevoItem({ 
+                          ...nuevoItem, 
+                          cantidad_minima_salones: {
+                            ...nuevoItem.cantidad_minima_salones,
+                            kendall: e.target.value
+                          }
+                        })}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Doral</label>
+                      <input
+                        type="number"
+                        value={nuevoItem.cantidad_minima_salones.doral}
+                        onChange={(e) => setNuevoItem({ 
+                          ...nuevoItem, 
+                          cantidad_minima_salones: {
+                            ...nuevoItem.cantidad_minima_salones,
+                            doral: e.target.value
+                          }
+                        })}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleCrearItem}
+                  disabled={crearItemMutation.isPending || !nuevoItem.nombre || !nuevoItem.categoria || !nuevoItem.unidad_medida}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {crearItemMutation.isPending ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Creando...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Crear Item
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setMostrarModalNuevoItem(false);
+                    setNuevoItem({
+                      nombre: '',
+                      categoria: '',
+                      unidad_medida: '',
+                      descripcion: '',
+                      cantidad_inicial: '0',
+                      cantidad_minima_central: '20',
+                      cantidad_minima_salones: '10'
+                    });
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Edición */}
+      {confirmarEdicion && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">¿Estás seguro?</h2>
+                  <p className="text-sm text-gray-600">Vas a editar la cantidad del inventario central</p>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-700 mb-2">
+                  Item: <span className="font-semibold">{confirmarEdicion.item?.inventario_items?.nombre}</span>
+                </p>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Cantidad actual:</span>
+                    <span className="font-semibold text-gray-900">
+                      {confirmarEdicion.cantidadAnterior.toFixed(2)} {confirmarEdicion.item?.inventario_items?.unidad_medida}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Nueva cantidad:</span>
+                    <span className={`font-semibold ${
+                      confirmarEdicion.diferencia > 0 ? 'text-green-600' : 
+                      confirmarEdicion.diferencia < 0 ? 'text-red-600' : 
+                      'text-gray-900'
+                    }`}>
+                      {confirmarEdicion.cantidadNueva.toFixed(2)} {confirmarEdicion.item?.inventario_items?.unidad_medida}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                    <span className="text-gray-600">Diferencia:</span>
+                    <span className={`font-bold ${
+                      confirmarEdicion.diferencia > 0 ? 'text-green-600' : 
+                      confirmarEdicion.diferencia < 0 ? 'text-red-600' : 
+                      'text-gray-900'
+                    }`}>
+                      {confirmarEdicion.diferencia > 0 ? '+' : ''}{confirmarEdicion.diferencia.toFixed(2)} {confirmarEdicion.item?.inventario_items?.unidad_medida}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={confirmarGuardar}
+                  disabled={updateInventarioMutation.isPending}
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {updateInventarioMutation.isPending ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Sí, guardar
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setConfirmarEdicion(null);
+                    setEditingItem(null);
+                    setEditCantidad('');
+                  }}
+                  disabled={updateInventarioMutation.isPending}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

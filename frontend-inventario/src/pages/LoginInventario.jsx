@@ -44,14 +44,14 @@ function LoginInventario() {
             </div>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">DiamondSistem</h1>
-          <p className="text-gray-600">Sistema de Inventario</p>
+          <p className="text-gray-600">Sistema de Administración</p>
         </div>
 
         {/* Formulario */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="mb-6">
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Iniciar Sesión</h2>
-            <p className="text-gray-600 text-sm">Ingresa tus credenciales de inventario</p>
+            <p className="text-gray-600 text-sm">Ingresa tus credenciales de administración</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

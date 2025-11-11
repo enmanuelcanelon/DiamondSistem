@@ -14,7 +14,17 @@ const prisma = getPrismaClient();
 /**
  * Servicios externos válidos
  */
-const SERVICIOS_EXTERNOS_VALIDOS = ['limosina', 'hora_loca', 'animador', 'chef'];
+const SERVICIOS_EXTERNOS_VALIDOS = [
+  'foto_video',
+  'dj',
+  'comida',
+  'cake',
+  'mini_postres',
+  'limosina',
+  'hora_loca',
+  'animador',
+  'maestro_ceremonia'
+];
 
 /**
  * @route   GET /api/managers/contratos
@@ -41,7 +51,16 @@ router.get('/contratos', authenticate, requireManager, async (req, res, next) =>
             id: true,
             nombre_evento: true,
             fecha_evento: true,
-            hora_inicio: true
+            hora_inicio: true,
+            hora_fin: true,
+            cantidad_invitados_confirmados: true
+          }
+        },
+        paquetes: {
+          select: {
+            id: true,
+            nombre: true,
+            precio_base: true
           }
         },
         salones: {
@@ -51,13 +70,6 @@ router.get('/contratos', authenticate, requireManager, async (req, res, next) =>
           }
         },
         contratos_servicios: {
-          where: {
-            servicios: {
-              nombre: {
-                in: ['Limosina', 'Hora Loca', 'Animador', 'Chef']
-              }
-            }
-          },
           include: {
             servicios: {
               select: {
@@ -77,32 +89,45 @@ router.get('/contratos', authenticate, requireManager, async (req, res, next) =>
               }
             }
           }
-        }
+        },
+        ajustes_evento: true
       },
       orderBy: {
         fecha_evento: 'asc'
       }
     });
 
+    // Función helper para mapear nombre de servicio a tipo
+    const mapearServicioATipo = (nombreServicio) => {
+      const nombre = nombreServicio.toLowerCase();
+      if (nombre.includes('foto') || nombre.includes('video') || nombre.includes('fotografía')) {
+        return 'foto_video';
+      } else if (nombre.includes('dj') || nombre.includes('disc jockey')) {
+        return 'dj';
+      } else if (nombre.includes('comida') || nombre.includes('catering') || nombre.includes('menú')) {
+        return 'comida';
+      } else if (nombre.includes('cake') || nombre.includes('torta') || nombre.includes('pastel')) {
+        return 'cake';
+      } else if (nombre.includes('mini postre') || nombre.includes('postre')) {
+        return 'mini_postres';
+      } else if (nombre.includes('limosina') || nombre.includes('limousine')) {
+        return 'limosina';
+      } else if (nombre.includes('hora loca')) {
+        return 'hora_loca';
+      } else if (nombre.includes('animador')) {
+        return 'animador';
+      } else if (nombre.includes('maestro') && nombre.includes('ceremonia')) {
+        return 'maestro_ceremonia';
+      }
+      return null;
+    };
+
     // Procesar contratos para identificar servicios externos
     const contratosProcesados = contratos.map(contrato => {
       // Identificar servicios externos contratados
-      const serviciosExternos = contrato.contratos_servicios.map(cs => {
-        const nombreServicio = cs.servicios.nombre.toLowerCase();
-        let tipoServicio = null;
-
-        if (nombreServicio.includes('limosina') || nombreServicio.includes('limousine')) {
-          tipoServicio = 'limosina';
-        } else if (nombreServicio.includes('hora loca')) {
-          tipoServicio = 'hora_loca';
-        } else if (nombreServicio.includes('animador')) {
-          tipoServicio = 'animador';
-        } else if (nombreServicio.includes('chef')) {
-          tipoServicio = 'chef';
-        }
-
-        return tipoServicio;
-      }).filter(Boolean);
+      const serviciosExternos = contrato.contratos_servicios
+        .map(cs => mapearServicioATipo(cs.servicios.nombre))
+        .filter(Boolean);
 
       // Obtener checklist existente por tipo
       const checklistPorTipo = {};
@@ -110,12 +135,12 @@ router.get('/contratos', authenticate, requireManager, async (req, res, next) =>
         checklistPorTipo[item.servicio_tipo] = item;
       });
 
-      // Crear checklist completo (incluyendo servicios sin checklist)
+      // Crear checklist completo solo con servicios que están contratados
       const checklistCompleto = SERVICIOS_EXTERNOS_VALIDOS.map(tipo => {
         if (checklistPorTipo[tipo]) {
           return checklistPorTipo[tipo];
         }
-        // Si el servicio está contratado pero no tiene checklist, crear uno pendiente
+        // Solo crear checklist si el servicio está contratado
         if (serviciosExternos.includes(tipo)) {
           return {
             id: null,
@@ -123,6 +148,8 @@ router.get('/contratos', authenticate, requireManager, async (req, res, next) =>
             servicio_tipo: tipo,
             contacto_realizado: false,
             fecha_contacto: null,
+            fecha_pago: null,
+            hora_recogida: null,
             notas: null,
             estado: 'pendiente',
             manager_id: null,
@@ -141,6 +168,9 @@ router.get('/contratos', authenticate, requireManager, async (req, res, next) =>
         clientes: contrato.clientes,
         eventos: contrato.eventos,
         salones: contrato.salones,
+        paquetes: contrato.paquetes,
+        contratos_servicios: contrato.contratos_servicios,
+        ajustes_evento: contrato.ajustes_evento,
         servicios_externos: serviciosExternos,
         checklist: checklistCompleto
       };
@@ -184,7 +214,16 @@ router.get('/contratos/:id', authenticate, requireManager, async (req, res, next
             id: true,
             nombre_evento: true,
             fecha_evento: true,
-            hora_inicio: true
+            hora_inicio: true,
+            hora_fin: true,
+            cantidad_invitados_confirmados: true
+          }
+        },
+        paquetes: {
+          select: {
+            id: true,
+            nombre: true,
+            precio_base: true
           }
         },
         salones: {
@@ -194,13 +233,6 @@ router.get('/contratos/:id', authenticate, requireManager, async (req, res, next
           }
         },
         contratos_servicios: {
-          where: {
-            servicios: {
-              nombre: {
-                in: ['Limosina', 'Hora Loca', 'Animador', 'Chef']
-              }
-            }
-          },
           include: {
             servicios: {
               select: {
@@ -223,7 +255,8 @@ router.get('/contratos/:id', authenticate, requireManager, async (req, res, next
           orderBy: {
             servicio_tipo: 'asc'
           }
-        }
+        },
+        ajustes_evento: true
       }
     });
 
@@ -231,20 +264,35 @@ router.get('/contratos/:id', authenticate, requireManager, async (req, res, next
       throw new NotFoundError('Contrato no encontrado');
     }
 
-    // Identificar servicios externos contratados
-    const serviciosExternos = contrato.contratos_servicios.map(cs => {
-      const nombreServicio = cs.servicios.nombre.toLowerCase();
-      if (nombreServicio.includes('limosina') || nombreServicio.includes('limousine')) {
+    // Función helper para mapear nombre de servicio a tipo
+    const mapearServicioATipo = (nombreServicio) => {
+      const nombre = nombreServicio.toLowerCase();
+      if (nombre.includes('foto') || nombre.includes('video') || nombre.includes('fotografía')) {
+        return 'foto_video';
+      } else if (nombre.includes('dj') || nombre.includes('disc jockey')) {
+        return 'dj';
+      } else if (nombre.includes('comida') || nombre.includes('catering') || nombre.includes('menú')) {
+        return 'comida';
+      } else if (nombre.includes('cake') || nombre.includes('torta') || nombre.includes('pastel')) {
+        return 'cake';
+      } else if (nombre.includes('mini postre') || nombre.includes('postre')) {
+        return 'mini_postres';
+      } else if (nombre.includes('limosina') || nombre.includes('limousine')) {
         return 'limosina';
-      } else if (nombreServicio.includes('hora loca')) {
+      } else if (nombre.includes('hora loca')) {
         return 'hora_loca';
-      } else if (nombreServicio.includes('animador')) {
+      } else if (nombre.includes('animador')) {
         return 'animador';
-      } else if (nombreServicio.includes('chef')) {
-        return 'chef';
+      } else if (nombre.includes('maestro') && nombre.includes('ceremonia')) {
+        return 'maestro_ceremonia';
       }
       return null;
-    }).filter(Boolean);
+    };
+
+    // Identificar servicios externos contratados
+    const serviciosExternos = contrato.contratos_servicios
+      .map(cs => mapearServicioATipo(cs.servicios.nombre))
+      .filter(Boolean);
 
     // Obtener checklist existente
     const checklistPorTipo = {};
@@ -252,11 +300,12 @@ router.get('/contratos/:id', authenticate, requireManager, async (req, res, next
       checklistPorTipo[item.servicio_tipo] = item;
     });
 
-    // Crear checklist completo
+    // Crear checklist completo solo con servicios que están contratados
     const checklistCompleto = SERVICIOS_EXTERNOS_VALIDOS.map(tipo => {
       if (checklistPorTipo[tipo]) {
         return checklistPorTipo[tipo];
       }
+      // Solo crear checklist si el servicio está contratado
       if (serviciosExternos.includes(tipo)) {
         return {
           id: null,
@@ -264,6 +313,8 @@ router.get('/contratos/:id', authenticate, requireManager, async (req, res, next
           servicio_tipo: tipo,
           contacto_realizado: false,
           fecha_contacto: null,
+          fecha_pago: null,
+          hora_recogida: null,
           notas: null,
           estado: 'pendiente',
           manager_id: null,
@@ -284,6 +335,9 @@ router.get('/contratos/:id', authenticate, requireManager, async (req, res, next
         clientes: contrato.clientes,
         eventos: contrato.eventos,
         salones: contrato.salones,
+        paquetes: contrato.paquetes,
+        contratos_servicios: contrato.contratos_servicios,
+        ajustes_evento: contrato.ajustes_evento,
         servicios_externos: serviciosExternos,
         checklist: checklistCompleto
       }
@@ -302,7 +356,7 @@ router.get('/contratos/:id', authenticate, requireManager, async (req, res, next
  */
 router.post('/checklist', authenticate, requireManager, async (req, res, next) => {
   try {
-    const { contrato_id, servicio_tipo, contacto_realizado, fecha_contacto, notas, estado } = req.body;
+    const { contrato_id, servicio_tipo, fecha_contacto, fecha_pago, hora_recogida, notas, estado } = req.body;
     const managerId = req.user.id;
 
     // Validaciones
@@ -324,7 +378,7 @@ router.post('/checklist', authenticate, requireManager, async (req, res, next) =
     }
 
     // Estados válidos
-    const estadosValidos = ['pendiente', 'en_proceso', 'completado'];
+    const estadosValidos = ['pendiente', 'completado'];
     const estadoFinal = estado && estadosValidos.includes(estado) ? estado : 'pendiente';
 
     // Buscar si ya existe un checklist para este contrato y servicio
@@ -348,6 +402,8 @@ router.post('/checklist', authenticate, requireManager, async (req, res, next) =
         data: {
           contacto_realizado: contacto_realizado !== undefined ? contacto_realizado : checklistExistente.contacto_realizado,
           fecha_contacto: fecha_contacto ? new Date(fecha_contacto) : checklistExistente.fecha_contacto,
+          fecha_pago: fecha_pago ? new Date(fecha_pago) : checklistExistente.fecha_pago,
+          hora_recogida: hora_recogida ? new Date(hora_recogida) : checklistExistente.hora_recogida,
           notas: notas !== undefined ? notas : checklistExistente.notas,
           estado: estadoFinal,
           manager_id: managerId,
@@ -364,17 +420,28 @@ router.post('/checklist', authenticate, requireManager, async (req, res, next) =
         }
       });
     } else {
-      // Crear nuevo checklist
+      // Crear nuevo checklist - usar campos directos en lugar de relaciones
+      const createData = {
+        contrato_id: parseInt(contrato_id),
+        servicio_tipo,
+        fecha_contacto: fecha_contacto ? new Date(fecha_contacto) : null,
+        hora_recogida: hora_recogida ? new Date(hora_recogida) : null,
+        notas: notas || null,
+        estado: estadoFinal,
+        manager_id: managerId || null
+      };
+
+      // Agregar fecha_pago si está disponible (puede no estar en el cliente de Prisma si no se regeneró)
+      try {
+        if (fecha_pago) {
+          createData.fecha_pago = new Date(fecha_pago);
+        }
+      } catch (e) {
+        // Ignorar si el campo no existe
+      }
+
       resultado = await prisma.checklist_servicios_externos.create({
-        data: {
-          contrato_id: parseInt(contrato_id),
-          servicio_tipo,
-          contacto_realizado: contacto_realizado !== undefined ? contacto_realizado : false,
-          fecha_contacto: fecha_contacto ? new Date(fecha_contacto) : null,
-          notas: notas || null,
-          estado: estadoFinal,
-          manager_id: managerId
-        },
+        data: createData,
         include: {
           managers: {
             select: {
@@ -407,7 +474,7 @@ router.post('/checklist', authenticate, requireManager, async (req, res, next) =
 router.put('/checklist/:id', authenticate, requireManager, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { contacto_realizado, fecha_contacto, notas, estado } = req.body;
+    const { fecha_contacto, fecha_pago, hora_recogida, notas, estado } = req.body;
     const managerId = req.user.id;
 
     const checklistId = parseInt(id);
@@ -422,15 +489,16 @@ router.put('/checklist/:id', authenticate, requireManager, async (req, res, next
     }
 
     // Validar estado
-    const estadosValidos = ['pendiente', 'en_proceso', 'completado'];
+    const estadosValidos = ['pendiente', 'completado'];
     const estadoFinal = estado && estadosValidos.includes(estado) ? estado : checklistExistente.estado;
 
     // Actualizar
     const resultado = await prisma.checklist_servicios_externos.update({
       where: { id: checklistId },
       data: {
-        contacto_realizado: contacto_realizado !== undefined ? contacto_realizado : checklistExistente.contacto_realizado,
         fecha_contacto: fecha_contacto ? new Date(fecha_contacto) : checklistExistente.fecha_contacto,
+        fecha_pago: fecha_pago ? new Date(fecha_pago) : checklistExistente.fecha_pago,
+        hora_recogida: hora_recogida ? new Date(hora_recogida) : checklistExistente.hora_recogida,
         notas: notas !== undefined ? notas : checklistExistente.notas,
         estado: estadoFinal,
         manager_id: managerId,
@@ -512,9 +580,28 @@ router.get('/checklist/resumen', authenticate, requireManager, async (req, res, 
     const resumen = {
       total: checklistItems.length,
       pendiente: checklistItems.filter(item => item.estado === 'pendiente').length,
-      en_proceso: checklistItems.filter(item => item.estado === 'en_proceso').length,
       completado: checklistItems.filter(item => item.estado === 'completado').length,
       por_servicio: {
+        foto_video: {
+          total: checklistItems.filter(item => item.servicio_tipo === 'foto_video').length,
+          completado: checklistItems.filter(item => item.servicio_tipo === 'foto_video' && item.estado === 'completado').length
+        },
+        dj: {
+          total: checklistItems.filter(item => item.servicio_tipo === 'dj').length,
+          completado: checklistItems.filter(item => item.servicio_tipo === 'dj' && item.estado === 'completado').length
+        },
+        comida: {
+          total: checklistItems.filter(item => item.servicio_tipo === 'comida').length,
+          completado: checklistItems.filter(item => item.servicio_tipo === 'comida' && item.estado === 'completado').length
+        },
+        cake: {
+          total: checklistItems.filter(item => item.servicio_tipo === 'cake').length,
+          completado: checklistItems.filter(item => item.servicio_tipo === 'cake' && item.estado === 'completado').length
+        },
+        mini_postres: {
+          total: checklistItems.filter(item => item.servicio_tipo === 'mini_postres').length,
+          completado: checklistItems.filter(item => item.servicio_tipo === 'mini_postres' && item.estado === 'completado').length
+        },
         limosina: {
           total: checklistItems.filter(item => item.servicio_tipo === 'limosina').length,
           completado: checklistItems.filter(item => item.servicio_tipo === 'limosina' && item.estado === 'completado').length
@@ -527,9 +614,9 @@ router.get('/checklist/resumen', authenticate, requireManager, async (req, res, 
           total: checklistItems.filter(item => item.servicio_tipo === 'animador').length,
           completado: checklistItems.filter(item => item.servicio_tipo === 'animador' && item.estado === 'completado').length
         },
-        chef: {
-          total: checklistItems.filter(item => item.servicio_tipo === 'chef').length,
-          completado: checklistItems.filter(item => item.servicio_tipo === 'chef' && item.estado === 'completado').length
+        maestro_ceremonia: {
+          total: checklistItems.filter(item => item.servicio_tipo === 'maestro_ceremonia').length,
+          completado: checklistItems.filter(item => item.servicio_tipo === 'maestro_ceremonia' && item.estado === 'completado').length
         }
       }
     };
