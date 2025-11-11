@@ -184,6 +184,11 @@ DiamondSistem/
 - ✅ Confirmación paso a paso con validaciones
 - ✅ Anulación de pagos con auditoría
 - ✅ Sistema de comisiones (3% dividido en 2 pagos de 1.5%)
+  - Primera mitad (1.5%): Se desbloquea con $500 reserva + $500 adicionales en 10 días
+  - Segunda mitad (1.5%): Se desbloquea al pagar 50% del contrato
+  - Pagos parciales de comisiones (permite pagar montos menores al total)
+  - Reversión de pagos de comisiones
+  - Generación de PDFs de resúmenes mensuales
 
 #### Portal del Cliente
 - ✅ Dashboard personalizado con información del evento
@@ -222,6 +227,12 @@ DiamondSistem/
 - ✅ Vista de trabajo de managers por salón y mes
 - ✅ Seguimiento de servicios externos (pendientes/completados)
 - ✅ Reportes de pagos
+- ✅ **Gestión de Comisiones**: Visualización y descarga de resúmenes
+  - Vista de todas las comisiones (pendientes y pagadas) por vendedor
+  - Filtrado por mes y año
+  - Descarga de PDFs de resúmenes de comisiones
+  - Detalles de contratos que desbloquearon comisiones
+  - Seguimiento de pagos parciales y completos
 - ✅ Calendario de eventos
 
 #### Sistema de Administración (App Administración)
@@ -258,6 +269,16 @@ DiamondSistem/
   - Recordatorios de pago
   - Historial de pagos por contrato
   - Cálculo de saldos pendientes
+
+- ✅ **Gestión de Comisiones**: Sistema completo de pagos de comisiones a vendedores
+  - Visualización de comisiones desbloqueadas por vendedor
+  - Pagos parciales de comisiones (primera y segunda mitad de 1.5% cada una)
+  - Registro de pagos de comisiones con validación
+  - Reversión de pagos de comisiones en caso de error
+  - Filtrado por mes y año
+  - Descarga de PDFs de resúmenes de comisiones por mes y vendedor
+  - Vista detallada de comisiones pendientes y pagadas
+  - Seguimiento de contratos que desbloquearon cada comisión
 
 - ✅ **Funcionalidades Automáticas**:
   - Cálculo automático de inventario necesario por evento
@@ -605,9 +626,28 @@ GET  /api/salones/:id               # Detalle de salón
 - **Salones**: Gestión por salón con asignaciones, devoluciones y retornos
 - **Historial**: Registro completo de movimientos con filtros avanzados
 - **Pagos**: Gestión de pagos de contratos con envío de emails y recordatorios
+- **Comisiones**: Gestión completa de pagos de comisiones a vendedores
+  - Visualización de comisiones desbloqueadas por vendedor
+  - Registro de pagos parciales y completos
+  - Reversión de pagos en caso de error
+  - Descarga de PDFs de resúmenes mensuales
 - Abastecimiento masivo con selección múltiple
 - Cálculo y asignación automática de inventario
 - Interfaz limpia y organizada
+
+### Frontend-Gerente
+- **Dashboard**: Métricas globales, estadísticas por vendedor, comisiones desbloqueadas
+- **Vendedores**: Gestión completa, visualización de comisiones, eliminación de vendedores
+- **Contratos**: Vista detallada de todos los contratos con filtros por salón y mes
+- **Ofertas**: Visualización de ofertas, detalles, facturas proforma, ofertas del mismo día
+- **Pagos**: Reportes de pagos con filtros por mes y año
+- **Comisiones**: Visualización y descarga de resúmenes de comisiones
+  - Vista de comisiones pendientes y pagadas por vendedor
+  - Filtrado por mes y año
+  - Descarga de PDFs de resúmenes completos
+  - Detalles de contratos y montos
+- **Calendario**: Vista mensual de eventos
+- **Trabajo Managers**: Seguimiento de servicios externos por salón y mes
 
 ## 🛠️ Desarrollo
 

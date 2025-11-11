@@ -126,7 +126,22 @@
 - Casos de uso comunes
 - Mejores prácticas de auditoría
 
-#### 9. PORTAL_CLIENTE_INSTRUCCIONES.md
+#### 9. SISTEMA_COMISIONES.md 💰
+**Propósito:** Documentación completa del sistema de gestión de comisiones  
+**Contenido:**
+- Lógica de comisiones (3% dividido en 2 mitades de 1.5%)
+- Condiciones de desbloqueo (primera y segunda mitad)
+- Sistema de pagos parciales de comisiones
+- Gestión desde Administración y Gerente
+- Generación de PDFs de resúmenes mensuales
+- Reversión de pagos de comisiones
+- Flujos de trabajo completos
+- Casos de uso y ejemplos
+- Referencias técnicas y archivos clave
+
+**Cuándo leerlo:** Para entender y trabajar con el sistema de comisiones
+
+#### 10. PORTAL_CLIENTE_INSTRUCCIONES.md
 **Propósito:** Guía completa del portal del cliente  
 **Contenido:**
 - Autenticación con código de acceso
@@ -139,7 +154,7 @@
 
 ---
 
-#### 10. ASIGNACION_MESAS_INSTRUCCIONES.md
+#### 11. ASIGNACION_MESAS_INSTRUCCIONES.md
 **Propósito:** Documentación del sistema de mesas  
 **Contenido:**
 - Gestión de mesas
@@ -152,7 +167,7 @@
 
 ---
 
-#### 11. PLAYLIST_MUSICAL_INSTRUCCIONES.md
+#### 12. PLAYLIST_MUSICAL_INSTRUCCIONES.md
 **Propósito:** Documentación del sistema de playlist  
 **Contenido:**
 - Agregar canciones
@@ -165,7 +180,7 @@
 
 ---
 
-#### 10. INDICE_DOCUMENTACION.md (este archivo)
+#### 13. INDICE_DOCUMENTACION.md (este archivo)
 **Propósito:** Navegación por toda la documentación  
 **Contenido:**
 - Índice completo de documentos
@@ -194,6 +209,7 @@
 #### 💡 Entender una funcionalidad específica
 - **Nombres de Eventos:** `NOMBRES_EVENTOS_DESCRIPTIVOS.md` 🎉
 - **Pagos Seguros:** `SISTEMA_PAGOS_SEGUROS.md` 🔐
+- **Comisiones:** `SISTEMA_COMISIONES.md` 💰
 - **Portal del Cliente:** `PORTAL_CLIENTE_INSTRUCCIONES.md`
 - **Mesas:** `ASIGNACION_MESAS_INSTRUCCIONES.md`
 - **Playlist:** `PLAYLIST_MUSICAL_INSTRUCCIONES.md`
@@ -261,6 +277,7 @@ DiamondSistem/
 ├── INDICE_DOCUMENTACION.md ✅ (este archivo)
 ├── NOMBRES_EVENTOS_DESCRIPTIVOS.md ✅ 🎉
 ├── SISTEMA_PAGOS_SEGUROS.md ✅ 🔐
+├── SISTEMA_COMISIONES.md ✅ 💰
 ├── PORTAL_CLIENTE_INSTRUCCIONES.md ✅
 ├── ASIGNACION_MESAS_INSTRUCCIONES.md ✅
 ├── PLAYLIST_MUSICAL_INSTRUCCIONES.md ✅
@@ -393,9 +410,9 @@ Si tienes dudas después de leer la documentación:
 
 ---
 
-**Total de documentos:** 10 archivos principales ✅  
-**Líneas de documentación:** ~5,000 líneas  
-**Cobertura:** 95% del sistema documentado  
+**Total de documentos:** 11 archivos principales ✅  
+**Líneas de documentación:** ~6,000 líneas  
+**Cobertura:** 98% del sistema documentado  
 
 **¡Documentación completa y lista para usar! 📚🎉**
 
