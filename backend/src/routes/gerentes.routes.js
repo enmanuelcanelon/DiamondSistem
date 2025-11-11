@@ -671,6 +671,8 @@ router.get('/contratos', authenticate, requireGerente, async (req, res, next) =>
             monto: true,
             monto_total: true,
             metodo_pago: true,
+            tipo_tarjeta: true,
+            numero_referencia: true,
             fecha_pago: true,
             estado: true
           },
