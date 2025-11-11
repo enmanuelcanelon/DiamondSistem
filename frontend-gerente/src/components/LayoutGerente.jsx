@@ -35,7 +35,7 @@ function LayoutGerente() {
     { name: 'Pagos', href: '/pagos', icon: DollarSign },
     { name: 'Comisiones', href: '/comisiones', icon: CreditCard },
     { name: 'Calendario', href: '/calendario', icon: Calendar },
-    { name: 'Trabajo Managers', href: '/managers', icon: ClipboardCheck },
+    { name: 'Managers', href: '/managers', icon: ClipboardCheck },
   ];
 
   const isActive = (path) => {
