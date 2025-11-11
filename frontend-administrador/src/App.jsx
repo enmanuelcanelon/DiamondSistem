@@ -10,6 +10,7 @@ import AsignacionesInventario from './pages/AsignacionesInventario';
 import SalonInventario from './pages/SalonInventario';
 import MovimientosInventario from './pages/MovimientosInventario';
 import PagosAdministracion from './pages/PagosAdministracion';
+import ComisionesAdministracion from './pages/ComisionesAdministracion';
 
 // Layout
 import LayoutInventario from './components/LayoutInventario';
@@ -61,6 +62,7 @@ function App() {
             <Route path="asignaciones" element={<AsignacionesInventario />} />
             <Route path="movimientos" element={<MovimientosInventario />} />
             <Route path="pagos" element={<PagosAdministracion />} />
+            <Route path="comisiones" element={<ComisionesAdministracion />} />
             <Route path=":salonNombre" element={<SalonInventario />} />
           </Route>
         </Routes>

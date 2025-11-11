@@ -404,8 +404,8 @@ function ChecklistManager() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {contrato.codigo_contrato}
-                    </h3>
+                    {contrato.codigo_contrato}
+                  </h3>
                     <ChevronDown 
                       className={`w-5 h-5 text-gray-600 transition-transform ${
                         contratosExpandidos[contrato.id] ? 'transform rotate-180' : ''
@@ -467,16 +467,16 @@ function ChecklistManager() {
                       <Download className="w-4 h-4" />
                       <span>Descargar PDF</span>
                     </button>
-                  </div>
                 </div>
+              </div>
               )}
             </div>
 
             {/* Checklist Items - Solo visible cuando está expandido */}
             {contratosExpandidos[contrato.id] && (
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {contrato.checklist?.map((item) => {
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {contrato.checklist?.map((item) => {
                   const itemKey = `${contrato.id}-${item.servicio_tipo}`;
                   const isEditing = editingItem === itemKey;
                   const EstadoIcon = ESTADOS_ICONS[item.estado] || Clock;
@@ -503,16 +503,16 @@ function ChecklistManager() {
                       {isEditing ? (
                         <div className="space-y-3">
                           <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Fecha de Contacto
-                              </label>
-                              <input
+                            </label>
+                            <input
                                 type="date"
-                                value={editForm.fecha_contacto}
-                                onChange={(e) => setEditForm({ ...editForm, fecha_contacto: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                              />
+                              value={editForm.fecha_contacto}
+                              onChange={(e) => setEditForm({ ...editForm, fecha_contacto: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            />
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -659,8 +659,8 @@ function ChecklistManager() {
                     </div>
                   );
                 })}
-                </div>
               </div>
+            </div>
             )}
           </div>
         ))}

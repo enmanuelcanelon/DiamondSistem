@@ -284,8 +284,20 @@ function Dashboard() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Total Comisiones</span>
+              <span className="font-semibold text-gray-900">
+                ${parseFloat(stats?.estadisticas?.comisiones?.total || stats?.estadisticas?.finanzas?.total_comisiones || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Desbloqueadas</span>
               <span className="font-semibold text-green-600">
-                ${parseFloat(stats?.estadisticas?.finanzas?.total_comisiones || 0).toLocaleString()}
+                ${parseFloat(stats?.estadisticas?.comisiones?.desbloqueadas || stats?.estadisticas?.finanzas?.total_comisiones_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Pendientes</span>
+              <span className="font-semibold text-yellow-600">
+                ${parseFloat(stats?.estadisticas?.comisiones?.pendientes || stats?.estadisticas?.finanzas?.total_comisiones_pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div className="pt-3 border-t flex justify-between items-center">
@@ -295,6 +307,28 @@ function Dashboard() {
               </span>
             </div>
           </div>
+
+          {/* Comisiones por Mes */}
+          {stats?.estadisticas?.comisiones?.por_mes && stats.estadisticas.comisiones.por_mes.length > 0 && (
+            <div className="mt-4 pt-4 border-t">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Comisiones Desbloqueadas por Mes</h3>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {stats.estadisticas.comisiones.por_mes.map((item, idx) => {
+                  const [anio, mes] = item.mes.split('-');
+                  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                  const nombreMes = meses[parseInt(mes) - 1];
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                      <span className="text-sm text-gray-700">{nombreMes} {anio}</span>
+                      <span className="text-sm font-semibold text-green-600">
+                        ${item.total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

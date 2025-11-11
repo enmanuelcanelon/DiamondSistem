@@ -8,9 +8,11 @@ import DashboardGerente from './pages/DashboardGerente';
 import VendedoresGerente from './pages/VendedoresGerente';
 import ContratosGerente from './pages/ContratosGerente';
 import OfertasGerente from './pages/OfertasGerente';
+import DetalleOfertaGerente from './pages/DetalleOfertaGerente';
 import PagosGerente from './pages/PagosGerente';
 import CalendarioGerente from './pages/CalendarioGerente';
 import TrabajoManagersGerente from './pages/TrabajoManagersGerente';
+import ComisionesGerente from './pages/ComisionesGerente';
 
 // Layout
 import LayoutGerente from './components/LayoutGerente';
@@ -62,7 +64,9 @@ function App() {
             <Route path="vendedores" element={<VendedoresGerente />} />
             <Route path="contratos" element={<ContratosGerente />} />
             <Route path="ofertas" element={<OfertasGerente />} />
+            <Route path="ofertas/:id" element={<DetalleOfertaGerente />} />
             <Route path="pagos" element={<PagosGerente />} />
+            <Route path="comisiones" element={<ComisionesGerente />} />
             <Route path="calendario" element={<CalendarioGerente />} />
             <Route path="managers" element={<TrabajoManagersGerente />} />
           </Route>

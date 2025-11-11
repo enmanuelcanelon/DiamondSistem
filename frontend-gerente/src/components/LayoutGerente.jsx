@@ -10,7 +10,8 @@ import {
   Calendar,
   TrendingUp,
   BarChart3,
-  ClipboardCheck
+  ClipboardCheck,
+  CreditCard
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '@shared/store/useAuthStore';
@@ -32,6 +33,7 @@ function LayoutGerente() {
     { name: 'Contratos', href: '/contratos', icon: FileText },
     { name: 'Ofertas', href: '/ofertas', icon: TrendingUp },
     { name: 'Pagos', href: '/pagos', icon: DollarSign },
+    { name: 'Comisiones', href: '/comisiones', icon: CreditCard },
     { name: 'Calendario', href: '/calendario', icon: Calendar },
     { name: 'Trabajo Managers', href: '/managers', icon: ClipboardCheck },
   ];

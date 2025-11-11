@@ -161,7 +161,140 @@ const calcularComisionesVendedor = async (contratoId) => {
   };
 };
 
+/**
+ * Calcular comisiones desbloqueadas de un vendedor
+ * @param {Number} vendedorId - ID del vendedor
+ * @param {Object} fechaFiltro - Opcional: { gte: Date, lte: Date } para filtrar contratos por fecha de creación
+ * @returns {Object} Resumen de comisiones desbloqueadas
+ */
+const calcularComisionesDesbloqueadasVendedor = async (vendedorId, fechaFiltro = null) => {
+  // Construir where clause
+  const where = { vendedor_id: vendedorId };
+  if (fechaFiltro) {
+    where.fecha_creacion_contrato = fechaFiltro;
+  }
+
+  // Obtener contratos del vendedor (con filtro de fecha si aplica)
+  const contratos = await prisma.contratos.findMany({
+    where,
+    include: {
+      pagos: {
+        where: { estado: 'completado' },
+        orderBy: { fecha_pago: 'asc' }
+      }
+    }
+  });
+
+  let totalComisiones = 0;
+  let totalComisionesDesbloqueadas = 0;
+  const comisionesPorMes = {};
+
+  for (const contrato of contratos) {
+    const totalContrato = parseFloat(contrato.total_contrato || 0);
+    const totalPagado = contrato.pagos.reduce((sum, pago) => {
+      return sum + parseFloat(pago.monto_total || 0);
+    }, 0);
+
+    // Calcular comisiones (3% total, dividido en dos mitades de 1.5%)
+    const comisionTotal = (totalContrato * 3) / 100;
+    const comisionPrimeraMitad = (totalContrato * 1.5) / 100;
+    const comisionSegundaMitad = (totalContrato * 1.5) / 100;
+
+    totalComisiones += comisionTotal;
+
+    // Verificar condiciones para primera mitad (1.5%)
+    let primeraMitadCumplida = false;
+    if (contrato.fecha_creacion_contrato && contrato.pagos.length > 0) {
+      const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
+      const primerPago = contrato.pagos[0];
+      const montoPrimerPago = parseFloat(primerPago.monto_total || 0);
+      
+      if (montoPrimerPago >= 500) {
+        const fechaLimite = new Date(fechaCreacion);
+        fechaLimite.setDate(fechaLimite.getDate() + 10);
+        
+        const pagosEnPlazo = contrato.pagos.filter((pago, index) => {
+          if (index === 0) return false;
+          const fechaPago = new Date(pago.fecha_pago);
+          return fechaPago > fechaCreacion && 
+                 fechaPago <= fechaLimite &&
+                 parseFloat(pago.monto_total) >= 500;
+        });
+
+        if (pagosEnPlazo.length > 0) {
+          const montoEnPlazo = pagosEnPlazo.reduce((sum, p) => 
+            sum + parseFloat(p.monto_total), 0
+          );
+          
+          if (montoEnPlazo >= 500 && (montoPrimerPago + montoEnPlazo) >= 1000) {
+            primeraMitadCumplida = true;
+          }
+        }
+      }
+    }
+
+    // Verificar condición para segunda mitad (1.5%): 50% del contrato pagado
+    const porcentajePagado = totalContrato > 0 ? (totalPagado / totalContrato) * 100 : 0;
+    const segundaMitadCumplida = porcentajePagado >= 50;
+
+    // Calcular comisiones desbloqueadas
+    let comisionDesbloqueada = 0;
+    if (primeraMitadCumplida) {
+      comisionDesbloqueada += comisionPrimeraMitad;
+      
+      // Obtener mes de cuando se desbloqueó (fecha del segundo pago o fecha de creación + 10 días)
+      if (contrato.pagos.length > 1) {
+        const segundoPago = contrato.pagos[1];
+        const fechaDesbloqueo = new Date(segundoPago.fecha_pago);
+        const mesKey = `${fechaDesbloqueo.getFullYear()}-${String(fechaDesbloqueo.getMonth() + 1).padStart(2, '0')}`;
+        if (!comisionesPorMes[mesKey]) {
+          comisionesPorMes[mesKey] = { mes: mesKey, total: 0 };
+        }
+        comisionesPorMes[mesKey].total += comisionPrimeraMitad;
+      }
+    }
+    
+    if (segundaMitadCumplida) {
+      comisionDesbloqueada += comisionSegundaMitad;
+      
+      // Obtener mes de cuando se desbloqueó (cuando se alcanzó el 50%)
+      // Buscar el pago que hizo que se alcanzara el 50%
+      let acumulado = 0;
+      for (const pago of contrato.pagos) {
+        acumulado += parseFloat(pago.monto_total || 0);
+        const porcentaje = (acumulado / totalContrato) * 100;
+        if (porcentaje >= 50) {
+          const fechaDesbloqueo = new Date(pago.fecha_pago);
+          const mesKey = `${fechaDesbloqueo.getFullYear()}-${String(fechaDesbloqueo.getMonth() + 1).padStart(2, '0')}`;
+          if (!comisionesPorMes[mesKey]) {
+            comisionesPorMes[mesKey] = { mes: mesKey, total: 0 };
+          }
+          comisionesPorMes[mesKey].total += comisionSegundaMitad;
+          break;
+        }
+      }
+    }
+
+    totalComisionesDesbloqueadas += comisionDesbloqueada;
+  }
+
+  // Convertir comisionesPorMes a array y ordenar
+  const comisionesPorMesArray = Object.values(comisionesPorMes)
+    .map(item => ({
+      mes: item.mes,
+      total: parseFloat(item.total.toFixed(2))
+    }))
+    .sort((a, b) => a.mes.localeCompare(b.mes));
+
+  return {
+    totalComisiones: parseFloat(totalComisiones.toFixed(2)),
+    totalComisionesDesbloqueadas: parseFloat(totalComisionesDesbloqueadas.toFixed(2)),
+    comisionesPorMes: comisionesPorMesArray
+  };
+};
+
 module.exports = {
-  calcularComisionesVendedor
+  calcularComisionesVendedor,
+  calcularComisionesDesbloqueadasVendedor
 };
 

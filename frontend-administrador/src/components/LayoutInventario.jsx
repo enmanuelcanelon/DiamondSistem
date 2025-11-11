@@ -7,7 +7,8 @@ import {
   Home,
   Building2,
   History,
-  DollarSign
+  DollarSign,
+  CreditCard
 } from 'lucide-react';
 import { useState } from 'react';
 import useAuthStore from '@shared/store/useAuthStore';
@@ -28,6 +29,7 @@ function LayoutInventario() {
     { name: 'Salones', href: '/asignaciones', icon: Building2 },
     { name: 'Historial', href: '/movimientos', icon: History },
     { name: 'Pagos', href: '/pagos', icon: DollarSign },
+    { name: 'Comisiones', href: '/comisiones', icon: CreditCard },
   ];
 
   const isActive = (path) => {

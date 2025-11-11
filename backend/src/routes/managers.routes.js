@@ -422,12 +422,12 @@ router.post('/checklist', authenticate, requireManager, async (req, res, next) =
     } else {
       // Crear nuevo checklist - usar campos directos en lugar de relaciones
       const createData = {
-        contrato_id: parseInt(contrato_id),
-        servicio_tipo,
-        fecha_contacto: fecha_contacto ? new Date(fecha_contacto) : null,
+          contrato_id: parseInt(contrato_id),
+          servicio_tipo,
+          fecha_contacto: fecha_contacto ? new Date(fecha_contacto) : null,
         hora_recogida: hora_recogida ? new Date(hora_recogida) : null,
-        notas: notas || null,
-        estado: estadoFinal,
+          notas: notas || null,
+          estado: estadoFinal,
         manager_id: managerId || null
       };
 

@@ -1,20 +1,50 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Filter, Calendar, DollarSign, Loader2, FileText, User } from 'lucide-react';
+import { Search, Filter, Calendar, DollarSign, Loader2, FileText, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '@shared/config/api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 function PagosGerente() {
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
+  const fechaActual = new Date();
+  const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
+  const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
+
+  const nombresMeses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  const cambiarMes = (direccion) => {
+    if (direccion === 'anterior') {
+      if (mesSeleccionado === 1) {
+        setMesSeleccionado(12);
+        setAñoSeleccionado(añoSeleccionado - 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado - 1);
+      }
+    } else {
+      if (mesSeleccionado === 12) {
+        setMesSeleccionado(1);
+        setAñoSeleccionado(añoSeleccionado + 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado + 1);
+      }
+    }
+  };
+
+  const resetearMes = () => {
+    setMesSeleccionado(fechaActual.getMonth() + 1);
+    setAñoSeleccionado(fechaActual.getFullYear());
+  };
 
   const { data: pagosData, isLoading } = useQuery({
-    queryKey: ['gerente-pagos', fechaDesde, fechaHasta],
+    queryKey: ['gerente-pagos', mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
-      const params = {};
-      if (fechaDesde) params.fecha_desde = fechaDesde;
-      if (fechaHasta) params.fecha_hasta = fechaHasta;
+      const params = {
+        mes: mesSeleccionado,
+        año: añoSeleccionado
+      };
       
       const response = await api.get('/gerentes/pagos', { params });
       return response.data;
@@ -51,31 +81,60 @@ function PagosGerente() {
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Selector de Mes y Año */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-5 h-5 text-gray-500" />
-          <h2 className="text-lg font-semibold text-gray-900">Filtros por Fecha</h2>
+          <Calendar className="w-5 h-5 text-gray-500" />
+          <h2 className="text-lg font-semibold text-gray-900">Seleccionar Mes y Año</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
-            <input
-              type="date"
-              value={fechaDesde}
-              onChange={(e) => setFechaDesde(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
+        <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-purple-200 p-2 w-fit">
+          <button
+            onClick={() => cambiarMes('anterior')}
+            className="p-1 hover:bg-purple-50 rounded transition"
+            title="Mes anterior"
+          >
+            <ChevronLeft className="w-5 h-5 text-purple-600" />
+          </button>
+          
+          <div className="flex items-center gap-2 px-3">
+            <Calendar className="w-4 h-4 text-purple-600" />
+            <select
+              value={mesSeleccionado}
+              onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
+              className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+            >
+              {nombresMeses.map((mes, index) => (
+                <option key={index} value={index + 1}>{mes}</option>
+              ))}
+            </select>
+            <select
+              value={añoSeleccionado}
+              onChange={(e) => setAñoSeleccionado(parseInt(e.target.value))}
+              className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+            >
+              {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                <option key={año} value={año}>{año}</option>
+              ))}
+            </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
-            <input
-              type="date"
-              value={fechaHasta}
-              onChange={(e) => setFechaHasta(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
+
+          <button
+            onClick={() => cambiarMes('siguiente')}
+            className="p-1 hover:bg-purple-50 rounded transition"
+            title="Mes siguiente"
+          >
+            <ChevronRight className="w-5 h-5 text-purple-600" />
+          </button>
+
+          {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+            <button
+              onClick={resetearMes}
+              className="ml-2 px-3 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded transition"
+              title="Volver al mes actual"
+            >
+              Hoy
+            </button>
+          )}
         </div>
       </div>
 

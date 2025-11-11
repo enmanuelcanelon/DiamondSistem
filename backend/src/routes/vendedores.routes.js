@@ -7,6 +7,7 @@ const router = express.Router();
 const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
+const { calcularComisionesDesbloqueadasVendedor } = require('../utils/comisionCalculator');
 
 const prisma = getPrismaClient();
 
@@ -151,6 +152,9 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
     const comisionPorcentaje = 3.0; // Porcentaje fijo
     const totalComisiones = totalVentas * (comisionPorcentaje / 100);
 
+    // Calcular comisiones desbloqueadas
+    const comisionesDesbloqueadas = await calcularComisionesDesbloqueadasVendedor(parseInt(id));
+
     // Calcular tasa de conversión
     const tasaConversion = totalOfertas > 0 
       ? ((ofertasAceptadas / totalOfertas) * 100).toFixed(2) 
@@ -182,7 +186,15 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
         finanzas: {
           total_ventas: parseFloat(totalVentas.toFixed(2)),
           total_comisiones: parseFloat(totalComisiones.toFixed(2)),
-          comision_porcentaje: comisionPorcentaje
+          comision_porcentaje: comisionPorcentaje,
+          total_comisiones_desbloqueadas: comisionesDesbloqueadas.totalComisionesDesbloqueadas,
+          total_comisiones_pendientes: comisionesDesbloqueadas.totalComisiones - comisionesDesbloqueadas.totalComisionesDesbloqueadas
+        },
+        comisiones: {
+          total: comisionesDesbloqueadas.totalComisiones,
+          desbloqueadas: comisionesDesbloqueadas.totalComisionesDesbloqueadas,
+          pendientes: comisionesDesbloqueadas.totalComisiones - comisionesDesbloqueadas.totalComisionesDesbloqueadas,
+          por_mes: comisionesDesbloqueadas.comisionesPorMes
         }
       }
     });
@@ -446,6 +458,17 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
     const comisionPorcentaje = 3.0; // Porcentaje fijo
     const totalComisionesMes = totalVentasMes * (comisionPorcentaje / 100);
 
+    // Calcular comisiones desbloqueadas (totales y del mes específico)
+    const comisionesDesbloqueadas = await calcularComisionesDesbloqueadasVendedor(parseInt(id));
+    
+    // Filtrar comisiones desbloqueadas del mes específico
+    const comisionesDesbloqueadasMes = comisionesDesbloqueadas.comisionesPorMes
+      .filter(item => {
+        const [anio, mes] = item.mes.split('-');
+        return parseInt(mes) === mesFiltro && parseInt(anio) === añoFiltro;
+      })
+      .reduce((sum, item) => sum + item.total, 0);
+
     // Tasa de conversión del mes
     const tasaConversion = ofertasMes > 0
       ? ((ofertasAceptadasMes / ofertasMes) * 100).toFixed(2)
@@ -478,7 +501,13 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
         finanzas: {
           total_ventas: parseFloat(totalVentasMes.toFixed(2)),
           total_comisiones: parseFloat(totalComisionesMes.toFixed(2)),
-          comision_porcentaje: comisionPorcentaje
+          comision_porcentaje: comisionPorcentaje,
+          total_comisiones_desbloqueadas_mes: parseFloat(comisionesDesbloqueadasMes.toFixed(2))
+        },
+        comisiones: {
+          total_mes: parseFloat(totalComisionesMes.toFixed(2)),
+          desbloqueadas_mes: parseFloat(comisionesDesbloqueadasMes.toFixed(2)),
+          pendientes_mes: parseFloat((totalComisionesMes - comisionesDesbloqueadasMes).toFixed(2))
         }
       }
     });

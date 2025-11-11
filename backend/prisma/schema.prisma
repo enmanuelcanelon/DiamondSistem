@@ -245,6 +245,8 @@ model contratos {
   comision_segunda_mitad      Decimal?  @db.Decimal(10, 2)  // 1.5% del total
   comision_primera_mitad_pagada Boolean? @default(false)
   comision_segunda_mitad_pagada Boolean? @default(false)
+  comision_primera_mitad_pagada_monto Decimal? @default(0.00) @db.Decimal(10, 2)  // Monto pagado de la primera mitad (permite pagos parciales)
+  comision_segunda_mitad_pagada_monto Decimal? @default(0.00) @db.Decimal(10, 2)  // Monto pagado de la segunda mitad (permite pagos parciales)
   fecha_pago_comision_primera  DateTime? @db.Timestamp(6)
   fecha_pago_comision_segunda  DateTime? @db.Timestamp(6)
   numero_plazos         Int?
