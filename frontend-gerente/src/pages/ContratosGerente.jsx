@@ -17,9 +17,11 @@ import {
   CheckCircle2,
   AlertCircle,
   CreditCard,
-  Wallet
+  Wallet,
+  Download
 } from 'lucide-react';
 import api from '@shared/config/api';
+import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -553,6 +555,35 @@ function ContratosGerente() {
                       </div>
                     </div>
                   )}
+
+                  {/* Botón de Descarga PDF */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await api.get(`/contratos/${contrato.id}/pdf-contrato`, {
+                            responseType: 'blob'
+                          });
+                          const url = window.URL.createObjectURL(new Blob([response.data]));
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.setAttribute('download', `Contrato-${contrato.codigo_contrato}.pdf`);
+                          document.body.appendChild(link);
+                          link.click();
+                          link.remove();
+                          window.URL.revokeObjectURL(url);
+                          toast.success('PDF descargado exitosamente');
+                        } catch (error) {
+                          toast.error('Error al descargar el PDF');
+                          console.error(error);
+                        }
+                      }}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Descargar Contrato PDF
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

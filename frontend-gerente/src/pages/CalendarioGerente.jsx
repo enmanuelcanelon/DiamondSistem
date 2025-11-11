@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin, DollarSign, Loader2, X, User, FileText, Phone, Mail, Package, Building2, CreditCard, Wallet, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin, DollarSign, Loader2, X, User, FileText, Phone, Mail, Package, Building2, CreditCard, Wallet, CheckCircle2, AlertCircle, Download } from 'lucide-react';
 import api from '@shared/config/api';
+import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -490,7 +491,36 @@ function CalendarioGerente() {
               )}
             </div>
 
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end">
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-between items-center">
+              <button
+                onClick={async () => {
+                  if (!contratosData?.id) {
+                    toast.error('No se puede descargar el contrato');
+                    return;
+                  }
+                  try {
+                    const response = await api.get(`/contratos/${contratosData.id}/pdf-contrato`, {
+                      responseType: 'blob'
+                    });
+                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', `Contrato-${contratosData.codigo_contrato}.pdf`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                    toast.success('PDF descargado exitosamente');
+                  } catch (error) {
+                    toast.error('Error al descargar el PDF');
+                    console.error(error);
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Descargar Contrato PDF
+              </button>
               <button
                 onClick={() => {
                   setMostrarModal(false);
