@@ -139,9 +139,9 @@ function Clientes() {
           </p>
         </div>
         <Button size="lg" asChild className="whitespace-nowrap">
-          <Link to="/clientes/nuevo">
-            <Plus className="h-5 w-5 mr-2" />
-            Nuevo Cliente
+          <Link to="/clientes/nuevo" className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            <span>Nuevo Cliente</span>
           </Link>
         </Button>
       </div>

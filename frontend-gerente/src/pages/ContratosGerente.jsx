@@ -126,7 +126,7 @@ function ContratosGerente() {
   }
 
   const contratos = contratosData?.contratos || [];
-  
+
   const contratosFiltrados = contratos.filter(contrato => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -215,9 +215,9 @@ function ContratosGerente() {
             <X className="w-5 h-5" />
             Cambiar Salón
           </button>
-        </div>
+      </div>
 
-        {/* Filtros */}
+      {/* Filtros */}
         <div className="flex items-center gap-4 flex-wrap">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Mes</label>
@@ -232,7 +232,7 @@ function ContratosGerente() {
                 </option>
               ))}
             </select>
-          </div>
+        </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Año</label>
             <select
@@ -343,18 +343,18 @@ function ContratosGerente() {
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                       {contrato.clientes?.nombre_completo && (
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4" />
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
                           <span className="font-medium">{contrato.clientes.nombre_completo}</span>
-                        </div>
+                      </div>
                       )}
                       {fechaEvento && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>
                             {format(new Date(fechaEvento), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
-                          </span>
-                        </div>
+                        </span>
+                      </div>
                       )}
                       {contrato.salones?.nombre && (
                         <div className="flex items-center gap-2">
@@ -454,7 +454,7 @@ function ContratosGerente() {
                             </div>
                           </div>
                         )}
-                        {contrato.vendedores && (
+                    {contrato.vendedores && (
                           <div className="flex items-start gap-3">
                             <User className="w-5 h-5 text-purple-600 mt-0.5" />
                             <div>
@@ -585,8 +585,8 @@ function ContratosGerente() {
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+          )}
+        </div>
           );
         })}
       </div>

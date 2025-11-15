@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Edit2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Loader2, ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 import ModalPlanPago from '../components/ModalPlanPago';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
+import { Skeleton } from '../components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Separator } from '../components/ui/separator';
+import toast from 'react-hot-toast';
 
 function Ofertas() {
   const queryClient = useQueryClient();
@@ -176,23 +184,20 @@ function Ofertas() {
       queryClient.invalidateQueries(['contratos']);
       setModalPlanPagoOpen(false);
       setOfertaSeleccionada(null);
-      alert('¡Contrato creado exitosamente!');
+      toast.success('¡Contrato creado exitosamente!');
     },
     onError: (error) => {
-      alert(error.response?.data?.message || 'Error al crear contrato');
+      toast.error(error.response?.data?.message || 'Error al crear contrato');
     },
   });
 
   const handleAceptar = (oferta) => {
-    if (window.confirm('¿Estás seguro de aceptar esta oferta? Se abrirá el modal para configurar el plan de pago.')) {
-      aceptarMutation.mutate(oferta);
-    }
+    aceptarMutation.mutate(oferta);
   };
 
   const handleRechazar = (ofertaId) => {
-    if (window.confirm('¿Estás seguro de rechazar esta oferta?')) {
-      rechazarMutation.mutate(ofertaId);
-    }
+    rechazarMutation.mutate(ofertaId);
+    toast.success('Oferta rechazada');
   };
 
   const handleCrearContrato = (oferta) => {
@@ -224,7 +229,7 @@ function Ofertas() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert('Error al descargar el PDF');
+      toast.error('Error al descargar el PDF');
       console.error(error);
     }
   };
@@ -232,308 +237,317 @@ function Ofertas() {
   const getEstadoColor = (estado) => {
     switch (estado) {
       case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800';
       case 'aceptada':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
       case 'rechazada':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between space-y-2">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Ofertas</h1>
-          <p className="text-gray-600 mt-1">Gestiona tus propuestas comerciales</p>
+          <h2 className="text-3xl font-bold tracking-tight">Ofertas</h2>
+          <p className="text-muted-foreground">
+            Gestiona tus propuestas comerciales
+          </p>
         </div>
-        <Link
-          to="/ofertas/nueva"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-        >
-          <Plus className="w-5 h-5" />
-          Nueva Oferta
-        </Link>
+        <Button size="lg" asChild className="whitespace-nowrap">
+          <Link to="/ofertas/nueva" className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            <span>Nueva Oferta</span>
+          </Link>
+        </Button>
       </div>
 
       {/* Búsqueda y filtros */}
-      <div className="bg-white rounded-lg shadow-sm border p-4">
-        <div className="space-y-3">
+      <Card>
+        <CardContent className="pt-6 space-y-4">
           <div className="flex gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
                 type="text"
                 placeholder="Buscar por código o cliente..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                className="pl-10"
               />
             </div>
-            <select 
-              value={estadoFiltro}
-              onChange={(e) => setEstadoFiltro(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-            >
-              <option value="">Todos los estados</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="aceptada">Aceptada</option>
-              <option value="rechazada">Rechazada</option>
-            </select>
+            <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos los estados</SelectItem>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
+                <SelectItem value="aceptada">Aceptada</SelectItem>
+                <SelectItem value="rechazada">Rechazada</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
           {/* Filtro por Mes y Año */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-700 font-medium">Filtrar por mes:</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => cambiarMes('anterior')}
+              title="Mes anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
             
-            <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-indigo-200 p-2">
-              <button
-                onClick={() => cambiarMes('anterior')}
-                className="p-1 hover:bg-indigo-50 rounded transition"
-                title="Mes anterior"
-              >
-                <ChevronLeft className="w-5 h-5 text-indigo-600" />
-              </button>
-              
-              <div className="flex items-center gap-2 px-3">
-                <select
-                  value={mesSeleccionado}
-                  onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
-                >
-                  {nombresMeses.map((mes, index) => (
-                    <option key={index} value={index + 1}>{mes}</option>
-                  ))}
-                </select>
-                <select
-                  value={añoSeleccionado}
-                  onChange={(e) => setAñoSeleccionado(parseInt(e.target.value))}
-                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
-                >
-                  {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
-                    <option key={año} value={año}>{año}</option>
-                  ))}
-                </select>
-              </div>
+            <Select value={mesSeleccionado.toString()} onValueChange={(value) => setMesSeleccionado(parseInt(value))}>
+              <SelectTrigger className="w-auto min-w-[180px] [&>span]:line-clamp-none [&>span]:whitespace-nowrap">
+                <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                <SelectValue placeholder="Seleccionar mes">
+                  {nombresMeses[mesSeleccionado - 1]}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {nombresMeses.map((mes, index) => (
+                  <SelectItem key={index} value={(index + 1).toString()}>
+                    {mes}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <button
-                onClick={() => cambiarMes('siguiente')}
-                className="p-1 hover:bg-indigo-50 rounded transition"
-                title="Mes siguiente"
-              >
-                <ChevronRight className="w-5 h-5 text-indigo-600" />
-              </button>
+            <Select value={añoSeleccionado.toString()} onValueChange={(value) => setAñoSeleccionado(parseInt(value))}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                  <SelectItem key={año} value={año.toString()}>
+                    {año}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
-                <button
-                  onClick={resetearMes}
-                  className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded transition"
-                  title="Volver al mes actual"
-                >
-                  Hoy
-                </button>
-              )}
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => cambiarMes('siguiente')}
+              title="Mes siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetearMes}
+                title="Volver al mes actual"
+              >
+                Hoy
+              </Button>
+            )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Lista de ofertas */}
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl p-6 shadow-sm border animate-pulse">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-6 bg-gray-200 rounded w-32"></div>
-                <div className="h-6 bg-gray-200 rounded w-24"></div>
-              </div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            </div>
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : ofertas.length === 0 ? (
-        <div className="bg-white rounded-xl p-12 text-center shadow-sm border">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileText className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {searchTerm || estadoFiltro ? 'No se encontraron ofertas' : 'No hay ofertas'}
-          </h3>
-          <p className="text-gray-600 mb-6">
-            {searchTerm || estadoFiltro ? 'Intenta con otros filtros' : 'Crea tu primera oferta para un cliente'}
-          </p>
-          {!searchTerm && !estadoFiltro && (
-            <Link
-              to="/ofertas/nueva"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-            >
-              <Plus className="w-5 h-5" />
-              Crear Primera Oferta
-            </Link>
-          )}
-        </div>
+        <Card>
+          <CardContent className="pt-12 pb-12 text-center">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchTerm || estadoFiltro ? 'No se encontraron ofertas' : 'No hay ofertas'}
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              {searchTerm || estadoFiltro ? 'Intenta con otros filtros' : 'Crea tu primera oferta para un cliente'}
+            </p>
+            {!searchTerm && !estadoFiltro && (
+              <Button asChild>
+                <Link to="/ofertas/nueva">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Primera Oferta
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {ofertas.map((oferta) => (
-            <div
-              key={oferta.id}
-              className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition"
-            >
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {oferta.codigo_oferta}
-                    </h3>
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${getEstadoColor(oferta.estado)}`}>
-                      {oferta.estado.charAt(0).toUpperCase() + oferta.estado.slice(1)}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 mb-1">
-                    Cliente: <span className="font-medium">{oferta.clientes?.nombre_completo}</span>
-                    {oferta.homenajeado && (
-                      <span className="ml-2 text-purple-600 font-medium">
-                        🎉 {oferta.homenajeado}
-                      </span>
-                    )}
-                  </p>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(oferta.fecha_evento).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
+          {ofertas.map((oferta) => {
+            // Determinar color del borde izquierdo según estado
+            const colorBorde = oferta.estado === 'aceptada' 
+              ? 'border-l-green-500' 
+              : oferta.estado === 'pendiente' 
+              ? 'border-l-yellow-500'
+              : 'border-l-red-500';
+            
+            return (
+            <Card key={oferta.id} className={`hover:shadow-md transition-shadow border-l-4 ${colorBorde}`}>
+              <CardContent className="pt-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-base font-semibold text-foreground">
+                        {oferta.codigo_oferta}
+                      </h3>
+                      <Badge variant="outline" className={getEstadoColor(oferta.estado)}>
+                        {oferta.estado.charAt(0).toUpperCase() + oferta.estado.slice(1)}
+                      </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span className="font-medium">
-                      {(() => {
-                          const horasAdicionales = obtenerHorasAdicionales(oferta.ofertas_servicios_adicionales);
-                          const horaFinConExtras = calcularHoraFinConExtras(oferta.hora_fin, horasAdicionales);
-                          const duracion = calcularDuracion(oferta.hora_inicio, horaFinConExtras);
-                          
-                          return (
-                            <>
-                              {formatearHora(oferta.hora_inicio)} / {formatearHora(horaFinConExtras)}
-                              {duracion > 0 && (() => {
-                                const horasEnteras = Math.floor(duracion);
-                                const minutos = Math.round((duracion - horasEnteras) * 60);
-                                if (minutos > 0 && minutos < 60) {
-                                  return ` • ${horasEnteras}h ${minutos}m`;
-                                }
-                                return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
-                              })()}
-                            </>
-                          );
-                      })()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{oferta.cantidad_invitados} invitados</span>
-                    </div>
-                    {(oferta.lugar_salon || oferta.salones?.nombre) && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-indigo-600 font-medium">
-                          📍 {oferta.lugar_salon || oferta.salones?.nombre}
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Cliente: <span className="font-medium text-foreground">{oferta.clientes?.nombre_completo}</span>
+                      {oferta.homenajeado && (
+                        <span className="ml-2 text-foreground">
+                          {oferta.homenajeado}
                         </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="lg:text-right">
-                  <div className="mb-2">
-                    <p className="text-sm text-gray-600">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">
-                      ${parseFloat(oferta.total_final).toLocaleString()}
+                      )}
                     </p>
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
+                      {oferta.fecha_evento && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {new Date(oferta.fecha_evento).toLocaleDateString('es-ES', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      )}
+                      {oferta.hora_inicio && oferta.hora_fin && (
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span className="font-medium text-foreground">
+                            {(() => {
+                              const horasAdicionales = obtenerHorasAdicionales(oferta.ofertas_servicios_adicionales);
+                              const horaFinConExtras = calcularHoraFinConExtras(oferta.hora_fin, horasAdicionales);
+                              const duracion = calcularDuracion(oferta.hora_inicio, horaFinConExtras);
+                              
+                              return (
+                                <>
+                                  {formatearHora(oferta.hora_inicio)} - {formatearHora(horaFinConExtras)}
+                                  {duracion > 0 && (() => {
+                                    const horasEnteras = Math.floor(duracion);
+                                    const minutos = Math.round((duracion - horasEnteras) * 60);
+                                    if (minutos > 0 && minutos < 60) {
+                                      return ` (${horasEnteras}h ${minutos}m)`;
+                                    }
+                                    return ` (${horasEnteras}h)`;
+                                  })()}
+                                </>
+                              );
+                            })()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-foreground">{oferta.cantidad_invitados} invitados</span>
+                      </div>
+                      {(oferta.lugar_salon || oferta.salones?.nombre) && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-foreground font-medium">
+                            {oferta.lugar_salon || oferta.salones?.nombre}
+                          </span>
+                        </div>
+                      )}
+                      {oferta.paquetes?.nombre && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">Paquete: {oferta.paquetes.nombre}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    {oferta.paquetes?.nombre}
-                  </p>
-                </div>
-              </div>
 
-              {/* Botón de descarga PDF */}
-              <div className="mt-4 pt-4 border-t">
-                <button
-                  onClick={() => handleDescargarPDF(oferta.id, oferta.codigo_oferta)}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition text-sm font-medium"
-                >
-                  <Download className="w-4 h-4" />
-                  Descargar Factura Proforma (PDF)
-                </button>
-              </div>
-
-              {oferta.estado === 'pendiente' && (
-                <div className="mt-4 pt-4 border-t space-y-3">
-                  <Link
-                    to={`/ofertas/editar/${oferta.id}`}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition text-sm font-medium"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    Editar Oferta
-                  </Link>
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => handleAceptar(oferta)}
-                      disabled={aceptarMutation.isPending}
-                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium disabled:opacity-50"
-                    >
-                      {aceptarMutation.isPending ? 'Aceptando...' : 'Aceptar Oferta'}
-                    </button>
-                    <button 
-                      onClick={() => handleRechazar(oferta.id)}
-                      disabled={rechazarMutation.isPending}
-                      className="flex-1 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition text-sm font-medium disabled:opacity-50"
-                    >
-                      {rechazarMutation.isPending ? 'Rechazando...' : 'Rechazar'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {oferta.estado === 'aceptada' && !oferta.contratos?.length && (
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-sm text-green-800">
-                        ✅ Oferta aceptada. Configura el plan de pago para crear el contrato.
+                  <div className="lg:text-right">
+                    <div className="mb-2">
+                      <p className="text-sm text-muted-foreground">Total</p>
+                      <p className="text-xl font-bold text-foreground">
+                        ${parseFloat(oferta.total_final).toLocaleString()}
                       </p>
                     </div>
-                    <button
+                  </div>
+                </div>
+
+                {/* Acciones - Todos los botones juntos */}
+                <div className="mt-4 pt-4 border-t flex gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDescargarPDF(oferta.id, oferta.codigo_oferta)}
+                    className="whitespace-nowrap"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Descargar PDF
+                  </Button>
+
+                  {oferta.estado === 'pendiente' && (
+                    <>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleAceptar(oferta)}
+                        disabled={aceptarMutation.isPending}
+                        className="!border-green-500 !text-green-600 hover:!bg-green-50 dark:!border-green-500 dark:!text-green-400 dark:hover:!bg-green-950/20 whitespace-nowrap"
+                      >
+                        {aceptarMutation.isPending ? 'Aceptando...' : 'Aceptar Oferta'}
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleRechazar(oferta.id)}
+                        disabled={rechazarMutation.isPending}
+                        className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20 whitespace-nowrap"
+                      >
+                        {rechazarMutation.isPending ? 'Rechazando...' : 'Rechazar'}
+                      </Button>
+                    </>
+                  )}
+
+                  {oferta.estado === 'aceptada' && !oferta.contratos?.length && (
+                    <Button
+                      variant="outline"
                       onClick={() => handleCrearContrato(oferta)}
                       disabled={crearContratoMutation.isPending}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+                      className="whitespace-nowrap"
                     >
                       {crearContratoMutation.isPending ? 'Creando...' : 'Plan de Pago →'}
-                    </button>
-                  </div>
+                    </Button>
+                  )}
+
+                  {oferta.estado === 'aceptada' && oferta.contratos?.length > 0 && (
+                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Contrato ya creado
+                    </Badge>
+                  )}
                 </div>
-              )}
-              
-              {oferta.estado === 'aceptada' && oferta.contratos?.length > 0 && (
-                <div className="mt-4 pt-4 border-t">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg text-sm font-medium">
-                    <FileText className="w-4 h-4" />
-                    Contrato ya creado
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+              </CardContent>
+            </Card>
+            );
+          })}
           
           {/* Observador para scroll infinito */}
-          <div ref={observerTarget} className="h-10 flex items-center justify-center">
+          <div ref={observerTarget} className="h-10 flex items-center justify-center py-4">
             {isFetchingNextPage && (
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span className="text-sm">Cargando más ofertas...</span>
               </div>
@@ -542,7 +556,7 @@ function Ofertas() {
           
           {/* Indicador de fin */}
           {!hasNextPage && ofertas.length > 0 && (
-            <div className="text-center py-4 text-gray-500 text-sm">
+            <div className="text-center py-4 text-muted-foreground text-sm">
               Mostrando todas las {totalOfertas} oferta{totalOfertas !== 1 ? 's' : ''}
             </div>
           )}

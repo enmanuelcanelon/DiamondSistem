@@ -446,7 +446,7 @@ router.get('/dashboard', authenticate, requireGerente, async (req, res, next) =>
                 desbloqueadas: comisionesDesbloqueadas.totalComisionesDesbloqueadas,
                 pendientes: comisionesDesbloqueadas.totalComisiones - comisionesDesbloqueadas.totalComisionesDesbloqueadas,
                 por_mes: comisionesDesbloqueadas.comisionesPorMes
-              }
+          }
         };
       })
     );

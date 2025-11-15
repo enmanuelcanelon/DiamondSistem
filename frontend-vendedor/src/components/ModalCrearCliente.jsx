@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { X, Save, Loader2, UserPlus } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Textarea } from '../components/ui/textarea';
 
 function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
   const queryClient = useQueryClient();
@@ -70,178 +75,177 @@ function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-xl flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-background rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
+        {/* Header simple */}
+        <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <UserPlus className="w-6 h-6" />
+            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+              <UserPlus className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold">Nuevo Cliente</h2>
-              <p className="text-sm text-indigo-100">Completa la información del cliente</p>
+              <h2 className="text-xl font-semibold">Nuevo Cliente</h2>
+              <p className="text-sm text-muted-foreground">Completa la información del cliente</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition"
+            className="p-2 hover:bg-muted rounded-lg transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Información Personal */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Información Personal</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label htmlFor="nombre_completo" className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre Completo *
-                </label>
-                <input
-                  type="text"
-                  id="nombre_completo"
-                  name="nombre_completo"
-                  value={formData.nombre_completo}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  placeholder="Ej: Juan Pérez"
-                />
-              </div>
+        {/* Formulario con scroll solo si es necesario */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <form id="cliente-form" onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Información Personal */}
+            <div className="space-y-4">
+              <h3 className="text-base font-semibold">Información Personal</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label htmlFor="nombre_completo">
+                    Nombre Completo <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    id="nombre_completo"
+                    name="nombre_completo"
+                    value={formData.nombre_completo}
+                    onChange={handleChange}
+                    required
+                    placeholder="Ej: Juan Pérez"
+                    className="mt-2"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  placeholder="ejemplo@correo.com"
-                />
-              </div>
+                <div>
+                  <Label htmlFor="email">
+                    Email <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    placeholder="ejemplo@correo.com"
+                    className="mt-2"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-2">
-                  Teléfono *
-                </label>
-                <input
-                  type="tel"
-                  id="telefono"
-                  name="telefono"
-                  value={formData.telefono}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  placeholder="+1-234-567-8900"
-                />
-              </div>
+                <div>
+                  <Label htmlFor="telefono">
+                    Teléfono <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="tel"
+                    id="telefono"
+                    name="telefono"
+                    value={formData.telefono}
+                    onChange={handleChange}
+                    required
+                    placeholder="+1-234-567-8900"
+                    className="mt-2"
+                  />
+                </div>
 
-              <div className="md:col-span-2">
-                <label htmlFor="direccion" className="block text-sm font-medium text-gray-700 mb-2">
-                  Dirección
-                </label>
-                <textarea
-                  id="direccion"
-                  name="direccion"
-                  value={formData.direccion}
-                  onChange={handleChange}
-                  rows="2"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  placeholder="Calle, ciudad, código postal..."
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Información del Evento */}
-          <div className="pt-4 border-t">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Información del Evento</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="tipo_evento" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Evento
-                </label>
-                <select
-                  id="tipo_evento"
-                  name="tipo_evento"
-                  value={formData.tipo_evento}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                >
-                  <option value="">Seleccionar...</option>
-                  {tiposEvento.map((tipo) => (
-                    <option key={tipo} value={tipo}>{tipo}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="como_nos_conocio" className="block text-sm font-medium text-gray-700 mb-2">
-                  ¿Cómo nos conoció?
-                </label>
-                <select
-                  id="como_nos_conocio"
-                  name="como_nos_conocio"
-                  value={formData.como_nos_conocio}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                >
-                  <option value="">Seleccionar...</option>
-                  {fuentesConocimiento.map((fuente) => (
-                    <option key={fuente} value={fuente}>{fuente}</option>
-                  ))}
-                </select>
+                <div className="md:col-span-2">
+                  <Label htmlFor="direccion">Dirección</Label>
+                  <Textarea
+                    id="direccion"
+                    name="direccion"
+                    value={formData.direccion}
+                    onChange={handleChange}
+                    rows="2"
+                    placeholder="Calle, ciudad, código postal..."
+                    className="mt-2"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Error Message */}
-          {mutation.isError && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">
-                {mutation.error.response?.data?.message || 'Error al crear cliente'}
-              </p>
+            {/* Información del Evento */}
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-base font-semibold">Información del Evento</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="tipo_evento">Tipo de Evento</Label>
+                  <Select
+                    value={formData.tipo_evento}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_evento: value })}
+                  >
+                    <SelectTrigger id="tipo_evento" className="mt-2">
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposEvento.map((tipo) => (
+                        <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="como_nos_conocio">¿Cómo nos conoció?</Label>
+                  <Select
+                    value={formData.como_nos_conocio}
+                    onValueChange={(value) => setFormData({ ...formData, como_nos_conocio: value })}
+                  >
+                    <SelectTrigger id="como_nos_conocio" className="mt-2">
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fuentesConocimiento.map((fuente) => (
+                        <SelectItem key={fuente} value={fuente}>{fuente}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
-          )}
 
-          {/* Botones */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  Guardar Cliente
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={mutation.isPending}
-              className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
+            {/* Error Message */}
+            {mutation.isError && (
+              <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-red-800 dark:text-red-300 text-sm">
+                  {mutation.error.response?.data?.message || 'Error al crear cliente'}
+                </p>
+              </div>
+            )}
+          </form>
+        </div>
+
+        {/* Botones fijos en el footer */}
+        <div className="flex gap-3 p-6 border-t bg-muted/30">
+          <Button
+            type="submit"
+            form="cliente-form"
+            disabled={mutation.isPending}
+            className="flex-1"
+          >
+            {mutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Guardar Cliente
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={mutation.isPending}
+          >
+            Cancelar
+          </Button>
+        </div>
       </div>
     </div>
   );

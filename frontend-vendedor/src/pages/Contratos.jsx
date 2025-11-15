@@ -5,6 +5,13 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Progress } from '../components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Skeleton } from '../components/ui/skeleton';
 
 function Contratos() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -16,6 +23,8 @@ function Contratos() {
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
   const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
   const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || '');
+  const [filtroEstadoPago, setFiltroEstadoPago] = useState('');
+  const [filtroEstadoEvento, setFiltroEstadoEvento] = useState('');
 
   // Nombres de los meses
   const nombresMeses = [
@@ -76,7 +85,7 @@ function Contratos() {
     isLoading,
     isRefetching,
   } = useInfiniteQuery({
-    queryKey: ['contratos', searchTerm, clienteFiltro, mesSeleccionado, añoSeleccionado],
+    queryKey: ['contratos', searchTerm, clienteFiltro, mesSeleccionado, añoSeleccionado, filtroEstadoPago, filtroEstadoEvento],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         page: pageParam,
@@ -94,9 +103,57 @@ function Contratos() {
       return lastPage.hasNextPage ? lastPage.page + 1 : undefined;
     },
     initialPageParam: 1,
-  }); // Aplanar todos los contratos de todas las páginas
-  const contratos = data?.pages.flatMap(page => page.data) || [];
+  });   // Aplanar todos los contratos de todas las páginas
+  const contratosRaw = data?.pages.flatMap(page => page.data) || [];
   const totalContratos = data?.pages[0]?.total || 0;
+
+  // Función para determinar si un contrato está finalizado (fecha del evento ya pasó)
+  const esContratoFinalizado = (fechaEvento) => {
+    if (!fechaEvento) return false;
+    const fechaEventoDate = new Date(fechaEvento);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fechaEventoDate.setHours(0, 0, 0, 0);
+    return fechaEventoDate < hoy;
+  };
+
+  // Función para obtener el estado real del evento (activo o finalizado)
+  const obtenerEstadoEvento = (contrato) => {
+    if (esContratoFinalizado(contrato.fecha_evento)) {
+      return 'finalizado';
+    }
+    return contrato.estado === 'completado' ? 'completado' : 'activo';
+  };
+
+  // Función para obtener el estado de pago
+  const obtenerEstadoPago = (contrato) => {
+    const total = parseFloat(contrato.total_contrato || 0);
+    const pagado = parseFloat(contrato.total_pagado || 0);
+    const porcentajePago = total > 0 ? (pagado / total) * 100 : 0;
+    const esPagadoCompleto = porcentajePago >= 99.5 || parseFloat(contrato.saldo_pendiente || 0) < 1;
+    const tienePagoParcial = pagado > 0 && !esPagadoCompleto;
+    
+    if (esPagadoCompleto) return 'pagado_completo';
+    if (tienePagoParcial) return 'pago_parcial';
+    return 'pago_pendiente';
+  };
+
+  // Filtrar contratos según los filtros de estado
+  const contratos = contratosRaw.filter((contrato) => {
+    // Filtro por estado de pago
+    if (filtroEstadoPago) {
+      const estadoPago = obtenerEstadoPago(contrato);
+      if (estadoPago !== filtroEstadoPago) return false;
+    }
+
+    // Filtro por estado del evento
+    if (filtroEstadoEvento) {
+      const estadoEvento = obtenerEstadoEvento(contrato);
+      if (estadoEvento !== filtroEstadoEvento) return false;
+    }
+
+    return true;
+  });
 
   // Obtener nombre del cliente para mostrar en el filtro (del primer contrato que coincida)
   const clienteFiltrado = contratos.find(c => c.cliente_id === parseInt(clienteFiltro))?.clientes;
@@ -105,6 +162,25 @@ function Contratos() {
   const limpiarFiltroCliente = () => {
     setClienteFiltro('');
     navigate('/contratos');
+  };
+
+  // Mapeo de valores a etiquetas para los filtros
+  const getEstadoPagoLabel = (value) => {
+    const map = {
+      '': 'Todos',
+      'pagado_completo': 'Pagado Completo',
+      'pago_parcial': 'Pago Parcial',
+    };
+    return map[value] || value;
+  };
+
+  const getEstadoEventoLabel = (value) => {
+    const map = {
+      '': 'Todos',
+      'activo': 'Activo',
+      'finalizado': 'Finalizado',
+    };
+    return map[value] || value;
   };
 
   // Detección de scroll para cargar más
@@ -150,333 +226,408 @@ function Contratos() {
     }
   };
 
-  const getEstadoPagoColor = (estadoPago) => {
-    switch (estadoPago) {
-      case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'parcial':
-        return 'bg-blue-100 text-blue-800';
-      case 'pagado':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getEstadoContratoColor = (estado) => {
-    switch (estado) {
-      case 'activo':
-        return 'bg-green-100 text-green-800';
-      case 'completado':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelado':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Contratos</h1>
-        <p className="text-gray-600 mt-1">Gestiona tus contratos y pagos</p>
+        <h1 className="text-3xl font-bold tracking-tight">Contratos</h1>
+        <p className="text-muted-foreground mt-1">Gestiona tus contratos y pagos</p>
       </div>
 
       {/* Banner de filtro por cliente */}
       {clienteFiltro && clienteFiltrado && (
-        <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-              <span className="text-indigo-600 font-semibold text-sm">
-                {clienteFiltrado.nombre_completo.charAt(0)}
-              </span>
+        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                  <span className="text-blue-700 dark:text-blue-300 font-semibold text-sm">
+                    {clienteFiltrado.nombre_completo.charAt(0)}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Filtrando contratos de: <strong>{clienteFiltrado.nombre_completo}</strong>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Mostrando {contratos.length} contrato{contratos.length !== 1 ? 's' : ''}
+                    {(filtroEstadoPago || filtroEstadoEvento) && ` (filtrados)`}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={limpiarFiltroCliente}
+                className="gap-2"
+              >
+                <X className="w-4 h-4" />
+                Limpiar
+              </Button>
             </div>
-            <div>
-              <p className="text-sm font-medium text-indigo-900">
-                Filtrando contratos de: <strong>{clienteFiltrado.nombre_completo}</strong>
-              </p>
-              <p className="text-xs text-indigo-700">
-                Mostrando {contratos.length} de {totalContratos} contrato{totalContratos !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={limpiarFiltroCliente}
-            className="flex items-center gap-2 px-3 py-2 bg-white border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-100 transition text-sm font-medium"
-          >
-            <X className="w-4 h-4" />
-            Limpiar filtro
-          </button>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Búsqueda y filtros */}
-      <div className="bg-white rounded-lg shadow-sm border p-4">
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 relative min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
                 type="text"
                 placeholder="Buscar por código o cliente..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                className="pl-10"
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Estado de pago:</span>
+              <Select value={filtroEstadoPago} onValueChange={setFiltroEstadoPago}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Todos">
+                    {getEstadoPagoLabel(filtroEstadoPago)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="pagado_completo">Pagado Completo</SelectItem>
+                  <SelectItem value="pago_parcial">Pago Parcial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Estado del evento:</span>
+              <Select value={filtroEstadoEvento} onValueChange={setFiltroEstadoEvento}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Todos">
+                    {getEstadoEventoLabel(filtroEstadoEvento)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="finalizado">Finalizado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
           {/* Filtro por Mes y Año */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-700 font-medium">Filtrar por mes:</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => cambiarMes('anterior')}
+              title="Mes anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
             
-            <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-indigo-200 p-2">
-              <button
-                onClick={() => cambiarMes('anterior')}
-                className="p-1 hover:bg-indigo-50 rounded transition"
-                title="Mes anterior"
-              >
-                <ChevronLeft className="w-5 h-5 text-indigo-600" />
-              </button>
-              
-              <div className="flex items-center gap-2 px-3">
-                <select
-                  value={mesSeleccionado}
-                  onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
-                >
-                  {nombresMeses.map((mes, index) => (
-                    <option key={index} value={index + 1}>{mes}</option>
-                  ))}
-                </select>
-                <select
-                  value={añoSeleccionado}
-                  onChange={(e) => setAñoSeleccionado(parseInt(e.target.value))}
-                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
-                >
-                  {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
-                    <option key={año} value={año}>{año}</option>
-                  ))}
-                </select>
-              </div>
+            <Select
+              value={mesSeleccionado.toString()}
+              onValueChange={(value) => setMesSeleccionado(parseInt(value))}
+            >
+              <SelectTrigger className="w-auto min-w-[180px] [&>span]:line-clamp-none [&>span]:whitespace-nowrap">
+                <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                <SelectValue placeholder="Seleccionar mes">
+                  {nombresMeses[mesSeleccionado - 1]}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {nombresMeses.map((mes, index) => (
+                  <SelectItem key={index} value={(index + 1).toString()}>
+                    {mes}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select
+              value={añoSeleccionado.toString()}
+              onValueChange={(value) => setAñoSeleccionado(parseInt(value))}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                  <SelectItem key={año} value={año.toString()}>
+                    {año}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <button
-                onClick={() => cambiarMes('siguiente')}
-                className="p-1 hover:bg-indigo-50 rounded transition"
-                title="Mes siguiente"
-              >
-                <ChevronRight className="w-5 h-5 text-indigo-600" />
-              </button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => cambiarMes('siguiente')}
+              title="Mes siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
 
-              {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
-                <button
-                  onClick={resetearMes}
-                  className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded transition"
-                  title="Volver al mes actual"
-                >
-                  Hoy
-                </button>
-              )}
-            </div>
+            {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetearMes}
+                title="Volver al mes actual"
+                className="text-xs ml-1"
+              >
+                Hoy
+              </Button>
+            )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Lista de contratos */}
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl p-6 shadow-sm border animate-pulse">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-6 bg-gray-200 rounded w-32"></div>
-                <div className="h-6 bg-gray-200 rounded w-24"></div>
-              </div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            </div>
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : contratos.length === 0 ? (
-        <div className="bg-white rounded-xl p-12 text-center shadow-sm border">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileCheck className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {searchTerm ? 'No se encontraron contratos' : 'No hay contratos'}
-          </h3>
-          <p className="text-gray-600 mb-6">
-            {searchTerm ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
-          </p>
-          {!searchTerm && (
-            <Link
-              to="/ofertas"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-            >
-              Ver Ofertas
-            </Link>
-          )}
-        </div>
+        <Card>
+          <CardContent className="p-12 text-center">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileCheck className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchTerm ? 'No se encontraron contratos' : 'No hay contratos'}
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              {searchTerm ? 'Intenta con otros filtros' : 'Los contratos se generan desde las ofertas aceptadas'}
+            </p>
+            {!searchTerm && (
+              <Button asChild>
+                <Link to="/ofertas">
+                  Ver Ofertas
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {contratos.map((contrato) => (
-            <div
-              key={contrato.id}
-              className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition"
-            >
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">{getEventoEmoji(contrato)}</span>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {generarNombreEvento(contrato)}
-                      </h3>
-                      <p className="text-xs text-gray-500 font-mono">
+          {contratos.map((contrato) => {
+            // Calcular porcentaje de pago y determinar estado visual
+            const total = parseFloat(contrato.total_contrato || 0);
+            const pagado = parseFloat(contrato.total_pagado || 0);
+            const porcentajePago = total > 0 ? (pagado / total) * 100 : 0;
+            
+            // Determinar estado de pago visual
+            const esPagadoCompleto = porcentajePago >= 99.5 || parseFloat(contrato.saldo_pendiente || 0) < 1;
+            const tienePagoParcial = pagado > 0 && !esPagadoCompleto;
+            const esPendiente = pagado === 0;
+            
+            // Obtener estado real del evento
+            const estadoEventoReal = obtenerEstadoEvento(contrato);
+            
+            // Color del borde izquierdo según estado
+            const colorBorde = esPagadoCompleto 
+              ? 'border-l-green-500' 
+              : tienePagoParcial 
+              ? 'border-l-blue-500'
+              : 'border-l-orange-500';
+            
+            // Color de la barra de progreso
+            const colorProgreso = esPagadoCompleto 
+              ? 'bg-green-500' 
+              : tienePagoParcial 
+              ? 'bg-blue-500'
+              : 'bg-orange-500';
+            
+            // Determinar estilo del badge según estado del evento
+            const getBadgeStyle = (estado) => {
+              if (estado === 'finalizado') {
+                return 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-300 dark:border-gray-800';
+              }
+              if (estado === 'activo') {
+                return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800';
+              }
+              if (estado === 'completado') {
+                return 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-300 dark:border-gray-800';
+              }
+              return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800';
+            };
+            
+            const getEstadoLabel = (estado) => {
+              if (estado === 'finalizado') return 'Finalizado';
+              if (estado === 'activo') return 'Activo';
+              if (estado === 'completado') return 'Completado';
+              return estado.charAt(0).toUpperCase() + estado.slice(1);
+            };
+            
+            return (
+            <Card key={contrato.id} className={`hover:shadow-md transition-shadow border-l-4 ${colorBorde}`}>
+              <CardContent className="pt-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-base font-semibold text-foreground">
                         {contrato.codigo_contrato}
+                      </h3>
+                      <Badge 
+                        variant="outline"
+                        className={`text-xs ${getBadgeStyle(estadoEventoReal)}`}
+                      >
+                        {getEstadoLabel(estadoEventoReal)}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Cliente: <span className="font-medium text-foreground">{contrato.clientes?.nombre_completo || 'Sin cliente'}</span>
+                      {contrato.homenajeado && (
+                        <span className="ml-2 text-foreground">
+                          {contrato.homenajeado}
+                        </span>
+                      )}
+                    </p>
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
+                      {contrato.fecha_evento && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      )}
+                      {contrato.hora_inicio && contrato.hora_fin && (
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span className="font-medium text-foreground">
+                            {(() => {
+                              const horasAdicionales = obtenerHorasAdicionales(contrato.contratos_servicios);
+                              const horaFinConExtras = calcularHoraFinConExtras(contrato.hora_fin, horasAdicionales);
+                              const duracion = calcularDuracion(contrato.hora_inicio, horaFinConExtras);
+                              
+                              return (
+                                <>
+                                  {formatearHora(contrato.hora_inicio)} - {formatearHora(horaFinConExtras)}
+                                  {duracion > 0 && (() => {
+                                    const horasEnteras = Math.floor(duracion);
+                                    const minutos = Math.round((duracion - horasEnteras) * 60);
+                                    if (minutos > 0 && minutos < 60) {
+                                      return ` (${horasEnteras}h ${minutos}m)`;
+                                    }
+                                    return ` (${horasEnteras}h)`;
+                                  })()}
+                                </>
+                              );
+                            })()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-foreground">{contrato.cantidad_invitados || 0} invitados</span>
+                      </div>
+                      {(contrato.lugar_salon || contrato.salones?.nombre) && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-foreground font-medium">
+                            {contrato.lugar_salon || contrato.salones?.nombre || 'Sin salón'}
+                          </span>
+                        </div>
+                      )}
+                      {contrato.paquetes?.nombre && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">Paquete: {contrato.paquetes.nombre}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="lg:text-right">
+                    <div className="mb-2">
+                      <p className="text-sm text-muted-foreground">Total</p>
+                      <p className="text-xl font-bold text-foreground">
+                        ${total.toLocaleString()}
                       </p>
                     </div>
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${getEstadoContratoColor(contrato.estado)}`}>
-                      {contrato.estado.charAt(0).toUpperCase() + contrato.estado.slice(1)}
-                    </span>
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${getEstadoPagoColor(contrato.estado_pago)}`}>
-                      {contrato.estado_pago === 'pagado' ? 'Pagado' : contrato.estado_pago === 'parcial' ? 'Pago Parcial' : 'Pago Pendiente'}
-                    </span>
-                  </div>
-
-                  <p className="text-gray-600 mb-1 ml-11">
-                    Cliente: <span className="font-medium">{contrato.clientes?.nombre_completo || 'Sin cliente'}</span>
-                    {contrato.homenajeado && (
-                      <span className="ml-2 text-purple-600 font-medium">
-                        🎉 {contrato.homenajeado}
-                      </span>
-                    )}
-                  </p>
-
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      {contrato.fecha_evento ? new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      }) : 'Fecha no disponible'}
-                    </div>
-                    {contrato.hora_inicio && contrato.hora_fin && (
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span className="font-medium">
-                        {(() => {
-                            const horasAdicionales = obtenerHorasAdicionales(contrato.contratos_servicios);
-                            const horaFinConExtras = calcularHoraFinConExtras(contrato.hora_fin, horasAdicionales);
-                            const duracion = calcularDuracion(contrato.hora_inicio, horaFinConExtras);
-                            
-                            return (
-                              <>
-                                {formatearHora(contrato.hora_inicio)} / {formatearHora(horaFinConExtras)}
-                                {duracion > 0 && (() => {
-                                  const horasEnteras = Math.floor(duracion);
-                                  const minutos = Math.round((duracion - horasEnteras) * 60);
-                                  if (minutos > 0 && minutos < 60) {
-                                    return ` • ${horasEnteras}h ${minutos}m`;
-                                  }
-                                  return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
-                                })()}
-                              </>
-                            );
-                        })()}
+                    <div className="text-xs space-y-0.5">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Pagado:</span>
+                        <span className={`font-medium ${esPagadoCompleto ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                          ${pagado.toLocaleString()}
                         </span>
                       </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{contrato.cantidad_invitados || 0} invitados</span>
-                    </div>
-                    {(contrato.lugar_salon || contrato.salones?.nombre) ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-indigo-600 font-medium">
-                          📍 {contrato.lugar_salon || contrato.salones?.nombre || 'Sin salón'}
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Pendiente:</span>
+                        <span className="font-medium text-orange-600 dark:text-orange-400">
+                          ${parseFloat(contrato.saldo_pendiente || 0).toLocaleString()}
                         </span>
                       </div>
-                    ) : null}
-                  </div>
-                  {contrato.paquetes?.nombre && (
-                    <p className="text-xs text-gray-500 mt-2 ml-11">
-                      📦 Paquete: {contrato.paquetes.nombre}
-                    </p>
-                  )}
-                </div>
-
-                <div className="lg:text-right space-y-2">
-                  <div>
-                    <p className="text-sm text-gray-600">Total Contrato</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${parseFloat(contrato.total_contrato || 0).toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-1 text-sm">
-                    <div className="flex justify-between gap-4">
-                      <span className="text-gray-600">Pagado:</span>
-                      <span className="font-medium text-green-600">
-                        ${parseFloat(contrato.total_pagado || 0).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-gray-600">Pendiente:</span>
-                      <span className="font-medium text-orange-600">
-                        ${parseFloat(contrato.saldo_pendiente || 0).toLocaleString()}
-                      </span>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Barra de progreso de pago */}
-              <div className="mt-4">
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
-                  <span>Progreso de Pago</span>
-                  <span>
-                    {contrato.total_contrato > 0 
-                      ? ((parseFloat(contrato.total_pagado || 0) / parseFloat(contrato.total_contrato)) * 100).toFixed(0)
-                      : 0
-                    }%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full transition-all"
-                    style={{ 
-                      width: `${contrato.total_contrato > 0 
-                        ? (parseFloat(contrato.total_pagado || 0) / parseFloat(contrato.total_contrato)) * 100
-                        : 0
-                      }%` 
-                    }}
-                  ></div>
-                </div>
-              </div>
+                {/* Barra de progreso de pago */}
+                {esPagadoCompleto ? (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-medium text-green-700 dark:text-green-300">Pago Completo</span>
+                      <span className="text-xs font-medium text-green-700 dark:text-green-300">100%</span>
+                    </div>
+                    <div className="w-full bg-green-200 dark:bg-green-900 rounded-full h-2">
+                      <div 
+                        className="h-2 rounded-full transition-all bg-green-500"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                      <span>Progreso de Pago</span>
+                      <span className="font-medium text-foreground">
+                        {porcentajePago.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all ${colorProgreso}`}
+                        style={{ width: `${porcentajePago}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
-              {/* Acciones */}
-              <div className="mt-4 pt-4 border-t space-y-2">
-                <Link
-                  to={`/contratos/${contrato.id}`}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
-                >
-                  <Eye className="w-4 h-4" />
-                  Ver Detalles
-                </Link>
-                <button
-                  onClick={() => handleDescargarContrato(contrato.id, contrato.codigo_contrato)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition text-xs font-medium"
-                >
-                  <Download className="w-3 h-3" />
-                  Descargar Contrato PDF
-                </button>
-              </div>
-            </div>
-          ))}
+                {/* Acciones */}
+                <div className="mt-4 pt-4 border-t flex gap-2 flex-wrap">
+                  <Button asChild variant="outline" className="whitespace-nowrap">
+                    <Link to={`/contratos/${contrato.id}`} className="flex items-center gap-2">
+                      <Eye className="w-4 h-4" />
+                      <span>Ver Detalles</span>
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDescargarContrato(contrato.id, contrato.codigo_contrato)}
+                    className="whitespace-nowrap"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    PDF
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            );
+          })}
           
           {/* Observador para scroll infinito */}
           <div ref={observerTarget} className="h-10 flex items-center justify-center">
@@ -490,8 +641,11 @@ function Contratos() {
           
           {/* Indicador de fin */}
           {!hasNextPage && contratos.length > 0 && (
-            <div className="text-center py-4 text-gray-500 text-sm">
-              Mostrando todos los {totalContratos} contrato{totalContratos !== 1 ? 's' : ''}
+            <div className="text-center py-4 text-muted-foreground text-sm">
+              {filtroEstadoPago || filtroEstadoEvento 
+                ? `Mostrando ${contratos.length} contrato${contratos.length !== 1 ? 's' : ''} (filtrados)`
+                : `Mostrando todos los ${contratos.length} contrato${contratos.length !== 1 ? 's' : ''}`
+              }
             </div>
           )}
         </div>

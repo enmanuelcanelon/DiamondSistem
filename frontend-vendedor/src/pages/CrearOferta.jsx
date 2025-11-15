@@ -5,6 +5,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import ModalCrearCliente from '../components/ModalCrearCliente';
 import { calcularDuracion, formatearHora } from '../utils/formatters';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Label } from '../components/ui/label';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Separator } from '../components/ui/separator';
+import { Badge } from '../components/ui/badge';
 
 function CrearOferta() {
   const navigate = useNavigate();
@@ -689,6 +696,74 @@ function CrearOferta() {
     }
     
     return nombreServicio;
+  };
+
+  // Función helper para determinar la categoría de un servicio
+  const obtenerCategoriaServicio = (nombreServicio, servicioData) => {
+    if (!nombreServicio) return 'Otros';
+    
+    // Si el servicio tiene categoría definida, usarla
+    if (servicioData?.categoria) {
+      return servicioData.categoria;
+    }
+    
+    const nombre = nombreServicio.toLowerCase();
+    
+    // Entretenimiento
+    if (nombre.includes('dj') || nombre.includes('hora loca') || nombre.includes('animador') || 
+        nombre.includes('fotobooth') || nombre.includes('photobooth')) {
+      return 'Entretenimiento';
+    }
+    
+    // Bar
+    if (nombre.includes('premium') || nombre.includes('basic') || nombre.includes('sidra') || 
+        nombre.includes('champaña') || nombre.includes('champagne') || nombre.includes('bar')) {
+      return 'Bar';
+    }
+    
+    // Iluminación
+    if (nombre.includes('luces') || nombre.includes('mapping') || nombre.includes('lumínico') || 
+        nombre.includes('número lumínico') || nombre.includes('numero luminico')) {
+      return 'Iluminación';
+    }
+    
+    // Audio/Video
+    if (nombre.includes('pantalla') || nombre.includes('led') || nombre.includes('tv') || 
+        nombre.includes('foto y video') || nombre.includes('video') || nombre.includes('foto')) {
+      return 'Audio/Video';
+    }
+    
+    // Decoración
+    if (nombre.includes('lounge') || nombre.includes('decoración') || nombre.includes('decoracion') || 
+        nombre.includes('coctel') || nombre.includes('cóctel')) {
+      return 'Decoración';
+    }
+    
+    // Comida
+    if (nombre.includes('comida') || nombre.includes('quesos') || nombre.includes('cake') || 
+        nombre.includes('utensilios') || nombre.includes('mesa de quesos')) {
+      return 'Comida';
+    }
+    
+    // Transporte
+    if (nombre.includes('limosina') || nombre.includes('transporte')) {
+      return 'Transporte';
+    }
+    
+    // Personal
+    if (nombre.includes('coordinador') || nombre.includes('personal de servicio') || 
+        nombre.includes('bartender') || nombre.includes('mesero')) {
+      return 'Personal';
+    }
+    
+    // Extras
+    if (nombre.includes('hora extra') || nombre.includes('máquina de humo') || 
+        nombre.includes('maquina de humo') || nombre.includes('chispas') || 
+        nombre.includes('humo') || nombre.includes('extra')) {
+      return 'Extras';
+    }
+    
+    return 'Otros';
   };
 
   // Función helper para obtener servicios del paquete realmente seleccionados
@@ -1423,133 +1498,152 @@ function CrearOferta() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to="/ofertas" className="p-2 hover:bg-gray-100 rounded-lg transition">
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/ofertas">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nueva Oferta</h1>
-          <p className="text-gray-600 mt-1">Crea una propuesta comercial para tu cliente</p>
+          <h1 className="text-3xl font-bold tracking-tight">Nueva Oferta</h1>
+          <p className="text-muted-foreground mt-1">Crea una propuesta comercial para tu cliente</p>
         </div>
       </div>
 
       {/* Indicador de Progreso */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
+      <Card>
+        <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           {[1, 2, 3, 4, 5].map((paso, index) => (
             <div key={paso} className="flex items-center flex-1">
               <div className="flex flex-col items-center flex-1">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => irAPaso(paso)}
-                  className={`relative flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
+                  className={`relative h-10 w-10 rounded-full border-2 transition-all ${
                     paso === pasoActual
-                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      ? 'bg-primary border-primary text-primary-foreground'
                       : pasoCompleto(paso)
-                      ? 'bg-green-100 border-green-500 text-green-700'
+                      ? 'bg-green-50 border-green-500 text-green-700 dark:bg-green-950 dark:border-green-500 dark:text-green-400'
                       : paso < pasoActual
-                      ? 'bg-gray-100 border-gray-300 text-gray-500'
-                      : 'bg-white border-gray-300 text-gray-400'
+                      ? 'bg-muted border-muted-foreground/30 text-muted-foreground'
+                      : 'bg-background border-border text-muted-foreground'
                   }`}
                   disabled={paso > pasoActual && !pasoCompleto(paso - 1)}
                 >
                   {pasoCompleto(paso) && paso !== pasoActual ? (
-                    <CheckCircle2 className="w-6 h-6" />
+                    <CheckCircle2 className="h-5 w-5" />
                   ) : (
-                    <span className="font-semibold">{paso}</span>
+                    <span className="font-semibold text-sm">{paso}</span>
                   )}
-                </button>
+                </Button>
                 <span className={`mt-2 text-xs font-medium text-center ${
-                  paso === pasoActual ? 'text-indigo-600' : 'text-gray-500'
+                  paso === pasoActual ? 'text-primary' : 'text-muted-foreground'
                 }`}>
                   {nombresPasos[paso - 1]}
                 </span>
               </div>
               {index < 4 && (
                 <div className={`flex-1 h-0.5 mx-2 ${
-                  pasoCompleto(paso) ? 'bg-green-500' : 'bg-gray-200'
+                  pasoCompleto(paso) ? 'bg-green-500' : 'bg-border'
                 }`} />
               )}
             </div>
           ))}
         </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <form onSubmit={(e) => { e.preventDefault(); handleSubmitFinal(); }} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Formulario */}
         <div className="lg:col-span-2 space-y-6">
           {/* PASO 1: Información del Cliente */}
           {pasoActual === 1 && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Información del Cliente</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cliente *
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    name="cliente_id"
-                    value={formData.cliente_id}
-                    onChange={handleChange}
-                    required
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  >
-                    <option value="">Seleccionar cliente...</option>
-                    {clientes?.map((cliente) => (
-                      <option key={cliente.id} value={cliente.id}>
-                        {cliente.nombre_completo} - {cliente.email}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setModalClienteOpen(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
-                    title="Crear nuevo cliente"
-                  >
-                    <UserPlus className="w-5 h-5" />
-                    Nuevo Cliente
-                  </button>
+            <Card>
+              <CardHeader className="px-6 pt-6 pb-4">
+                <CardTitle>Información del Cliente</CardTitle>
+              </CardHeader>
+              <CardContent className="px-6 pb-6">
+                <div className="space-y-2">
+                  <Label htmlFor="cliente_id">
+                    Cliente <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={formData.cliente_id || ""}
+                      onValueChange={(value) => {
+                        setFormData(prev => ({ ...prev, cliente_id: value }));
+                      }}
+                    >
+                      <SelectTrigger id="cliente_id" className="flex-1 min-w-[300px] [&>span]:truncate">
+                        <SelectValue placeholder="Seleccionar cliente...">
+                          {formData.cliente_id && clientes?.find(c => c.id.toString() === formData.cliente_id.toString()) 
+                            ? `${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).nombre_completo} - ${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).email}`
+                            : null
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="min-w-[400px]">
+                        {clientes?.map((cliente) => (
+                          <SelectItem key={cliente.id} value={cliente.id.toString()}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{cliente.nombre_completo}</span>
+                              <span className="text-xs text-muted-foreground">{cliente.email}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      onClick={() => setModalClienteOpen(true)}
+                      className="whitespace-nowrap"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Nuevo Cliente
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* PASO 2: Detalles del Evento */}
           {pasoActual === 2 && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Detalles del Evento</h2>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Homenajeado/a
-              </label>
-              <input
-                type="text"
-                name="homenajeado"
-                value={formData.homenajeado}
-                onChange={handleChange}
-                placeholder="Ej: María López, Juan Pérez"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Nombre de la persona homenajeada en el evento (opcional)
-              </p>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Detalles del Evento</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="homenajeado">Homenajeado/a</Label>
+                <Input
+                  id="homenajeado"
+                  type="text"
+                  name="homenajeado"
+                  value={formData.homenajeado}
+                  onChange={handleChange}
+                  placeholder="Ej: María López, Juan Pérez"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Nombre de la persona homenajeada en el evento (opcional)
+                </p>
+              </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Lugar del Evento - PRIMERO */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lugar del Evento *
-                </label>
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="salon_id">
+                  Lugar del Evento <span className="text-destructive">*</span>
+                </Label>
                 <select
+                  id="salon_id"
                   name="salon_id"
                   value={formData.salon_id}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="">Seleccione un lugar</option>
                   {salones?.map((salon) => (
@@ -1560,108 +1654,85 @@ function CrearOferta() {
                   <option value="otro">Otro (Sede Externa - Sin cargo de salón)</option>
                 </select>
                 {salonSeleccionado && formData.salon_id !== 'otro' && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ℹ️ Capacidad máxima: {salonSeleccionado.capacidad_maxima} invitados
+                  <p className="text-xs text-muted-foreground">
+                    Capacidad máxima: {salonSeleccionado.capacidad_maxima} invitados
                   </p>
                 )}
                 {formData.salon_id === 'otro' && (
-                  <div className="mt-3">
-                    <input
+                  <div className="space-y-2">
+                    <Input
                       type="text"
                       value={lugarPersonalizado}
                       onChange={(e) => setLugarPersonalizado(e.target.value)}
                       placeholder="Especifica el lugar (ej: Universidad de Miami, Auditorio XYZ)"
                       required
-                      className="w-full px-4 py-2 border border-amber-300 bg-amber-50 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                       maxLength={255}
+                      className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800"
                     />
-                    <p className="text-xs text-amber-700 mt-1 flex items-center gap-1">
-                      <span className="font-semibold">💡 Importante:</span> Para sedes externas NO se cobra el salón. Solo se cobran los servicios.
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      💡 Importante: Para sedes externas NO se cobra el salón. Solo se cobran los servicios.
                     </p>
                   </div>
                 )}
               </div>
 
               {/* Fecha del Evento - SEGUNDO */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha del Evento *
-                </label>
-                <div className="relative">
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="fecha_evento">
+                  Fecha del Evento <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="fecha_evento"
                   type="date"
                   name="fecha_evento"
                   value={formData.fecha_evento}
                   onChange={handleChange}
                   min={obtenerFechaMinima()}
                   required
-                    disabled={!formData.salon_id || formData.salon_id === ''}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
-                      errorFecha ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '') ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                    placeholder="Selecciona una fecha"
-                  />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                </div>
+                  disabled={!formData.salon_id || formData.salon_id === ''}
+                  className={errorFecha ? 'border-destructive' : ''}
+                />
                 {!formData.salon_id || formData.salon_id === '' ? (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     ⚠️ Primero selecciona un lugar para el evento
                   </p>
                 ) : errorFecha ? (
-                  <p className="mt-2 text-sm text-red-600 flex items-start gap-2 bg-red-50 border border-red-200 rounded p-2">
-                    <span className="text-red-500 font-bold text-base">⚠</span>
+                  <p className="text-sm text-destructive flex items-start gap-2">
+                    <span>⚠</span>
                     <span>{errorFecha}</span>
                   </p>
                 ) : formData.fecha_evento && (
-                  <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    Fecha seleccionada correctamente
+                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                    ✓ Fecha seleccionada correctamente
                   </p>
                 )}
               </div>
 
               {/* Cantidad de Invitados */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cantidad de Invitados *
-                </label>
-                <div className="relative">
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="cantidad_invitados">
+                  Cantidad de Invitados <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="cantidad_invitados"
                   type="number"
                   name="cantidad_invitados"
                   value={formData.cantidad_invitados}
                   onChange={handleChange}
                   min="1"
-                    step="1"
+                  step="1"
                   required
-                    placeholder="Ej: 50"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
-                      excedeCapacidad ? 'border-amber-400 bg-amber-50' : 'border-gray-300 hover:border-gray-400'
-                  }`}
+                  placeholder="Ej: 50"
+                  className={excedeCapacidad ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20' : ''}
                 />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                </div>
                 {excedeCapacidad && salonSeleccionado ? (
-                  <p className="mt-2 text-sm text-amber-600 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded p-2">
-                    <span className="text-amber-500 font-bold text-base">⚠</span>
+                  <p className="text-sm text-amber-600 dark:text-amber-400 flex items-start gap-2">
+                    <span>⚠</span>
                     <span>Excede la capacidad máxima del salón <strong>{salonSeleccionado.nombre}</strong> ({salonSeleccionado.capacidad_maxima} invitados). Puedes continuar, pero se te pedirá confirmación.</span>
                   </p>
                 ) : formData.cantidad_invitados && parseInt(formData.cantidad_invitados) > 0 && (
-                  <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    {parseInt(formData.cantidad_invitados).toLocaleString()} {parseInt(formData.cantidad_invitados) === 1 ? 'invitado' : 'invitados'}
+                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                    ✓ {parseInt(formData.cantidad_invitados).toLocaleString()} {parseInt(formData.cantidad_invitados) === 1 ? 'invitado' : 'invitados'}
                   </p>
                 )}
               </div>
@@ -1902,14 +1973,18 @@ function CrearOferta() {
 
 
             </div>
-          </div>
+            </CardContent>
+          </Card>
           )}
 
           {/* PASO 3: Paquete y Temporada */}
           {pasoActual === 3 && (
           <>
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Paquete y Temporada</h2>
+          <Card>
+            <CardHeader>
+              <CardTitle>Paquete y Temporada</CardTitle>
+            </CardHeader>
+            <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2064,15 +2139,17 @@ function CrearOferta() {
                 )}
               </div>
             </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Servicios Incluidos en el Paquete */}
           {paqueteSeleccionado && paqueteSeleccionado.paquetes_servicios?.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Servicios Incluidos en {paqueteSeleccionado.nombre}
-              </h2>
-              <div className="space-y-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Servicios Incluidos en {paqueteSeleccionado.nombre}</CardTitle>
+              </CardHeader>
+              <CardContent>
+              <div className="space-y-6">
                 {(() => {
                   // Agrupar servicios excluyentes
                   const serviciosProcesados = new Set();
@@ -2180,27 +2257,77 @@ function CrearOferta() {
                     }
                   }
                   
-                  // Debug final (comentado para producción)
-                  // console.log('✅ Grupos excluyentes encontrados:', gruposExcluyentes.length);
-                  // console.log('✅ Servicios normales:', serviciosNormales.length);
-                  // gruposExcluyentes.forEach((grupo, idx) => {
-                  //   console.log(`Grupo ${idx}:`, grupo.map(g => g.servicios?.nombre));
-                  // });
-                  
+                  // Agrupar servicios normales por categoría
+                  const serviciosPorCategoria = serviciosNormales.reduce((acc, ps) => {
+                    const categoria = obtenerCategoriaServicio(ps.servicios?.nombre, ps.servicios);
+                    if (!acc[categoria]) {
+                      acc[categoria] = [];
+                    }
+                    acc[categoria].push(ps);
+                    return acc;
+                  }, {});
+
+                  // Orden de categorías (prioridad visual)
+                  const ordenCategorias = [
+                    'Entretenimiento',
+                    'Bar',
+                    'Iluminación',
+                    'Audio/Video',
+                    'Decoración',
+                    'Comida',
+                    'Transporte',
+                    'Personal',
+                    'Extras',
+                    'Otros'
+                  ];
+
+                  // Ordenar categorías según el orden definido
+                  const categoriasOrdenadas = Object.keys(serviciosPorCategoria).sort((a, b) => {
+                    const indexA = ordenCategorias.indexOf(a);
+                    const indexB = ordenCategorias.indexOf(b);
+                    if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+                    if (indexA === -1) return 1;
+                    if (indexB === -1) return -1;
+                    return indexA - indexB;
+                  });
+
                   return (
                     <>
-                      {/* Servicios normales (no excluyentes) */}
-                      {serviciosNormales.map((ps) => (
-                        <div key={ps.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="font-medium text-gray-900">{obtenerNombreServicio(ps.servicios?.nombre)}</span>
-                          </div>
-                          <span className="text-sm text-green-700 font-medium">
-                            ✓ Incluido
-                          </span>
+                      {/* Servicios normales (no excluyentes) - Agrupados por categoría */}
+                      {serviciosNormales.length > 0 && (
+                        <div className="space-y-6">
+                          {categoriasOrdenadas.map((categoria) => (
+                            <div key={categoria} className="space-y-3">
+                              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 pb-2 border-b border-border">
+                                <div className="w-1 h-5 bg-primary rounded-full"></div>
+                                {categoria}
+                              </h3>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {serviciosPorCategoria[categoria].map((ps) => (
+                                  <div 
+                                    key={ps.id} 
+                                    className="group relative flex items-center gap-3 p-3 rounded-lg border border-green-200 bg-green-50/50 hover:bg-green-50 hover:border-green-300 transition-all dark:bg-green-950/20 dark:border-green-800"
+                                  >
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                                      <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-foreground truncate">
+                                        {obtenerNombreServicio(ps.servicios?.nombre)}
+                                      </p>
+                                      {ps.servicios?.descripcion && (
+                                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                          {ps.servicios.descripcion}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                       
                       {/* Grupos de servicios excluyentes (con selector) */}
                       {gruposExcluyentes.map((grupo, idx) => {
@@ -2208,19 +2335,20 @@ function CrearOferta() {
                         const seleccionado = serviciosExcluyentesSeleccionados[grupoKey] || grupo[0].servicio_id;
                         
                         return (
-                          <div key={grupoKey} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-sm font-medium text-gray-900 mb-3">
-                              🎯 Selecciona una opción:
+                          <div key={grupoKey} className="p-4 rounded-lg border border-primary/20 bg-primary/5">
+                            <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                              <span className="text-primary">🎯</span>
+                              Selecciona una opción:
                             </p>
-                            <div className="space-y-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               {grupo.map((ps) => (
                                 <label 
                                   key={ps.servicio_id}
                                   className={`
-                                    flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all
+                                    relative flex items-start gap-3 p-4 rounded-lg cursor-pointer transition-all border-2
                                     ${seleccionado === ps.servicio_id 
-                                      ? 'bg-indigo-100 border-2 border-indigo-500' 
-                                      : 'bg-white border-2 border-gray-200 hover:border-indigo-300'
+                                      ? 'bg-primary/10 border-primary shadow-sm' 
+                                      : 'bg-background border-border hover:border-primary/50 hover:bg-accent/50'
                                     }
                                   `}
                                 >
@@ -2235,16 +2363,18 @@ function CrearOferta() {
                                         [grupoKey]: parseInt(e.target.value)
                                       });
                                     }}
-                                    className="w-4 h-4 text-indigo-600"
+                                    className="mt-0.5 w-4 h-4 text-primary"
                                   />
-                                  <span className="font-medium text-gray-900">
-                                    {obtenerNombreServicio(ps.servicios?.nombre)}
-                                  </span>
-                                  {ps.servicios?.descripcion && (
-                                    <span className="text-xs text-gray-500 ml-auto">
-                                      {ps.servicios.descripcion}
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-medium text-foreground block">
+                                      {obtenerNombreServicio(ps.servicios?.nombre)}
                                     </span>
-                                  )}
+                                    {ps.servicios?.descripcion && (
+                                      <span className="text-xs text-muted-foreground block mt-1">
+                                        {ps.servicios.descripcion}
+                                      </span>
+                                    )}
+                                  </div>
                                 </label>
                               ))}
                             </div>
@@ -2255,7 +2385,8 @@ function CrearOferta() {
                   );
                 })()}
               </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
           </>
           )}
@@ -2872,14 +3003,15 @@ function CrearOferta() {
 
           {/* PASO 5: Descuento */}
           {pasoActual === 5 && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Descuento</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descuento ($)
-                </label>
-                <input
+          <Card>
+            <CardHeader>
+              <CardTitle>Descuento</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="descuento_porcentaje">Descuento ($)</Label>
+                <Input
+                  id="descuento_porcentaje"
                   type="number"
                   name="descuento_porcentaje"
                   value={formData.descuento_porcentaje}
@@ -2907,17 +3039,16 @@ function CrearOferta() {
                   min="0"
                   step="0.01"
                   max={precioCalculado?.desglose?.subtotalBase || 0}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                   placeholder="0.00"
                 />
                 {precioCalculado?.desglose?.subtotalBase && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground">
                     Descuento máximo permitido: ${precioCalculado.desglose.subtotalBase.toLocaleString()}
                   </p>
                 )}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
           )}
 
           {/* Error Message */}
@@ -2930,63 +3061,64 @@ function CrearOferta() {
           )}
 
           {/* Botones de Navegación del Wizard */}
-          <div className="flex gap-3 pt-4 border-t">
+          <Separator className="my-6" />
+          <div className="flex gap-3">
             {pasoActual > 1 && (
-            <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={retrocederPaso}
-                className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="h-4 w-4 mr-2" />
                 Anterior
-              </button>
+              </Button>
             )}
             <div className="flex-1" />
             {pasoActual < TOTAL_PASOS ? (
-              <button
+              <Button
                 type="button"
                 onClick={avanzarPaso}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
               >
                 Siguiente
-                <ChevronRight className="w-5 h-5" />
-              </button>
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
             ) : (
-              <button
+              <Button
                 type="button"
                 onClick={handleSubmitFinal}
-              disabled={mutation.isPending}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Creando oferta...
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  Crear Oferta
-                </>
-              )}
-            </button>
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creando oferta...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Crear Oferta
+                  </>
+                )}
+              </Button>
             )}
-            <Link
-              to="/ofertas"
-              className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-            >
-              Cancelar
-            </Link>
+            <Button variant="outline" asChild>
+              <Link to="/ofertas">
+                Cancelar
+              </Link>
+            </Button>
           </div>
         </div>
 
         {/* Panel de Calculadora */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border p-6 sticky top-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Calculator className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Calculadora de Precio</h2>
-            </div>
+          <Card className="sticky top-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                Calculadora de Precio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
 
             {precioCalculado && precioCalculado.desglose ? (
               <div className="space-y-4">
@@ -2994,101 +3126,104 @@ function CrearOferta() {
                 <div className="space-y-2">
                   {/* Paquete Base */}
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Paquete {precioCalculado.desglose.paquete.nombre}:</span>
-                    <span className="font-medium">${parseFloat(precioCalculado.desglose.paquete.precioBase || 0).toLocaleString()}</span>
+                    <span className="text-muted-foreground">Paquete {precioCalculado.desglose.paquete.nombre}:</span>
+                    <span className="font-medium text-foreground">${parseFloat(precioCalculado.desglose.paquete.precioBase || 0).toLocaleString()}</span>
                   </div>
 
                   {/* Ajuste de Temporada */}
                   {precioCalculado.desglose.paquete.ajusteTemporada > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Ajuste Temporada {precioCalculado.desglose.temporada.nombre}:</span>
-                      <span className="font-medium text-orange-600">+${parseFloat(precioCalculado.desglose.paquete.ajusteTemporada).toLocaleString()}</span>
+                      <span className="text-muted-foreground">Ajuste Temporada {precioCalculado.desglose.temporada.nombre}:</span>
+                      <span className="font-medium text-orange-600 dark:text-orange-400">+${parseFloat(precioCalculado.desglose.paquete.ajusteTemporada).toLocaleString()}</span>
                     </div>
                   )}
 
                   {/* Invitados Adicionales */}
                   {precioCalculado.desglose.invitados.adicionales > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">
+                      <span className="text-muted-foreground">
                         {precioCalculado.desglose.invitados.adicionales} Invitados Adicionales 
                         (${precioCalculado.desglose.invitados.precioUnitario} c/u):
                       </span>
-                      <span className="font-medium">${parseFloat(precioCalculado.desglose.invitados.subtotal).toLocaleString()}</span>
+                      <span className="font-medium text-foreground">${parseFloat(precioCalculado.desglose.invitados.subtotal).toLocaleString()}</span>
                     </div>
                   )}
 
                   {/* Servicios Adicionales */}
                   {precioCalculado.desglose.serviciosAdicionales.subtotal > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Servicios Adicionales:</span>
-                      <span className="font-medium">${parseFloat(precioCalculado.desglose.serviciosAdicionales.subtotal).toLocaleString()}</span>
+                      <span className="text-muted-foreground">Servicios Adicionales:</span>
+                      <span className="font-medium text-foreground">${parseFloat(precioCalculado.desglose.serviciosAdicionales.subtotal).toLocaleString()}</span>
                     </div>
                   )}
 
                   {/* Subtotal */}
-                  <div className="flex justify-between text-sm pt-2 border-t">
-                    <span className="text-gray-600 font-medium">Subtotal:</span>
-                    <span className="font-semibold">${parseFloat(precioCalculado.desglose.subtotalBase || 0).toLocaleString()}</span>
+                  <Separator className="my-2" />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">Subtotal:</span>
+                    <span className="font-semibold text-foreground">${parseFloat(precioCalculado.desglose.subtotalBase || 0).toLocaleString()}</span>
                   </div>
 
                   {/* Descuento */}
                   {precioCalculado.desglose.descuento > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Descuento:</span>
-                      <span className="font-medium text-green-600">-${parseFloat(precioCalculado.desglose.descuento).toLocaleString()}</span>
+                      <span className="text-muted-foreground">Descuento:</span>
+                      <span className="font-medium text-green-600 dark:text-green-400">-${parseFloat(precioCalculado.desglose.descuento).toLocaleString()}</span>
                     </div>
                   )}
 
                   {/* Impuestos */}
-                  <div className="pt-3 border-t space-y-2">
+                  <Separator className="my-2" />
+                  <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">IVA ({precioCalculado.desglose.impuestos.iva.porcentaje}%):</span>
-                      <span className="font-medium">${parseFloat(precioCalculado.desglose.impuestos.iva.monto || 0).toLocaleString()}</span>
+                      <span className="text-muted-foreground">IVA ({precioCalculado.desglose.impuestos.iva.porcentaje}%):</span>
+                      <span className="font-medium text-foreground">${parseFloat(precioCalculado.desglose.impuestos.iva.monto || 0).toLocaleString()}</span>
                     </div>
 
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Service Fee ({precioCalculado.desglose.impuestos.tarifaServicio.porcentaje}%):</span>
-                      <span className="font-medium">${parseFloat(precioCalculado.desglose.impuestos.tarifaServicio.monto || 0).toLocaleString()}</span>
+                      <span className="text-muted-foreground">Service Fee ({precioCalculado.desglose.impuestos.tarifaServicio.porcentaje}%):</span>
+                      <span className="font-medium text-foreground">${parseFloat(precioCalculado.desglose.impuestos.tarifaServicio.monto || 0).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Total Final */}
-                <div className="pt-4 border-t">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-lg font-semibold text-gray-900">Total Final:</span>
-                    <span className="text-2xl font-bold text-indigo-600">
+                <Separator className="my-4" />
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Total Final:</span>
+                    <span className="text-2xl font-bold text-primary">
                       ${parseFloat(precioCalculado.desglose.totalFinal || 0).toLocaleString()}
                     </span>
                   </div>
 
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-sm text-muted-foreground space-y-1">
                     <p className="flex justify-between">
                       <span>Precio persona adicional:</span>
-                      <span className="font-medium">${precioCalculado.desglose.invitados.precioUnitario || 0}</span>
+                      <span className="font-medium text-foreground">${precioCalculado.desglose.invitados.precioUnitario || 0}</span>
                     </p>
                     <p className="flex justify-between">
                       <span>Invitados:</span>
-                      <span className="font-medium">{precioCalculado.desglose.invitados.contratados} ({precioCalculado.desglose.invitados.minimo} incluidos + {precioCalculado.desglose.invitados.adicionales} adicionales)</span>
+                      <span className="font-medium text-foreground">{precioCalculado.desglose.invitados.contratados} ({precioCalculado.desglose.invitados.minimo} incluidos + {precioCalculado.desglose.invitados.adicionales} adicionales)</span>
                     </p>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t">
-                  <p className="text-xs text-gray-500 text-center">
-                    Los precios son estimados y pueden variar
-                  </p>
-                </div>
+                <Separator className="my-4" />
+                <p className="text-xs text-muted-foreground text-center">
+                  Los precios son estimados y pueden variar
+                </p>
               </div>
             ) : (
               <div className="text-center py-8">
-                <Calculator className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500">
+                <Calculator className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">
                   Completa los datos para ver el cálculo de precio
                 </p>
               </div>
             )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </form>
 

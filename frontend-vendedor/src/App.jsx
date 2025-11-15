@@ -11,7 +11,6 @@ import CrearCliente from './pages/CrearCliente';
 import EditarCliente from './pages/EditarCliente';
 import Ofertas from './pages/Ofertas';
 import CrearOferta from './pages/CrearOferta';
-import EditarOferta from './pages/EditarOferta';
 import Contratos from './pages/Contratos';
 import DetalleContrato from './pages/DetalleContrato';
 import AsignacionMesas from './pages/AsignacionMesas';
@@ -130,7 +129,6 @@ function App() {
             <Route path="clientes/editar/:id" element={<EditarCliente />} />
             <Route path="ofertas" element={<Ofertas />} />
             <Route path="ofertas/nueva" element={<CrearOferta />} />
-            <Route path="ofertas/editar/:id" element={<EditarOferta />} />
             <Route path="contratos" element={<Contratos />} />
             <Route path="contratos/:id" element={<DetalleContrato />} />
             <Route path="contratos/:id/mesas" element={<AsignacionMesas />} />
