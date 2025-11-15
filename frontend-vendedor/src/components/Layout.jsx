@@ -25,15 +25,21 @@ function Layout() {
     navigate('/login');
   };
 
-  const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Clientes', href: '/clientes', icon: Users },
-    { name: 'Ofertas', href: '/ofertas', icon: FileText },
-    { name: 'Contratos', href: '/contratos', icon: FileCheck },
-    { name: 'Calendario', href: '/calendario', icon: Calendar },
-    { name: 'Gestión de Eventos', href: '/eventos', icon: Calendar },
-    { name: 'Comisiones', href: '/comisiones', icon: CreditCard },
-  ];
+  const navigation = {
+    principal: [
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { name: 'Clientes', href: '/clientes', icon: Users },
+      { name: 'Ofertas', href: '/ofertas', icon: FileText },
+      { name: 'Contratos', href: '/contratos', icon: FileCheck },
+    ],
+    eventos: [
+      { name: 'Calendario', href: '/calendario', icon: Calendar },
+      { name: 'Gestión de Eventos', href: '/eventos', icon: Calendar },
+    ],
+    finanzas: [
+      { name: 'Comisiones', href: '/comisiones', icon: CreditCard },
+    ],
+  };
 
   const isActive = (path) => {
     if (path === '/') {
@@ -47,89 +53,249 @@ function Layout() {
       {/* Sidebar para móvil */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white">
-            <div className="flex h-16 items-center justify-between px-4 border-b">
-              <div className="flex items-center gap-2">
-                <Diamond className="w-8 h-8 text-indigo-600" />
-                <span className="text-xl font-bold text-gray-900">Party Venue</span>
+          <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-background border-r">
+            <div className="flex h-16 items-center gap-3 px-6 border-b">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+                <Diamond className="h-5 w-5 text-primary-foreground" />
               </div>
-              <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
+              <span className="text-lg font-semibold text-foreground">Party Venue</span>
+              <button 
+                onClick={() => setSidebarOpen(false)} 
+                className="ml-auto p-2 text-muted-foreground hover:text-foreground rounded-lg"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <nav className="flex-1 space-y-1 px-3 py-4">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                return (
-                  <button
-                    key={item.name}
-                    onClick={() => {
-                      navigate(item.href);
-                      setSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                      active
-                        ? 'bg-indigo-50 text-indigo-600'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.name}</span>
-                  </button>
-                );
-              })}
+            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+              {/* Sección Principal */}
+              <div className="space-y-1">
+                <div className="px-3 py-2">
+                  <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Principal
+                  </h2>
+                </div>
+                {navigation.principal.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => {
+                        navigate(item.href);
+                        setSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Sección Eventos */}
+              <div className="space-y-1">
+                <div className="px-3 py-2">
+                  <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Eventos
+                  </h2>
+                </div>
+                {navigation.eventos.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => {
+                        navigate(item.href);
+                        setSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Sección Finanzas */}
+              <div className="space-y-1">
+                <div className="px-3 py-2">
+                  <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Finanzas
+                  </h2>
+                </div>
+                {navigation.finanzas.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => {
+                        navigate(item.href);
+                        setSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </nav>
+            <div className="border-t p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                  <span className="text-sm font-semibold text-primary">
+                    {user?.nombre_completo?.charAt(0) || 'U'}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{user?.nombre_completo}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.codigo_vendedor}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Cerrar Sesión</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Sidebar para desktop */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-1 border-r bg-white">
-          <div className="flex h-16 items-center px-4 border-b">
-            <Diamond className="w-8 h-8 text-indigo-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900">Party Venue</span>
+        <div className="flex flex-col flex-1 border-r bg-background">
+          {/* Logo y nombre */}
+          <div className="flex h-16 items-center gap-3 px-6 border-b">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Diamond className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <span className="text-lg font-semibold text-foreground">Party Venue</span>
           </div>
-          <nav className="flex-1 space-y-1 px-3 py-4">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
-              return (
-                <button
-                  key={item.name}
-                  onClick={() => navigate(item.href)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                    active
-                      ? 'bg-indigo-50 text-indigo-600'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium">{item.name}</span>
-                </button>
-              );
-            })}
+          
+          {/* Navegación con secciones */}
+          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+            {/* Sección Principal */}
+            <div className="space-y-1">
+              <div className="px-3 py-2">
+                <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Principal
+                </h2>
+              </div>
+              {navigation.principal.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => navigate(item.href)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sección Eventos */}
+            <div className="space-y-1">
+              <div className="px-3 py-2">
+                <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Eventos
+                </h2>
+              </div>
+              {navigation.eventos.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => navigate(item.href)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sección Finanzas */}
+            <div className="space-y-1">
+              <div className="px-3 py-2">
+                <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Finanzas
+                </h2>
+              </div>
+              {navigation.finanzas.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => navigate(item.href)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </button>
+                );
+              })}
+            </div>
           </nav>
+          
+          {/* Usuario y logout */}
           <div className="border-t p-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                <span className="text-indigo-600 font-semibold">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                <span className="text-sm font-semibold text-primary">
                   {user?.nombre_completo?.charAt(0) || 'U'}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user?.nombre_completo}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.codigo_vendedor}</p>
+                <p className="text-sm font-medium text-foreground truncate">{user?.nombre_completo}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.codigo_vendedor}</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition"
             >
-              <LogOut className="w-4 h-4" />
-              Cerrar Sesión
+              <LogOut className="h-4 w-4" />
+              <span>Cerrar Sesión</span>
             </button>
           </div>
         </div>

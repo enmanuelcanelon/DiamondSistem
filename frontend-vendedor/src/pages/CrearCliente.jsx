@@ -3,6 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Label } from '../components/ui/label';
+import toast from 'react-hot-toast';
 
 function CrearCliente() {
   const navigate = useNavigate();
@@ -23,7 +30,11 @@ function CrearCliente() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['clientes']);
+      toast.success('Cliente creado exitosamente');
       navigate('/clientes');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Error al crear cliente');
     },
   });
 
@@ -59,84 +70,88 @@ function CrearCliente() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link
-          to="/clientes"
-          className="p-2 hover:bg-gray-100 rounded-lg transition"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/clientes">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nuevo Cliente</h1>
-          <p className="text-gray-600 mt-1">Completa la información del cliente</p>
+          <h2 className="text-3xl font-bold tracking-tight">Nuevo Cliente</h2>
+          <p className="text-muted-foreground">
+            Completa la información del cliente
+          </p>
         </div>
       </div>
 
       {/* Formulario */}
       <form onSubmit={handleSubmit} className="max-w-3xl">
-        <div className="bg-white rounded-xl shadow-sm border p-6 space-y-6">
+        <Card>
+          <CardContent className="pt-6 space-y-6">
           {/* Información Personal */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Información Personal</h2>
+            <CardHeader className="px-0 pt-0">
+              <CardTitle>Información Personal</CardTitle>
+            </CardHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label htmlFor="nombre_completo" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="nombre_completo">
                   Nombre Completo *
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   id="nombre_completo"
                   name="nombre_completo"
                   value={formData.nombre_completo}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="mt-2"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="email">
                   Email *
-                </label>
-                <input
+                </Label>
+                <Input
                   type="email"
                   id="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="mt-2"
                 />
               </div>
 
               <div>
-                <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="telefono">
                   Teléfono *
-                </label>
-                <input
+                </Label>
+                <Input
                   type="tel"
                   id="telefono"
                   name="telefono"
                   value={formData.telefono}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="mt-2"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label htmlFor="direccion" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="direccion">
                   Dirección
-                </label>
-                <textarea
+                </Label>
+                <Textarea
                   id="direccion"
                   name="direccion"
                   value={formData.direccion}
                   onChange={handleChange}
                   rows="2"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="mt-2"
                 />
               </div>
             </div>
@@ -144,88 +159,84 @@ function CrearCliente() {
 
           {/* Información del Evento */}
           <div className="pt-6 border-t">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Información del Evento</h2>
+            <CardHeader className="px-0 pt-0">
+              <CardTitle>Información del Evento</CardTitle>
+            </CardHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="tipo_evento" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="tipo_evento">
                   Tipo de Evento
-                </label>
-                <select
-                  id="tipo_evento"
-                  name="tipo_evento"
-                  value={formData.tipo_evento}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                </Label>
+                <Select 
+                  value={formData.tipo_evento} 
+                  onValueChange={(value) => setFormData({ ...formData, tipo_evento: value })}
                 >
-                  <option value="">Seleccionar...</option>
-                  {tiposEvento.map((tipo) => (
-                    <option key={tipo} value={tipo}>{tipo}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposEvento.map((tipo) => (
+                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
-                <label htmlFor="como_nos_conocio" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="como_nos_conocio">
                   ¿Cómo nos conoció?
-                </label>
-                <select
-                  id="como_nos_conocio"
-                  name="como_nos_conocio"
-                  value={formData.como_nos_conocio}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                </Label>
+                <Select 
+                  value={formData.como_nos_conocio} 
+                  onValueChange={(value) => setFormData({ ...formData, como_nos_conocio: value })}
                 >
-                  <option value="">Seleccionar...</option>
-                  {fuentesConocimiento.map((fuente) => (
-                    <option key={fuente} value={fuente}>{fuente}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fuentesConocimiento.map((fuente) => (
+                      <SelectItem key={fuente} value={fuente}>{fuente}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
 
-          {/* Error Message */}
-          {mutation.isError && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">
-                {mutation.error.response?.data?.message || 'Error al crear cliente'}
-              </p>
-            </div>
-          )}
-
           {/* Botones */}
           <div className="flex gap-3 pt-4">
-            <button
+            <Button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1"
             >
               {mutation.isPending ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                   Guardando...
                 </>
               ) : (
                 <>
-                  <Save className="w-5 h-5" />
+                  <Save className="w-5 h-5 mr-2" />
                   Guardar Cliente
                 </>
               )}
-            </button>
-            <Link
-              to="/clientes"
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-            >
-              Cancelar
-            </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/clientes">
+                Cancelar
+              </Link>
+            </Button>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       </form>
     </div>
   );
 }
 
 export default CrearCliente;
+
 
 
 

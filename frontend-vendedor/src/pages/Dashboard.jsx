@@ -1,8 +1,20 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FileText, FileCheck, DollarSign, TrendingUp, Calendar, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Users, FileText, FileCheck, DollarSign, TrendingUp, TrendingDown, Calendar, ChevronLeft, ChevronRight, Download, ArrowUpRight, ArrowDownRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 function Dashboard() {
   const { user } = useAuthStore();
@@ -11,18 +23,332 @@ function Dashboard() {
   const fechaActual = new Date();
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
   const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
+  const [periodoSeleccionado, setPeriodoSeleccionado] = useState('3meses'); // '3meses', '30dias', '7dias'
 
-  // Obtener estadísticas del vendedor (siempre filtrado por mes)
+  // Calcular fechas según el período seleccionado
+  const calcularFechasPorPeriodo = (periodo) => {
+    const hoy = new Date();
+    let fechaInicio, fechaFin;
+
+    switch (periodo) {
+      case '3meses':
+        // Últimos 3 meses
+        fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
+        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
+        break;
+      case '30dias':
+        // Últimos 30 días
+        fechaInicio = new Date(hoy);
+        fechaInicio.setDate(fechaInicio.getDate() - 30);
+        fechaInicio.setHours(0, 0, 0, 0);
+        fechaFin = new Date(hoy);
+        fechaFin.setHours(23, 59, 59, 999);
+        break;
+      case '7dias':
+        // Últimos 7 días
+        fechaInicio = new Date(hoy);
+        fechaInicio.setDate(fechaInicio.getDate() - 7);
+        fechaInicio.setHours(0, 0, 0, 0);
+        fechaFin = new Date(hoy);
+        fechaFin.setHours(23, 59, 59, 999);
+        break;
+      default:
+        // Por defecto, último mes
+        fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
+    }
+
+    return {
+      desde: fechaInicio.toISOString().split('T')[0],
+      hasta: fechaFin.toISOString().split('T')[0],
+      fechaInicio,
+      fechaFin
+    };
+  };
+
+  // Calcular fechas del período anterior para comparación
+  const calcularFechasPeriodoAnterior = (periodo) => {
+    const hoy = new Date();
+    let fechaInicio, fechaFin;
+
+    switch (periodo) {
+      case '3meses':
+        // 3 meses anteriores (meses 4-6 atrás)
+        fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1);
+        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 0, 23, 59, 59);
+        break;
+      case '30dias':
+        // Días 31-60 atrás
+        fechaInicio = new Date(hoy);
+        fechaInicio.setDate(fechaInicio.getDate() - 60);
+        fechaInicio.setHours(0, 0, 0, 0);
+        fechaFin = new Date(hoy);
+        fechaFin.setDate(fechaFin.getDate() - 31);
+        fechaFin.setHours(23, 59, 59, 999);
+        break;
+      case '7dias':
+        // Días 8-14 atrás
+        fechaInicio = new Date(hoy);
+        fechaInicio.setDate(fechaInicio.getDate() - 14);
+        fechaInicio.setHours(0, 0, 0, 0);
+        fechaFin = new Date(hoy);
+        fechaFin.setDate(fechaFin.getDate() - 8);
+        fechaFin.setHours(23, 59, 59, 999);
+        break;
+      default:
+        return null;
+    }
+
+    return { fechaInicio, fechaFin };
+  };
+
+  // Obtener estadísticas del vendedor filtradas por período
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['vendedor-stats', user?.id, mesSeleccionado, añoSeleccionado],
+    queryKey: ['vendedor-stats', user?.id, periodoSeleccionado],
     queryFn: async () => {
-      const response = await api.get(`/vendedores/${user.id}/stats/mes`, {
-        params: { mes: mesSeleccionado, año: añoSeleccionado }
+      const { fechaInicio, fechaFin } = calcularFechasPorPeriodo(periodoSeleccionado);
+      const periodoAnterior = calcularFechasPeriodoAnterior(periodoSeleccionado);
+      
+      // Obtener ofertas del período actual
+      const ofertasResponse = await api.get('/ofertas', {
+        params: {
+          fecha_desde: fechaInicio.toISOString().split('T')[0],
+          fecha_hasta: fechaFin.toISOString().split('T')[0],
+          page: 1,
+          limit: 1000
+        }
+      });
+
+      const ofertas = ofertasResponse.data?.data || [];
+      const ofertasPendientes = ofertas.filter(o => o.estado === 'pendiente').length;
+      const ofertasAceptadas = ofertas.filter(o => o.estado === 'aceptada').length;
+      const ofertasRechazadas = ofertas.filter(o => o.estado === 'rechazada').length;
+      const totalOfertas = ofertas.length;
+      const tasaConversion = totalOfertas > 0 
+        ? ((ofertasAceptadas / totalOfertas) * 100).toFixed(2)
+        : '0.00';
+
+      // Obtener contratos del período actual
+      const contratosResponse = await api.get('/contratos', {
+        params: {
+          fecha_desde: fechaInicio.toISOString().split('T')[0],
+          fecha_hasta: fechaFin.toISOString().split('T')[0],
+          page: 1,
+          limit: 1000
+        }
+      });
+
+      const contratos = contratosResponse.data?.data || [];
+      const contratosActivos = contratos.filter(c => c.estado === 'activo').length;
+      const contratosPagadosCompleto = contratos.filter(c => c.estado_pago === 'completado').length;
+      const totalVentas = contratos.reduce((sum, c) => sum + parseFloat(c.total_contrato || 0), 0);
+
+      // Obtener clientes del período actual
+      const clientesResponse = await api.get(`/vendedores/${user.id}/stats/mes`, {
+        params: { mes: fechaActual.getMonth() + 1, año: fechaActual.getFullYear() }
+      });
+      const totalClientes = clientesResponse.data?.estadisticas?.clientes?.total || 0;
+
+      // Obtener comisiones usando el endpoint dedicado (sin filtro de mes para obtener todas)
+      let comisionesData = {
+        total: 0,
+        desbloqueadas: 0,
+        pendientes: 0,
+        por_mes: []
+      };
+
+      try {
+        const comisionesResponse = await api.get(`/vendedores/${user.id}/comisiones`);
+        if (comisionesResponse.data?.comisiones) {
+          comisionesData = {
+            total: comisionesResponse.data.comisiones.total || 0,
+            desbloqueadas: comisionesResponse.data.comisiones.total_desbloqueadas || 0,
+            pendientes: comisionesResponse.data.comisiones.pendientes || 0,
+            por_mes: [] // El endpoint no devuelve por_mes, lo calcularemos si es necesario
+          };
+        }
+      } catch (error) {
+        console.error('Error al obtener comisiones:', error);
+      }
+
+      // Calcular comisiones del período basándose en los contratos del período
+      const comisionPorcentaje = 3.0; // 3% fijo
+      const totalComisionesPeriodo = totalVentas * (comisionPorcentaje / 100);
+      
+      // Para las comisiones desbloqueadas y pendientes, usamos los datos del endpoint
+      // pero filtramos por el período si es necesario
+      const totalComisiones = comisionesData.total || totalComisionesPeriodo;
+      const totalComisionesDesbloqueadas = comisionesData.desbloqueadas || 0;
+      const totalComisionesPendientes = comisionesData.pendientes || (totalComisiones - totalComisionesDesbloqueadas);
+
+      // Agrupar comisiones por mes basándose en los contratos del período
+      const comisionesPorMes = {};
+      contratos.forEach((contrato) => {
+        if (contrato.fecha_evento) {
+          const fechaEvento = new Date(contrato.fecha_evento);
+          const mesKey = `${fechaEvento.getFullYear()}-${String(fechaEvento.getMonth() + 1).padStart(2, '0')}`;
+          const totalContrato = parseFloat(contrato.total_contrato || 0);
+          const comisionTotal = (totalContrato * comisionPorcentaje) / 100;
+          
+          if (!comisionesPorMes[mesKey]) {
+            comisionesPorMes[mesKey] = { total: 0, desbloqueadas: 0 };
+          }
+          comisionesPorMes[mesKey].total += comisionTotal;
+          // Para desbloqueadas, usamos una estimación basada en el porcentaje general
+          comisionesPorMes[mesKey].desbloqueadas += comisionTotal * (totalComisionesDesbloqueadas / totalComisiones || 0);
+        }
+      });
+
+      const comisionesPorMesArray = Object.entries(comisionesPorMes).map(([mes, datos]) => ({
+        mes,
+        total: datos.total,
+        desbloqueadas: datos.desbloqueadas,
+        pendientes: datos.total - datos.desbloqueadas
+      })).sort((a, b) => b.mes.localeCompare(a.mes));
+
+      // Obtener datos del período anterior para comparación
+      let datosAnteriores = {
+        clientes: 0,
+        ofertasPendientes: 0,
+        contratosActivos: 0,
+        totalVentas: 0
+      };
+
+      if (periodoAnterior) {
+        const [ofertasAnterioresResponse, contratosAnterioresResponse] = await Promise.all([
+          api.get('/ofertas', {
+            params: {
+              fecha_desde: periodoAnterior.fechaInicio.toISOString().split('T')[0],
+              fecha_hasta: periodoAnterior.fechaFin.toISOString().split('T')[0],
+              page: 1,
+              limit: 1000
+            }
+          }),
+          api.get('/contratos', {
+            params: {
+              fecha_desde: periodoAnterior.fechaInicio.toISOString().split('T')[0],
+              fecha_hasta: periodoAnterior.fechaFin.toISOString().split('T')[0],
+              page: 1,
+              limit: 1000
+            }
+          })
+        ]);
+
+        const ofertasAnteriores = ofertasAnterioresResponse.data?.data || [];
+        const contratosAnteriores = contratosAnterioresResponse.data?.data || [];
+
+        datosAnteriores = {
+          clientes: totalClientes, // Mantener igual para clientes
+          ofertasPendientes: ofertasAnteriores.filter(o => o.estado === 'pendiente').length,
+          contratosActivos: contratosAnteriores.filter(c => c.estado === 'activo').length,
+          totalVentas: contratosAnteriores.reduce((sum, c) => sum + parseFloat(c.total_contrato || 0), 0)
+        };
+      }
+
+      // Calcular cambios porcentuales
+      const calcularCambioPorcentual = (actual, anterior) => {
+        if (!anterior || anterior === 0) return actual > 0 ? 100 : 0;
+        return ((actual - anterior) / anterior) * 100;
+      };
+
+      return {
+        estadisticas: {
+          clientes: { 
+            total: totalClientes,
+            cambio: calcularCambioPorcentual(totalClientes, datosAnteriores.clientes)
+          },
+          ofertas: {
+            total: totalOfertas,
+            pendientes: ofertasPendientes,
+            aceptadas: ofertasAceptadas,
+            rechazadas: ofertasRechazadas,
+            tasa_conversion: `${tasaConversion}%`,
+            cambioPendientes: calcularCambioPorcentual(ofertasPendientes, datosAnteriores.ofertasPendientes)
+          },
+          contratos: {
+            activos: contratosActivos,
+            total: contratos.length,
+            pagados_completo: contratosPagadosCompleto,
+            cambio: calcularCambioPorcentual(contratosActivos, datosAnteriores.contratosActivos)
+          },
+          finanzas: {
+            total_ventas: totalVentas,
+            cambio: calcularCambioPorcentual(totalVentas, datosAnteriores.totalVentas),
+            comision_porcentaje: comisionPorcentaje,
+            total_comisiones: totalComisiones,
+            total_comisiones_desbloqueadas: totalComisionesDesbloqueadas,
+            total_comisiones_pendientes: totalComisionesPendientes
+          },
+          comisiones: {
+            total: totalComisiones,
+            desbloqueadas: totalComisionesDesbloqueadas,
+            pendientes: totalComisionesPendientes,
+            por_mes: comisionesPorMesArray
+          }
+        }
+      };
+    },
+    enabled: !!user?.id,
+  });
+
+  // Calcular fechas del mes seleccionado para contratos
+  const calcularFechasPorMes = (mes, año) => {
+    const fechaInicio = new Date(año, mes - 1, 1);
+    const fechaFin = new Date(año, mes, 0, 23, 59, 59);
+    return {
+      desde: fechaInicio.toISOString().split('T')[0],
+      hasta: fechaFin.toISOString().split('T')[0]
+    };
+  };
+
+  const { desde: fechaDesde, hasta: fechaHasta } = calcularFechasPorMes(mesSeleccionado, añoSeleccionado);
+
+  // Obtener contratos del mes seleccionado
+  const { data: contratosData, isLoading: isLoadingContratos } = useQuery({
+    queryKey: ['contratos-dashboard', user?.id, mesSeleccionado, añoSeleccionado],
+    queryFn: async () => {
+      const response = await api.get('/contratos', {
+        params: {
+          page: 1,
+          limit: 10,
+          fecha_desde: fechaDesde,
+          fecha_hasta: fechaHasta,
+        }
       });
       return response.data;
     },
     enabled: !!user?.id,
   });
+
+  const contratos = contratosData?.data || [];
+
+  // Función para obtener el color del estado del contrato
+  const getEstadoContratoColor = (estado) => {
+    switch (estado) {
+      case 'activo':
+        return 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+      case 'completado':
+        return 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+      case 'cancelado':
+        return 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
+      default:
+        return 'bg-gray-50 dark:bg-gray-950 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-800';
+    }
+  };
+
+  // Función para obtener el color del estado de pago
+  const getEstadoPagoColor = (estadoPago) => {
+    switch (estadoPago) {
+      case 'pagado':
+        return 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+      case 'parcial':
+        return 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+      case 'pendiente':
+        return 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
+      default:
+        return 'bg-gray-50 dark:bg-gray-950 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-800';
+    }
+  };
 
   // Nombres de los meses
   const nombresMeses = [
@@ -55,280 +381,563 @@ function Dashboard() {
     setAñoSeleccionado(fechaActual.getFullYear());
   };
 
+  // Descargar reporte
+  const descargarReporte = async () => {
+    try {
+      const response = await api.get(`/vendedores/${user.id}/reporte-mensual/${mesSeleccionado}/${añoSeleccionado}`, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Reporte-Mensual-${nombresMeses[mesSeleccionado - 1]}-${añoSeleccionado}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error al descargar reporte:', error);
+      alert('Error al descargar el reporte');
+    }
+  };
+
+  // Calcular tasa de conversión como número
+  const tasaConversion = parseFloat(stats?.estadisticas?.ofertas?.tasa_conversion?.replace('%', '') || 0);
+
   const statCards = [
     {
       name: 'Total Clientes',
       value: stats?.estadisticas?.clientes?.total || 0,
-      icon: Users,
-      color: 'bg-blue-500',
+      cambio: stats?.estadisticas?.clientes?.cambio || 0,
+      descripcion: 'Clientes registrados',
     },
     {
       name: 'Ofertas Pendientes',
       value: stats?.estadisticas?.ofertas?.pendientes || 0,
-      icon: FileText,
-      color: 'bg-yellow-500',
+      cambio: stats?.estadisticas?.ofertas?.cambioPendientes || 0,
+      descripcion: 'Ofertas en revisión',
     },
     {
       name: 'Contratos Activos',
       value: stats?.estadisticas?.contratos?.activos || 0,
-      icon: FileCheck,
-      color: 'bg-green-500',
+      cambio: stats?.estadisticas?.contratos?.cambio || 0,
+      descripcion: 'Contratos en curso',
     },
     {
       name: 'Total Ventas',
       value: `$${parseFloat(stats?.estadisticas?.finanzas?.total_ventas || 0).toLocaleString()}`,
-      icon: DollarSign,
-      color: 'bg-indigo-500',
+      cambio: stats?.estadisticas?.finanzas?.cambio || 0,
+      descripcion: 'Ingresos del período',
     },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      {/* Header mejorado */}
+      <div className="flex items-center justify-between space-y-2">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            ¡Bienvenido, {user?.nombre_completo}!
-          </h1>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
             Resumen de {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => cambiarMes('anterior')}
+            title="Mes anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <Select value={mesSeleccionado.toString()} onValueChange={(value) => setMesSeleccionado(parseInt(value))}>
+            <SelectTrigger className="w-auto min-w-[180px] [&>span]:line-clamp-none [&>span]:whitespace-nowrap">
+              <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+              <SelectValue placeholder="Seleccionar mes">
+                {nombresMeses[mesSeleccionado - 1]}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {nombresMeses.map((mes, index) => (
+                <SelectItem key={index} value={(index + 1).toString()}>
+                  {mes}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {/* Selector de Mes y Año - Siempre visible */}
-        <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-indigo-200 p-2">
-              <button
-                onClick={() => cambiarMes('anterior')}
-                className="p-1 hover:bg-indigo-50 rounded transition"
-                title="Mes anterior"
-              >
-                <ChevronLeft className="w-5 h-5 text-indigo-600" />
-              </button>
-              
-              <div className="flex items-center gap-2 px-3">
-                <Calendar className="w-4 h-4 text-indigo-600" />
-                <select
-                  value={mesSeleccionado}
-                  onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
-                >
-                  {nombresMeses.map((mes, index) => (
-                    <option key={index} value={index + 1}>{mes}</option>
-                  ))}
-                </select>
-                <select
-                  value={añoSeleccionado}
-                  onChange={(e) => setAñoSeleccionado(parseInt(e.target.value))}
-                  className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
-                >
-                  {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
-                    <option key={año} value={año}>{año}</option>
-                  ))}
-                </select>
-              </div>
+          <Select value={añoSeleccionado.toString()} onValueChange={(value) => setAñoSeleccionado(parseInt(value))}>
+            <SelectTrigger className="w-[100px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                <SelectItem key={año} value={año.toString()}>
+                  {año}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-              <button
-                onClick={() => cambiarMes('siguiente')}
-                className="p-1 hover:bg-indigo-50 rounded transition"
-                title="Mes siguiente"
-              >
-                <ChevronRight className="w-5 h-5 text-indigo-600" />
-              </button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => cambiarMes('siguiente')}
+            title="Mes siguiente"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
 
-              {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
-                <button
-                  onClick={resetearMes}
-                  className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded transition"
-                  title="Volver al mes actual"
-                >
-                  Hoy
-                </button>
-              )}
+          {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetearMes}
+            >
+              Hoy
+            </Button>
+          )}
 
-              {/* Botón de descarga de reporte */}
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await api.get(`/vendedores/${user.id}/reporte-mensual/${mesSeleccionado}/${añoSeleccionado}`, {
-                      responseType: 'blob'
-                    });
-                    
-                    const blob = new Blob([response.data], { type: 'application/pdf' });
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    const nombresMeses = [
-                      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-                    ];
-                    link.download = `Reporte-Mensual-${nombresMeses[mesSeleccionado - 1]}-${añoSeleccionado}.pdf`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
-                  } catch (error) {
-                    console.error('Error al descargar reporte:', error);
-                    alert('Error al descargar el reporte');
-                  }
-                }}
-                className="ml-2 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
-                title="Descargar reporte mensual en PDF"
-              >
-                <Download className="w-4 h-4" />
-                Descargar Reporte
-              </button>
-            </div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={descargarReporte}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Reporte
+          </Button>
+        </div>
       </div>
 
-      {/* Tarjetas de estadísticas */}
+      {/* Tarjetas de estadísticas - Estilo mejorado */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl p-6 shadow-sm border animate-pulse">
-              <div className="h-12 w-12 bg-gray-200 rounded-lg mb-4"></div>
-              <div className="h-8 bg-gray-200 rounded mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-24"></div>
-            </div>
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  <Skeleton className="h-4 w-24" />
+                </CardTitle>
+                <Skeleton className="h-8 w-8 rounded-lg" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-32 mb-1" />
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => {
-            const Icon = stat.icon;
+            const cambio = stat.cambio || 0;
+            const esPositivo = cambio >= 0;
+            const cambioAbsoluto = Math.abs(cambio);
+            
+            // "Ofertas Pendientes" siempre debe ser amarillo
+            const esOfertasPendientes = stat.name === 'Ofertas Pendientes';
+            const badgeColorClass = esOfertasPendientes
+              ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+              : esPositivo
+                ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                : 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
+            
             return (
-              <div key={stat.name} className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition">
-                <div className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
-                <p className="text-sm text-gray-600">{stat.name}</p>
-              </div>
+              <Card key={stat.name} className="bg-card relative">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {stat.name}
+                  </CardTitle>
+                  {/* Indicador de rendimiento/KPI - Esquina superior derecha */}
+                  <Badge 
+                    variant="outline" 
+                    className={`absolute top-4 right-4 h-6 px-2 rounded-full border ${badgeColorClass}`}
+                  >
+                    <div className="flex items-center gap-1">
+                      {esPositivo ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
+                      <span className="text-xs font-semibold">
+                        {esPositivo ? '+' : ''}{cambioAbsoluto.toFixed(1)}%
+                      </span>
+                    </div>
+                  </Badge>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  {stat.descripcion && (
+                    <p className="text-xs text-muted-foreground mt-1">{stat.descripcion}</p>
+                  )}
+                </CardContent>
+              </Card>
             );
           })}
         </div>
       )}
 
-      {/* Información detallada */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Ofertas */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Estado de Ofertas</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Pendientes</span>
-              <span className="font-semibold text-yellow-600">
-                {stats?.estadisticas?.ofertas?.pendientes || 0}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Aceptadas</span>
-              <span className="font-semibold text-green-600">
-                {stats?.estadisticas?.ofertas?.aceptadas || 0}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Rechazadas</span>
-              <span className="font-semibold text-red-600">
-                {stats?.estadisticas?.ofertas?.rechazadas || 0}
-              </span>
-            </div>
-            <div className="pt-3 border-t flex justify-between items-center">
-              <span className="text-gray-900 font-medium">Tasa de Conversión</span>
-              <span className="font-bold text-indigo-600 flex items-center gap-1">
-                <TrendingUp className="w-4 h-4" />
-                {stats?.estadisticas?.ofertas?.tasa_conversion || '0%'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Comisiones */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Comisiones</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Porcentaje</span>
-              <span className="font-semibold text-indigo-600">
-                {stats?.estadisticas?.finanzas?.comision_porcentaje || 0}%
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Total Comisiones</span>
-              <span className="font-semibold text-gray-900">
-                ${parseFloat(stats?.estadisticas?.comisiones?.total || stats?.estadisticas?.finanzas?.total_comisiones || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Desbloqueadas</span>
-              <span className="font-semibold text-green-600">
-                ${parseFloat(stats?.estadisticas?.comisiones?.desbloqueadas || stats?.estadisticas?.finanzas?.total_comisiones_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Pendientes</span>
-              <span className="font-semibold text-yellow-600">
-                ${parseFloat(stats?.estadisticas?.comisiones?.pendientes || stats?.estadisticas?.finanzas?.total_comisiones_pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="pt-3 border-t flex justify-between items-center">
-              <span className="text-gray-900 font-medium">Contratos Pagados</span>
-              <span className="font-bold text-indigo-600">
-                {stats?.estadisticas?.contratos?.pagados_completo || 0}
-              </span>
-            </div>
-          </div>
-
-          {/* Comisiones por Mes */}
-          {stats?.estadisticas?.comisiones?.por_mes && stats.estadisticas.comisiones.por_mes.length > 0 && (
-            <div className="mt-4 pt-4 border-t">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Comisiones Desbloqueadas por Mes</h3>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {stats.estadisticas.comisiones.por_mes.map((item, idx) => {
-                  const [anio, mes] = item.mes.split('-');
-                  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-                  const nombreMes = meses[parseInt(mes) - 1];
-                  return (
-                    <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                      <span className="text-sm text-gray-700">{nombreMes} {anio}</span>
-                      <span className="text-sm font-semibold text-green-600">
-                        ${item.total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  );
-                })}
+      {/* Información detallada - Layout mejorado */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Ofertas - Ocupa más espacio */}
+        <Card className="col-span-4">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Estado de Ofertas</CardTitle>
+                <CardDescription>Resumen de ofertas del período seleccionado</CardDescription>
+              </div>
+              {/* Selector de Período */}
+              <div className="flex items-center gap-0.5 bg-muted p-0.5 rounded-lg">
+                <button
+                  onClick={() => setPeriodoSeleccionado('3meses')}
+                  className={`px-3 py-1.5 text-xs font-medium transition ${
+                    periodoSeleccionado === '3meses'
+                      ? 'bg-background text-foreground shadow-sm rounded-md'
+                      : 'text-muted-foreground hover:text-foreground rounded-md'
+                  }`}
+                >
+                  Últimos 3 meses
+                </button>
+                <button
+                  onClick={() => setPeriodoSeleccionado('30dias')}
+                  className={`px-3 py-1.5 text-xs font-medium transition ${
+                    periodoSeleccionado === '30dias'
+                      ? 'bg-background text-foreground shadow-sm rounded-md'
+                      : 'text-muted-foreground hover:text-foreground rounded-md'
+                  }`}
+                >
+                  Últimos 30 días
+                </button>
+                <button
+                  onClick={() => setPeriodoSeleccionado('7dias')}
+                  className={`px-3 py-1.5 text-xs font-medium transition ${
+                    periodoSeleccionado === '7dias'
+                      ? 'bg-background text-foreground shadow-sm rounded-md'
+                      : 'text-muted-foreground hover:text-foreground rounded-md'
+                  }`}
+                >
+                  Últimos 7 días
+                </button>
               </div>
             </div>
-          )}
-        </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Pendientes</span>
+                <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
+                  {stats?.estadisticas?.ofertas?.pendientes || 0}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Aceptadas</span>
+                <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
+                  {stats?.estadisticas?.ofertas?.aceptadas || 0}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Rechazadas</span>
+                <Badge variant="outline" className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
+                  {stats?.estadisticas?.ofertas?.rechazadas || 0}
+                </Badge>
+              </div>
+              <Separator />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Tasa de Conversión</span>
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold">{stats?.estadisticas?.ofertas?.tasa_conversion || '0%'}</span>
+                  </div>
+                </div>
+                {/* Gráfico de Tasa de Conversión */}
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={(() => {
+                        const { fechaInicio, fechaFin } = calcularFechasPorPeriodo(periodoSeleccionado);
+                        const datosGrafico = [];
+                        
+                        if (periodoSeleccionado === '3meses') {
+                          // Mostrar datos por mes (3 meses)
+                          for (let i = 2; i >= 0; i--) {
+                            const fecha = new Date();
+                            fecha.setMonth(fecha.getMonth() - i);
+                            const mesNombre = format(fecha, 'MMM', { locale: es });
+                            datosGrafico.push({ name: mesNombre, value: i === 0 ? tasaConversion : 0 });
+                          }
+                        } else if (periodoSeleccionado === '30dias') {
+                          // Mostrar datos por semana (4 semanas)
+                          for (let i = 3; i >= 0; i--) {
+                            const fecha = new Date();
+                            fecha.setDate(fecha.getDate() - (i * 7));
+                            datosGrafico.push({ 
+                              name: `Sem ${4 - i}`, 
+                              value: i === 0 ? tasaConversion : 0 
+                            });
+                          }
+                        } else {
+                          // Mostrar datos por día (7 días)
+                          for (let i = 6; i >= 0; i--) {
+                            const fecha = new Date();
+                            fecha.setDate(fecha.getDate() - i);
+                            const diaNombre = format(fecha, 'EEE', { locale: es });
+                            datosGrafico.push({ 
+                              name: diaNombre, 
+                              value: i === 0 ? tasaConversion : 0 
+                            });
+                          }
+                        }
+                        
+                        return datosGrafico;
+                      })()}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorConversion" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                        style={{ fontSize: '12px' }}
+                      />
+                      <YAxis 
+                        domain={[0, 100]}
+                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                        style={{ fontSize: '12px' }}
+                        label={{ value: '%', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--popover))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px'
+                        }}
+                        formatter={(value) => [`${value.toFixed(2)}%`, 'Tasa de Conversión']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="hsl(var(--primary))"
+                        fillOpacity={1}
+                        fill="url(#colorConversion)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Comisiones - Ocupa menos espacio */}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Comisiones</CardTitle>
+            <CardDescription>Resumen de comisiones del mes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Porcentaje</span>
+                <Badge variant="secondary">
+                  {stats?.estadisticas?.finanzas?.comision_porcentaje || 0}%
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Total Comisiones</span>
+                <span className="text-sm font-semibold">
+                  ${parseFloat(stats?.estadisticas?.comisiones?.total || stats?.estadisticas?.finanzas?.total_comisiones || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Desbloqueadas</span>
+                <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
+                  ${parseFloat(stats?.estadisticas?.comisiones?.desbloqueadas || stats?.estadisticas?.finanzas?.total_comisiones_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Pendientes</span>
+                <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
+                  ${parseFloat(stats?.estadisticas?.comisiones?.pendientes || stats?.estadisticas?.finanzas?.total_comisiones_pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Badge>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Contratos Pagados</span>
+                <Badge variant="default">
+                  {stats?.estadisticas?.contratos?.pagados_completo || 0}
+                </Badge>
+              </div>
+
+              {/* Comisiones por Mes */}
+              {stats?.estadisticas?.comisiones?.por_mes && stats.estadisticas.comisiones.por_mes.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Por Mes</h3>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                      {stats.estadisticas.comisiones.por_mes.map((item, idx) => {
+                        const [anio, mes] = item.mes.split('-');
+                        const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                        const nombreMes = meses[parseInt(mes) - 1];
+                        return (
+                          <div key={idx} className="flex items-center justify-between text-sm py-1.5 px-2 bg-muted/50 rounded-md">
+                            <span className="text-muted-foreground">{nombreMes} {anio}</span>
+                            <span className="font-medium">
+                              ${item.total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Acciones rápidas */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-8 text-white">
-        <h2 className="text-2xl font-bold mb-4">Acciones Rápidas</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <a
-            href="/clientes/nuevo"
-            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg p-4 text-center transition"
-          >
-            <Users className="w-8 h-8 mx-auto mb-2" />
-            <span className="font-medium">Nuevo Cliente</span>
-          </a>
-          <a
-            href="/ofertas/nueva"
-            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg p-4 text-center transition"
-          >
-            <FileText className="w-8 h-8 mx-auto mb-2" />
-            <span className="font-medium">Nueva Oferta</span>
-          </a>
-          <a
-            href="/contratos"
-            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg p-4 text-center transition"
-          >
-            <FileCheck className="w-8 h-8 mx-auto mb-2" />
-            <span className="font-medium">Ver Contratos</span>
-          </a>
-        </div>
-      </div>
+      {/* Acciones rápidas - Estilo mejorado */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Acciones Rápidas</CardTitle>
+          <CardDescription>Accesos directos a las funciones más utilizadas</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-3 py-6"
+              asChild
+            >
+              <a href="/clientes/nuevo">
+                <Users className="h-5 w-5" />
+                <span className="font-medium">Nuevo Cliente</span>
+              </a>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-3 py-6"
+              asChild
+            >
+              <a href="/ofertas/nueva">
+                <FileText className="h-5 w-5" />
+                <span className="font-medium">Nueva Oferta</span>
+              </a>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-3 py-6"
+              asChild
+            >
+              <a href="/contratos">
+                <FileCheck className="h-5 w-5" />
+                <span className="font-medium">Ver Contratos</span>
+              </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabla de Contratos */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Contratos</CardTitle>
+              <CardDescription>Resumen de contratos del mes seleccionado</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/contratos">Ver Todos</Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingContratos ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : contratos.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No hay contratos para el mes seleccionado
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Fecha Evento</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Estado de Pago</TableHead>
+                  <TableHead className="text-right">Monto Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contratos.map((contrato) => (
+                  <TableRow key={contrato.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell className="font-medium">
+                      <Link 
+                        to={`/contratos/${contrato.id}`}
+                        className="hover:underline"
+                      >
+                        {contrato.codigo_contrato}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {contrato.clientes?.nombre_completo || 'Sin cliente'}
+                    </TableCell>
+                    <TableCell>
+                      {contrato.fecha_evento 
+                        ? format(new Date(contrato.fecha_evento), 'dd/MM/yyyy', { locale: es })
+                        : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline" 
+                        className={getEstadoContratoColor(contrato.estado)}
+                      >
+                        {contrato.estado.charAt(0).toUpperCase() + contrato.estado.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline" 
+                        className={getEstadoPagoColor(contrato.estado_pago)}
+                      >
+                        {contrato.estado_pago === 'pagado' 
+                          ? 'Pagado' 
+                          : contrato.estado_pago === 'parcial' 
+                          ? 'Pago Parcial' 
+                          : 'Pendiente'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      ${parseFloat(contrato.total_contrato || 0).toLocaleString('es-ES', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                      })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
