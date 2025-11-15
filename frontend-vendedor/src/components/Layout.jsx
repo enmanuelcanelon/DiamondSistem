@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   Calendar,
+  CalendarCheck,
   CreditCard,
   ChevronLeft,
   ChevronRight
@@ -38,7 +39,7 @@ function Layout() {
     ],
     eventos: [
       { name: 'Calendario', href: '/calendario', icon: Calendar },
-      { name: 'Gestión de Eventos', href: '/eventos', icon: Calendar },
+      { name: 'Gestión de Eventos', href: '/eventos', icon: CalendarCheck },
     ],
     finanzas: [
       { name: 'Comisiones', href: '/comisiones', icon: CreditCard },

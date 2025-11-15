@@ -214,6 +214,7 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
 router.get('/:id/clientes', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { fecha_desde, fecha_hasta } = req.query;
 
     // CRÍTICO: Verificar que el vendedor solo vea sus propios clientes
     if (parseInt(id) !== req.user.id) {
@@ -223,9 +224,21 @@ router.get('/:id/clientes', authenticate, requireVendedor, async (req, res, next
     const { getPaginationParams, createPaginationResponse } = require('../utils/pagination');
     const { page, limit, skip } = getPaginationParams(req.query);
     
+    // Construir where clause con filtro de fecha si se proporciona
+    const where = { vendedor_id: parseInt(id) };
+    if (fecha_desde || fecha_hasta) {
+      where.fecha_registro = {};
+      if (fecha_desde) {
+        where.fecha_registro.gte = new Date(fecha_desde);
+      }
+      if (fecha_hasta) {
+        where.fecha_registro.lte = new Date(fecha_hasta + 'T23:59:59');
+      }
+    }
+    
     const [clientes, total] = await Promise.all([
       prisma.clientes.findMany({
-        where: { vendedor_id: parseInt(id) },
+        where,
         include: {
           _count: {
             select: {
@@ -238,7 +251,7 @@ router.get('/:id/clientes', authenticate, requireVendedor, async (req, res, next
         take: limit,
         skip: skip
       }),
-      prisma.clientes.count({ where: { vendedor_id: parseInt(id) } })
+      prisma.clientes.count({ where })
     ]);
 
     res.json(createPaginationResponse(clientes, total, page, limit));
@@ -1020,9 +1033,10 @@ router.get('/:id/comisiones', authenticate, requireVendedor, async (req, res, ne
       })
     );
 
-    // Calcular comisiones pendientes y pagadas
+    // Calcular comisiones pendientes, pagadas y no desbloqueadas
     const comisionesPendientes = [];
     const comisionesPagadas = [];
+    const comisionesNoDesbloqueadas = [];
 
     for (const contrato of contratosConMontosPagados) {
       const totalContrato = parseFloat(contrato.total_contrato || 0);
@@ -1068,6 +1082,47 @@ router.get('/:id/comisiones', authenticate, requireVendedor, async (req, res, ne
       const montoPagadoSegunda = contrato.comision_segunda_mitad_pagada_monto;
       const estaCompletamentePagadaPrimera = montoPagadoPrimera >= comisionPrimeraMitad;
       const estaCompletamentePagadaSegunda = montoPagadoSegunda >= comisionSegundaMitad;
+
+      // Calcular información para comisiones no desbloqueadas
+      let motivoPrimeraMitad = null;
+      let motivoSegundaMitad = null;
+      
+      if (!primeraMitadCumplida) {
+        if (contrato.pagos.length === 0) {
+          motivoPrimeraMitad = 'No se ha realizado ningún pago';
+        } else {
+          const primerPago = contrato.pagos[0];
+          const montoPrimerPago = parseFloat(primerPago.monto_total || 0);
+          if (montoPrimerPago < 500) {
+            motivoPrimeraMitad = `El primer pago ($${montoPrimerPago.toFixed(2)}) es menor a $500`;
+          } else {
+            const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
+            const fechaLimite = new Date(fechaCreacion);
+            fechaLimite.setDate(fechaLimite.getDate() + 10);
+            const ahora = new Date();
+            
+            if (ahora > fechaLimite) {
+              const pagosDespues = contrato.pagos.filter((p, idx) => {
+                if (idx === 0) return false;
+                const fechaPago = new Date(p.fecha_pago);
+                return fechaPago > fechaCreacion && fechaPago <= fechaLimite;
+              });
+              const montoEnPlazo = pagosDespues.reduce((sum, p) => sum + parseFloat(p.monto_total || 0), 0);
+              if (montoEnPlazo < 500) {
+                motivoPrimeraMitad = `⚠️ FUERA DE PLAZO: No se pagaron $500 adicionales dentro de 10 días (pagado: $${montoEnPlazo.toFixed(2)}). Debe contactar para ver qué pasa.`;
+              } else {
+                motivoPrimeraMitad = `⚠️ FUERA DE PLAZO: No se alcanzó el total de $1000 en los primeros 10 días. Debe contactar para ver qué pasa.`;
+              }
+            } else {
+              motivoPrimeraMitad = `Faltan $500 adicionales dentro de 10 días (plazo vence: ${fechaLimite.toLocaleDateString('es-ES')})`;
+            }
+          }
+        }
+      }
+      
+      if (!segundaMitadCumplida) {
+        motivoSegundaMitad = `Se requiere pagar el 50% del contrato (actualmente: ${porcentajePagado.toFixed(2)}%)`;
+      }
 
       // Primera mitad
       if (primeraMitadCumplida) {
@@ -1144,6 +1199,37 @@ router.get('/:id/comisiones', authenticate, requireVendedor, async (req, res, ne
           });
         }
       }
+
+      // Agregar comisiones no desbloqueadas (agrupadas por contrato)
+      const mitadesNoDesbloqueadas = [];
+      if (!primeraMitadCumplida) {
+        mitadesNoDesbloqueadas.push({
+          tipo: 'primera_mitad',
+          monto_comision: comisionPrimeraMitad,
+          motivo: motivoPrimeraMitad
+        });
+      }
+      if (!segundaMitadCumplida) {
+        mitadesNoDesbloqueadas.push({
+          tipo: 'segunda_mitad',
+          monto_comision: comisionSegundaMitad,
+          motivo: motivoSegundaMitad
+        });
+      }
+
+      if (mitadesNoDesbloqueadas.length > 0) {
+        comisionesNoDesbloqueadas.push({
+          contrato_id: contrato.id,
+          codigo_contrato: contrato.codigo_contrato,
+          total_contrato: totalContrato,
+          cliente: contrato.clientes.nombre_completo,
+          fecha_evento: contrato.fecha_evento,
+          total_pagado: totalPagado,
+          porcentaje_pagado: porcentajePagado,
+          mitades: mitadesNoDesbloqueadas,
+          monto_total_comision: mitadesNoDesbloqueadas.reduce((sum, m) => sum + m.monto_comision, 0)
+        });
+      }
     }
 
     res.json({
@@ -1161,7 +1247,8 @@ router.get('/:id/comisiones', authenticate, requireVendedor, async (req, res, ne
         pagadas: comisionesPagadas.reduce((sum, c) => sum + c.monto_pagado, 0)
       },
       comisiones_pendientes: comisionesPendientes,
-      comisiones_pagadas: comisionesPagadas
+      comisiones_pagadas: comisionesPagadas,
+      comisiones_no_desbloqueadas: comisionesNoDesbloqueadas
     });
   } catch (error) {
     logger.error('Error al obtener comisiones del vendedor:', error);

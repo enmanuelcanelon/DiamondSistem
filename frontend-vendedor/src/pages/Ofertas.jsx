@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Loader2, ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Loader2, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, CheckCircle, XCircle, AlertCircle, Percent } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
@@ -101,6 +101,17 @@ function Ofertas() {
   const ofertas = data?.pages.flatMap(page => page.data) || [];
   const totalOfertas = data?.pages[0]?.total || 0;
 
+  // Calcular métricas de ofertas
+  const ofertasPendientes = ofertas.filter(o => o.estado === 'pendiente').length;
+  const ofertasAceptadas = ofertas.filter(o => o.estado === 'aceptada').length;
+  const ofertasRechazadas = ofertas.filter(o => o.estado === 'rechazada').length;
+  const valorPendiente = ofertas
+    .filter(o => o.estado === 'pendiente')
+    .reduce((sum, o) => sum + parseFloat(o.total_final || 0), 0);
+  const tasaConversion = totalOfertas > 0 
+    ? ((ofertasAceptadas / totalOfertas) * 100).toFixed(1)
+    : '0.0';
+
   // Detección de scroll para cargar más
   const observerTarget = useRef(null);
 
@@ -172,6 +183,7 @@ function Ofertas() {
         oferta_id: ofertaId,
         tipo_pago: planPago.tipo_pago,
         numero_plazos: planPago.numero_plazos,
+        dia_mes_pago: planPago.dia_mes_pago,
         plan_pagos: planPago.plan_pagos,
         meses_financiamiento: planPago.tipo_pago === 'plazos' ? planPago.numero_plazos : 1,
         nombre_evento: 'Evento',
@@ -258,11 +270,110 @@ function Ofertas() {
           </p>
         </div>
         <Button size="lg" asChild className="whitespace-nowrap">
-          <Link to="/ofertas/nueva" className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            <span>Nueva Oferta</span>
+          <Link to="/ofertas/nueva">
+            <Plus className="h-5 w-5 mr-2" />
+            Nueva Oferta
           </Link>
         </Button>
+      </div>
+
+      {/* Panel de Métricas */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Total de Ofertas */}
+        <Card className="bg-card relative">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total de Ofertas
+            </CardTitle>
+            <Badge 
+              variant="outline" 
+              className="absolute top-4 right-4 h-6 px-2 rounded-full border bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+            >
+              <div className="flex items-center gap-1">
+                <FileText className="w-3 h-3" />
+                <span className="text-xs font-semibold">
+                  {totalOfertas > 0 ? `+${totalOfertas}` : totalOfertas}
+                </span>
+              </div>
+            </Badge>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-2xl font-bold">{totalOfertas}</div>
+            <p className="text-xs text-muted-foreground mt-1">Ofertas totales</p>
+          </CardContent>
+        </Card>
+
+        {/* Pendientes */}
+        <Card className="bg-card relative">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ofertas Pendientes
+            </CardTitle>
+            <Badge 
+              variant="outline" 
+              className="absolute top-4 right-4 h-6 px-2 rounded-full border bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+            >
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                <span className="text-xs font-semibold">
+                  {ofertasPendientes > 0 ? `+${ofertasPendientes}` : ofertasPendientes}
+                </span>
+              </div>
+            </Badge>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-2xl font-bold">{ofertasPendientes}</div>
+            <p className="text-xs text-muted-foreground mt-1">Ofertas en revisión</p>
+          </CardContent>
+        </Card>
+
+        {/* Aceptadas */}
+        <Card className="bg-card relative">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ofertas Aceptadas
+            </CardTitle>
+            <Badge 
+              variant="outline" 
+              className="absolute top-4 right-4 h-6 px-2 rounded-full border bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+            >
+              <div className="flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" />
+                <span className="text-xs font-semibold">
+                  {ofertasAceptadas > 0 ? `+${ofertasAceptadas}` : ofertasAceptadas}
+                </span>
+              </div>
+            </Badge>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-2xl font-bold">{ofertasAceptadas}</div>
+            <p className="text-xs text-muted-foreground mt-1">Ofertas aprobadas</p>
+          </CardContent>
+        </Card>
+
+        {/* Rechazadas */}
+        <Card className="bg-card relative">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ofertas Rechazadas
+            </CardTitle>
+            <Badge 
+              variant="outline" 
+              className="absolute top-4 right-4 h-6 px-2 rounded-full border bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
+            >
+              <div className="flex items-center gap-1">
+                <XCircle className="w-3 h-3" />
+                <span className="text-xs font-semibold">
+                  {ofertasRechazadas > 0 ? `-${ofertasRechazadas}` : ofertasRechazadas}
+                </span>
+              </div>
+            </Badge>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-2xl font-bold">{ofertasRechazadas}</div>
+            <p className="text-xs text-muted-foreground mt-1">Ofertas rechazadas</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Búsqueda y filtros */}

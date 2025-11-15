@@ -143,6 +143,32 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     // Validar datos
     validarDatosCliente(datos);
 
+    // Verificar que el email no esté duplicado
+    const clienteConEmail = await prisma.clientes.findFirst({
+      where: { email: datos.email }
+    });
+
+    if (clienteConEmail) {
+      throw new ValidationError(
+        'Ya existe un cliente con este email',
+        ['El email debe ser único']
+      );
+    }
+
+    // Verificar que el teléfono no esté duplicado
+    if (datos.telefono) {
+      const clienteConTelefono = await prisma.clientes.findFirst({
+        where: { telefono: datos.telefono }
+      });
+
+      if (clienteConTelefono) {
+        throw new ValidationError(
+          'Ya existe un cliente con este teléfono',
+          ['El teléfono debe ser único']
+        );
+      }
+    }
+
     // Crear cliente
     const cliente = await prisma.clientes.create({
       data: {
@@ -193,6 +219,40 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
 
     if (!clienteExistente) {
       throw new NotFoundError('Cliente no encontrado');
+    }
+
+    // Verificar que el email no esté duplicado (si cambió)
+    if (datos.email && datos.email !== clienteExistente.email) {
+      const clienteConEmail = await prisma.clientes.findFirst({
+        where: { 
+          email: datos.email,
+          id: { not: parseInt(id) } // Excluir el cliente actual
+        }
+      });
+
+      if (clienteConEmail) {
+        throw new ValidationError(
+          'Ya existe un cliente con este email',
+          ['El email debe ser único']
+        );
+      }
+    }
+
+    // Verificar que el teléfono no esté duplicado (si cambió)
+    if (datos.telefono && datos.telefono !== clienteExistente.telefono) {
+      const clienteConTelefono = await prisma.clientes.findFirst({
+        where: { 
+          telefono: datos.telefono,
+          id: { not: parseInt(id) } // Excluir el cliente actual
+        }
+      });
+
+      if (clienteConTelefono) {
+        throw new ValidationError(
+          'Ya existe un cliente con este teléfono',
+          ['El teléfono debe ser único']
+        );
+      }
     }
 
     // Actualizar cliente

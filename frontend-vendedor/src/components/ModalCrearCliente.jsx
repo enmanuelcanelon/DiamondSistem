@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
+import toast from 'react-hot-toast';
 
 function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
   const queryClient = useQueryClient();
@@ -26,6 +27,7 @@ function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['clientes']);
+      toast.success('Cliente creado exitosamente');
       // Cerrar modal y notificar al padre
       onClienteCreado(data.cliente);
       // Resetear formulario
@@ -38,6 +40,9 @@ function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
         como_nos_conocio: '',
       });
       onClose();
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Error al crear cliente');
     },
   });
 

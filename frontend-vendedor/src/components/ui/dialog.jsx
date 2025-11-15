@@ -39,7 +39,7 @@ const DialogContent = React.forwardRef(({ className = "", children, ...props }, 
   return (
     <div
       ref={ref}
-      className={`bg-background text-foreground rounded-lg shadow-lg border p-6 max-w-lg w-full mx-4 ${className}`}
+      className={`bg-background text-foreground rounded-lg shadow-lg border p-6 w-full mx-4 ${className || 'max-w-lg'}`}
       onClick={(e) => e.stopPropagation()}
       {...props}
     >

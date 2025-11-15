@@ -252,6 +252,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       meses_financiamiento,
       nombre_evento,
       numero_plazos,
+      dia_mes_pago,  // Día del mes para pagos en plazos
       plan_pagos,
       pago_reserva_id  // ID del pago de reserva de $500
     } = req.body;

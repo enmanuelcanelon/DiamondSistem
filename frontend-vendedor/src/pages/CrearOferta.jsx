@@ -1569,41 +1569,31 @@ function CrearOferta() {
                   <Label htmlFor="cliente_id">
                     Cliente <span className="text-destructive">*</span>
                   </Label>
-                  <div className="flex gap-2">
-                    <Select
-                      value={formData.cliente_id || ""}
-                      onValueChange={(value) => {
-                        setFormData(prev => ({ ...prev, cliente_id: value }));
-                      }}
-                    >
-                      <SelectTrigger id="cliente_id" className="flex-1 min-w-[300px] [&>span]:truncate">
-                        <SelectValue placeholder="Seleccionar cliente...">
-                          {formData.cliente_id && clientes?.find(c => c.id.toString() === formData.cliente_id.toString()) 
-                            ? `${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).nombre_completo} - ${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).email}`
-                            : null
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="min-w-[400px]">
-                        {clientes?.map((cliente) => (
-                          <SelectItem key={cliente.id} value={cliente.id.toString()}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{cliente.nombre_completo}</span>
-                              <span className="text-xs text-muted-foreground">{cliente.email}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      onClick={() => setModalClienteOpen(true)}
-                      className="whitespace-nowrap"
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Nuevo Cliente
-                    </Button>
-                  </div>
+                  <Select
+                    value={formData.cliente_id || ""}
+                    onValueChange={(value) => {
+                      setFormData(prev => ({ ...prev, cliente_id: value }));
+                    }}
+                  >
+                    <SelectTrigger id="cliente_id" className="w-full [&>span]:truncate">
+                      <SelectValue placeholder="Seleccionar cliente...">
+                        {formData.cliente_id && clientes?.find(c => c.id.toString() === formData.cliente_id.toString()) 
+                          ? `${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).nombre_completo} - ${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).email}`
+                          : null
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="min-w-[400px]">
+                      {clientes?.map((cliente) => (
+                        <SelectItem key={cliente.id} value={cliente.id.toString()}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{cliente.nombre_completo}</span>
+                            <span className="text-xs text-muted-foreground">{cliente.email}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>

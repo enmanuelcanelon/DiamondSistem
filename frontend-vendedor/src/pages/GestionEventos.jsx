@@ -56,13 +56,18 @@ function GestionEventos() {
   const { data: contratosData, isLoading: loadingContratos } = useQuery({
     queryKey: ['contratos-vendedor'],
     queryFn: async () => {
-      const response = await api.get('/contratos');
+      const response = await api.get('/contratos', {
+        params: {
+          page: 1,
+          limit: 1000, // Obtener todos los contratos
+        }
+      });
       return response.data;
     },
   });
 
   const solicitudes = solicitudesData?.solicitudes || [];
-  const contratos = contratosData?.contratos || [];
+  const contratos = contratosData?.data || [];
 
   // Filtrar solicitudes por búsqueda
   const solicitudesFiltradas = solicitudes.filter((sol) => {
@@ -75,12 +80,25 @@ function GestionEventos() {
     );
   });
 
+  // Calcular eventos activos (estado activo y fecha_evento en el futuro o hoy)
+  const eventosActivos = contratos.filter((c) => {
+    if (!c.fecha_evento) return false;
+    const fechaEvento = new Date(c.fecha_evento);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fechaEvento.setHours(0, 0, 0, 0);
+    // Evento activo: estado activo y fecha del evento no ha pasado
+    return c.estado === 'activo' && fechaEvento >= hoy;
+  });
+
   // Calcular eventos próximos (menos de 30 días)
   const eventosProximos = contratos.filter((c) => {
     if (!c.fecha_evento) return false;
-    const dias = Math.floor(
-      (new Date(c.fecha_evento) - new Date()) / (1000 * 60 * 60 * 24)
-    );
+    const fechaEvento = new Date(c.fecha_evento);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fechaEvento.setHours(0, 0, 0, 0);
+    const dias = Math.floor((fechaEvento - hoy) / (1000 * 60 * 60 * 24));
     return dias >= 0 && dias <= 30;
   });
 
@@ -110,7 +128,7 @@ function GestionEventos() {
               <div>
                 <p className="text-xs text-muted-foreground">Eventos Activos</p>
                 <p className="text-2xl font-bold text-foreground mt-1">
-                  {contratos.length}
+                  {eventosActivos.length}
                 </p>
               </div>
               <div className="p-2 bg-blue-500/10 rounded-lg">

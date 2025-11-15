@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FileText, FileCheck, DollarSign, TrendingUp, TrendingDown, Calendar, ChevronLeft, ChevronRight, Download, ArrowUpRight, ArrowDownRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { Users, FileText, FileCheck, DollarSign, TrendingUp, TrendingDown, Calendar, ChevronLeft, ChevronRight, Download, ArrowUpRight, ArrowDownRight, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
@@ -23,41 +23,13 @@ function Dashboard() {
   const fechaActual = new Date();
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
   const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
-  const [periodoSeleccionado, setPeriodoSeleccionado] = useState('3meses'); // '3meses', '30dias', '7dias'
+  const [mostrarDatos, setMostrarDatos] = useState(false);
 
-  // Calcular fechas según el período seleccionado
-  const calcularFechasPorPeriodo = (periodo) => {
-    const hoy = new Date();
-    let fechaInicio, fechaFin;
-
-    switch (periodo) {
-      case '3meses':
-        // Últimos 3 meses
-        fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
-        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
-        break;
-      case '30dias':
-        // Últimos 30 días
-        fechaInicio = new Date(hoy);
-        fechaInicio.setDate(fechaInicio.getDate() - 30);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(hoy);
-        fechaFin.setHours(23, 59, 59, 999);
-        break;
-      case '7dias':
-        // Últimos 7 días
-        fechaInicio = new Date(hoy);
-        fechaInicio.setDate(fechaInicio.getDate() - 7);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(hoy);
-        fechaFin.setHours(23, 59, 59, 999);
-        break;
-      default:
-        // Por defecto, último mes
-        fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
-    }
-
+  // Calcular fechas del mes seleccionado
+  const calcularFechasPorMes = (mes, año) => {
+    const fechaInicio = new Date(año, mes - 1, 1);
+    fechaInicio.setHours(0, 0, 0, 0);
+    const fechaFin = new Date(año, mes, 0, 23, 59, 59);
     return {
       desde: fechaInicio.toISOString().split('T')[0],
       hasta: fechaFin.toISOString().split('T')[0],
@@ -66,48 +38,26 @@ function Dashboard() {
     };
   };
 
-  // Calcular fechas del período anterior para comparación
-  const calcularFechasPeriodoAnterior = (periodo) => {
-    const hoy = new Date();
-    let fechaInicio, fechaFin;
-
-    switch (periodo) {
-      case '3meses':
-        // 3 meses anteriores (meses 4-6 atrás)
-        fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1);
-        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 0, 23, 59, 59);
-        break;
-      case '30dias':
-        // Días 31-60 atrás
-        fechaInicio = new Date(hoy);
-        fechaInicio.setDate(fechaInicio.getDate() - 60);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(hoy);
-        fechaFin.setDate(fechaFin.getDate() - 31);
-        fechaFin.setHours(23, 59, 59, 999);
-        break;
-      case '7dias':
-        // Días 8-14 atrás
-        fechaInicio = new Date(hoy);
-        fechaInicio.setDate(fechaInicio.getDate() - 14);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(hoy);
-        fechaFin.setDate(fechaFin.getDate() - 8);
-        fechaFin.setHours(23, 59, 59, 999);
-        break;
-      default:
-        return null;
-    }
-
-    return { fechaInicio, fechaFin };
-  };
-
-  // Obtener estadísticas del vendedor filtradas por período
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['vendedor-stats', user?.id, periodoSeleccionado],
+  // Obtener estadísticas del vendedor filtradas por mes seleccionado
+  const { data: stats, isLoading, refetch } = useQuery({
+    queryKey: ['vendedor-stats', user?.id, mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
-      const { fechaInicio, fechaFin } = calcularFechasPorPeriodo(periodoSeleccionado);
-      const periodoAnterior = calcularFechasPeriodoAnterior(periodoSeleccionado);
+      const { fechaInicio, fechaFin } = calcularFechasPorMes(mesSeleccionado, añoSeleccionado);
+      
+      // Calcular período anterior (mes anterior) para comparación
+      let mesAnterior = mesSeleccionado - 1;
+      let añoAnterior = añoSeleccionado;
+      if (mesAnterior === 0) {
+        mesAnterior = 12;
+        añoAnterior = añoSeleccionado - 1;
+      }
+      const periodoAnterior = calcularFechasPorMes(mesAnterior, añoAnterior);
+      
+      // Debug: mostrar fechas calculadas
+      console.log(`[Mes ${mesSeleccionado}/${añoSeleccionado}] Fechas:`, {
+        inicio: fechaInicio.toISOString().split('T')[0],
+        fin: fechaFin.toISOString().split('T')[0]
+      });
       
       // Obtener ofertas del período actual
       const ofertasResponse = await api.get('/ofertas', {
@@ -128,26 +78,43 @@ function Dashboard() {
         ? ((ofertasAceptadas / totalOfertas) * 100).toFixed(2)
         : '0.00';
 
-      // Obtener contratos del período actual
+      // Obtener contratos del período actual (filtrar por fecha de creación del contrato)
+      // Necesitamos obtener todos los contratos y filtrar por fecha_creacion_contrato en el frontend
+      // ya que el backend filtra por fecha_evento
       const contratosResponse = await api.get('/contratos', {
         params: {
-          fecha_desde: fechaInicio.toISOString().split('T')[0],
-          fecha_hasta: fechaFin.toISOString().split('T')[0],
           page: 1,
           limit: 1000
         }
       });
-
-      const contratos = contratosResponse.data?.data || [];
+      
+      // Filtrar contratos por fecha_creacion_contrato en el frontend
+      const todosContratos = contratosResponse.data?.data || [];
+      const contratos = todosContratos.filter(contrato => {
+        if (!contrato.fecha_creacion_contrato) return false;
+        const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
+        // Normalizar fechas para comparación (solo fecha, sin hora)
+        const fechaCreacionNormalizada = new Date(fechaCreacion.getFullYear(), fechaCreacion.getMonth(), fechaCreacion.getDate());
+        const fechaInicioNormalizada = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), fechaInicio.getDate());
+        const fechaFinNormalizada = new Date(fechaFin.getFullYear(), fechaFin.getMonth(), fechaFin.getDate());
+        return fechaCreacionNormalizada >= fechaInicioNormalizada && fechaCreacionNormalizada <= fechaFinNormalizada;
+      });
       const contratosActivos = contratos.filter(c => c.estado === 'activo').length;
       const contratosPagadosCompleto = contratos.filter(c => c.estado_pago === 'completado').length;
       const totalVentas = contratos.reduce((sum, c) => sum + parseFloat(c.total_contrato || 0), 0);
 
       // Obtener clientes del período actual
-      const clientesResponse = await api.get(`/vendedores/${user.id}/stats/mes`, {
-        params: { mes: fechaActual.getMonth() + 1, año: fechaActual.getFullYear() }
+      const fechaInicioClientes = new Date(fechaInicio);
+      const fechaFinClientes = new Date(fechaFin);
+      const clientesResponse = await api.get(`/vendedores/${user.id}/clientes`, {
+        params: {
+          fecha_desde: fechaInicioClientes.toISOString().split('T')[0],
+          fecha_hasta: fechaFinClientes.toISOString().split('T')[0],
+          page: 1,
+          limit: 1000
+        }
       });
-      const totalClientes = clientesResponse.data?.estadisticas?.clientes?.total || 0;
+      const totalClientes = clientesResponse.data?.total || clientesResponse.data?.data?.length || 0;
 
       // Obtener comisiones usando el endpoint dedicado (sin filtro de mes para obtener todas)
       let comisionesData = {
@@ -214,36 +181,51 @@ function Dashboard() {
         totalVentas: 0
       };
 
-      if (periodoAnterior) {
-        const [ofertasAnterioresResponse, contratosAnterioresResponse] = await Promise.all([
-          api.get('/ofertas', {
-            params: {
-              fecha_desde: periodoAnterior.fechaInicio.toISOString().split('T')[0],
-              fecha_hasta: periodoAnterior.fechaFin.toISOString().split('T')[0],
-              page: 1,
-              limit: 1000
-            }
-          }),
-          api.get('/contratos', {
-            params: {
-              fecha_desde: periodoAnterior.fechaInicio.toISOString().split('T')[0],
-              fecha_hasta: periodoAnterior.fechaFin.toISOString().split('T')[0],
-              page: 1,
-              limit: 1000
-            }
-          })
-        ]);
+      // Obtener datos del mes anterior para comparación
+      const [ofertasAnterioresResponse, contratosAnterioresResponse, clientesAnterioresResponse] = await Promise.all([
+        api.get('/ofertas', {
+          params: {
+            fecha_desde: periodoAnterior.fechaInicio.toISOString().split('T')[0],
+            fecha_hasta: periodoAnterior.fechaFin.toISOString().split('T')[0],
+            page: 1,
+            limit: 1000
+          }
+        }),
+        api.get('/contratos', {
+          params: {
+            page: 1,
+            limit: 1000
+          }
+        }),
+        api.get(`/vendedores/${user.id}/clientes`, {
+          params: {
+            fecha_desde: periodoAnterior.fechaInicio.toISOString().split('T')[0],
+            fecha_hasta: periodoAnterior.fechaFin.toISOString().split('T')[0],
+            page: 1,
+            limit: 1000
+          }
+        })
+      ]);
 
-        const ofertasAnteriores = ofertasAnterioresResponse.data?.data || [];
-        const contratosAnteriores = contratosAnterioresResponse.data?.data || [];
+      const ofertasAnteriores = ofertasAnterioresResponse.data?.data || [];
+      const todosContratosAnteriores = contratosAnterioresResponse.data?.data || [];
+      // Filtrar contratos anteriores por fecha_creacion_contrato
+      const contratosAnteriores = todosContratosAnteriores.filter(contrato => {
+        if (!contrato.fecha_creacion_contrato) return false;
+        const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
+        const fechaCreacionNormalizada = new Date(fechaCreacion.getFullYear(), fechaCreacion.getMonth(), fechaCreacion.getDate());
+        const fechaInicioNormalizada = new Date(periodoAnterior.fechaInicio.getFullYear(), periodoAnterior.fechaInicio.getMonth(), periodoAnterior.fechaInicio.getDate());
+        const fechaFinNormalizada = new Date(periodoAnterior.fechaFin.getFullYear(), periodoAnterior.fechaFin.getMonth(), periodoAnterior.fechaFin.getDate());
+        return fechaCreacionNormalizada >= fechaInicioNormalizada && fechaCreacionNormalizada <= fechaFinNormalizada;
+      });
+      const totalClientesAnteriores = clientesAnterioresResponse.data?.total || clientesAnterioresResponse.data?.data?.length || 0;
 
-        datosAnteriores = {
-          clientes: totalClientes, // Mantener igual para clientes
-          ofertasPendientes: ofertasAnteriores.filter(o => o.estado === 'pendiente').length,
-          contratosActivos: contratosAnteriores.filter(c => c.estado === 'activo').length,
-          totalVentas: contratosAnteriores.reduce((sum, c) => sum + parseFloat(c.total_contrato || 0), 0)
-        };
-      }
+      datosAnteriores = {
+        clientes: totalClientesAnteriores,
+        ofertasPendientes: ofertasAnteriores.filter(o => o.estado === 'pendiente').length,
+        contratosActivos: contratosAnteriores.filter(c => c.estado === 'activo').length,
+        totalVentas: contratosAnteriores.reduce((sum, c) => sum + parseFloat(c.total_contrato || 0), 0)
+      };
 
       // Calcular cambios porcentuales
       const calcularCambioPorcentual = (actual, anterior) => {
@@ -291,31 +273,39 @@ function Dashboard() {
     enabled: !!user?.id,
   });
 
-  // Calcular fechas del mes seleccionado para contratos
-  const calcularFechasPorMes = (mes, año) => {
-    const fechaInicio = new Date(año, mes - 1, 1);
-    const fechaFin = new Date(año, mes, 0, 23, 59, 59);
-    return {
-      desde: fechaInicio.toISOString().split('T')[0],
-      hasta: fechaFin.toISOString().split('T')[0]
-    };
-  };
-
   const { desde: fechaDesde, hasta: fechaHasta } = calcularFechasPorMes(mesSeleccionado, añoSeleccionado);
 
   // Obtener contratos del mes seleccionado
   const { data: contratosData, isLoading: isLoadingContratos } = useQuery({
     queryKey: ['contratos-dashboard', user?.id, mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
+      // Obtener todos los contratos y filtrar por fecha_creacion_contrato
       const response = await api.get('/contratos', {
         params: {
           page: 1,
-          limit: 10,
-          fecha_desde: fechaDesde,
-          fecha_hasta: fechaHasta,
+          limit: 1000
         }
       });
-      return response.data;
+      
+      // Filtrar contratos por fecha_creacion_contrato del mes seleccionado
+      const todosContratos = response.data?.data || [];
+      const fechaInicioMes = new Date(añoSeleccionado, mesSeleccionado - 1, 1);
+      fechaInicioMes.setHours(0, 0, 0, 0);
+      const fechaFinMes = new Date(añoSeleccionado, mesSeleccionado, 0, 23, 59, 59);
+      
+      const contratosFiltrados = todosContratos.filter(contrato => {
+        if (!contrato.fecha_creacion_contrato) return false;
+        const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
+        const fechaCreacionNormalizada = new Date(fechaCreacion.getFullYear(), fechaCreacion.getMonth(), fechaCreacion.getDate());
+        const fechaInicioNormalizada = new Date(fechaInicioMes.getFullYear(), fechaInicioMes.getMonth(), fechaInicioMes.getDate());
+        const fechaFinNormalizada = new Date(fechaFinMes.getFullYear(), fechaFinMes.getMonth(), fechaFinMes.getDate());
+        return fechaCreacionNormalizada >= fechaInicioNormalizada && fechaCreacionNormalizada <= fechaFinNormalizada;
+      });
+      
+      return {
+        ...response.data,
+        data: contratosFiltrados.slice(0, 10) // Solo mostrar los primeros 10
+      };
     },
     enabled: !!user?.id,
   });
@@ -427,7 +417,9 @@ function Dashboard() {
     },
     {
       name: 'Total Ventas',
-      value: `$${parseFloat(stats?.estadisticas?.finanzas?.total_ventas || 0).toLocaleString()}`,
+      value: mostrarDatos 
+        ? `$${parseFloat(stats?.estadisticas?.finanzas?.total_ventas || 0).toLocaleString()}`
+        : '••••••',
       cambio: stats?.estadisticas?.finanzas?.cambio || 0,
       descripcion: 'Ingresos del período',
     },
@@ -444,6 +436,24 @@ function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMostrarDatos(!mostrarDatos)}
+            className="gap-2"
+          >
+            {mostrarDatos ? (
+              <>
+                <EyeOff className="w-4 h-4" />
+                Ocultar
+              </>
+            ) : (
+              <>
+                <Eye className="w-4 h-4" />
+                Mostrar
+              </>
+            )}
+          </Button>
           <Button
             variant="outline"
             size="icon"
@@ -535,7 +545,9 @@ function Dashboard() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => {
             const cambio = stat.cambio || 0;
-            const esPositivo = cambio >= 0;
+            const esPositivo = cambio > 0;
+            const esNegativo = cambio < 0;
+            const esCero = cambio === 0;
             const cambioAbsoluto = Math.abs(cambio);
             
             // "Ofertas Pendientes" siempre debe ser amarillo
@@ -544,7 +556,9 @@ function Dashboard() {
               ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
               : esPositivo
                 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                : 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
+                : esNegativo
+                  ? 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                  : 'bg-gray-50 dark:bg-gray-950/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-800';
             
             return (
               <Card key={stat.name} className="bg-card relative">
@@ -553,21 +567,35 @@ function Dashboard() {
                     {stat.name}
                   </CardTitle>
                   {/* Indicador de rendimiento/KPI - Esquina superior derecha */}
-                  <Badge 
-                    variant="outline" 
-                    className={`absolute top-4 right-4 h-6 px-2 rounded-full border ${badgeColorClass}`}
-                  >
-                    <div className="flex items-center gap-1">
-                      {esPositivo ? (
-                        <TrendingUp className="w-3 h-3" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3" />
-                      )}
-                      <span className="text-xs font-semibold">
-                        {esPositivo ? '+' : ''}{cambioAbsoluto.toFixed(1)}%
-                      </span>
-                    </div>
-                  </Badge>
+                  {!esCero && (
+                    <Badge 
+                      variant="outline" 
+                      className={`absolute top-4 right-4 h-6 px-2 rounded-full border ${badgeColorClass}`}
+                    >
+                      <div className="flex items-center gap-1">
+                        {esPositivo ? (
+                          <TrendingUp className="w-3 h-3" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3" />
+                        )}
+                        <span className="text-xs font-semibold">
+                          {esPositivo ? '+' : '-'}{cambioAbsoluto.toFixed(1)}%
+                        </span>
+                      </div>
+                    </Badge>
+                  )}
+                  {esCero && (
+                    <Badge 
+                      variant="outline" 
+                      className={`absolute top-4 right-4 h-6 px-2 rounded-full border ${badgeColorClass}`}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-semibold">
+                          0%
+                        </span>
+                      </div>
+                    </Badge>
+                  )}
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="text-2xl font-bold">{stat.value}</div>
@@ -586,44 +614,9 @@ function Dashboard() {
         {/* Ofertas - Ocupa más espacio */}
         <Card className="col-span-4">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Estado de Ofertas</CardTitle>
-                <CardDescription>Resumen de ofertas del período seleccionado</CardDescription>
-              </div>
-              {/* Selector de Período */}
-              <div className="flex items-center gap-0.5 bg-muted p-0.5 rounded-lg">
-                <button
-                  onClick={() => setPeriodoSeleccionado('3meses')}
-                  className={`px-3 py-1.5 text-xs font-medium transition ${
-                    periodoSeleccionado === '3meses'
-                      ? 'bg-background text-foreground shadow-sm rounded-md'
-                      : 'text-muted-foreground hover:text-foreground rounded-md'
-                  }`}
-                >
-                  Últimos 3 meses
-                </button>
-                <button
-                  onClick={() => setPeriodoSeleccionado('30dias')}
-                  className={`px-3 py-1.5 text-xs font-medium transition ${
-                    periodoSeleccionado === '30dias'
-                      ? 'bg-background text-foreground shadow-sm rounded-md'
-                      : 'text-muted-foreground hover:text-foreground rounded-md'
-                  }`}
-                >
-                  Últimos 30 días
-                </button>
-                <button
-                  onClick={() => setPeriodoSeleccionado('7dias')}
-                  className={`px-3 py-1.5 text-xs font-medium transition ${
-                    periodoSeleccionado === '7dias'
-                      ? 'bg-background text-foreground shadow-sm rounded-md'
-                      : 'text-muted-foreground hover:text-foreground rounded-md'
-                  }`}
-                >
-                  Últimos 7 días
-                </button>
-              </div>
+            <div>
+              <CardTitle>Estado de Ofertas</CardTitle>
+              <CardDescription>Resumen de ofertas del mes seleccionado</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -660,36 +653,28 @@ function Dashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                       data={(() => {
-                        const { fechaInicio, fechaFin } = calcularFechasPorPeriodo(periodoSeleccionado);
+                        // Mostrar datos por semana del mes seleccionado
                         const datosGrafico = [];
+                        const fechaInicioMes = new Date(añoSeleccionado, mesSeleccionado - 1, 1);
+                        const fechaFinMes = new Date(añoSeleccionado, mesSeleccionado, 0);
+                        const semanasEnMes = Math.ceil(fechaFinMes.getDate() / 7);
                         
-                        if (periodoSeleccionado === '3meses') {
-                          // Mostrar datos por mes (3 meses)
-                          for (let i = 2; i >= 0; i--) {
-                            const fecha = new Date();
-                            fecha.setMonth(fecha.getMonth() - i);
-                            const mesNombre = format(fecha, 'MMM', { locale: es });
-                            datosGrafico.push({ name: mesNombre, value: i === 0 ? tasaConversion : 0 });
-                          }
-                        } else if (periodoSeleccionado === '30dias') {
-                          // Mostrar datos por semana (4 semanas)
-                          for (let i = 3; i >= 0; i--) {
-                            const fecha = new Date();
-                            fecha.setDate(fecha.getDate() - (i * 7));
+                        for (let i = 0; i < semanasEnMes; i++) {
+                          const semanaInicio = new Date(fechaInicioMes);
+                          semanaInicio.setDate(semanaInicio.getDate() + (i * 7));
+                          const semanaFin = new Date(semanaInicio);
+                          semanaFin.setDate(semanaFin.getDate() + 6);
+                          
+                          // Verificar si la semana actual está dentro del mes
+                          if (semanaInicio <= fechaFinMes) {
+                            const fechaActual = new Date();
+                            const esSemanaActual = fechaActual >= semanaInicio && fechaActual <= semanaFin && 
+                                                   fechaActual.getMonth() === mesSeleccionado - 1 &&
+                                                   fechaActual.getFullYear() === añoSeleccionado;
+                            
                             datosGrafico.push({ 
-                              name: `Sem ${4 - i}`, 
-                              value: i === 0 ? tasaConversion : 0 
-                            });
-                          }
-                        } else {
-                          // Mostrar datos por día (7 días)
-                          for (let i = 6; i >= 0; i--) {
-                            const fecha = new Date();
-                            fecha.setDate(fecha.getDate() - i);
-                            const diaNombre = format(fecha, 'EEE', { locale: es });
-                            datosGrafico.push({ 
-                              name: diaNombre, 
-                              value: i === 0 ? tasaConversion : 0 
+                              name: `Sem ${i + 1}`, 
+                              value: esSemanaActual ? tasaConversion : 0 
                             });
                           }
                         }
@@ -756,19 +741,25 @@ function Dashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Total Comisiones</span>
                 <span className="text-sm font-semibold">
-                  ${parseFloat(stats?.estadisticas?.comisiones?.total || stats?.estadisticas?.finanzas?.total_comisiones || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {mostrarDatos 
+                    ? `$${parseFloat(stats?.estadisticas?.comisiones?.total || stats?.estadisticas?.finanzas?.total_comisiones || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : '••••••'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Desbloqueadas</span>
                 <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
-                  ${parseFloat(stats?.estadisticas?.comisiones?.desbloqueadas || stats?.estadisticas?.finanzas?.total_comisiones_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {mostrarDatos 
+                    ? `$${parseFloat(stats?.estadisticas?.comisiones?.desbloqueadas || stats?.estadisticas?.finanzas?.total_comisiones_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : '••••••'}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Pendientes</span>
                 <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                  ${parseFloat(stats?.estadisticas?.comisiones?.pendientes || stats?.estadisticas?.finanzas?.total_comisiones_pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {mostrarDatos 
+                    ? `$${parseFloat(stats?.estadisticas?.comisiones?.pendientes || stats?.estadisticas?.finanzas?.total_comisiones_pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : '••••••'}
                 </Badge>
               </div>
               <Separator />
@@ -794,7 +785,9 @@ function Dashboard() {
                           <div key={idx} className="flex items-center justify-between text-sm py-1.5 px-2 bg-muted/50 rounded-md">
                             <span className="text-muted-foreground">{nombreMes} {anio}</span>
                             <span className="font-medium">
-                              ${item.total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {mostrarDatos 
+                                ? `$${item.total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : '••••••'}
                             </span>
                           </div>
                         );
@@ -926,10 +919,12 @@ function Dashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${parseFloat(contrato.total_contrato || 0).toLocaleString('es-ES', { 
-                        minimumFractionDigits: 2, 
-                        maximumFractionDigits: 2 
-                      })}
+                      {mostrarDatos 
+                        ? `$${parseFloat(contrato.total_contrato || 0).toLocaleString('es-ES', { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                          })}`
+                        : '••••••'}
                     </TableCell>
                   </TableRow>
                 ))}

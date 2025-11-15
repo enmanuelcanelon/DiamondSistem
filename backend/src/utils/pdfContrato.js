@@ -553,31 +553,48 @@ function generarPDFContrato(contrato) {
       .text('El pago total debe realizarse de una sola vez antes del evento.', 50);
 
   } else if (contrato.plan_pagos && (contrato.tipo_pago === 'plazos' || contrato.tipo_pago === 'financiado')) {
-    const plan = contrato.plan_pagos;
+    const plan = typeof contrato.plan_pagos === 'string' 
+      ? JSON.parse(contrato.plan_pagos) 
+      : contrato.plan_pagos;
 
-    doc.fontSize(tamanosTexto.normal)
-      .fillColor(colores.texto)
-      .font(fuentes.bold)
-      .text(`Modalidad de Pago: Financiamiento en ${contrato.meses_financiamiento} Cuotas`, 50)
-      .moveDown(1);
+    if (!plan) {
+      doc.fontSize(tamanosTexto.normal)
+        .fillColor(colores.texto)
+        .font(fuentes.normal)
+        .text('Modalidad de Pago: Plan de Pagos (Detalles no disponibles)', 50);
+      doc.moveDown(1);
+    } else {
+      doc.fontSize(tamanosTexto.normal)
+        .fillColor(colores.texto)
+        .font(fuentes.bold)
+        .text(`Modalidad de Pago: Financiamiento en ${contrato.meses_financiamiento || plan.pagos?.length || 'N/A'} Cuotas`, 50)
+        .moveDown(1);
 
-    // PAGOS INICIALES OBLIGATORIOS
-    doc.fontSize(tamanosTexto.subseccionPequena)
-      .fillColor(colores.primario)
-      .font(fuentes.bold)
-      .text('PAGOS INICIALES OBLIGATORIOS')
-      .moveDown(0.5);
+      // PAGOS INICIALES OBLIGATORIOS
+      doc.fontSize(tamanosTexto.subseccionPequena)
+        .fillColor(colores.primario)
+        .font(fuentes.bold)
+        .text('PAGOS INICIALES OBLIGATORIOS')
+        .moveDown(0.5);
 
-    doc.fontSize(tamanosTexto.pequeno)
-      .fillColor(colores.texto)
-      .font(fuentes.normal)
-      .text(`1. Depósito de Reserva (No reembolsable): $${plan.depositoReserva.toLocaleString('es-ES')}`, 70)
-      .text('   Este pago confirma la reserva de su fecha y no es reembolsable bajo ninguna circunstancia.', 70)
-      .moveDown(0.5);
+      doc.fontSize(tamanosTexto.pequeno)
+        .fillColor(colores.texto)
+        .font(fuentes.normal);
 
-    doc.text(`2. Pago Inicial: $${plan.pagoInicial.toLocaleString('es-ES')}`, 70)
-      .text('   Debe realizarse dentro de los primeros 10 días calendario de la firma del contrato.', 70)
-      .moveDown(1);
+      // Depósito de reserva
+      if (plan.depositoReserva) {
+        doc.text(`1. Depósito de Reserva (No reembolsable): $${plan.depositoReserva.toLocaleString('es-ES')}`, 70)
+          .text('   Este pago confirma la reserva de su fecha y no es reembolsable bajo ninguna circunstancia.', 70)
+          .moveDown(0.5);
+      }
+
+      // Segundo pago (puede ser pagoInicial o segundoPago dependiendo de la versión)
+      const segundoPago = plan.segundoPago || plan.pagoInicial || 0;
+      if (segundoPago > 0) {
+        doc.text(`2. Segundo Pago: $${segundoPago.toLocaleString('es-ES')}`, 70)
+          .text('   Debe realizarse 15 días después de la reserva.', 70)
+          .moveDown(1);
+      }
 
     // CUOTAS MENSUALES
     if (plan.pagos && plan.pagos.length > 0) {
@@ -609,19 +626,20 @@ function generarPDFContrato(contrato) {
       doc.y = yActual + 10;
     }
 
-    doc.moveDown(1);
+      doc.moveDown(1);
 
-    // ADVERTENCIA IMPORTANTE
-    dibujarCajaInfo(doc, 50, doc.y, layout.anchoUtil, 50, config, '#FEE2E2', '#FECACA');
+      // ADVERTENCIA IMPORTANTE
+      dibujarCajaInfo(doc, 50, doc.y, layout.anchoUtil, 50, config, '#FEE2E2', '#FECACA');
 
-    doc.fontSize(tamanosTexto.pequeno)
-      .fillColor(colores.error)
-      .font(fuentes.bold)
-      .text('ADVERTENCIA IMPORTANTE: ', 65, doc.y + 12, { continued: true })
-      .font(fuentes.normal)
-      .text('El pago completo debe estar liquidado al menos 15 días hábiles antes del evento. El incumplimiento puede resultar en la cancelación del servicio sin derecho a reembolso.', { width: 480 });
+      doc.fontSize(tamanosTexto.pequeno)
+        .fillColor(colores.error)
+        .font(fuentes.bold)
+        .text('ADVERTENCIA IMPORTANTE: ', 65, doc.y + 12, { continued: true })
+        .font(fuentes.normal)
+        .text('El pago completo debe estar liquidado al menos 15 días hábiles antes del evento. El incumplimiento puede resultar en la cancelación del servicio sin derecho a reembolso.', { width: 480 });
 
-    doc.moveDown(3);
+      doc.moveDown(3);
+    }
   }
 
   // SECCIÓN 10: HISTORIAL DE PAGOS
