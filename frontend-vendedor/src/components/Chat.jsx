@@ -3,6 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Loader2, MessageCircle } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import api from '../config/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
 
 function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre, destinatarioEmail, destinatarioTelefono }) {
   const { user } = useAuthStore();
@@ -77,35 +81,33 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
   const mensajes = mensajesData?.mensajes || [];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border flex flex-col h-[600px]">
+    <Card className="flex flex-col h-[600px]">
       {/* Header */}
-      <div className="p-4 border-b bg-gradient-to-r from-purple-600 to-pink-600 rounded-t-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-            <MessageCircle className="w-6 h-6 text-white" />
+      <CardHeader className="border-b">
+        <CardTitle className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+            <MessageCircle className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">
-              {destinatarioNombre || 'Chat'}
-            </h3>
-            <p className="text-xs text-purple-100">
+            <div className="text-base">{destinatarioNombre || 'Chat'}</div>
+            <p className="text-xs text-muted-foreground font-normal">
               {user?.tipo === 'cliente' ? 'Tu asesor de eventos' : 'Cliente'}
             </p>
           </div>
-        </div>
-      </div>
+        </CardTitle>
+      </CardHeader>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/30">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : mensajes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <MessageCircle className="w-12 h-12 mb-3 text-gray-300" />
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <MessageCircle className="w-12 h-12 mb-3 text-muted-foreground/50" />
             <p className="text-sm">No hay mensajes aún</p>
-            <p className="text-xs text-gray-400">Envía el primer mensaje</p>
+            <p className="text-xs text-muted-foreground/70">Envía el primer mensaje</p>
           </div>
         ) : (
           <>
@@ -128,9 +130,9 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
               
               if (esMio) {
                 // Mensaje que YO envié
-                etiqueta = user?.tipo === 'vendedor' ? '📤 Tú (Vendedor)' : '📤 Tú (Cliente)';
-                colorFondo = 'bg-gradient-to-r from-purple-600 to-pink-600';
-                colorTexto = 'text-white';
+                etiqueta = user?.tipo === 'vendedor' ? 'Tú (Vendedor)' : 'Tú (Cliente)';
+                colorFondo = 'bg-primary';
+                colorTexto = 'text-primary-foreground';
                 colorBorde = '';
               } else if (mensaje.remitente_tipo === 'vendedor') {
                 // Mensaje del VENDEDOR (lo ve el cliente)
@@ -142,16 +144,16 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
                   nombreVendedor = 'Vendedor ADMIN001';
                 }
                 
-                etiqueta = `👔 ${nombreVendedor}`;
-                colorFondo = 'bg-blue-50';
-                colorTexto = 'text-gray-900';
-                colorBorde = 'border-2 border-blue-400';
+                etiqueta = nombreVendedor;
+                colorFondo = 'bg-blue-50 dark:bg-blue-950/20';
+                colorTexto = 'text-foreground';
+                colorBorde = 'border border-blue-200 dark:border-blue-800';
               } else {
                 // Mensaje del CLIENTE (lo ve el vendedor)
-                etiqueta = '👤 Cliente';
-                colorFondo = 'bg-green-50';
-                colorTexto = 'text-gray-900';
-                colorBorde = 'border-2 border-green-400';
+                etiqueta = 'Cliente';
+                colorFondo = 'bg-green-50 dark:bg-green-950/20';
+                colorTexto = 'text-foreground';
+                colorBorde = 'border border-green-200 dark:border-green-800';
               }
 
               // Verificar si hay info adicional del vendedor
@@ -175,26 +177,26 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
                   key={mensaje.id}
                   className={`flex ${esMio ? 'justify-end' : 'justify-start'} mb-3`}
                 >
-                  <div className={`max-w-[70%] rounded-xl px-4 py-3 shadow-sm ${colorFondo} ${colorBorde}`}>
+                  <div className={`max-w-[70%] rounded-lg px-4 py-3 shadow-sm ${colorFondo} ${colorBorde}`}>
                     {/* SIEMPRE mostrar la etiqueta de quién envió */}
                     <div className={`mb-2 ${
                       esMio 
-                        ? 'text-purple-100' 
+                        ? 'text-primary-foreground/80' 
                         : mensaje.remitente_tipo === 'vendedor'
-                          ? 'text-blue-700'
-                          : 'text-green-700'
+                          ? 'text-blue-700 dark:text-blue-300'
+                          : 'text-green-700 dark:text-green-300'
                     }`}>
-                      <p className="text-xs font-bold">
+                      <p className="text-xs font-semibold">
                         {etiqueta}
                       </p>
                       {/* Mostrar email y teléfono del vendedor si está disponible */}
                       {mostrarInfoVendedor && (
                         <div className="text-xs mt-1 space-y-0.5">
                           {emailVendedor && (
-                            <p className="text-blue-600">📧 {emailVendedor}</p>
+                            <p className="text-blue-600 dark:text-blue-400">{emailVendedor}</p>
                           )}
                           {telefonoVendedor && (
-                            <p className="text-blue-600">📞 {telefonoVendedor}</p>
+                            <p className="text-blue-600 dark:text-blue-400">{telefonoVendedor}</p>
                           )}
                         </div>
                       )}
@@ -208,10 +210,10 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
                     {/* Hora */}
                     <p className={`text-xs mt-2 ${
                       esMio 
-                        ? 'text-purple-200' 
+                        ? 'text-primary-foreground/70' 
                         : mensaje.remitente_tipo === 'vendedor'
-                          ? 'text-blue-600'
-                          : 'text-green-600'
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-green-600 dark:text-green-400'
                     }`}>
                       {new Date(mensaje.fecha_envio).toLocaleTimeString('es-ES', {
                         hour: '2-digit',
@@ -226,33 +228,33 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
             <div ref={messagesEndRef} />
           </>
         )}
-      </div>
+      </CardContent>
 
       {/* Input Area */}
-      <form onSubmit={handleEnviar} className="p-4 border-t bg-white rounded-b-xl">
-        <div className="flex gap-2">
-          <input
+      <div className="p-4 border-t bg-background">
+        <form onSubmit={handleEnviar} className="flex gap-2">
+          <Input
             type="text"
             value={nuevoMensaje}
             onChange={(e) => setNuevoMensaje(e.target.value)}
             placeholder="Escribe un mensaje..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
             disabled={enviarMutation.isPending}
+            className="flex-1"
           />
-          <button
+          <Button
             type="submit"
             disabled={!nuevoMensaje.trim() || enviarMutation.isPending}
-            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            size="icon"
           >
             {enviarMutation.isPending ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <Send className="w-5 h-5" />
             )}
-          </button>
-        </div>
-      </form>
-    </div>
+          </Button>
+        </form>
+      </div>
+    </Card>
   );
 }
 

@@ -53,15 +53,15 @@ function ImagenSeleccion({ urlImagen, alt = 'Imagen', tamaño = 'medium', onClos
           <X className="w-4 h-4" />
         </button>
       )}
-      <div className={`relative ${tamaños[tamaño]} rounded-lg overflow-hidden border-2 border-gray-200 shadow-md bg-gray-100`}>
+      <div className={`relative ${tamaños[tamaño]} rounded-lg overflow-hidden border border-border shadow-sm bg-muted/30`}>
         {cargando && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-            <ImageIcon className="w-8 h-8 text-gray-400 animate-pulse" />
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+            <ImageIcon className="w-6 h-6 text-muted-foreground animate-pulse" />
           </div>
         )}
         {error ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-            <ImageIcon className="w-8 h-8 text-gray-400" />
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+            <ImageIcon className="w-6 h-6 text-muted-foreground" />
             <span className="sr-only">Imagen no disponible</span>
           </div>
         ) : (

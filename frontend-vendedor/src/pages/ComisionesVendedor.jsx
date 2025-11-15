@@ -6,6 +6,12 @@ import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Separator } from '../components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 
 function ComisionesVendedor() {
   const { user } = useAuthStore();
@@ -39,6 +45,16 @@ function ComisionesVendedor() {
   const resetearMes = () => {
     setMesSeleccionado(fechaActual.getMonth() + 1);
     setAñoSeleccionado(fechaActual.getFullYear());
+  };
+
+  // Generar años disponibles (5 años atrás y 5 años adelante)
+  const generarAños = () => {
+    const años = [];
+    const añoActual = fechaActual.getFullYear();
+    for (let i = añoActual - 5; i <= añoActual + 5; i++) {
+      años.push(i);
+    }
+    return años;
   };
 
   const { data: comisionesData, isLoading, isError } = useQuery({
@@ -88,202 +104,224 @@ function ComisionesVendedor() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <p className="text-red-700">Error al cargar las comisiones</p>
-      </div>
+      <Card className="border-destructive">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <p className="text-destructive">Error al cargar las comisiones</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   const { vendedor, comisiones, comisiones_pendientes, comisiones_pagadas } = comisionesData || {};
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Mis Comisiones</h1>
-        <p className="text-gray-600">Visualiza y descarga el resumen de tus comisiones</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Mis Comisiones</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Visualiza y descarga el resumen de tus comisiones
+          </p>
+        </div>
+        <Button
+          onClick={handleDescargarResumen}
+          disabled={descargandoPDF}
+          className="whitespace-nowrap"
+        >
+          {descargandoPDF ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Generando...
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4 mr-2" />
+              Descargar PDF
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-500" />
-            <h2 className="text-lg font-semibold text-gray-900">Filtros</h2>
-          </div>
-          <button
-            onClick={handleDescargarResumen}
-            disabled={descargandoPDF}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {descargandoPDF ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generando...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                Descargar Resumen PDF
-              </>
-            )}
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-indigo-200 p-2">
-            <button
-              onClick={() => cambiarMes('anterior')}
-              className="p-1 hover:bg-indigo-50 rounded transition"
-              title="Mes anterior"
-            >
-              <ChevronLeft className="w-5 h-5 text-indigo-600" />
-            </button>
-            
-            <div className="flex items-center gap-2 px-3">
-              <select
-                value={mesSeleccionado}
-                onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-                className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => cambiarMes('anterior')}
+                title="Mes anterior"
               >
-                {nombresMeses.map((mes, index) => (
-                  <option key={index + 1} value={index + 1}>
-                    {mes}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={añoSeleccionado}
-                onChange={(e) => setAñoSeleccionado(parseInt(e.target.value))}
-                className="text-sm font-semibold text-gray-900 bg-transparent border-none outline-none cursor-pointer"
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                <Select value={mesSeleccionado.toString()} onValueChange={(value) => setMesSeleccionado(parseInt(value))}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue>
+                      {nombresMeses[mesSeleccionado - 1]}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {nombresMeses.map((mes, index) => (
+                      <SelectItem key={index} value={(index + 1).toString()}>
+                        {mes}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={añoSeleccionado.toString()} onValueChange={(value) => setAñoSeleccionado(parseInt(value))}>
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue>
+                      {añoSeleccionado}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {generarAños().map((año) => (
+                      <SelectItem key={año} value={año.toString()}>
+                        {año}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => cambiarMes('siguiente')}
+                title="Mes siguiente"
               >
-                {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - i).map((año) => (
-                  <option key={año} value={año}>
-                    {año}
-                  </option>
-                ))}
-              </select>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+
+              {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetearMes}
+                  title="Volver al mes actual"
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Hoy
+                </Button>
+              )}
             </div>
-
-            <button
-              onClick={() => cambiarMes('siguiente')}
-              className="p-1 hover:bg-indigo-50 rounded transition"
-              title="Mes siguiente"
-            >
-              <ChevronRight className="w-5 h-5 text-indigo-600" />
-            </button>
-
-            {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
-              <button
-                onClick={resetearMes}
-                className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded transition"
-                title="Volver al mes actual"
-              >
-                Hoy
-              </button>
-            )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Resumen de Comisiones */}
       {vendedor && (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="p-6 bg-gradient-to-r from-indigo-50 to-indigo-100 border-b border-indigo-200">
+        <Card>
+          <CardHeader className="bg-primary/5 border-b">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">{vendedor.nombre_completo}</h3>
-                <p className="text-sm text-gray-600">{vendedor.codigo_vendedor}</p>
+                <CardTitle className="text-xl">{vendedor.nombre_completo}</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">{vendedor.codigo_vendedor}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-600">Total Desbloqueadas</p>
-                <p className="text-2xl font-bold text-indigo-600">
+                <p className="text-xs text-muted-foreground">Total Desbloqueadas</p>
+                <p className="text-2xl font-bold text-primary">
                   ${parseFloat(comisiones?.total_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
-          </div>
-
-          <div className="p-6 space-y-6">
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
             {/* Resumen de Comisiones */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-xs text-gray-600 mb-1">Pendientes de Pago</p>
-                <p className="text-2xl font-bold text-yellow-700">
-                  ${parseFloat(comisiones?.pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-xs text-gray-600 mb-1">Pagadas</p>
-                <p className="text-2xl font-bold text-green-700">
-                  ${parseFloat(comisiones?.pagadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                <p className="text-xs text-gray-600 mb-1">Total</p>
-                <p className="text-2xl font-bold text-indigo-700">
-                  ${parseFloat(comisiones?.total || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
+              <Card className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
+                <CardContent className="pt-6">
+                  <p className="text-xs text-muted-foreground mb-1">Pendientes de Pago</p>
+                  <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+                    ${parseFloat(comisiones?.pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                <CardContent className="pt-6">
+                  <p className="text-xs text-muted-foreground mb-1">Pagadas</p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                    ${parseFloat(comisiones?.pagadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="bg-primary/10 border-primary/20">
+                <CardContent className="pt-6">
+                  <p className="text-xs text-muted-foreground mb-1">Total</p>
+                  <p className="text-2xl font-bold text-primary">
+                    ${parseFloat(comisiones?.total || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Comisiones Pendientes */}
             {comisiones_pendientes && comisiones_pendientes.length > 0 && (
               <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <XCircle className="w-5 h-5 text-yellow-600" />
-                  Comisiones Pendientes de Pago ({comisiones_pendientes.length})
-                </h4>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contrato</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Contrato</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto Comisión</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pagado</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pendiente</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <XCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                  <h4 className="text-lg font-semibold text-foreground">
+                    Comisiones Pendientes de Pago ({comisiones_pendientes.length})
+                  </h4>
+                </div>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Contrato</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead className="text-right">Total Contrato</TableHead>
+                        <TableHead className="text-right">Monto Comisión</TableHead>
+                        <TableHead className="text-right">Pagado</TableHead>
+                        <TableHead className="text-right">Pendiente</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {comisiones_pendientes.map((comision, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">{comision.codigo_contrato}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{comision.cliente}</td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium">{comision.codigo_contrato}</TableCell>
+                          <TableCell className="text-muted-foreground">{comision.cliente}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={
                               comision.tipo === 'primera_mitad' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-purple-100 text-purple-800'
-                            }`}>
+                                ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' 
+                                : 'bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300'
+                            }>
                               {comision.tipo === 'primera_mitad' ? 'Primera Mitad' : 'Segunda Mitad'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
                             ${parseFloat(comision.total_contrato || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
                             ${parseFloat(comision.monto_total || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
                             ${parseFloat(comision.monto_pagado || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-yellow-700">
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-yellow-700 dark:text-yellow-300">
                             ${parseFloat(comision.monto_pendiente || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             )}
@@ -291,68 +329,70 @@ function ComisionesVendedor() {
             {/* Comisiones Pagadas */}
             {comisiones_pagadas && comisiones_pagadas.length > 0 && (
               <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  Comisiones Pagadas ({comisiones_pagadas.length})
-                </h4>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contrato</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Contrato</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto Comisión</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pagado</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Pago</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <h4 className="text-lg font-semibold text-foreground">
+                    Comisiones Pagadas ({comisiones_pagadas.length})
+                  </h4>
+                </div>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Contrato</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead className="text-right">Total Contrato</TableHead>
+                        <TableHead className="text-right">Monto Comisión</TableHead>
+                        <TableHead className="text-right">Pagado</TableHead>
+                        <TableHead>Fecha Pago</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {comisiones_pagadas.map((comision, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">{comision.codigo_contrato}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{comision.cliente}</td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium">{comision.codigo_contrato}</TableCell>
+                          <TableCell className="text-muted-foreground">{comision.cliente}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={
                               comision.tipo === 'primera_mitad' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-purple-100 text-purple-800'
-                            }`}>
+                                ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' 
+                                : 'bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300'
+                            }>
                               {comision.tipo === 'primera_mitad' ? 'Primera Mitad' : 'Segunda Mitad'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
                             ${parseFloat(comision.total_contrato || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
                             ${parseFloat(comision.monto_total || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-green-700">
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-green-700 dark:text-green-300">
                             ${parseFloat(comision.monto_pagado || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
                             {comision.fecha_pago 
                               ? format(new Date(comision.fecha_pago), 'dd/MM/yyyy', { locale: es })
                               : '-'}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             )}
 
             {(!comisiones_pendientes || comisiones_pendientes.length === 0) && 
              (!comisiones_pagadas || comisiones_pagadas.length === 0) && (
-              <div className="text-center py-8 text-gray-500">
-                <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                <p>No hay comisiones registradas para este período</p>
+              <div className="text-center py-12">
+                <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">No hay comisiones registradas para este período</p>
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

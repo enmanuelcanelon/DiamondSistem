@@ -25,6 +25,7 @@ function Contratos() {
   const [clienteFiltro, setClienteFiltro] = useState(clienteIdFromUrl || '');
   const [filtroEstadoPago, setFiltroEstadoPago] = useState('');
   const [filtroEstadoEvento, setFiltroEstadoEvento] = useState('');
+  const [ordenamiento, setOrdenamiento] = useState('fecha_creacion'); // 'fecha_creacion' | 'fecha_evento'
 
   // Nombres de los meses
   const nombresMeses = [
@@ -139,7 +140,7 @@ function Contratos() {
   };
 
   // Filtrar contratos según los filtros de estado
-  const contratos = contratosRaw.filter((contrato) => {
+  const contratosFiltrados = contratosRaw.filter((contrato) => {
     // Filtro por estado de pago
     if (filtroEstadoPago) {
       const estadoPago = obtenerEstadoPago(contrato);
@@ -153,6 +154,30 @@ function Contratos() {
     }
 
     return true;
+  });
+
+  // Ordenar contratos según la opción seleccionada
+  const contratos = [...contratosFiltrados].sort((a, b) => {
+    if (ordenamiento === 'fecha_evento') {
+      // Ordenar por fecha del evento (más cercano primero)
+      const fechaA = a.fecha_evento ? new Date(a.fecha_evento).getTime() : Infinity;
+      const fechaB = b.fecha_evento ? new Date(b.fecha_evento).getTime() : Infinity;
+      return fechaA - fechaB; // Ascendente: eventos más próximos primero
+    } else {
+      // Ordenar por fecha de creación (más reciente primero)
+      // Usar created_at, fecha_firma o id como fallback
+      const fechaA = a.created_at 
+        ? new Date(a.created_at).getTime() 
+        : a.fecha_firma 
+        ? new Date(a.fecha_firma).getTime() 
+        : a.id || 0;
+      const fechaB = b.created_at 
+        ? new Date(b.created_at).getTime() 
+        : b.fecha_firma 
+        ? new Date(b.fecha_firma).getTime() 
+        : b.id || 0;
+      return fechaB - fechaA; // Descendente: más recientes primero
+    }
   });
 
   // Obtener nombre del cliente para mostrar en el filtro (del primer contrato que coincida)
@@ -314,6 +339,20 @@ function Contratos() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Ordenar por:</span>
+              <Select value={ordenamiento} onValueChange={setOrdenamiento}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue>
+                    {ordenamiento === 'fecha_evento' ? 'Próximo Evento' : 'Fecha de Creación'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fecha_creacion">Fecha de Creación</SelectItem>
+                  <SelectItem value="fecha_evento">Próximo Evento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           {/* Filtro por Mes y Año */}
@@ -442,23 +481,23 @@ function Contratos() {
             const colorBorde = esPagadoCompleto 
               ? 'border-l-green-500' 
               : tienePagoParcial 
-              ? 'border-l-blue-500'
+              ? 'border-l-yellow-500'
               : 'border-l-orange-500';
             
             // Color de la barra de progreso
             const colorProgreso = esPagadoCompleto 
               ? 'bg-green-500' 
               : tienePagoParcial 
-              ? 'bg-blue-500'
+              ? 'bg-yellow-500'
               : 'bg-orange-500';
             
             // Determinar estilo del badge según estado del evento
             const getBadgeStyle = (estado) => {
               if (estado === 'finalizado') {
-                return 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-300 dark:border-gray-800';
+                return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800';
               }
               if (estado === 'activo') {
-                return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800';
+                return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800';
               }
               if (estado === 'completado') {
                 return 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-300 dark:border-gray-800';

@@ -12,10 +12,12 @@ import {
   Save,
   X,
   Table,
-  Eye,
 } from 'lucide-react';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 
 function AsignacionMesas() {
   const { id: contratoId } = useParams();
@@ -313,164 +315,138 @@ function AsignacionMesas() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Modal para seleccionar invitado */}
       {mesaSeleccionadaParaAsignar && puedeEditar && invitadosSinMesa.length > 0 && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Seleccionar Invitado
-              </h3>
-              <button
-                onClick={() => setMesaSeleccionadaParaAsignar(null)}
-                className="p-1 rounded hover:bg-gray-100 transition"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Selecciona un invitado para asignar a la mesa
-            </p>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {invitadosSinMesa.map((invitado) => (
-                <button
-                  key={invitado.id}
-                  onClick={() => handleAsignarInvitadoAMesa(invitado.id)}
-                  disabled={asignarInvitadoMutation.isPending}
-                  className="w-full text-left p-3 border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition disabled:opacity-50"
+          <Card className="max-w-md w-full mx-4">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Seleccionar Invitado</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setMesaSeleccionadaParaAsignar(null)}
                 >
-                  <p className="font-medium text-gray-900">{invitado.nombre_completo}</p>
-                  <p className="text-xs text-gray-500 capitalize">{invitado.tipo}</p>
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setMesaSeleccionadaParaAsignar(null)}
-              className="mt-4 w-full px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
-            >
-              Cancelar
-            </button>
-          </div>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Selecciona un invitado para asignar a la mesa
+              </p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {invitadosSinMesa.map((invitado) => (
+                  <Button
+                    key={invitado.id}
+                    onClick={() => handleAsignarInvitadoAMesa(invitado.id)}
+                    disabled={asignarInvitadoMutation.isPending}
+                    variant="outline"
+                    className="w-full justify-start h-auto py-3"
+                  >
+                    <div className="text-left w-full">
+                      <p className="font-medium text-foreground">{invitado.nombre_completo}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{invitado.tipo}</p>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+              <Button
+                onClick={() => setMesaSeleccionadaParaAsignar(null)}
+                variant="outline"
+                className="mt-4 w-full"
+              >
+                Cancelar
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
       
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to={`/contratos/${contratoId}`} className="p-2 hover:bg-gray-100 rounded-lg transition">
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
+        <Button variant="ghost" size="icon" asChild>
+          <Link to={`/contratos/${contratoId}`}>
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
         <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900">Asignación de Mesas</h1>
-            {esVendedor && (
-              <span className="px-3 py-1 text-xs font-medium bg-amber-100 text-amber-800 rounded-full flex items-center gap-1">
-                <Eye className="w-3 h-3" />
-                Solo Lectura
-              </span>
-            )}
-          </div>
-          <p className="text-gray-600 mt-1">
-            {contrato?.codigo_contrato} - {contrato?.clientes?.nombre_completo}
+          <h1 className="text-3xl font-bold tracking-tight">Asignación de Mesas</h1>
+          <p className="text-muted-foreground mt-1">
+            {contrato?.codigo_contrato} • {contrato?.clientes?.nombre_completo}
           </p>
         </div>
       </div>
 
-      {/* Banner informativo para vendedor */}
-      {esVendedor && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
-          <div className="flex items-start gap-3">
-            <Eye className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900">
-                Vista de Solo Lectura
-              </p>
-              <p className="text-sm text-blue-700 mt-1">
-                Como vendedor, puedes ver la asignación de mesas pero no puedes editarla. Solo el cliente puede realizar cambios en esta sección.
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Vista Visual de Distribución */}
+      {(salonNombre || salonId) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Table className="w-5 h-5" />
+              Distribución Visual - {salonNombreKey || salonNombre || (salonId ? 'Salón ID: ' + salonId : 'Salón')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!configSalon ? (
+              <div className="bg-muted/50 border-l-4 border-muted-foreground/50 p-4 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Table className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground mb-1">
+                      Salón no configurado
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      El salón "{salonNombre}" aún no tiene una distribución visual configurada.
+                      Por favor, utiliza la lista de mesas a continuación para gestionar las asignaciones.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : mostrarMantenimiento ? (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 dark:border-amber-800 p-4 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Table className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-base font-semibold text-amber-900 dark:text-amber-300 mb-1">
+                      {configSalon.mensaje || 'En Mantenimiento'}
+                    </h3>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      La distribución visual de mesas para el salón {salonNombreKey || salonNombre} está en desarrollo.
+                      Por favor, utiliza la lista de mesas a continuación para gestionar las asignaciones.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="relative bg-background rounded-lg overflow-hidden border border-border">
+                <div className="relative w-full">
+                  <img 
+                    src={(() => {
+                      const imagenPath = configSalon.imagen;
+                      if (!imagenPath) return '';
+                      if (imagenPath.startsWith('http')) return imagenPath;
+                      
+                      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                      const baseUrl = apiUrl.replace('/api', '') || 'http://localhost:5000';
+                      const path = imagenPath.startsWith('/') ? imagenPath : `/${imagenPath}`;
+                      return `${baseUrl}${path}`;
+                    })()} 
+                    alt={`Plano del salón ${salonNombreKey || salonNombre}`}
+                    className="w-full h-auto object-contain"
+                    style={{ maxHeight: '800px' }}
+                    onError={(e) => {
+                      console.error('Error cargando imagen:', configSalon.imagen);
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-        {/* Panel Central: Gráfico Visual de Distribución */}
-        <div className="lg:col-span-1 space-y-4">
-          {/* Vista Visual de Distribución - Mostrar si hay salón o si hay mesas */}
-          {(salonNombre || salonId) && (
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                <Table className="w-5 h-5 text-indigo-600" />
-                Distribución Visual - {salonNombreKey || salonNombre || (salonId ? 'Salón ID: ' + salonId : 'Salón')}
-              </h2>
-              
-              {!configSalon ? (
-                <div className="bg-gray-50 border-l-4 border-gray-400 p-6 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      <Table className="w-8 h-8 text-gray-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                        Salón no configurado
-                      </h3>
-                      <p className="text-gray-700">
-                        El salón "{salonNombre}" aún no tiene una distribución visual configurada.
-                        Por favor, utiliza la lista de mesas a continuación para gestionar las asignaciones.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : mostrarMantenimiento ? (
-                <div className="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      <Table className="w-8 h-8 text-amber-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-amber-900 mb-1">
-                        {configSalon.mensaje || 'En Mantenimiento'}
-                      </h3>
-                      <p className="text-amber-700">
-                        La distribución visual de mesas para el salón {salonNombreKey || salonNombre} está en desarrollo.
-                        Por favor, utiliza la lista de mesas a continuación para gestionar las asignaciones.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative bg-white rounded-lg overflow-hidden border-2 border-gray-300">
-                  {/* Imagen del plano del salón */}
-                  <div className="relative w-full">
-                    <img 
-                      src={(() => {
-                        // Construir URL completa si es relativa
-                        const imagenPath = configSalon.imagen;
-                        if (!imagenPath) return '';
-                        if (imagenPath.startsWith('http')) return imagenPath;
-                        
-                        // Si es relativa, construir URL completa
-                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-                        const baseUrl = apiUrl.replace('/api', '') || 'http://localhost:5000';
-                        const path = imagenPath.startsWith('/') ? imagenPath : `/${imagenPath}`;
-                        return `${baseUrl}${path}`;
-                      })()} 
-                      alt={`Plano del salón ${salonNombreKey || salonNombre}`}
-                      className="w-full h-auto object-contain"
-                      style={{ maxHeight: '800px' }}
-                      onError={(e) => {
-                        console.error('Error cargando imagen:', configSalon.imagen);
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                  
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

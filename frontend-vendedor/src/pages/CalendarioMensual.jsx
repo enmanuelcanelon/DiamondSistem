@@ -5,6 +5,11 @@ import { Calendar, ChevronLeft, ChevronRight, Clock, Users, MapPin, DollarSign, 
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Separator } from '../components/ui/separator';
 
 function CalendarioMensual() {
   const { user } = useAuthStore();
@@ -60,6 +65,16 @@ function CalendarioMensual() {
     setAñoSeleccionado(hoy.getFullYear());
   };
 
+  // Generar años disponibles (10 años atrás y 10 años adelante)
+  const generarAños = () => {
+    const años = [];
+    const añoActual = fechaActual.getFullYear();
+    for (let i = añoActual - 10; i <= añoActual + 10; i++) {
+      años.push(i);
+    }
+    return años;
+  };
+
   // Obtener el primer día del mes y cuántos días tiene
   const obtenerDiasDelMes = () => {
     const primerDia = new Date(añoSeleccionado, mesSeleccionado - 1, 1);
@@ -85,13 +100,13 @@ function CalendarioMensual() {
   const obtenerColorEstado = (estado) => {
     switch (estado) {
       case 'completado':
-        return 'bg-green-100 border-green-300 text-green-800';
+        return 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300';
       case 'parcial':
-        return 'bg-yellow-100 border-yellow-300 text-yellow-800';
+        return 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300';
       case 'pendiente':
-        return 'bg-red-100 border-red-300 text-red-800';
+        return 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300';
       default:
-        return 'bg-gray-100 border-gray-300 text-gray-800';
+        return 'bg-muted border-border text-foreground';
     }
   };
 
@@ -104,7 +119,7 @@ function CalendarioMensual() {
     // Días vacíos al inicio del mes
     for (let i = 0; i < diaInicioSemana; i++) {
       dias.push(
-        <div key={`empty-${i}`} className="h-32 bg-gray-50 border border-gray-200 rounded-lg"></div>
+        <div key={`empty-${i}`} className="h-32 bg-muted/30 border border-border rounded-lg"></div>
       );
     }
 
@@ -118,30 +133,30 @@ function CalendarioMensual() {
       dias.push(
         <div
           key={dia}
-          className={`h-32 border rounded-lg p-2 overflow-y-auto ${
+          className={`h-32 border rounded-lg p-2 overflow-y-auto transition-colors ${
             esHoy 
-              ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-300' 
-              : 'bg-white border-gray-200 hover:border-gray-300'
+              ? 'bg-primary/10 border-primary ring-2 ring-primary/20' 
+              : 'bg-card border-border hover:border-primary/50'
           }`}
         >
-          <div className={`text-sm font-semibold mb-1 ${esHoy ? 'text-blue-700' : 'text-gray-700'}`}>
+          <div className={`text-sm font-semibold mb-1 ${esHoy ? 'text-primary' : 'text-foreground'}`}>
             {dia}
           </div>
           <div className="space-y-1">
             {eventosDelDia.length === 0 ? (
-              <div className="text-xs text-gray-400 text-center mt-1">Sin eventos</div>
+              <div className="text-xs text-muted-foreground text-center mt-1">Sin eventos</div>
             ) : (
               eventosDelDia.map((evento, index) => (
                 <div
                   key={evento.id}
                   onClick={() => navigate(`/contratos/${evento.id}`)}
-                  className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 transition ${obtenerColorEstado(evento.estado_pago)}`}
+                  className={`text-xs p-1.5 rounded cursor-pointer hover:opacity-80 transition border ${obtenerColorEstado(evento.estado_pago)}`}
                   title={`${evento.clientes?.nombre_completo || 'Cliente'} - ${evento.salones?.nombre || 'Salón'} - ${formatearHora(evento.hora_inicio)}`}
                 >
                   <div className="font-medium truncate">
                     {evento.clientes?.nombre_completo || 'Sin nombre'}
                   </div>
-                  <div className="flex items-center gap-1 text-xs">
+                  <div className="flex items-center gap-1 text-[10px] mt-0.5">
                     {evento.hora_inicio && (
                       <Clock className="w-3 h-3" />
                     )}
@@ -161,8 +176,8 @@ function CalendarioMensual() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
-        <p className="ml-3 text-gray-600">Cargando calendario...</p>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="ml-3 text-muted-foreground">Cargando calendario...</p>
       </div>
     );
   }
@@ -171,20 +186,20 @@ function CalendarioMensual() {
     toast.error('Error al cargar el calendario');
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-600">Error al cargar el calendario</p>
+        <p className="text-destructive">Error al cargar el calendario</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Calendar className="w-8 h-8 text-purple-600" />
+          <Calendar className="w-6 h-6 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Calendario de Eventos</h1>
-            <p className="text-sm text-gray-600">
+            <h1 className="text-3xl font-bold tracking-tight">Calendario de Eventos</h1>
+            <p className="text-sm text-muted-foreground">
               Vista mensual de todos tus eventos programados
             </p>
           </div>
@@ -192,119 +207,167 @@ function CalendarioMensual() {
       </div>
 
       {/* Controles de navegación */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => cambiarMes('anterior')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
-              title="Mes anterior"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            
-            <div className="text-center min-w-[200px]">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
-              </h2>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Navegación Mes/Año */}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => cambiarMes('anterior')}
+                title="Mes anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                <Select value={mesSeleccionado.toString()} onValueChange={(value) => setMesSeleccionado(parseInt(value))}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue>
+                      {nombresMeses[mesSeleccionado - 1]}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {nombresMeses.map((mes, index) => (
+                      <SelectItem key={index} value={(index + 1).toString()}>
+                        {mes}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={añoSeleccionado.toString()} onValueChange={(value) => setAñoSeleccionado(parseInt(value))}>
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue>
+                      {añoSeleccionado}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {generarAños().map((año) => (
+                      <SelectItem key={año} value={año.toString()}>
+                        {año}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => cambiarMes('siguiente')}
+                title="Mes siguiente"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
             </div>
 
-            <button
-              onClick={() => cambiarMes('siguiente')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
-              title="Mes siguiente"
+            <Button
+              variant="outline"
+              onClick={irAlMesActual}
+              className="whitespace-nowrap"
             >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+              <Calendar className="w-4 h-4 mr-2" />
+              Ir a Hoy
+            </Button>
           </div>
 
-          <button
-            onClick={irAlMesActual}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium"
-          >
-            Hoy
-          </button>
-        </div>
-
-        {/* Estadísticas del mes */}
-        {calendarioData && (
-          <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-purple-600" />
-              <div>
-                <p className="text-sm text-gray-600">Total Eventos</p>
-                <p className="text-lg font-bold text-gray-900">{calendarioData.total_eventos || 0}</p>
+          {/* Estadísticas del mes */}
+          {calendarioData && (
+            <>
+              <Separator className="my-4" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Calendar className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Eventos</p>
+                    <p className="text-lg font-bold text-foreground">{calendarioData.total_eventos || 0}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pagados</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {calendarioData.eventos?.filter(e => e.estado_pago === 'completado').length || 0}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Invitados</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {calendarioData.eventos?.reduce((sum, e) => sum + (e.cantidad_invitados || 0), 0) || 0}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-500/10 rounded-lg">
+                    <MapPin className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Salones Únicos</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {new Set(calendarioData.eventos?.map(e => e.salones?.nombre).filter(Boolean)).size || 0}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="text-sm text-gray-600">Pagados</p>
-                <p className="text-lg font-bold text-gray-900">
-                  {calendarioData.eventos?.filter(e => e.estado_pago === 'completado').length || 0}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600">Total Invitados</p>
-                <p className="text-lg font-bold text-gray-900">
-                  {calendarioData.eventos?.reduce((sum, e) => sum + (e.cantidad_invitados || 0), 0) || 0}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-orange-600" />
-              <div>
-                <p className="text-sm text-gray-600">Salones Únicos</p>
-                <p className="text-lg font-bold text-gray-900">
-                  {new Set(calendarioData.eventos?.map(e => e.salones?.nombre).filter(Boolean)).size || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Calendario Grid */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        {/* Días de la semana */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
-          {diasSemana.map((dia) => (
-            <div key={dia} className="text-center font-semibold text-gray-700 py-2">
-              {dia}
-            </div>
-          ))}
-        </div>
+      <Card>
+        <CardContent className="pt-6">
+          {/* Días de la semana */}
+          <div className="grid grid-cols-7 gap-2 mb-2">
+            {diasSemana.map((dia) => (
+              <div key={dia} className="text-center font-semibold text-muted-foreground py-2 text-sm">
+                {dia}
+              </div>
+            ))}
+          </div>
 
-        {/* Días del mes */}
-        <div className="grid grid-cols-7 gap-2">
-          {renderizarCalendario()}
-        </div>
-      </div>
+          {/* Días del mes */}
+          <div className="grid grid-cols-7 gap-2">
+            {renderizarCalendario()}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Leyenda */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Leyenda de Estados</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-            <span className="text-sm text-gray-700">Completado</span>
+      <Card>
+        <CardContent className="pt-6">
+          <h3 className="text-sm font-semibold text-foreground mb-4">Leyenda de Estados</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-4 h-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded"></div>
+              <span className="text-sm text-foreground">Completado</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-4 h-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded"></div>
+              <span className="text-sm text-foreground">Pago Parcial</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-4 h-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded"></div>
+              <span className="text-sm text-foreground">Pendiente</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
-            <span className="text-sm text-gray-700">Pago Parcial</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
-            <span className="text-sm text-gray-700">Pendiente</span>
-          </div>
-        </div>
-        <p className="text-xs text-gray-500 mt-3">
-          💡 Haz clic en cualquier evento para ver los detalles del contrato
-        </p>
-      </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            Haz clic en cualquier evento para ver los detalles del contrato
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

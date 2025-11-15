@@ -25,6 +25,12 @@ import api from '../config/api';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
 import toast, { Toaster } from 'react-hot-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Progress } from '../components/ui/progress';
+import { Separator } from '../components/ui/separator';
+import { CheckCircle2 } from 'lucide-react';
 
 function DetalleContrato() {
   const { id } = useParams();
@@ -157,199 +163,309 @@ function DetalleContrato() {
     setEditandoNotas(false);
   };
 
+  // Función para determinar si el contrato está finalizado
+  const esContratoFinalizado = (fechaEvento) => {
+    if (!fechaEvento) return false;
+    const fechaEventoDate = new Date(fechaEvento);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fechaEventoDate.setHours(0, 0, 0, 0);
+    return fechaEventoDate < hoy;
+  };
+
+  // Obtener estado real del evento
+  const obtenerEstadoEvento = (contrato) => {
+    if (esContratoFinalizado(contrato?.fecha_evento)) {
+      return 'finalizado';
+    }
+    return contrato?.estado === 'completado' ? 'completado' : 'activo';
+  };
+
+  // Obtener estado de pago
+  const obtenerEstadoPago = (contrato) => {
+    const total = parseFloat(contrato?.total_contrato || 0);
+    const pagado = parseFloat(contrato?.total_pagado || 0);
+    const porcentajePago = total > 0 ? (pagado / total) * 100 : 0;
+    const esPagadoCompleto = porcentajePago >= 99.5 || parseFloat(contrato?.saldo_pendiente || 0) < 1;
+    const tienePagoParcial = pagado > 0 && !esPagadoCompleto;
+    
+    if (esPagadoCompleto) return 'pagado_completo';
+    if (tienePagoParcial) return 'pago_parcial';
+    return 'pago_pendiente';
+  };
+
+  // Función helper para determinar la categoría de un servicio
+  const obtenerCategoriaServicio = (nombreServicio, servicioData) => {
+    if (!nombreServicio) return 'Otros';
+    
+    // Si el servicio tiene categoría definida, usarla
+    if (servicioData?.categoria) {
+      return servicioData.categoria;
+    }
+    
+    const nombre = nombreServicio.toLowerCase();
+    
+    // Entretenimiento
+    if (nombre.includes('dj') || nombre.includes('hora loca') || nombre.includes('animador') || 
+        nombre.includes('fotobooth') || nombre.includes('photobooth')) {
+      return 'Entretenimiento';
+    }
+    
+    // Bar
+    if (nombre.includes('premium') || nombre.includes('basic') || nombre.includes('sidra') || 
+        nombre.includes('champaña') || nombre.includes('champagne') || nombre.includes('bar')) {
+      return 'Bar';
+    }
+    
+    // Iluminación
+    if (nombre.includes('luces') || nombre.includes('mapping') || nombre.includes('lumínico') || 
+        nombre.includes('número lumínico') || nombre.includes('numero luminico')) {
+      return 'Iluminación';
+    }
+    
+    // Audio/Video
+    if (nombre.includes('pantalla') || nombre.includes('led') || nombre.includes('tv') || 
+        nombre.includes('foto y video') || nombre.includes('video') || nombre.includes('foto')) {
+      return 'Audio/Video';
+    }
+    
+    // Decoración
+    if (nombre.includes('lounge') || nombre.includes('decoración') || nombre.includes('decoracion') || 
+        nombre.includes('coctel') || nombre.includes('cóctel')) {
+      return 'Decoración';
+    }
+    
+    // Comida
+    if (nombre.includes('comida') || nombre.includes('quesos') || nombre.includes('cake') || 
+        nombre.includes('utensilios') || nombre.includes('mesa de quesos')) {
+      return 'Comida';
+    }
+    
+    // Transporte
+    if (nombre.includes('limosina') || nombre.includes('transporte')) {
+      return 'Transporte';
+    }
+    
+    // Personal
+    if (nombre.includes('coordinador') || nombre.includes('personal de servicio') || 
+        nombre.includes('bartender') || nombre.includes('mesero')) {
+      return 'Personal';
+    }
+    
+    // Extras
+    if (nombre.includes('hora extra') || nombre.includes('máquina de humo') || 
+        nombre.includes('maquina de humo') || nombre.includes('chispas') || 
+        nombre.includes('humo') || nombre.includes('extra')) {
+      return 'Extras';
+    }
+    
+    return 'Otros';
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
+  const estadoEventoReal = obtenerEstadoEvento(contrato);
+  const estadoPagoReal = obtenerEstadoPago(contrato);
+
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link 
-          to="/contratos" 
-          className="p-2 hover:bg-gray-100 rounded-lg transition"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
-        <div className="flex items-center gap-3 flex-1">
-          <span className="text-4xl">{getEventoEmoji(contrato)}</span>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900">
-              {generarNombreEvento(contrato)}
-            </h1>
-            <p className="text-sm text-gray-500 font-mono mt-1">
-              {contrato?.codigo_contrato}
-            </p>
-            <p className="text-gray-600 mt-1">
-              Cliente: {contrato?.clientes?.nombre_completo || 'Sin cliente'}
-            </p>
-          </div>
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/contratos">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {generarNombreEvento(contrato)}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {contrato?.codigo_contrato} • {contrato?.clientes?.nombre_completo || 'Sin cliente'}
+          </p>
         </div>
         <div className="flex gap-2">
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-            contrato?.estado === 'activo' ? 'bg-green-100 text-green-800' :
-            contrato?.estado === 'completado' ? 'bg-blue-100 text-blue-800' :
-            'bg-red-100 text-red-800'
-          }`}>
-            {contrato?.estado}
-          </span>
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-            contrato?.estado_pago === 'pagado' ? 'bg-green-100 text-green-800' :
-            contrato?.estado_pago === 'parcial' ? 'bg-blue-100 text-blue-800' :
-            'bg-yellow-100 text-yellow-800'
-          }`}>
-            {contrato?.estado_pago === 'pagado' ? 'Pagado Completo' :
-             contrato?.estado_pago === 'parcial' ? 'Pago Parcial' :
-             'Pendiente de Pago'}
-          </span>
+          <Badge 
+            variant="outline"
+            className={
+              estadoEventoReal === 'activo' 
+                ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800' 
+                : estadoEventoReal === 'finalizado'
+                ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+                : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-300 dark:border-gray-800'
+            }
+          >
+            {estadoEventoReal === 'finalizado' ? 'Finalizado' : estadoEventoReal === 'activo' ? 'Activo' : 'Completado'}
+          </Badge>
+          <Badge 
+            variant="outline"
+            className={
+              estadoPagoReal === 'pagado_completo'
+                ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800'
+                : estadoPagoReal === 'pago_parcial'
+                ? 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800'
+                : 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800'
+            }
+          >
+            {estadoPagoReal === 'pagado_completo' ? 'Pagado Completo' :
+             estadoPagoReal === 'pago_parcial' ? 'Pago Parcial' :
+             'Pago Pendiente'}
+          </Badge>
         </div>
       </div>
 
-      {/* Contenido del contrato */}
-      <>
-          {/* Botones de Descarga de PDFs y Acciones */}
-          <div className="bg-white rounded-xl shadow-sm border p-4">
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to={`/contratos/${id}/mesas`}
-            className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
-          >
-            <Table className="w-5 h-5" />
-            Asignación de Mesas
-          </Link>
-          <Link
-            to={`/contratos/${id}/playlist`}
-            className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
-          >
-            <Music className="w-5 h-5" />
-            Playlist Musical
-          </Link>
-          <Link
-            to={`/chat/${id}`}
-            className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            <MessageCircle className="w-5 h-5" />
-            Chat con Cliente
-          </Link>
-          <Link
-            to={`/ajustes/${id}`}
-            className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium"
-          >
-            <Settings className="w-5 h-5" />
-            Ajustes del Evento
-          </Link>
-          <button
-            onClick={handleDescargarContrato}
-            className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
-          >
-            <Download className="w-5 h-5" />
-            Descargar PDF
-          </button>
-          <button
-            onClick={handleEnviarContratoPorEmail}
-            className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            <Mail className="w-5 h-5" />
-            Enviar por Email
-          </button>
-        </div>
-      </div>
+      {/* Botones de Acción */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap gap-3">
+            <Button asChild className="flex-1 min-w-[200px] whitespace-nowrap">
+              <Link to={`/contratos/${id}/mesas`} className="flex items-center gap-2">
+                <Table className="w-4 h-4" />
+                <span>Asignación de Mesas</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="flex-1 min-w-[200px] whitespace-nowrap">
+              <Link to={`/contratos/${id}/playlist`} className="flex items-center gap-2">
+                <Music className="w-4 h-4" />
+                <span>Playlist Musical</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="flex-1 min-w-[200px] whitespace-nowrap">
+              <Link to={`/chat/${id}`} className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                <span>Chat con Cliente</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="flex-1 min-w-[200px] whitespace-nowrap">
+              <Link to={`/ajustes/${id}`} className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                <span>Ajustes del Evento</span>
+              </Link>
+            </Button>
+            <Button 
+              onClick={handleDescargarContrato}
+              variant="outline"
+              className="flex-1 min-w-[200px] whitespace-nowrap"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Descargar PDF
+            </Button>
+            <Button 
+              onClick={handleEnviarContratoPorEmail}
+              variant="outline"
+              className="flex-1 min-w-[200px] whitespace-nowrap"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Enviar por Email
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Información del Evento */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Detalles del Evento</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-600">Fecha del Evento</p>
-                  <p className="font-medium">
-                    {contrato?.fecha_evento ? new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    }) : 'Fecha no disponible'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-600">Horario</p>
-                  <p className="font-medium">
-                    {(() => {
-                      const horasAdicionales = obtenerHorasAdicionales(contrato?.contratos_servicios);
-                      const horaFinConExtras = calcularHoraFinConExtras(contrato?.hora_fin, horasAdicionales);
-                      const duracion = calcularDuracion(contrato?.hora_inicio, horaFinConExtras);
-                      
-                      return (
-                        <>
-                          {formatearHora(contrato?.hora_inicio)} / {formatearHora(horaFinConExtras)}
-                          {duracion > 0 && (() => {
-                            const horasEnteras = Math.floor(duracion);
-                            const minutos = Math.round((duracion - horasEnteras) * 60);
-                            if (minutos > 0) {
-                              return ` • ${horasEnteras}h ${minutos}m`;
-                            }
-                            return ` • ${horasEnteras} ${horasEnteras === 1 ? 'hora' : 'horas'}`;
-                          })()}
-                        </>
-                      );
-                    })()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-600">Lugar</p>
-                  <p className="font-medium">{contrato?.ofertas?.lugar_evento || contrato?.eventos?.nombre_evento || 'No especificado'}</p>
-                </div>
-              </div>
-
-              {contrato?.homenajeado && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Detalles del Evento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 text-gray-400 mt-0.5 flex items-center justify-center">
-                    🎉
-                  </div>
+                  <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-600">Homenajeado/a</p>
-                    <p className="font-medium">{contrato.homenajeado}</p>
+                    <p className="text-sm text-muted-foreground">Fecha del Evento</p>
+                    <p className="font-medium text-foreground">
+                      {contrato?.fecha_evento ? new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      }) : 'Fecha no disponible'}
+                    </p>
                   </div>
                 </div>
-              )}
 
-              <div className="flex items-start gap-3">
-                <Users className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-600">Invitados</p>
-                  <p className="font-medium">{contrato?.cantidad_invitados || 0} personas</p>
+                <div className="flex items-start gap-3">
+                  <Clock className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Horario</p>
+                    <p className="font-medium text-foreground">
+                      {(() => {
+                        const horasAdicionales = obtenerHorasAdicionales(contrato?.contratos_servicios);
+                        const horaFinConExtras = calcularHoraFinConExtras(contrato?.hora_fin, horasAdicionales);
+                        const duracion = calcularDuracion(contrato?.hora_inicio, horaFinConExtras);
+                        
+                        return (
+                          <>
+                            {formatearHora(contrato?.hora_inicio)} - {formatearHora(horaFinConExtras)}
+                            {duracion > 0 && (() => {
+                              const horasEnteras = Math.floor(duracion);
+                              const minutos = Math.round((duracion - horasEnteras) * 60);
+                              if (minutos > 0 && minutos < 60) {
+                                return ` (${horasEnteras}h ${minutos}m)`;
+                              }
+                              return ` (${horasEnteras}h)`;
+                            })()}
+                          </>
+                        );
+                      })()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Lugar</p>
+                    <p className="font-medium text-foreground">{contrato?.ofertas?.lugar_evento || contrato?.eventos?.nombre_evento || 'No especificado'}</p>
+                  </div>
+                </div>
+
+                {contrato?.homenajeado && (
+                  <div className="flex items-start gap-3">
+                    <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Homenajeado/a</p>
+                      <p className="font-medium text-foreground">{contrato.homenajeado}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-start gap-3">
+                  <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Invitados</p>
+                    <p className="font-medium text-foreground">{contrato?.cantidad_invitados || 0} personas</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Paquete y Servicios */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Paquete y Servicios</h2>
-            <div className="space-y-4">
-              <div className="p-4 bg-indigo-50 rounded-lg">
-                <h3 className="font-semibold text-indigo-900 mb-1">
-                  {contrato?.paquetes?.nombre || 'Paquete no especificado'}
-                </h3>
-                <p className="text-sm text-indigo-700">
-                  {contrato?.paquetes?.descripcion || ''}
-                </p>
-              </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Paquete y Servicios</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <h3 className="font-semibold text-foreground mb-1">
+                    {contrato?.paquetes?.nombre || 'Paquete no especificado'}
+                  </h3>
+                  {contrato?.paquetes?.descripcion && (
+                    <p className="text-sm text-muted-foreground">
+                      {contrato.paquetes.descripcion}
+                    </p>
+                  )}
+                </div>
 
                     {(() => {
                 // Función helper para obtener el nombre del servicio ajustado según el salón
@@ -376,7 +492,7 @@ function DetalleContrato() {
                 const serviciosAdicionales = [];
                 const salonNombre = contrato?.salones?.nombre || contrato?.lugar_salon || '';
 
-                // Obtener servicios del paquete
+                // Obtener servicios del paquete y agruparlos por categoría
                 if (contrato?.paquetes?.paquetes_servicios) {
                   contrato.paquetes.paquetes_servicios.forEach((ps) => {
                     const nombreServicio = ps.servicios?.nombre || '';
@@ -389,10 +505,46 @@ function DetalleContrato() {
                     serviciosIncluidos.push({
                       id: `paquete-${ps.servicio_id}`,
                       nombre: obtenerNombreServicio(nombreServicio),
+                      nombreOriginal: nombreServicio,
+                      servicioData: ps.servicios,
                       incluido: true
                     });
                   });
                 }
+
+                // Agrupar servicios incluidos por categoría
+                const serviciosPorCategoria = serviciosIncluidos.reduce((acc, servicio) => {
+                  const categoria = obtenerCategoriaServicio(servicio.nombreOriginal, servicio.servicioData);
+                  if (!acc[categoria]) {
+                    acc[categoria] = [];
+                  }
+                  acc[categoria].push(servicio);
+                  return acc;
+                }, {});
+
+                // Orden de categorías (prioridad visual)
+                const ordenCategorias = [
+                  'Entretenimiento',
+                  'Bar',
+                  'Iluminación',
+                  'Audio/Video',
+                  'Decoración',
+                  'Comida',
+                  'Transporte',
+                  'Personal',
+                  'Extras',
+                  'Otros'
+                ];
+
+                // Ordenar categorías según el orden definido
+                const categoriasOrdenadas = Object.keys(serviciosPorCategoria).sort((a, b) => {
+                  const indexA = ordenCategorias.indexOf(a);
+                  const indexB = ordenCategorias.indexOf(b);
+                  if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+                  if (indexA === -1) return 1;
+                  if (indexB === -1) return -1;
+                  return indexA - indexB;
+                });
 
                 // Obtener servicios adicionales del contrato
                 if (contrato?.contratos_servicios) {
@@ -453,96 +605,115 @@ function DetalleContrato() {
 
                 return (
                   <>
-                    {/* Servicios Incluidos en el Paquete */}
+                    {/* Servicios Incluidos en el Paquete - Agrupados por categoría */}
                     {serviciosIncluidos.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Servicios Incluidos en el Paquete:</h4>
-                        <ul className="space-y-2">
-                          {serviciosIncluidos.map((servicio) => (
-                            <li key={servicio.id} className="flex justify-between text-sm">
-                          <span className="text-gray-700">
-                                ✓ {servicio.nombre}
-                              </span>
-                              <span className="text-gray-500 text-xs">Incluido</span>
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="space-y-4">
+                        {categoriasOrdenadas.map((categoria) => (
+                          <div key={categoria} className="space-y-2">
+                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              {categoria}
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {serviciosPorCategoria[categoria].map((servicio) => (
+                                <div 
+                                  key={servicio.id} 
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-800"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                  <span className="text-sm text-foreground whitespace-nowrap">
+                                    {servicio.nombre}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
 
                     {/* Servicios Adicionales */}
                     {serviciosAdicionales.length > 0 && (
-                      <div className={serviciosIncluidos.length > 0 ? 'mt-4' : ''}>
-                        <h4 className="font-medium text-gray-900 mb-2">Servicios Adicionales:</h4>
-                        <ul className="space-y-2">
+                      <div className={serviciosIncluidos.length > 0 ? 'mt-6 pt-6 border-t' : ''}>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                          Servicios Adicionales (Extras)
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
                           {serviciosAdicionales.map((servicio) => (
-                            <li key={servicio.id} className="flex justify-between text-sm">
-                              <span className="text-gray-700">
+                            <div 
+                              key={servicio.id} 
+                              className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-800"
+                            >
+                              <span className="text-sm font-medium text-foreground">
                                 {servicio.nombre}
                                 {servicio.cantidad > 1 && (
-                                  <span className="text-gray-500 text-xs ml-1">
+                                  <span className="text-muted-foreground text-xs ml-1">
                                     (x{servicio.cantidad})
                                   </span>
                                 )}
-                          </span>
-                          <span className="font-medium">
+                              </span>
+                              <Badge variant="outline" className="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700 text-xs font-semibold">
                                 ${servicio.subtotal.toLocaleString()}
-                          </span>
-                        </li>
+                              </Badge>
+                            </div>
                           ))}
-                  </ul>
-                </div>
-              )}
+                        </div>
+                      </div>
+                    )}
 
                     {serviciosIncluidos.length === 0 && serviciosAdicionales.length === 0 && (
-                      <p className="text-sm text-gray-500">No hay servicios registrados</p>
+                      <p className="text-sm text-muted-foreground">No hay servicios registrados</p>
                     )}
                   </>
                 );
               })()}
-              </div>
             </div>
+            </CardContent>
+          </Card>
  
-            {/* Notas Internas del Vendedor */}
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          {/* Notas Internas del Vendedor */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-amber-600" />
                   Notas Internas
-                </h2>
+                </CardTitle>
                 {!editandoNotas ? (
-                  <button
+                  <Button
                     onClick={() => setEditandoNotas(true)}
-                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition text-sm font-medium"
+                    size="sm"
                   >
                     {contrato?.notas_vendedor ? 'Editar Notas' : 'Agregar Notas'}
-                  </button>
+                  </Button>
                 ) : (
                   <div className="flex gap-2">
-                    <button
+                    <Button
                       onClick={handleCancelarNotas}
                       disabled={mutationNotasInternas.isLoading}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm font-medium"
+                      variant="outline"
+                      size="sm"
                     >
                       Cancelar
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={handleGuardarNotas}
                       disabled={mutationNotasInternas.isLoading}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium flex items-center gap-2"
+                      size="sm"
                     >
                       {mutationNotasInternas.isLoading ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
                           Guardando...
                         </>
                       ) : (
                         'Guardar'
                       )}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
+            </CardHeader>
+            <CardContent>
 
               {editandoNotas ? (
                 <div>
@@ -558,91 +729,97 @@ function DetalleContrato() {
                   </p>
                 </div>
               ) : (
-                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
                   {contrato?.notas_vendedor ? (
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{contrato.notas_vendedor}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{contrato.notas_vendedor}</p>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">No hay notas registradas aún.</p>
+                    <p className="text-sm text-muted-foreground italic">No hay notas registradas aún.</p>
                   )}
                 </div>
               )}
-            </div>
+            </CardContent>
+          </Card>
   
-            {/* Historial de Pagos */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Historial de Pagos</h2>
-            {pagos?.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">
-                No se han registrado pagos aún
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {pagos?.map((pago) => (
-                  <div 
-                    key={pago.id} 
-                    className={`flex items-center justify-between p-4 rounded-lg ${
-                      pago.estado === 'anulado' 
-                        ? 'bg-red-50 border-2 border-red-200' 
-                        : 'bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+          {/* Historial de Pagos */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Historial de Pagos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pagos?.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No se han registrado pagos aún
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {pagos?.map((pago) => (
+                    <div 
+                      key={pago.id} 
+                      className={`flex items-center justify-between p-4 rounded-lg border ${
                         pago.estado === 'anulado' 
-                          ? 'bg-red-100' 
-                          : 'bg-green-100'
-                      }`}>
-                        <CreditCard className={`w-5 h-5 ${
+                          ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800' 
+                          : 'bg-muted/50 border-border'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                           pago.estado === 'anulado' 
-                            ? 'text-red-600' 
-                            : 'text-green-600'
-                        }`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className={`font-medium ${
+                            ? 'bg-red-100 dark:bg-red-900' 
+                            : 'bg-green-100 dark:bg-green-900'
+                        }`}>
+                          <CreditCard className={`w-5 h-5 ${
                             pago.estado === 'anulado' 
-                              ? 'text-red-900 line-through' 
-                              : 'text-gray-900'
+                              ? 'text-red-600 dark:text-red-400' 
+                              : 'text-green-600 dark:text-green-400'
+                          }`} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className={`font-medium ${
+                              pago.estado === 'anulado' 
+                                ? 'text-red-900 dark:text-red-300 line-through' 
+                                : 'text-foreground'
+                            }`}>
+                              ${parseFloat(pago.monto_total || pago.monto).toLocaleString()}
+                            </p>
+                            {pago.estado === 'anulado' && (
+                              <Badge variant="destructive" className="text-xs">
+                                ANULADO
+                              </Badge>
+                            )}
+                          </div>
+                          <p className={`text-sm ${
+                            pago.estado === 'anulado' 
+                              ? 'text-red-700 dark:text-red-300' 
+                              : 'text-muted-foreground'
                           }`}>
-                            ${parseFloat(pago.monto_total || pago.monto).toLocaleString()}
+                            {pago.metodo_pago} - {new Date(pago.fecha_pago).toLocaleDateString('es-ES')}
                           </p>
-                          {pago.estado === 'anulado' && (
-                            <span className="px-2 py-0.5 bg-red-600 text-white text-xs font-bold rounded">
-                              ANULADO
-                            </span>
+                          {pago.numero_referencia && (
+                            <p className="text-xs text-muted-foreground">Ref: {pago.numero_referencia}</p>
+                          )}
+                          {pago.vendedores && (
+                            <p className="text-xs text-muted-foreground">
+                              Por: {pago.vendedores.nombre_completo}
+                            </p>
                           )}
                         </div>
-                        <p className={`text-sm ${
-                          pago.estado === 'anulado' 
-                            ? 'text-red-700' 
-                            : 'text-gray-600'
-                        }`}>
-                          {pago.metodo_pago} - {new Date(pago.fecha_pago).toLocaleDateString('es-ES')}
-                        </p>
-                        {pago.numero_referencia && (
-                          <p className="text-xs text-gray-500">Ref: {pago.numero_referencia}</p>
-                        )}
-                        {pago.vendedores && (
-                          <p className="text-xs text-gray-500">
-                            Por: {pago.vendedores.nombre_completo}
-                          </p>
-                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Versiones del Contrato */}
           {versionesData && versionesData.versiones && versionesData.versiones.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                📄 Versiones del Contrato
-              </h2>
-              <p className="text-sm text-gray-600 mb-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Versiones del Contrato</CardTitle>
+              </CardHeader>
+              <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
                 Historial de todas las versiones generadas del contrato
               </p>
               <div className="space-y-3">
@@ -656,28 +833,28 @@ function DetalleContrato() {
                   return (
                     <div 
                       key={version.id}
-                      className={`p-4 rounded-lg border-2 ${
+                      className={`p-4 rounded-lg border ${
                         esUltimaVersion 
-                          ? 'border-purple-300 bg-purple-50' 
-                          : 'border-gray-200 bg-gray-50'
+                          ? 'border-primary/50 bg-primary/5' 
+                          : 'border-border bg-muted/50'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-sm">
                               v{version.version_numero}
                             </div>
                             <div>
-                              <h3 className="font-semibold text-gray-900">
+                              <h3 className="font-semibold text-foreground flex items-center gap-2">
                                 Versión {version.version_numero}
                                 {esUltimaVersion && (
-                                  <span className="ml-2 text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                                  <Badge variant="default" className="text-xs">
                                     Actual
-                                  </span>
+                                  </Badge>
                                 )}
                               </h3>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-muted-foreground">
                                 {new Date(version.fecha_generacion).toLocaleDateString('es-ES', {
                                   day: 'numeric',
                                   month: 'short',
@@ -690,20 +867,20 @@ function DetalleContrato() {
                           </div>
 
                           {version.motivo_cambio && (
-                            <p className="text-sm text-gray-700 mb-2">
+                            <p className="text-sm text-foreground mb-2">
                               {version.motivo_cambio}
                             </p>
                           )}
 
                           <div className="flex items-center gap-4 text-sm">
-                            <span className="text-gray-600">
-                              Total: <strong className="text-gray-900">
+                            <span className="text-muted-foreground">
+                              Total: <strong className="text-foreground">
                                 ${parseFloat(version.total_contrato).toLocaleString()}
                               </strong>
                             </span>
                             {version.cantidad_invitados && (
-                              <span className="text-gray-600">
-                                Invitados: <strong className="text-gray-900">
+                              <span className="text-muted-foreground">
+                                Invitados: <strong className="text-foreground">
                                   {version.cantidad_invitados}
                                 </strong>
                               </span>
@@ -712,7 +889,7 @@ function DetalleContrato() {
 
                           {versionAnterior && diferenciaTotal !== 0 && (
                             <p className={`text-xs mt-2 ${
-                              diferenciaTotal > 0 ? 'text-red-600' : 'text-green-600'
+                              diferenciaTotal > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
                             }`}>
                               {diferenciaTotal > 0 ? '↗' : '↘'} 
                               {diferenciaTotal > 0 ? '+' : ''}
@@ -721,134 +898,145 @@ function DetalleContrato() {
                           )}
                         </div>
 
-                        <button
+                        <Button
                           onClick={() => handleDescargarVersion(version.version_numero)}
-                          className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
+                          variant="outline"
+                          size="sm"
                         >
-                          <Download className="w-4 h-4" />
+                          <Download className="w-4 h-4 mr-2" />
                           PDF
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-xs text-gray-500 text-center mt-4">
+              <p className="text-xs text-muted-foreground text-center mt-4">
                 {versionesData.total} {versionesData.total === 1 ? 'versión' : 'versiones'} disponibles
               </p>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </div>
 
         {/* Panel Lateral */}
         <div className="space-y-6">
           {/* Resumen Financiero */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumen Financiero</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Monto Total:</span>
-                <span className="font-semibold text-gray-900">
-                  ${parseFloat(contrato?.total_contrato || 0).toLocaleString()}
-                </span>
+          <Card>
+            <CardHeader>
+              <CardTitle>Resumen Financiero</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Monto Total:</span>
+                  <span className="font-semibold text-foreground">
+                    ${parseFloat(contrato?.total_contrato || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Monto Pagado:</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">
+                    ${parseFloat(contrato?.total_pagado || 0).toLocaleString()}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-foreground font-medium">Saldo Pendiente:</span>
+                  <span className="font-bold text-orange-600 dark:text-orange-400">
+                    ${parseFloat(contrato?.saldo_pendiente || 0).toLocaleString()}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Monto Pagado:</span>
-                <span className="font-semibold text-green-600">
-                  ${parseFloat(contrato?.total_pagado || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="pt-3 border-t flex justify-between">
-                <span className="text-gray-900 font-medium">Saldo Pendiente:</span>
-                <span className="font-bold text-orange-600">
-                  ${parseFloat(contrato?.saldo_pendiente || 0).toLocaleString()}
-                </span>
-              </div>
-            </div>
 
-            {/* Barra de progreso */}
-            <div className="mt-4">
-              <div className="flex justify-between text-xs text-gray-600 mb-1">
-                <span>Progreso de Pago</span>
-                <span>
-                  {contrato?.total_contrato > 0
-                    ? ((parseFloat(contrato?.total_pagado || 0) / parseFloat(contrato?.total_contrato)) * 100).toFixed(0)
-                    : 0
-                  }%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-green-600 h-2 rounded-full transition-all"
-                  style={{
-                    width: `${contrato?.total_contrato > 0
-                      ? (parseFloat(contrato?.total_pagado || 0) / parseFloat(contrato?.total_contrato)) * 100
+              {/* Barra de progreso */}
+              <div className="mt-4">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                  <span>Progreso de Pago</span>
+                  <span className="font-medium text-foreground">
+                    {contrato?.total_contrato > 0
+                      ? ((parseFloat(contrato?.total_pagado || 0) / parseFloat(contrato?.total_contrato)) * 100).toFixed(1)
                       : 0
-                    }%`,
-                  }}
-                ></div>
+                    }%
+                  </span>
+                </div>
+                <Progress 
+                  value={contrato?.total_contrato > 0
+                    ? (parseFloat(contrato?.total_pagado || 0) / parseFloat(contrato?.total_contrato)) * 100
+                    : 0
+                  }
+                  className="h-2"
+                />
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Información del Contrato */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Información</h2>
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-gray-600 mb-2">Código de Acceso Cliente:</p>
-                <div className="flex items-center gap-2">
-                  <p className="font-mono font-medium text-indigo-600 flex-1">
-                    {mostrarCodigoAcceso 
-                      ? contrato?.codigo_acceso_cliente 
-                      : '••••••••••••••••••••'}
-                  </p>
-                  <button
-                    onClick={() => setMostrarCodigoAcceso(!mostrarCodigoAcceso)}
-                    className="px-3 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition flex items-center gap-1 text-xs font-medium"
-                  >
-                    {mostrarCodigoAcceso ? (
-                      <>
-                        <EyeOff className="w-3 h-3" />
-                        Ocultar
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-3 h-3" />
-                        Mostrar
-                      </>
-                    )}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  🔒 Código privado para acceso del cliente al portal
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-600">Fecha de Creación:</p>
-                <p className="font-medium">
-                  {contrato?.fecha_firma 
-                    ? new Date(contrato.fecha_firma).toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
-                    : 'No especificada'}
-                </p>
-              </div>
-              {contrato?.notas_internas && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Información</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 text-sm">
                 <div>
-                  <p className="text-gray-600">Notas Internas:</p>
-                  <p className="font-medium">{contrato?.notas_internas}</p>
+                  <p className="text-muted-foreground mb-2">Código de Acceso Cliente:</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono font-medium text-primary flex-1">
+                      {mostrarCodigoAcceso 
+                        ? contrato?.codigo_acceso_cliente 
+                        : '••••••••••••••••••••'}
+                    </p>
+                    <Button
+                      onClick={() => setMostrarCodigoAcceso(!mostrarCodigoAcceso)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {mostrarCodigoAcceso ? (
+                        <>
+                          <EyeOff className="w-3 h-3 mr-1" />
+                          Ocultar
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3 h-3 mr-1" />
+                          Mostrar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Código privado para acceso del cliente al portal
+                  </p>
                 </div>
-              )}
-            </div>
-          </div>
+                <Separator />
+                <div>
+                  <p className="text-muted-foreground">Fecha de Creación:</p>
+                  <p className="font-medium text-foreground">
+                    {contrato?.fecha_firma 
+                      ? new Date(contrato.fecha_firma).toLocaleDateString('es-ES', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : 'No especificada'}
+                  </p>
+                </div>
+                {contrato?.notas_internas && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-muted-foreground">Notas Internas:</p>
+                      <p className="font-medium text-foreground">{contrato?.notas_internas}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-      </>
 
       <Toaster position="top-right" />
     </div>

@@ -10,7 +10,6 @@ import {
   Ban,
   Lightbulb,
   Search,
-  Eye,
   ExternalLink,
   Copy,
   Share2,
@@ -18,6 +17,14 @@ import {
 } from 'lucide-react';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
+import { Separator } from '../components/ui/separator';
+import { Textarea } from '../components/ui/textarea';
 
 function PlaylistMusical() {
   const { id: contratoId } = useParams();
@@ -300,10 +307,10 @@ function PlaylistMusical() {
     const [imagenError, setImagenError] = useState(false);
     
     return (
-      <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-indigo-300 transition">
+      <div className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:border-primary/50 transition">
         {/* Preview/Thumbnail de la playlist */}
         <div className="flex-shrink-0">
-          <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-gray-200 bg-white shadow-sm">
+          <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-border bg-background">
             {previewUrl && !imagenError ? (
               <img
                 src={previewUrl}
@@ -328,133 +335,136 @@ function PlaylistMusical() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             {plataforma && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs font-medium">
-                {plataforma === 'youtube' ? '🎵 YouTube Music' : '🎵 Spotify'}
-              </span>
+              <Badge variant="outline" className="text-xs">
+                {plataforma === 'youtube' ? 'YouTube Music' : 'Spotify'}
+              </Badge>
             )}
           </div>
-          <p className="text-sm text-gray-600 break-all" title={url}>
+          <p className="text-sm text-muted-foreground break-all" title={url}>
             {url}
           </p>
         </div>
         
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onCopiar(url)}
-            className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition"
             title="Copiar URL"
           >
             <Copy className="w-4 h-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onAbrir(url)}
-            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
             title="Abrir en plataforma"
           >
             <ExternalLink className="w-4 h-4" />
-          </button>
+          </Button>
           {puedeEditar && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => onEliminar(url)}
               disabled={guardandoUrl}
-              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+              className="text-destructive hover:text-destructive"
               title="Eliminar URL"
             >
               <Trash2 className="w-4 h-4" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
     );
   };
 
+  const handleDescargarPDF = async () => {
+    try {
+      const response = await api.get(`/playlist/contrato/${contratoId}/pdf`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Playlist-${contrato?.codigo_contrato || 'evento'}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      alert('PDF descargado exitosamente');
+    } catch (error) {
+      alert('Error al descargar el PDF');
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to={`/contratos/${contratoId}`} className="p-2 hover:bg-gray-100 rounded-lg transition">
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
+        <Button variant="ghost" size="icon" asChild>
+          <Link to={`/contratos/${contratoId}`}>
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Music className="w-8 h-8 text-indigo-600" />
-            Playlist Musical
-            {esVendedor && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
-                <Eye className="w-4 h-4" />
-                Solo lectura
-              </span>
-            )}
-          </h1>
-          <p className="text-gray-600 mt-1">
-            {contrato?.codigo_contrato} - {contrato?.clientes?.nombre_completo}
+          <h1 className="text-3xl font-bold tracking-tight">Playlist Musical</h1>
+          <p className="text-muted-foreground mt-1">
+            {contrato?.codigo_contrato} • {contrato?.clientes?.nombre_completo}
           </p>
         </div>
-        <button
-          onClick={async () => {
-            try {
-              const response = await api.get(`/playlist/contrato/${contratoId}/pdf`, {
-                responseType: 'blob'
-              });
-              const url = window.URL.createObjectURL(new Blob([response.data]));
-              const link = document.createElement('a');
-              link.href = url;
-              link.setAttribute('download', `Playlist-${contrato?.codigo_contrato || 'evento'}.pdf`);
-              document.body.appendChild(link);
-              link.click();
-              link.remove();
-              alert('PDF descargado exitosamente');
-            } catch (error) {
-              alert('Error al descargar el PDF');
-            }
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition shadow-md"
+        <Button
+          onClick={handleDescargarPDF}
+          variant="outline"
+          className="whitespace-nowrap"
         >
-          <Download className="w-5 h-5" />
-          <span className="hidden sm:inline">Descargar PDF</span>
-        </button>
+          <Download className="w-4 h-4 mr-2" />
+          Descargar PDF
+        </Button>
       </div>
 
       {/* Sección de Playlist Externa */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Share2 className="w-5 h-5 text-indigo-600" />
-          Playlists Externas (YouTube/Spotify)
-        </h3>
-        <div className="space-y-4">
-          {puedeEditar && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Agregar Nueva URL de Playlist
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={nuevaPlaylistUrl}
-                  onChange={(e) => setNuevaPlaylistUrl(e.target.value)}
-                  placeholder="https://music.youtube.com/playlist?list=... o https://open.spotify.com/..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                />
-                <button
-                  onClick={handleAgregarPlaylistUrl}
-                  disabled={guardandoUrl || !nuevaPlaylistUrl.trim()}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                >
-                  {guardandoUrl ? 'Guardando...' : 'Agregar'}
-                </button>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Share2 className="w-5 h-5" />
+            Playlists Externas (YouTube/Spotify)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {puedeEditar && (
+              <div>
+                <Label className="mb-2">
+                  Agregar Nueva URL de Playlist
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="url"
+                    value={nuevaPlaylistUrl}
+                    onChange={(e) => setNuevaPlaylistUrl(e.target.value)}
+                    placeholder="https://music.youtube.com/playlist?list=... o https://open.spotify.com/..."
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleAgregarPlaylistUrl}
+                    disabled={guardandoUrl || !nuevaPlaylistUrl.trim()}
+                    className="whitespace-nowrap"
+                  >
+                    {guardandoUrl ? 'Guardando...' : 'Agregar'}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Puedes agregar múltiples playlists de YouTube Music o Spotify
+                </p>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Puedes agregar múltiples playlists de YouTube Music o Spotify
-              </p>
-            </div>
-          )}
+            )}
 
-          {/* Lista de URLs guardadas */}
-          {playlistUrls.length > 0 ? (
-            <div className="space-y-3 pt-4 border-t border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-700">
-                Playlists Agregadas ({playlistUrls.length})
-              </h4>
+            {/* Lista de URLs guardadas */}
+            {playlistUrls.length > 0 ? (
+              <div className="space-y-3 pt-4 border-t">
+                <h4 className="text-sm font-semibold text-foreground">
+                  Playlists Agregadas ({playlistUrls.length})
+                </h4>
               {playlistUrls.map((url, index) => {
                 const plataforma = detectarPlataforma(url);
                 const previewUrl = obtenerPreviewUrl(url);
@@ -475,268 +485,290 @@ function PlaylistMusical() {
                 );
               })}
             </div>
-          ) : (
-            <div className="text-center py-8 border-t border-gray-200">
-              <Music className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">
-                {puedeEditar 
-                  ? 'No hay playlists agregadas. Agrega una URL arriba.' 
-                  : 'No hay playlists agregadas por el cliente.'}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+              ) : (
+                <div className="text-center py-8 border-t">
+                  <Music className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground text-sm">
+                    {puedeEditar 
+                      ? 'No hay playlists agregadas. Agrega una URL arriba.' 
+                      : 'No hay playlists agregadas por el cliente.'}
+                  </p>
+                </div>
+              )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <Heart className="w-8 h-8 text-red-500 fill-red-500" />
-            <div>
-              <p className="text-sm text-gray-600">Canciones Favoritas</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {playlistData?.stats?.favoritas || 0}
-              </p>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Heart className="w-6 h-6 text-red-500 fill-red-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Canciones Favoritas</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {playlistData?.stats?.favoritas || 0}
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <Ban className="w-8 h-8 text-red-600" />
-            <div>
-              <p className="text-sm text-gray-600">Canciones Prohibidas</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {playlistData?.stats?.prohibidas || 0}
-              </p>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Ban className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <div>
+                <p className="text-sm text-muted-foreground">Canciones Prohibidas</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {playlistData?.stats?.prohibidas || 0}
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <Lightbulb className="w-8 h-8 text-yellow-500" />
-            <div>
-              <p className="text-sm text-gray-600">Canciones Sugeridas</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {playlistData?.stats?.sugeridas || 0}
-              </p>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Lightbulb className="w-6 h-6 text-yellow-500 dark:text-yellow-400" />
+              <div>
+                <p className="text-sm text-muted-foreground">Canciones Sugeridas</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {playlistData?.stats?.sugeridas || 0}
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filtros y búsqueda */}
-      <div className="bg-white rounded-xl shadow-sm border p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Buscar por título, artista o género..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-            />
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="Buscar por título, artista o género..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Todas las categorías" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas las categorías</SelectItem>
+                <SelectItem value="favorita">Favoritas</SelectItem>
+                <SelectItem value="prohibida">Prohibidas</SelectItem>
+                <SelectItem value="sugerida">Sugeridas</SelectItem>
+              </SelectContent>
+            </Select>
+            {puedeEditar && (
+              <Button
+                onClick={() => setMostrarForm(!mostrarForm)}
+                className="whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Agregar Canción
+              </Button>
+            )}
           </div>
-          <select
-            value={filtroCategoria}
-            onChange={(e) => setFiltroCategoria(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-          >
-            <option value="">Todas las categorías</option>
-            <option value="favorita">Favoritas</option>
-            <option value="prohibida">Prohibidas</option>
-            <option value="sugerida">Sugeridas</option>
-          </select>
-          {puedeEditar && (
-            <button
-              onClick={() => setMostrarForm(!mostrarForm)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition whitespace-nowrap"
-            >
-              <Plus className="w-5 h-5" />
-              Agregar Canción
-            </button>
-          )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Formulario para agregar canción */}
       {puedeEditar && mostrarForm && (
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Nueva Canción</h3>
-          <form onSubmit={handleCrearCancion} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Nueva Canción</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCrearCancion} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>
+                    Título de la canción *
+                  </Label>
+                  <Input
+                    type="text"
+                    value={nuevaCancion.titulo}
+                    onChange={(e) => setNuevaCancion({ ...nuevaCancion, titulo: e.target.value })}
+                    placeholder="Ej: Amor Eterno"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label>
+                    Artista
+                  </Label>
+                  <Input
+                    type="text"
+                    value={nuevaCancion.artista}
+                    onChange={(e) => setNuevaCancion({ ...nuevaCancion, artista: e.target.value })}
+                    placeholder="Ej: Rocío Dúrcal"
+                  />
+                </div>
+
+                <div>
+                  <Label>
+                    Género Musical
+                  </Label>
+                  <Select value={nuevaCancion.genero} onValueChange={(value) => setNuevaCancion({ ...nuevaCancion, genero: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar género" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Seleccionar género</SelectItem>
+                      {generosMusicales.map((genero) => (
+                        <SelectItem key={genero} value={genero}>{genero}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>
+                    Categoría *
+                  </Label>
+                  <Select value={nuevaCancion.categoria} onValueChange={(value) => setNuevaCancion({ ...nuevaCancion, categoria: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="favorita">Favorita (Debe sonar)</SelectItem>
+                      <SelectItem value="prohibida">Prohibida (No debe sonar)</SelectItem>
+                      <SelectItem value="sugerida">Sugerida (Opcional)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Título de la canción *
-                </label>
-                <input
-                  type="text"
-                  value={nuevaCancion.titulo}
-                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, titulo: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  placeholder="Ej: Amor Eterno"
-                  required
+                <Label>
+                  Notas adicionales
+                </Label>
+                <Textarea
+                  value={nuevaCancion.notas}
+                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, notas: e.target.value })}
+                  rows="2"
+                  placeholder="Ej: Para el primer baile, momento especial, etc."
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Artista
-                </label>
-                <input
-                  type="text"
-                  value={nuevaCancion.artista}
-                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, artista: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  placeholder="Ej: Rocío Dúrcal"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Género Musical
-                </label>
-                <select
-                  value={nuevaCancion.genero}
-                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, genero: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              <div className="flex gap-3">
+                <Button
+                  type="submit"
+                  disabled={crearCancionMutation.isPending}
+                  className="flex-1"
                 >
-                  <option value="">Seleccionar género</option>
-                  {generosMusicales.map((genero) => (
-                    <option key={genero} value={genero}>{genero}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoría *
-                </label>
-                <select
-                  value={nuevaCancion.categoria}
-                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, categoria: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  required
+                  {crearCancionMutation.isPending ? 'Agregando...' : 'Agregar Canción'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMostrarForm(false)}
                 >
-                  <option value="favorita">⭐ Favorita (Debe sonar)</option>
-                  <option value="prohibida">🚫 Prohibida (No debe sonar)</option>
-                  <option value="sugerida">💡 Sugerida (Opcional)</option>
-                </select>
+                  Cancelar
+                </Button>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notas adicionales
-              </label>
-              <textarea
-                value={nuevaCancion.notas}
-                onChange={(e) => setNuevaCancion({ ...nuevaCancion, notas: e.target.value })}
-                rows="2"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                placeholder="Ej: Para el primer baile, momento especial, etc."
-              ></textarea>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={crearCancionMutation.isPending}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
-              >
-                {crearCancionMutation.isPending ? 'Agregando...' : 'Agregar Canción'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMostrarForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
       {/* Lista de canciones */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Canciones ({cancionesFiltradas?.length || 0})
-        </h3>
-
-        {isLoading ? (
-          <p className="text-gray-500 text-center py-8">Cargando playlist...</p>
-        ) : !cancionesFiltradas || cancionesFiltradas.length === 0 ? (
-          <div className="text-center py-12">
-            <Music className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">
-              {busqueda || filtroCategoria ? 'No se encontraron canciones' : 'La playlist está vacía'}
-            </p>
-            {puedeEditar && (
-              <button
-                onClick={() => setMostrarForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-              >
-                <Plus className="w-5 h-5" />
-                Agregar Primera Canción
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {cancionesFiltradas.map((cancion) => (
-              <div
-                key={cancion.id}
-                className={`border rounded-lg p-4 transition group ${getCategoriaColor(cancion.categoria)}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-1">
-                    {getCategoriaIcon(cancion.categoria)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900 truncate">
-                      {cancion.titulo}
-                    </h4>
-                    {cancion.artista && (
-                      <p className="text-sm text-gray-600 truncate">
-                        {cancion.artista}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {cancion.genero && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
-                          {cancion.genero}
-                        </span>
-                      )}
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 capitalize">
-                        {cancion.categoria}
-                      </span>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Canciones ({cancionesFiltradas?.length || 0})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-muted-foreground text-center py-8">Cargando playlist...</p>
+          ) : !cancionesFiltradas || cancionesFiltradas.length === 0 ? (
+            <div className="text-center py-12">
+              <Music className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-4">
+                {busqueda || filtroCategoria ? 'No se encontraron canciones' : 'La playlist está vacía'}
+              </p>
+              {puedeEditar && (
+                <Button
+                  onClick={() => setMostrarForm(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Agregar Primera Canción
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {cancionesFiltradas.map((cancion) => (
+                <div
+                  key={cancion.id}
+                  className={`border rounded-lg p-4 transition group ${
+                    cancion.categoria === 'favorita' 
+                      ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                      : cancion.categoria === 'prohibida'
+                      ? 'bg-muted/50 border-border'
+                      : 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">
+                      {getCategoriaIcon(cancion.categoria)}
                     </div>
-                    {cancion.notas && (
-                      <p className="text-sm text-gray-500 mt-2 italic">
-                        "{cancion.notas}"
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-foreground truncate">
+                        {cancion.titulo}
+                      </h4>
+                      {cancion.artista && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {cancion.artista}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {cancion.genero && (
+                          <Badge variant="outline" className="text-xs">
+                            {cancion.genero}
+                          </Badge>
+                        )}
+                        <Badge variant="secondary" className="text-xs capitalize">
+                          {cancion.categoria}
+                        </Badge>
+                      </div>
+                      {cancion.notas && (
+                        <p className="text-sm text-muted-foreground mt-2 italic">
+                          "{cancion.notas}"
+                        </p>
+                      )}
+                    </div>
+                    {puedeEditar && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEliminarCancion(cancion.id, cancion.titulo)}
+                        disabled={eliminarCancionMutation.isPending}
+                        className="opacity-0 group-hover:opacity-100 transition text-destructive hover:text-destructive"
+                        title="Eliminar canción"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     )}
                   </div>
-                  {puedeEditar && (
-                    <button
-                      onClick={() => handleEliminarCancion(cancion.id, cancion.titulo)}
-                      disabled={eliminarCancionMutation.isPending}
-                      className="p-2 rounded text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
-                      title="Eliminar canción"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
