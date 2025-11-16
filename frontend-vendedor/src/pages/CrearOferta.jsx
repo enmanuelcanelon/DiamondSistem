@@ -12,6 +12,7 @@ import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Separator } from '../components/ui/separator';
 import { Badge } from '../components/ui/badge';
+import toast from 'react-hot-toast';
 
 function CrearOferta() {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ function CrearOferta() {
   const [lugarPersonalizado, setLugarPersonalizado] = useState('');
   const [precioBaseAjustado, setPrecioBaseAjustado] = useState('');
   const [ajusteTemporadaCustom, setAjusteTemporadaCustom] = useState('');
+  const [tarifaServicioCustom, setTarifaServicioCustom] = useState('');
   const [mostrarAjusteTemporada, setMostrarAjusteTemporada] = useState(false);
   const [mostrarAjustePrecioBase, setMostrarAjustePrecioBase] = useState(false);
   const [mostrarAjusteServicios, setMostrarAjusteServicios] = useState(false);
@@ -417,6 +419,7 @@ function CrearOferta() {
             opcion_seleccionada: s.opcion_seleccionada,
           })),
         descuento: parseFloat(formData.descuento_porcentaje) || 0,
+        tarifa_servicio_custom: tarifaServicioCustom && tarifaServicioCustom !== '' ? parseFloat(tarifaServicioCustom) : null,
       });
 
       setPrecioCalculado(response.data.calculo);
@@ -437,6 +440,7 @@ function CrearOferta() {
     formData.descuento_porcentaje,
     precioBaseAjustado,
     ajusteTemporadaCustom,
+    tarifaServicioCustom,
     serviciosSeleccionados,
   ]);
 
@@ -520,6 +524,28 @@ function CrearOferta() {
       
       const error = validarHorarios(horaInicio, horaFin);
       setErrorHorario(error || '');
+      
+      // Si se cambia la hora de inicio y hay un paquete "Especial" seleccionado, verificar si sigue siendo válido
+      if (name === 'hora_inicio' && formData.paquete_id && paqueteSeleccionado) {
+        const esPaqueteEspecial = paqueteSeleccionado.nombre?.toLowerCase().includes('especial');
+        if (esPaqueteEspecial && value) {
+          const [hora, minutos] = value.split(':').map(Number);
+          const horaEnMinutos = hora * 60 + minutos;
+          const horaMinima = 10 * 60; // 10:00 AM
+          const horaMaxima = 17 * 60; // 5:00 PM (17:00)
+          
+          // Si la hora está fuera del rango, deseleccionar el paquete
+          if (horaEnMinutos < horaMinima || horaEnMinutos > horaMaxima) {
+            setFormData({
+              ...formData,
+              paquete_id: '',
+              [name]: value,
+            });
+            toast.error('El paquete "Especial" solo está disponible entre las 10:00 AM y las 5:00 PM. Por favor, selecciona otro paquete.');
+            return;
+          }
+        }
+      }
     }
 
     setFormData({
@@ -1120,14 +1146,24 @@ function CrearOferta() {
         )
       );
     } else {
-      // Agregar nuevo servicio con precio original
+      // Si es paquete personalizado y el servicio es específicamente "Comida", usar $12 por persona
+      const esPaquetePersonalizado = paqueteSeleccionado?.nombre?.toLowerCase().includes('personalizado');
+      const esComida = servicioData?.nombre?.toLowerCase() === 'comida' || 
+                       servicioData?.nombre?.toLowerCase().trim() === 'comida';
+      
+      let precioInicial = servicioData?.precio_base || 0;
+      if (esPaquetePersonalizado && esComida) {
+        precioInicial = 12.00; // $12 por persona (solo para "Comida")
+      }
+      
+      // Agregar nuevo servicio con precio original (o $12 si es comida en personalizado)
       setServiciosSeleccionados([
         ...serviciosSeleccionados,
         { 
           servicio_id: servicioId, 
           cantidad: 1, 
           opcion_seleccionada: '',
-          precio_ajustado: servicioData?.precio_base || 0
+          precio_ajustado: precioInicial
         },
       ]);
     }
@@ -1241,6 +1277,7 @@ function CrearOferta() {
       // Incluir ajustes personalizados para que el backend los use al calcular
       precio_base_ajustado: precioBaseAjustado && precioBaseAjustado !== '' ? parseFloat(precioBaseAjustado) : null,
       ajuste_temporada_custom: ajusteTemporadaCustom && ajusteTemporadaCustom !== '' ? parseFloat(ajusteTemporadaCustom) : null,
+      tarifa_servicio_custom: tarifaServicioCustom && tarifaServicioCustom !== '' ? parseFloat(tarifaServicioCustom) : null,
       servicios_adicionales: serviciosSeleccionados.map(s => ({
         servicio_id: parseInt(s.servicio_id),
         cantidad: parseInt(s.cantidad),
@@ -1996,8 +2033,35 @@ function CrearOferta() {
                     if (formData.salon_id === 'otro') {
                       return p.nombre?.toLowerCase().includes('personalizado');
                     }
+                    
                     // Si es salón de la empresa, filtrar los disponibles
-                    return p.disponible_salon !== false;
+                    if (p.disponible_salon === false) {
+                      return false;
+                    }
+                    
+                    // Si es paquete "Especial", solo mostrarlo si la hora de inicio está entre 10:00 AM y 5:00 PM
+                    const esPaqueteEspecial = p.nombre?.toLowerCase().includes('especial');
+                    if (esPaqueteEspecial) {
+                      // Si no hay hora de inicio seleccionada, no mostrar el paquete "Especial"
+                      if (!formData.hora_inicio) {
+                        return false;
+                      }
+                      
+                      const [hora, minutos] = formData.hora_inicio.split(':').map(Number);
+                      const horaEnMinutos = hora * 60 + minutos;
+                      
+                      // 10:00 AM = 10:00 = 600 minutos
+                      // 5:00 PM = 17:00 = 1020 minutos
+                      const horaMinima = 10 * 60; // 10:00 AM
+                      const horaMaxima = 17 * 60; // 5:00 PM (17:00)
+                      
+                      // Si la hora está fuera del rango, no mostrar el paquete
+                      if (horaEnMinutos < horaMinima || horaEnMinutos > horaMaxima) {
+                        return false;
+                      }
+                    }
+                    
+                    return true;
                   }).map((paquete) => (
                     <option key={paquete.id} value={paquete.id}>
                       {paquete.nombre} - ${paquete.precio_base_salon || paquete.precio_base} 
@@ -2015,6 +2079,22 @@ function CrearOferta() {
                     ℹ️ Para sedes externas, solo está disponible el <strong>Paquete Personalizado</strong>
                   </p>
                 )}
+                {formData.salon_id && formData.salon_id !== 'otro' && formData.hora_inicio && (() => {
+                  const [hora, minutos] = formData.hora_inicio.split(':').map(Number);
+                  const horaEnMinutos = hora * 60 + minutos;
+                  const horaMinima = 10 * 60; // 10:00 AM
+                  const horaMaxima = 17 * 60; // 5:00 PM (17:00)
+                  const estaFueraDelRango = horaEnMinutos < horaMinima || horaEnMinutos > horaMaxima;
+                  
+                  if (estaFueraDelRango) {
+                    return (
+                      <p className="text-xs text-blue-600 mt-1">
+                        ℹ️ El paquete "Especial" solo está disponible entre las <strong>10:00 AM y las 5:00 PM</strong>
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
                 {paqueteSeleccionado && (
                   <div className="mt-2 space-y-2">
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -2838,7 +2918,21 @@ function CrearOferta() {
                                       </p>
                                     )}
                                     <p className={`text-sm font-semibold mt-2 ${necesitaHoraExtra ? 'text-red-700' : 'text-indigo-600'}`}>
-                                      ${parseFloat(servicio.precio_base).toLocaleString()}
+                                      {(() => {
+                                        // Si es paquete personalizado y el servicio es específicamente "Comida", mostrar $12 por persona
+                                        const esPaquetePersonalizado = paqueteSeleccionado?.nombre?.toLowerCase().includes('personalizado');
+                                        const esComida = servicio.nombre?.toLowerCase() === 'comida' || 
+                                                         servicio.nombre?.toLowerCase().trim() === 'comida';
+                                        
+                                        if (esPaquetePersonalizado && esComida) {
+                                          const cantidadInvitados = parseInt(formData.cantidad_invitados) || 0;
+                                          const precioPorPersona = 12.00;
+                                          return `$${precioPorPersona.toLocaleString()} por persona (${cantidadInvitados} × $${precioPorPersona.toLocaleString()} = $${(precioPorPersona * cantidadInvitados).toLocaleString()})`;
+                                        } else {
+                                          // Precio normal
+                                          return `$${parseFloat(servicio.precio_base || 0).toLocaleString()}`;
+                                        }
+                                      })()}
                                     </p>
                                     {necesitaHoraExtra && (
                                       <p className="text-xs text-red-700 mt-2 font-bold bg-red-100 px-2 py-1 rounded">
@@ -3036,6 +3130,32 @@ function CrearOferta() {
                     Descuento máximo permitido: ${precioCalculado.desglose.subtotalBase.toLocaleString()}
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tarifa_servicio_custom">Service Fee (%)</Label>
+                <Input
+                  id="tarifa_servicio_custom"
+                  type="number"
+                  value={tarifaServicioCustom}
+                  onChange={(e) => {
+                    const valor = parseFloat(e.target.value);
+                    if (valor >= 15 && valor <= 18) {
+                      setTarifaServicioCustom(e.target.value);
+                    } else if (e.target.value === '' || isNaN(valor)) {
+                      setTarifaServicioCustom('');
+                    } else {
+                      alert('⚠️ El Service Fee debe estar entre 15% y 18%');
+                    }
+                  }}
+                  min="15"
+                  max="18"
+                  step="0.1"
+                  placeholder={precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || "18.00"}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Porcentaje del Service Fee (15% - 18%). Por defecto: {precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || 18}%
+                </p>
               </div>
             </CardContent>
           </Card>
