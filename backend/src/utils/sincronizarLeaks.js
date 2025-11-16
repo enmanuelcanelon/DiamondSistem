@@ -1,6 +1,6 @@
 /**
  * Función para sincronizar leaks desde Google Sheets automáticamente
- * Evita duplicados verificando email y teléfono
+ * Evita duplicados actualizando leaks disponibles existentes en lugar de crear nuevos
  */
 
 const { obtenerDatosGoogleSheet, procesarCantidadInvitados, procesarSalon } = require('./googleSheetsService');
@@ -69,7 +69,108 @@ async function sincronizarLeaksAutomaticamente() {
       return null;
     };
 
+    // Función helper para parsear fechas en múltiples formatos
+    const parsearFechaFlexible = (fechaValor) => {
+        if (!fechaValor) return null;
+        
+        try {
+          const fechaStr = String(fechaValor).trim();
+          if (!fechaStr || fechaStr === '' || fechaStr.toLowerCase() === 'null' || fechaStr.toLowerCase() === 'undefined') {
+            return null;
+          }
+          
+          // Si es un número (timestamp de Excel), convertirlo
+          if (!isNaN(fechaStr) && fechaStr.length > 5) {
+            // Puede ser un timestamp de Excel (días desde 1900-01-01)
+            const excelTimestamp = parseFloat(fechaStr);
+            if (excelTimestamp > 1 && excelTimestamp < 100000) {
+              // Fecha base de Excel: 1900-01-01
+              const fechaBase = new Date(1900, 0, 1);
+              const dias = Math.floor(excelTimestamp - 2); // Excel cuenta desde 1900-01-01 como día 1, pero tiene un bug con 1900 (año bisiesto)
+              fechaBase.setDate(fechaBase.getDate() + dias);
+              fechaBase.setHours(0, 0, 0, 0);
+              return fechaBase;
+            }
+          }
+          
+          // Formato YYYY-MM-DD o YYYY-MM-DD HH:MM:SS
+          if (fechaStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+            const datePart = fechaStr.split('T')[0].split(' ')[0];
+            const [year, month, day] = datePart.split('-').map(Number);
+            if (year >= 2000 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+              const fecha = new Date(year, month - 1, day);
+              fecha.setHours(0, 0, 0, 0);
+              return fecha;
+            }
+          }
+          
+          // Formato DD/MM/YYYY o MM/DD/YYYY
+          if (fechaStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+            const partes = fechaStr.split('/');
+            const first = parseInt(partes[0]);
+            const second = parseInt(partes[1]);
+            const year = parseInt(partes[2]);
+            
+            if (year >= 2000 && year <= 2100) {
+              // Intentar ambos formatos: DD/MM/YYYY y MM/DD/YYYY
+              let fecha;
+              if (first > 12) {
+                // Claramente DD/MM/YYYY (día > 12)
+                fecha = new Date(year, second - 1, first);
+              } else if (second > 12) {
+                // Claramente MM/DD/YYYY (mes > 12)
+                fecha = new Date(year, first - 1, second);
+              } else {
+                // Ambiguo: asumir DD/MM/YYYY (formato más común en español)
+                fecha = new Date(year, second - 1, first);
+              }
+              fecha.setHours(0, 0, 0, 0);
+              return fecha;
+            }
+          }
+          
+          // Formato DD-MM-YYYY
+          if (fechaStr.match(/^\d{1,2}-\d{1,2}-\d{4}$/)) {
+            const partes = fechaStr.split('-');
+            const first = parseInt(partes[0]);
+            const second = parseInt(partes[1]);
+            const year = parseInt(partes[2]);
+            
+            if (year >= 2000 && year <= 2100) {
+              let fecha;
+              if (first > 12) {
+                fecha = new Date(year, second - 1, first);
+              } else if (second > 12) {
+                fecha = new Date(year, first - 1, second);
+              } else {
+                fecha = new Date(year, second - 1, first);
+              }
+              fecha.setHours(0, 0, 0, 0);
+              return fecha;
+            }
+          }
+          
+          // Intentar parsear con Date nativo (último recurso)
+          const fechaNativa = new Date(fechaStr);
+          if (!isNaN(fechaNativa.getTime())) {
+            // Verificar que sea una fecha razonable
+            const year = fechaNativa.getFullYear();
+            if (year >= 2000 && year <= 2100) {
+              fechaNativa.setHours(0, 0, 0, 0);
+              return fechaNativa;
+            }
+          }
+          
+        } catch (error) {
+          // Si falla cualquier parseo, retornar null
+        }
+        
+        return null;
+    };
+    
     const leaksParaImportar = [];
+    const filasOmitidas = [];
+    
     for (let i = 0; i < datos.length; i++) {
       const fila = datos[i];
       
@@ -78,6 +179,15 @@ async function sincronizarLeaksAutomaticamente() {
       const email = obtenerValor(fila, mapeoColumnas.email);
 
       if (!nombre || !telefono || !email) {
+        filasOmitidas.push({
+          fila: i + 1,
+          motivo: !nombre ? 'Falta nombre' : !telefono ? 'Falta teléfono' : 'Falta email',
+          datos: {
+            nombre: nombre || '(vacío)',
+            telefono: telefono || '(vacío)',
+            email: email || '(vacío)'
+          }
+        });
         continue;
       }
 
@@ -86,67 +196,39 @@ async function sincronizarLeaksAutomaticamente() {
       
       const fechaRecepcionExcel = obtenerValor(fila, mapeoColumnas.fecha_recepcion);
       if (fechaRecepcionExcel) {
-        try {
-          const fechaStr = String(fechaRecepcionExcel).trim();
-          
-          if (fechaStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-            const datePart = fechaStr.split('T')[0];
-            const [year, month, day] = datePart.split('-').map(Number);
-            if (year >= 2000 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-              fechaRecepcion = new Date(year, month - 1, day);
-              fechaRecepcion.setHours(0, 0, 0, 0);
-            }
-          }
-          else if (fechaStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
-            const partes = fechaStr.split('/');
-            const first = parseInt(partes[0]);
-            const second = parseInt(partes[1]);
-            const year = parseInt(partes[2]);
-            
-            if (year >= 2000 && year <= 2100) {
-              // Asumir formato DD/MM/YYYY (día-mes-año)
-              if (first > 12) {
-                fechaRecepcion = new Date(year, second - 1, first);
-              } else if (second > 12) {
-                fechaRecepcion = new Date(year, first - 1, second);
-              } else {
-                fechaRecepcion = new Date(year, second - 1, first);
-              }
-              fechaRecepcion.setHours(0, 0, 0, 0);
-            }
-          }
-        } catch (error) {
-          // Si falla el parseo, usar fecha actual
+        const fechaParseada = parsearFechaFlexible(fechaRecepcionExcel);
+        if (fechaParseada) {
+          fechaRecepcion = fechaParseada;
         }
+        // Si no se puede parsear, usar fecha actual (no es crítico)
       }
 
       let fechaEvento = null;
       const fechaEventoExcel = obtenerValor(fila, mapeoColumnas.fecha_evento);
       if (fechaEventoExcel) {
-        try {
-          const fechaStr = String(fechaEventoExcel).trim();
-          
-          if (fechaStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-            const datePart = fechaStr.split('T')[0];
-            const [year, month, day] = datePart.split('-').map(Number);
-            if (year >= 2000 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-              fechaEvento = new Date(year, month - 1, day);
-              fechaEvento.setHours(0, 0, 0, 0);
-            }
-          }
-        } catch (error) {
-          // Si falla el parseo, dejar null
-        }
+        fechaEvento = parsearFechaFlexible(fechaEventoExcel);
+        // Si no se puede parsear, dejar null (no es crítico)
       }
 
-      const cantidadInvitados = procesarCantidadInvitados(obtenerValor(fila, mapeoColumnas.cantidad_invitados));
+      const cantidadInvitadosRaw = obtenerValor(fila, mapeoColumnas.cantidad_invitados);
+      const cantidadInvitados = procesarCantidadInvitados(cantidadInvitadosRaw);
       let salonPreferido = procesarSalon(obtenerValor(fila, mapeoColumnas.salon_preferido));
       
-      // Validar y corregir salón basándose en cantidad de invitados
-      salonPreferido = validarYCorregirSalon(salonPreferido, cantidadInvitados);
+      // Si la cantidad de invitados es "-" (indicador de datos faltantes), asignar "Desconocido"
+      if (cantidadInvitadosRaw && String(cantidadInvitadosRaw).trim() === '-') {
+        salonPreferido = '?';
+      } else {
+        // Validar y corregir salón basándose en cantidad de invitados
+        salonPreferido = validarYCorregirSalon(salonPreferido, cantidadInvitados);
+      }
       
       // Si faltan datos críticos, asignar "Desconocido"
       if (!cantidadInvitados && !salonPreferido && !fechaEvento && !obtenerValor(fila, mapeoColumnas.tipo_evento)) {
+        salonPreferido = '?';
+      }
+      
+      // Si no hay cantidad de invitados válida y el salón es "Diamond" sin otros datos, asignar "Desconocido"
+      if (!cantidadInvitados && salonPreferido === 'Diamond' && !fechaEvento && !obtenerValor(fila, mapeoColumnas.tipo_evento)) {
         salonPreferido = '?';
       }
 
@@ -168,39 +250,76 @@ async function sincronizarLeaksAutomaticamente() {
     if (leaksParaImportar.length === 0) {
       return {
         success: false,
-        message: 'No se encontraron datos válidos en el Google Sheet',
+        message: `No se encontraron datos válidos en el Google Sheet. Total filas: ${datos.length}, Omitidas: ${filasOmitidas.length}`,
         creados: 0,
         duplicados: 0,
-        errores: 0
+        errores: 0,
+        omitidas: filasOmitidas.length,
+        totalEnSheet: datos.length,
+        detallesOmitidas: filasOmitidas.slice(0, 10)
       };
     }
 
     const leaksCreados = [];
+    const leaksActualizados = [];
     const leaksDuplicados = [];
     const errores = [];
 
-    // Crear leaks verificando duplicados
+    // Crear o actualizar leaks - evitar duplicados entre leaks disponibles
     for (const leakData of leaksParaImportar) {
       try {
-        // Verificar si ya existe un leak con este email o teléfono
+        // Verificar si ya existe un leak DISPONIBLE (no asignado y no convertido) con este email o teléfono
         const leakExistente = await prisma.leaks.findFirst({
           where: {
-            OR: [
-              { email: leakData.email },
-              { telefono: leakData.telefono }
+            AND: [
+              {
+                OR: [
+                  { email: leakData.email },
+                  { telefono: leakData.telefono }
+                ]
+              },
+              { vendedor_id: null },
+              { estado: { not: 'convertido' } }
             ]
           }
         });
 
         if (leakExistente) {
+          // Si existe un leak disponible, actualizarlo con la información más reciente
+          const leakActualizado = await prisma.leaks.update({
+            where: { id: leakExistente.id },
+            data: {
+              fecha_recepcion: leakData.fecha_recepcion,
+              nombre_completo: leakData.nombre_completo,
+              telefono: leakData.telefono,
+              email: leakData.email,
+              tipo_evento: leakData.tipo_evento || leakExistente.tipo_evento,
+              cantidad_invitados: leakData.cantidad_invitados || leakExistente.cantidad_invitados,
+              // Si el nuevo salón es "?", siempre usar "?" (incluso si el existente tiene otro valor)
+              salon_preferido: leakData.salon_preferido === '?' ? '?' : (leakData.salon_preferido || leakExistente.salon_preferido),
+              fecha_evento: leakData.fecha_evento || leakExistente.fecha_evento,
+              fuente: leakData.fuente || leakExistente.fuente,
+              horario_contactar: leakData.horario_contactar || leakExistente.horario_contactar,
+              observaciones: leakData.observaciones || leakExistente.observaciones,
+              // Mantener el estado actual si ya tiene uno diferente de 'nuevo'
+              estado: leakExistente.estado === 'nuevo' ? 'nuevo' : leakExistente.estado
+            }
+          });
+
+          leaksActualizados.push(leakActualizado);
           leaksDuplicados.push({
+            id_existente: leakExistente.id,
+            nombre: leakData.nombre_completo,
             email: leakData.email,
             telefono: leakData.telefono,
-            motivo: 'Ya existe un leak con este email o teléfono'
+            accion: 'actualizado',
+            fecha_recepcion_anterior: leakExistente.fecha_recepcion,
+            fecha_recepcion_nueva: leakData.fecha_recepcion
           });
           continue;
         }
 
+        // Si no existe un leak disponible, crear uno nuevo
         const leak = await prisma.leaks.create({
           data: {
             fecha_recepcion: leakData.fecha_recepcion,
@@ -228,12 +347,61 @@ async function sincronizarLeaksAutomaticamente() {
       }
     }
 
+    // Corregir automáticamente leaks existentes que tienen datos faltantes pero tienen salón asignado
+    const leaksACorregir = await prisma.leaks.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { cantidad_invitados: null },
+              { cantidad_invitados: 0 }
+            ]
+          },
+          {
+            salon_preferido: { not: '?' }
+          },
+          {
+            OR: [
+              { fecha_evento: null },
+              { tipo_evento: null }
+            ]
+          }
+        ]
+      }
+    });
+
+    let leaksCorregidos = 0;
+    if (leaksACorregir.length > 0) {
+      const resultadoCorreccion = await prisma.leaks.updateMany({
+        where: {
+          id: { in: leaksACorregir.map(l => l.id) }
+        },
+        data: {
+          salon_preferido: '?'
+        }
+      });
+      leaksCorregidos = resultadoCorreccion.count;
+    }
+
+    const totalProcesadas = leaksCreados.length + leaksActualizados.length + errores.length + filasOmitidas.length;
+    let mensaje = `Sincronización automática: ${leaksCreados.length} creados, ${leaksActualizados.length} actualizados, ${errores.length} errores`;
+    if (filasOmitidas.length > 0) {
+      mensaje += `, ${filasOmitidas.length} filas omitidas (faltan datos obligatorios)`;
+    }
+    
     return {
       success: true,
-      message: `Sincronización automática: ${leaksCreados.length} creados, ${leaksDuplicados.length} duplicados, ${errores.length} errores`,
+      message: mensaje,
       creados: leaksCreados.length,
+      actualizados: leaksActualizados.length,
       duplicados: leaksDuplicados.length,
-      errores: errores.length
+      errores: errores.length,
+      omitidas: filasOmitidas.length,
+      corregidos: leaksCorregidos,
+      totalProcesadas: totalProcesadas,
+      totalEnSheet: datos.length,
+      detallesOmitidas: filasOmitidas.length > 0 ? filasOmitidas.slice(0, 10) : [], // Mostrar solo las primeras 10 para no saturar
+      detallesDuplicados: leaksDuplicados.slice(0, 50) // Mostrar hasta 50 duplicados para debugging
     };
 
   } catch (error) {

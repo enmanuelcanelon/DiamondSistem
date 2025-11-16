@@ -102,7 +102,10 @@ function Dashboard() {
       });
       const contratosActivos = contratos.filter(c => c.estado === 'activo').length;
       const contratosPagadosCompleto = contratos.filter(c => c.estado_pago === 'completado').length;
+      // Total Ventas = suma de total_contrato de contratos aceptados (todos los contratos son aceptados por definición)
       const totalVentas = contratos.reduce((sum, c) => sum + parseFloat(c.total_contrato || 0), 0);
+      // Número de contratos aceptados (todos los contratos son aceptados por definición)
+      const numeroContratosAceptados = contratos.length;
 
       // Obtener clientes del período actual
       const fechaInicioClientes = new Date(fechaInicio);
@@ -225,10 +228,16 @@ function Dashboard() {
         clientes: totalClientesAnteriores,
         ofertasPendientes: ofertasAnteriores.filter(o => o.estado === 'pendiente').length,
         contratosActivos: contratosAnteriores.filter(c => c.estado === 'activo').length,
-        totalVentas: contratosAnteriores.reduce((sum, c) => sum + parseFloat(c.total_contrato || 0), 0)
+        totalVentas: contratosAnteriores.reduce((sum, c) => sum + parseFloat(c.total_contrato || 0), 0),
+        numeroContratosAceptados: contratosAnteriores.length
       };
 
-      // Calcular cambios porcentuales
+      // Calcular cambios numéricos (no porcentuales)
+      const calcularCambioNumerico = (actual, anterior) => {
+        return actual - (anterior || 0);
+      };
+
+      // Calcular cambios porcentuales (solo para finanzas)
       const calcularCambioPorcentual = (actual, anterior) => {
         if (!anterior || anterior === 0) return actual > 0 ? 100 : 0;
         return ((actual - anterior) / anterior) * 100;
@@ -238,7 +247,7 @@ function Dashboard() {
         estadisticas: {
           clientes: { 
             total: totalClientes,
-            cambio: calcularCambioPorcentual(totalClientes, datosAnteriores.clientes)
+            cambio: calcularCambioNumerico(totalClientes, datosAnteriores.clientes)
           },
           ofertas: {
             total: totalOfertas,
@@ -246,17 +255,17 @@ function Dashboard() {
             aceptadas: ofertasAceptadas,
             rechazadas: ofertasRechazadas,
             tasa_conversion: `${tasaConversion}%`,
-            cambioPendientes: calcularCambioPorcentual(ofertasPendientes, datosAnteriores.ofertasPendientes)
+            cambioPendientes: calcularCambioNumerico(ofertasPendientes, datosAnteriores.ofertasPendientes)
           },
           contratos: {
             activos: contratosActivos,
             total: contratos.length,
             pagados_completo: contratosPagadosCompleto,
-            cambio: calcularCambioPorcentual(contratosActivos, datosAnteriores.contratosActivos)
+            cambio: calcularCambioNumerico(contratosActivos, datosAnteriores.contratosActivos)
           },
           finanzas: {
             total_ventas: totalVentas,
-            cambio: calcularCambioPorcentual(totalVentas, datosAnteriores.totalVentas),
+            cambio: calcularCambioNumerico(numeroContratosAceptados, datosAnteriores.numeroContratosAceptados),
             comision_porcentaje: comisionPorcentaje,
             total_comisiones: totalComisiones,
             total_comisiones_desbloqueadas: totalComisionesDesbloqueadas,
@@ -580,7 +589,7 @@ function Dashboard() {
                           <TrendingDown className="w-3 h-3" />
                         )}
                         <span className="text-xs font-semibold">
-                          {esPositivo ? '+' : '-'}{cambioAbsoluto.toFixed(1)}%
+                          {esPositivo ? '+' : '-'}{cambioAbsoluto}
                         </span>
                       </div>
                     </Badge>
@@ -592,7 +601,7 @@ function Dashboard() {
                     >
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-semibold">
-                          0%
+                          0
                         </span>
                       </div>
                     </Badge>

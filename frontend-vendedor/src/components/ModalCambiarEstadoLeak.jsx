@@ -16,7 +16,12 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
   const [estado, setEstado] = useState(leak?.estado || 'nuevo');
   const [fechaCitaSalon, setFechaCitaSalon] = useState('');
   const [horaCitaSalon, setHoraCitaSalon] = useState('');
-  const [motivoRechazo, setMotivoRechazo] = useState('');
+  const [detallesInteresado, setDetallesInteresado] = useState('');
+  const [motivoNoInteresado, setMotivoNoInteresado] = useState('');
+  const [fechaLlamarLuego, setFechaLlamarLuego] = useState('');
+  const [horaLlamarLuego, setHoraLlamarLuego] = useState('');
+  const [fechaNoContactado, setFechaNoContactado] = useState('');
+  const [horaNoContactado, setHoraNoContactado] = useState('');
   const [notasVendedor, setNotasVendedor] = useState('');
 
   const mutation = useMutation({
@@ -28,6 +33,7 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
       queryClient.invalidateQueries(['leaks-mios']);
       queryClient.invalidateQueries(['leaks-pendientes']);
       queryClient.invalidateQueries(['leaks-pendientes-lista']);
+      queryClient.invalidateQueries(['leaks-stats']);
       toast.success('Estado actualizado exitosamente');
       onSuccess?.();
       onClose();
@@ -40,14 +46,24 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Validaciones
-    if (estado === 'contactado' && !fechaCitaSalon) {
-      toast.error('La fecha de cita al salón es requerida');
+    // Validaciones según el estado
+    if (estado === 'interesado' && !fechaCitaSalon) {
+      toast.error('La fecha para ver el salón es requerida');
       return;
     }
 
-    if (estado === 'rechazado' && !motivoRechazo.trim()) {
-      toast.error('El motivo de rechazo es requerido');
+    if (estado === 'contactado_no_interesado' && !motivoNoInteresado.trim()) {
+      toast.error('El motivo de por qué no está interesado es requerido');
+      return;
+    }
+
+    if (estado === 'contactado_llamar_luego' && !fechaLlamarLuego) {
+      toast.error('La fecha para contactar nuevamente es requerida');
+      return;
+    }
+
+    if (estado === 'no_contesta_llamar_luego' && !fechaNoContactado) {
+      toast.error('La fecha y hora para llamar luego es requerida');
       return;
     }
 
@@ -57,16 +73,31 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
       notas_vendedor: notasVendedor || null,
     };
 
-    if (estado === 'contactado' && fechaCitaSalon) {
-      // Combinar fecha y hora
+    // Campos específicos según el estado
+    if (estado === 'interesado' && fechaCitaSalon) {
       const fechaHora = horaCitaSalon 
         ? `${fechaCitaSalon}T${horaCitaSalon}:00`
         : `${fechaCitaSalon}T10:00:00`;
       data.fecha_cita_salon = fechaHora;
+      data.detalles_interesado = detallesInteresado || null;
     }
 
-    if (estado === 'rechazado') {
-      data.motivo_rechazo = motivoRechazo;
+    if (estado === 'contactado_no_interesado') {
+      data.motivo_no_interesado = motivoNoInteresado;
+    }
+
+    if (estado === 'contactado_llamar_luego' && fechaLlamarLuego) {
+      const fechaHora = horaLlamarLuego 
+        ? `${fechaLlamarLuego}T${horaLlamarLuego}:00`
+        : `${fechaLlamarLuego}T09:00:00`;
+      data.fecha_proximo_contacto = fechaHora;
+    }
+
+    if (estado === 'no_contesta_llamar_luego' && fechaNoContactado) {
+      const fechaHora = horaNoContactado 
+        ? `${fechaNoContactado}T${horaNoContactado}:00`
+        : `${fechaNoContactado}T09:00:00`;
+      data.fecha_proximo_contacto = fechaHora;
     }
 
     mutation.mutate(data);
@@ -95,80 +126,149 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="nuevo">Nuevo</SelectItem>
-                <SelectItem value="contactado">Contactado (Asignar fecha para ver salón)</SelectItem>
-                <SelectItem value="no_contesta">No Contesta (Llamar mañana)</SelectItem>
-                <SelectItem value="rechazado">Rechazado</SelectItem>
-                <SelectItem value="contactado_llamar_otra_vez">Contactado - Llamar Otra Vez</SelectItem>
+                <SelectItem value="nuevo">Nuevos</SelectItem>
+                <SelectItem value="interesado">Interesado</SelectItem>
+                <SelectItem value="contactado_llamar_luego">Contactado Llamar Luego</SelectItem>
+                <SelectItem value="no_contesta_llamar_luego">No Contesta Llamar Luego</SelectItem>
+                <SelectItem value="contactado_no_interesado">Contactado No Interesado</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Fecha de cita al salón (solo para contactado) */}
-          {estado === 'contactado' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="fecha_cita_salon">
-                  Fecha de Cita al Salón <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="date"
-                  id="fecha_cita_salon"
-                  value={fechaCitaSalon}
-                  onChange={(e) => setFechaCitaSalon(e.target.value)}
-                  required
-                  className="mt-2"
-                  min={format(new Date(), 'yyyy-MM-dd')}
-                />
+          {/* Fecha para ver salón (solo para Interesado) */}
+          {estado === 'interesado' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="fecha_cita_salon">
+                    Fecha para Ver el Salón <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    id="fecha_cita_salon"
+                    value={fechaCitaSalon}
+                    onChange={(e) => setFechaCitaSalon(e.target.value)}
+                    required
+                    className="mt-2"
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="hora_cita_salon">Hora (opcional)</Label>
+                  <Input
+                    type="time"
+                    id="hora_cita_salon"
+                    value={horaCitaSalon}
+                    onChange={(e) => setHoraCitaSalon(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
               </div>
               <div>
-                <Label htmlFor="hora_cita_salon">Hora (opcional)</Label>
-                <Input
-                  type="time"
-                  id="hora_cita_salon"
-                  value={horaCitaSalon}
-                  onChange={(e) => setHoraCitaSalon(e.target.value)}
+                <Label htmlFor="detalles_interesado">Detalles (opcional)</Label>
+                <Textarea
+                  id="detalles_interesado"
+                  value={detallesInteresado}
+                  onChange={(e) => setDetallesInteresado(e.target.value)}
+                  placeholder="Detalles sobre el interés del cliente..."
                   className="mt-2"
+                  rows={3}
                 />
               </div>
-            </div>
+            </>
           )}
 
-          {/* Motivo de rechazo (solo para rechazado) */}
-          {estado === 'rechazado' && (
+          {/* Motivo no interesado (solo para Contactado No Interesado) */}
+          {estado === 'contactado_no_interesado' && (
             <div>
-              <Label htmlFor="motivo_rechazo">
-                Motivo de Rechazo <span className="text-destructive">*</span>
+              <Label htmlFor="motivo_no_interesado">
+                ¿Por qué no está interesado? <span className="text-destructive">*</span>
               </Label>
               <Textarea
-                id="motivo_rechazo"
-                value={motivoRechazo}
-                onChange={(e) => setMotivoRechazo(e.target.value)}
+                id="motivo_no_interesado"
+                value={motivoNoInteresado}
+                onChange={(e) => setMotivoNoInteresado(e.target.value)}
                 required
-                placeholder="Ej: Precio muy alto, no le gustó la oferta, etc."
+                placeholder="Ej: Precio muy alto, no le gustó la oferta, ya contrató con otro, etc."
                 className="mt-2"
                 rows={3}
               />
             </div>
           )}
 
-          {/* Información para no_contesta y contactado_llamar_otra_vez */}
-          {(estado === 'no_contesta' || estado === 'contactado_llamar_otra_vez') && (
-            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                    {estado === 'no_contesta' 
-                      ? 'Se programará automáticamente para llamar mañana'
-                      : 'Se programará automáticamente para llamar mañana'}
-                  </p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                    El sistema establecerá la fecha de próximo contacto al día siguiente.
-                  </p>
-                </div>
+          {/* Fecha para contactar nuevamente (solo para Contactado Llamar Luego) */}
+          {estado === 'contactado_llamar_luego' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="fecha_llamar_luego">
+                  Fecha para Contactar Nuevamente <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="date"
+                  id="fecha_llamar_luego"
+                  value={fechaLlamarLuego}
+                  onChange={(e) => setFechaLlamarLuego(e.target.value)}
+                  required
+                  className="mt-2"
+                  min={format(new Date(), 'yyyy-MM-dd')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="hora_llamar_luego">Hora (opcional)</Label>
+                <Input
+                  type="time"
+                  id="hora_llamar_luego"
+                  value={horaLlamarLuego}
+                  onChange={(e) => setHoraLlamarLuego(e.target.value)}
+                  className="mt-2"
+                />
               </div>
             </div>
+          )}
+
+          {/* Fecha y hora para llamar (solo para No Contesta Llamar Luego) */}
+          {estado === 'no_contesta_llamar_luego' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="fecha_no_contactado">
+                    Fecha para Llamar <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    id="fecha_no_contactado"
+                    value={fechaNoContactado}
+                    onChange={(e) => setFechaNoContactado(e.target.value)}
+                    required
+                    className="mt-2"
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="hora_no_contactado">
+                    Hora para Llamar <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="time"
+                    id="hora_no_contactado"
+                    value={horaNoContactado}
+                    onChange={(e) => setHoraNoContactado(e.target.value)}
+                    required
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                      Recordatorio: Si no contacta por teléfono, escribir al email
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
 
           {/* Notas del vendedor (opcional para todos) */}

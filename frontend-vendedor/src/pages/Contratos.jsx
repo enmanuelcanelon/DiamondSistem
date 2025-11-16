@@ -142,7 +142,6 @@ function Contratos() {
   // Calcular métricas de contratos
   const contratosActivos = contratosRaw.filter(c => obtenerEstadoEvento(c) === 'activo').length;
   const contratosCompletados = contratosRaw.filter(c => obtenerEstadoEvento(c) === 'completado' || obtenerEstadoEvento(c) === 'finalizado').length;
-  const contratosCancelados = contratosRaw.filter(c => c.estado === 'cancelado').length;
   const totalIngresos = contratosRaw.reduce((sum, c) => sum + parseFloat(c.total_pagado || 0), 0);
   const saldoPendiente = contratosRaw.reduce((sum, c) => sum + parseFloat(c.saldo_pendiente || 0), 0);
   const totalContratosValor = contratosRaw.reduce((sum, c) => sum + parseFloat(c.total_contrato || 0), 0);
@@ -269,7 +268,7 @@ function Contratos() {
       </div>
 
       {/* Panel de Métricas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         {/* Total de Contratos */}
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
@@ -342,29 +341,6 @@ function Contratos() {
           </CardContent>
         </Card>
 
-        {/* Cancelados */}
-        <Card className="bg-card relative">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Contratos Cancelados
-            </CardTitle>
-            <Badge 
-              variant="outline" 
-              className="absolute top-4 right-4 h-6 px-2 rounded-full border bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
-            >
-              <div className="flex items-center gap-1">
-                <XCircle className="w-3 h-3" />
-                <span className="text-xs font-semibold">
-                  {contratosCancelados > 0 ? `-${contratosCancelados}` : contratosCancelados}
-                </span>
-              </div>
-            </Badge>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{contratosCancelados}</div>
-            <p className="text-xs text-muted-foreground mt-1">Contratos cancelados</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Banner de filtro por cliente */}

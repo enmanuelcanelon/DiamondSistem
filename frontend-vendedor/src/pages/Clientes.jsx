@@ -138,12 +138,13 @@ function Clientes() {
             Gestiona tu cartera de clientes
           </p>
         </div>
-        <Button size="lg" asChild className="whitespace-nowrap">
-          <Link to="/clientes/nuevo" className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            <span>Nuevo Cliente</span>
-          </Link>
-        </Button>
+        <Link
+          to="/clientes/nuevo"
+          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 rounded-md px-8 whitespace-nowrap gap-2"
+        >
+          <Plus className="h-5 w-5" />
+          <span>Nuevo Cliente</span>
+        </Link>
       </div>
 
       {/* Búsqueda */}
@@ -191,12 +192,13 @@ function Clientes() {
               {searchTerm ? 'Intenta con otro término de búsqueda' : 'Comienza agregando tu primer cliente'}
             </p>
             {!searchTerm && (
-              <Button asChild>
-                <Link to="/clientes/nuevo">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear Primer Cliente
-                </Link>
-              </Button>
+              <Link
+                to="/clientes/nuevo"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Crear Primer Cliente
+              </Link>
             )}
           </CardContent>
         </Card>
@@ -250,12 +252,13 @@ function Clientes() {
                     </Link>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" asChild>
-                      <Link to={`/clientes/editar/${cliente.id}`}>
-                        <Edit2 className="w-4 h-4 mr-2" />
-                        Editar
-                      </Link>
-                    </Button>
+                    <Link
+                      to={`/clientes/editar/${cliente.id}`}
+                      className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 flex-1"
+                    >
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Editar
+                    </Link>
                     <Button
                       variant="destructive"
                       className="flex-1"

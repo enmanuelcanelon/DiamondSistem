@@ -7,6 +7,50 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+// Función helper para parsear fechas sin problemas de timezone
+const parsearFechaLocal = (fecha) => {
+  if (!fecha) return null;
+  
+  // Si es un string en formato YYYY-MM-DD, parsearlo como fecha local
+  if (typeof fecha === 'string') {
+    // Extraer solo la parte de fecha (antes de T o espacio)
+    const datePart = fecha.split('T')[0].split(' ')[0];
+    if (datePart.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = datePart.split('-').map(Number);
+      // Crear fecha en timezone local (medianoche local)
+      return new Date(year, month - 1, day);
+    }
+  }
+  
+  // Si es un objeto Date, extraer año, mes, día y crear nueva fecha local
+  if (fecha instanceof Date) {
+    const year = fecha.getFullYear();
+    const month = fecha.getMonth();
+    const day = fecha.getDate();
+    return new Date(year, month, day);
+  }
+  
+  // Si es un string ISO con timezone, extraer solo la parte de fecha
+  if (typeof fecha === 'string') {
+    const datePart = fecha.split('T')[0].split(' ')[0];
+    if (datePart.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = datePart.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+  }
+  
+  // Último recurso: parsear normalmente y luego extraer año/mes/día
+  const date = new Date(fecha);
+  if (!isNaN(date.getTime())) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    return new Date(year, month, day);
+  }
+  
+  return null;
+};
 import api from '../config/api';
 import toast from 'react-hot-toast';
 
@@ -45,14 +89,13 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
 
   const getEstadoBadge = (estado) => {
     const estados = {
-      nuevo: { label: 'Nuevo', variant: 'default' },
-      contactado: { label: 'Contactado', variant: 'default' },
-      no_contesta: { label: 'No Contesta', variant: 'secondary' },
-      rechazado: { label: 'Rechazado', variant: 'destructive' },
-      contactado_llamar_otra_vez: { label: 'Llamar Otra Vez', variant: 'secondary' },
-      convertido: { label: 'Convertido', variant: 'default' },
+      nuevo: { label: 'Nuevos', variant: 'default' },
+      interesado: { label: 'Interesado', variant: 'default' },
+      contactado_llamar_luego: { label: 'Contactado Llamar Luego', variant: 'secondary' },
+      no_contesta_llamar_luego: { label: 'No Contesta Llamar Luego', variant: 'secondary' },
+      contactado_no_interesado: { label: 'Contactado No Interesado', variant: 'destructive' },
     };
-    return estados[estado] || { label: estado, variant: 'outline' };
+    return estados[estado] || { label: estado || 'Sin estado', variant: 'outline' };
   };
 
   const estadoInfo = getEstadoBadge(leak.estado);
@@ -144,14 +187,16 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                     <MapPin className="w-4 h-4" />
                     Salón Preferido
                   </label>
-                  <Badge variant="outline" className="mt-1">{leak.salon_preferido}</Badge>
+                  <Badge variant="outline" className="mt-1">
+                    {leak.salon_preferido === '?' ? 'Desconocido' : leak.salon_preferido}
+                  </Badge>
                 </div>
               )}
               {leak.fecha_evento && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Fecha del Evento</label>
                   <p className="text-base mt-1">
-                    {format(new Date(leak.fecha_evento), 'dd/MM/yyyy', { locale: es })}
+                    {format(parsearFechaLocal(leak.fecha_evento), 'yyyy-MM-dd')}
                   </p>
                 </div>
               )}
@@ -174,7 +219,7 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Fecha de Recepción</label>
                 <p className="text-base mt-1">
-                  {format(new Date(leak.fecha_recepcion), 'dd/MM/yyyy', { locale: es })}
+                  {format(parsearFechaLocal(leak.fecha_recepcion), 'yyyy-MM-dd')}
                 </p>
               </div>
             </div>
@@ -204,7 +249,7 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Fecha de Asignación</label>
                       <p className="text-base mt-1">
-                        {format(new Date(leak.fecha_asignacion), 'dd/MM/yyyy HH:mm', { locale: es })}
+                        {format(parsearFechaLocal(leak.fecha_asignacion), 'yyyy-MM-dd HH:mm')}
                       </p>
                     </div>
                   )}
@@ -212,7 +257,7 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Último Contacto</label>
                       <p className="text-base mt-1">
-                        {format(new Date(leak.fecha_ultimo_contacto), 'dd/MM/yyyy HH:mm', { locale: es })}
+                        {format(parsearFechaLocal(leak.fecha_ultimo_contacto), 'yyyy-MM-dd HH:mm')}
                       </p>
                     </div>
                   )}
@@ -220,7 +265,7 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Próximo Contacto</label>
                       <p className="text-base mt-1">
-                        {format(new Date(leak.fecha_proximo_contacto), 'dd/MM/yyyy', { locale: es })}
+                        {format(parsearFechaLocal(leak.fecha_proximo_contacto), 'yyyy-MM-dd')}
                       </p>
                     </div>
                   )}
@@ -228,7 +273,7 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Fecha de Cita al Salón</label>
                       <p className="text-base mt-1">
-                        {format(new Date(leak.fecha_cita_salon), 'dd/MM/yyyy HH:mm', { locale: es })}
+                        {format(parsearFechaLocal(leak.fecha_cita_salon), 'yyyy-MM-dd HH:mm')}
                       </p>
                     </div>
                   )}

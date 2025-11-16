@@ -237,7 +237,7 @@ router.get('/stats', authenticate, requireVendedor, async (req, res, next) => {
  */
 router.get('/disponibles', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { salon, ordenar } = req.query;
+    const { salon, ordenar, search, mes, año, ano, limit } = req.query;
 
     // Mostrar TODOS los leaks, incluyendo duplicados y asignados (solo excluir convertidos)
     const where = {
@@ -252,6 +252,34 @@ router.get('/disponibles', authenticate, requireVendedor, async (req, res, next)
       }
     }
 
+    // Búsqueda por nombre, email o teléfono
+    if (search) {
+      where.OR = [
+        { nombre_completo: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { telefono: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    // Filtro por mes y año (fecha_recepcion)
+    const añoFiltro = año || ano;
+    if (mes && añoFiltro) {
+      const mesNum = parseInt(mes);
+      const añoNum = parseInt(añoFiltro);
+      if (mesNum >= 1 && mesNum <= 12 && añoNum >= 2000 && añoNum <= 2100) {
+        // Crear fechas en UTC para evitar problemas de zona horaria
+        // fechaInicio: primer día del mes a las 00:00:00 UTC
+        const fechaInicio = new Date(Date.UTC(añoNum, mesNum - 1, 1, 0, 0, 0, 0));
+        // fechaFin: último día del mes a las 23:59:59.999 UTC
+        const fechaFin = new Date(Date.UTC(añoNum, mesNum, 0, 23, 59, 59, 999));
+        
+        where.fecha_recepcion = {
+          gte: fechaInicio,
+          lte: fechaFin
+        };
+      }
+    }
+
     // Ordenamiento por fecha_recepcion: 'asc' (más antigua) o 'desc' (más reciente)
     // Cuando es 'desc' (más reciente), ordenar primero por fecha_recepcion descendente
     // pero asegurar que las fechas futuras no aparezcan antes que las actuales
@@ -259,11 +287,17 @@ router.get('/disponibles', authenticate, requireVendedor, async (req, res, next)
       ? { fecha_recepcion: 'asc' }
       : { fecha_recepcion: 'desc' };
 
-    // Obtener TODOS los leaks sin paginación
+    // Obtener leaks con o sin paginación según el parámetro limit
+    const limitNum = limit && limit !== 'todos' ? parseInt(limit) : undefined;
+    const skip = limitNum ? 0 : undefined;
+    const take = limitNum || undefined;
+
     const [leaks, total] = await Promise.all([
       prisma.leaks.findMany({
         where,
-        orderBy
+        orderBy,
+        ...(take && { take }),
+        ...(skip !== undefined && { skip })
       }),
       prisma.leaks.count({ where })
     ]);
@@ -304,6 +338,67 @@ router.get('/disponibles', authenticate, requireVendedor, async (req, res, next)
       count: leaks.length,
       total,
       data: leaks
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/leaks/corregir-salon-desconocido
+ * @desc    Corregir leaks que tienen datos faltantes pero tienen salón asignado
+ * @access  Private (Vendedor)
+ */
+router.post('/corregir-salon-desconocido', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    // Buscar leaks que deberían tener "?" como salón pero tienen otro valor
+    // Criterios: cantidad_invitados es null o 0, y salon_preferido no es "?"
+    const leaksACorregir = await prisma.leaks.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { cantidad_invitados: null },
+              { cantidad_invitados: 0 }
+            ]
+          },
+          {
+            salon_preferido: { not: '?' }
+          },
+          {
+            OR: [
+              { fecha_evento: null },
+              { tipo_evento: null }
+            ]
+          }
+        ]
+      }
+    });
+
+    if (leaksACorregir.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No hay leaks que necesiten corrección',
+        corregidos: 0
+      });
+    }
+
+    // Actualizar todos los leaks encontrados
+    const resultado = await prisma.leaks.updateMany({
+      where: {
+        id: { in: leaksACorregir.map(l => l.id) }
+      },
+      data: {
+        salon_preferido: '?'
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Se corrigieron ${resultado.count} leaks asignándoles salón "Desconocido"`,
+      corregidos: resultado.count,
+      totalEncontrados: leaksACorregir.length
     });
 
   } catch (error) {
@@ -726,12 +821,19 @@ router.post('/sincronizar', authenticate, requireVendedor, async (req, res, next
     const { sincronizarLeaksAutomaticamente } = require('../utils/sincronizarLeaks');
     const resultado = await sincronizarLeaksAutomaticamente();
     
+    // Retornar TODOS los campos, incluyendo actualizados y detallesDuplicados
     res.json({
       success: resultado.success,
       message: resultado.message,
       creados: resultado.creados,
-      duplicados: resultado.duplicados,
-      errores: resultado.errores
+      actualizados: resultado.actualizados || 0,
+      duplicados: resultado.duplicados || 0,
+      errores: resultado.errores || 0,
+      omitidas: resultado.omitidas || 0,
+      totalProcesadas: resultado.totalProcesadas || 0,
+      totalEnSheet: resultado.totalEnSheet || 0,
+      detallesDuplicados: resultado.detallesDuplicados || [],
+      detallesOmitidas: resultado.detallesOmitidas || []
     });
   } catch (error) {
     next(error);
@@ -1121,6 +1223,7 @@ router.get('/debug/duplicados', authenticate, requireVendedor, async (req, res, 
 });
 
 module.exports = router;
+
 
 
 

@@ -24,7 +24,18 @@ const Button = React.forwardRef(
     const classes = `${baseClasses} ${buttonVariants[variant] || buttonVariants.default} ${buttonSizes[size] || buttonSizes.default} ${className}`
     
     if (asChild) {
-      return <>{React.cloneElement(props.children, { className: classes, ref, ...props })}</>
+      const { children, variant, size, asChild: _, ...restProps } = props;
+      // Filtrar props que no deben pasarse al hijo
+      const childProps = {
+        className: classes,
+        ...restProps,
+      };
+      // Solo pasar ref si el hijo lo acepta (Link de react-router-dom lo acepta)
+      // Usar React.cloneElement con mergeProps para manejar ref correctamente
+      return React.cloneElement(children, {
+        ...childProps,
+        ref: ref,
+      })
     }
     
     return <button className={classes} ref={ref} {...props} />

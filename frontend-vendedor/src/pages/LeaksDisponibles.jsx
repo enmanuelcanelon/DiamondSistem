@@ -12,7 +12,11 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowLeft,
-  RefreshCw
+  RefreshCw,
+  Search,
+  Calendar,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
@@ -22,6 +26,8 @@ import { Badge } from '../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Skeleton } from '../components/ui/skeleton';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import ModalDetalleLeak from '../components/ModalDetalleLeak';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -73,19 +79,59 @@ const parsearFechaLocal = (fecha) => {
 
 function LeaksDisponibles() {
   const queryClient = useQueryClient();
+  const fechaActual = new Date();
   const [filtroSalon, setFiltroSalon] = useState('');
   const [ordenarPor, setOrdenarPor] = useState('desc'); // 'asc' = más antigua, 'desc' = más reciente
+  const [searchTerm, setSearchTerm] = useState('');
+  const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
+  const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
+  const [limiteMostrar, setLimiteMostrar] = useState('todos'); // 'todos', '15', '25', '50'
   const [leakSeleccionado, setLeakSeleccionado] = useState(null);
   const [modalDetalleOpen, setModalDetalleOpen] = useState(false);
   const [resultadoSincronizacion, setResultadoSincronizacion] = useState(null);
 
+  // Nombres de los meses
+  const nombresMeses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  // Cambiar mes
+  const cambiarMes = (direccion) => {
+    if (direccion === 'anterior') {
+      if (mesSeleccionado === 1) {
+        setMesSeleccionado(12);
+        setAñoSeleccionado(añoSeleccionado - 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado - 1);
+      }
+    } else {
+      if (mesSeleccionado === 12) {
+        setMesSeleccionado(1);
+        setAñoSeleccionado(añoSeleccionado + 1);
+      } else {
+        setMesSeleccionado(mesSeleccionado + 1);
+      }
+    }
+  };
+
+  // Volver al mes actual
+  const resetearMes = () => {
+    setMesSeleccionado(fechaActual.getMonth() + 1);
+    setAñoSeleccionado(fechaActual.getFullYear());
+  };
+
   // Query para leaks disponibles
   const { data: disponiblesData, isLoading: isLoadingDisponibles } = useQuery({
-    queryKey: ['leaks-disponibles', filtroSalon, ordenarPor],
+    queryKey: ['leaks-disponibles', filtroSalon, ordenarPor, searchTerm, mesSeleccionado, añoSeleccionado, limiteMostrar],
     queryFn: async () => {
       const params = {};
       if (filtroSalon) params.salon = filtroSalon;
       if (ordenarPor) params.ordenar = ordenarPor;
+      if (searchTerm) params.search = searchTerm;
+      if (mesSeleccionado) params.mes = mesSeleccionado.toString();
+      if (añoSeleccionado) params.año = añoSeleccionado.toString();
+      if (limiteMostrar && limiteMostrar !== 'todos') params.limit = limiteMostrar;
       const response = await api.get('/leaks/disponibles', { params });
       return response.data;
     },
@@ -371,9 +417,9 @@ function LeaksDisponibles() {
                   ✓ {resultadoSincronizacion.creados} leaks creados
                 </p>
               )}
-              {resultadoSincronizacion.duplicados > 0 && (
-                <p className="text-yellow-700 dark:text-yellow-300 mt-1">
-                  ⚠ {resultadoSincronizacion.duplicados} duplicados omitidos
+              {resultadoSincronizacion.omitidas > 0 && (
+                <p className="text-orange-700 dark:text-orange-300 mt-1">
+                  ⚠ {resultadoSincronizacion.omitidas} filas omitidas (faltan datos obligatorios: nombre, teléfono o email)
                 </p>
               )}
               {resultadoSincronizacion.errores > 0 && (
@@ -386,14 +432,24 @@ function LeaksDisponibles() {
         </Card>
       )}
 
-      {/* Filtros */}
+      {/* Búsqueda y filtros */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Filtrar por Salón</label>
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 relative min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="Buscar por nombre, email o teléfono..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Salón:</span>
               <Select value={filtroSalon} onValueChange={setFiltroSalon}>
-                <SelectTrigger>
+                <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Todos">
                     {filtroSalon === '?' ? 'Desconocido' : 
                      filtroSalon === '' ? 'Todos' :
@@ -409,10 +465,10 @@ function LeaksDisponibles() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Fecha Rec</label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Ordenar por:</span>
               <Select value={ordenarPor} onValueChange={setOrdenarPor}>
-                <SelectTrigger>
+                <SelectTrigger className="w-[200px]">
                   <SelectValue>
                     {ordenarPor === 'asc' ? 'Fecha más antigua' : 'Fecha más reciente'}
                   </SelectValue>
@@ -434,39 +490,136 @@ function LeaksDisponibles() {
               </Select>
             </div>
           </div>
+          
+          {/* Filtro por Mes y Año */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => cambiarMes('anterior')}
+              title="Mes anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <Select
+              value={mesSeleccionado.toString()}
+              onValueChange={(value) => setMesSeleccionado(parseInt(value))}
+            >
+              <SelectTrigger className="w-auto min-w-[180px] [&>span]:line-clamp-none [&>span]:whitespace-nowrap">
+                <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                <SelectValue placeholder="Seleccionar mes">
+                  {nombresMeses[mesSeleccionado - 1]}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {nombresMeses.map((mes, index) => (
+                  <SelectItem key={index} value={(index + 1).toString()}>
+                    {mes}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={añoSeleccionado.toString()} onValueChange={(value) => setAñoSeleccionado(parseInt(value))}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                  <SelectItem key={año} value={año.toString()}>
+                    {año}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => cambiarMes('siguiente')}
+              title="Mes siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetearMes}
+              >
+                Hoy
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
       {/* Tabla de Leaks */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle>Leaks Disponibles</CardTitle>
-              <Badge variant="secondary">
-                {totalDisponibles} total
-              </Badge>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CardTitle>Leaks Disponibles</CardTitle>
+                <Badge variant="secondary">
+                  {totalDisponibles} total
+                </Badge>
+              </div>
+              {leaksDisponibles.length > 0 && (
+                <Button
+                  onClick={handleLimpiarDisponibles}
+                  disabled={limpiarDisponiblesMutation.isPending}
+                  variant="destructive"
+                  size="sm"
+                >
+                  {limpiarDisponiblesMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Eliminando...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Limpiar Todos
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
-            {leaksDisponibles.length > 0 && (
+            {/* Botones de paginación */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground">Mostrar:</span>
               <Button
-                onClick={handleLimpiarDisponibles}
-                disabled={limpiarDisponiblesMutation.isPending}
-                variant="destructive"
+                variant={limiteMostrar === '15' ? 'default' : 'outline'}
                 size="sm"
+                onClick={() => setLimiteMostrar('15')}
               >
-                {limpiarDisponiblesMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Limpiar Todos
-                  </>
-                )}
+                15
               </Button>
-            )}
+              <Button
+                variant={limiteMostrar === '25' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setLimiteMostrar('25')}
+              >
+                25
+              </Button>
+              <Button
+                variant={limiteMostrar === '50' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setLimiteMostrar('50')}
+              >
+                50
+              </Button>
+              <Button
+                variant={limiteMostrar === 'todos' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setLimiteMostrar('todos')}
+              >
+                Todos
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
