@@ -72,14 +72,16 @@ model leaks {
   observaciones           String?
   
   // Campos de gestión
-  estado                  String?   @default("nuevo") @db.VarChar(50)  // nuevo, contactado, no_contesta, rechazado, contactado_llamar_otra_vez, convertido
+  estado                  String?   @default("nuevo") @db.VarChar(50)  // nuevo, interesado, contactado_llamar_luego, no_contesta_llamar_luego, contactado_no_interesado
   vendedor_id             Int?
   fecha_asignacion        DateTime?
   fecha_ultimo_contacto   DateTime?
   fecha_proximo_contacto  DateTime?
-  motivo_rechazo          String?
-  notas_vendedor           String?
-  fecha_cita_salon         DateTime?
+  motivo_rechazo          String?   // Deprecated - usar motivo_no_interesado
+  motivo_no_interesado    String?   // Motivo por qué no está interesado
+  detalles_interesado     String?   // Detalles sobre el interés del cliente
+  notas_vendedor          String?
+  fecha_cita_salon        DateTime?
   cliente_id              Int?      // ID del cliente cuando se convierte
   
   fecha_creacion          DateTime  @default(now())
