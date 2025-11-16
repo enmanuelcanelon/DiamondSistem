@@ -28,6 +28,7 @@ model vendedores {
   contratos               contratos[]
   versiones_contratos_pdf versiones_contratos_pdf[]
   solicitudes_cliente     solicitudes_cliente[]     @relation("respondido_por")
+  leaks                   leaks[]
 }
 
 model clientes {
@@ -47,10 +48,53 @@ model clientes {
   ofertas             ofertas[]
   contratos           contratos[]
   solicitudes_cliente solicitudes_cliente[]
+  leaks               leaks[]
 
   @@index([vendedor_id], map: "idx_clientes_vendedor")
   @@index([vendedor_id, tipo_evento], map: "idx_clientes_vendedor_tipo")
   @@index([email], map: "idx_clientes_email")
+}
+
+model leaks {
+  id                      Int       @id @default(autoincrement())
+  // Campos del Excel
+  fecha_recepcion         DateTime  @db.Date
+  nombre_completo         String    @db.VarChar(255)
+  telefono                String    @db.VarChar(20)
+  email                   String    @db.VarChar(255)
+  tipo_evento             String?   @db.VarChar(100)
+  cantidad_invitados      Int?
+  salon_preferido          String?   @db.VarChar(50)  // Diamond, Kendall, Doral
+  fecha_evento            DateTime? @db.Date
+  fuente                  String?   @db.VarChar(255)  // SOURCE: DMD GOOGLE CORPORATE, DMD META FORM, etc.
+  horario_contactar       String?   @db.VarChar(100)
+  opt_in_sms              Boolean?  @default(false)
+  observaciones           String?
+  
+  // Campos de gestión
+  estado                  String?   @default("nuevo") @db.VarChar(50)  // nuevo, contactado, no_contesta, rechazado, contactado_llamar_otra_vez, convertido
+  vendedor_id             Int?
+  fecha_asignacion        DateTime?
+  fecha_ultimo_contacto   DateTime?
+  fecha_proximo_contacto  DateTime?
+  motivo_rechazo          String?
+  notas_vendedor           String?
+  fecha_cita_salon         DateTime?
+  cliente_id              Int?      // ID del cliente cuando se convierte
+  
+  fecha_creacion          DateTime  @default(now())
+  fecha_actualizacion     DateTime  @default(now())
+  
+  // Relaciones
+  vendedores              vendedores? @relation(fields: [vendedor_id], references: [id])
+  clientes                clientes?   @relation(fields: [cliente_id], references: [id])
+  
+  @@index([vendedor_id], map: "idx_leaks_vendedor")
+  @@index([estado], map: "idx_leaks_estado")
+  @@index([salon_preferido], map: "idx_leaks_salon")
+  @@index([fecha_proximo_contacto], map: "idx_leaks_fecha_proximo")
+  @@index([email], map: "idx_leaks_email")
+  @@index([telefono], map: "idx_leaks_telefono")
 }
 
 model temporadas {

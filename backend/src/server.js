@@ -40,6 +40,7 @@ const managersRoutes = require('./routes/managers.routes');
 const gerentesRoutes = require('./routes/gerentes.routes');
 const inventarioRoutes = require('./routes/inventario.routes');
 const comisionesRoutes = require('./routes/comisiones.routes');
+const leaksRoutes = require('./routes/leaks.routes');
 
 // Jobs
 const cron = require('node-cron');
@@ -297,6 +298,7 @@ app.use('/api/managers', managersRoutes);
 app.use('/api/gerentes', gerentesRoutes);
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/inventario/comisiones', comisionesRoutes);
+app.use('/api/leaks', leaksRoutes);
 
 // Ruta 404 - Debe ir al final de todas las rutas
 app.use((req, res) => {
