@@ -340,6 +340,27 @@ const startServer = async () => {
     });
     logger.info('✅ Job de asignación automática de inventario configurado (diario a las 2:00 AM)');
 
+    // Configurar job de sincronización automática de leaks
+    // Se ejecuta cada 3 minutos
+    const { sincronizarLeaksAutomaticamente } = require('./utils/sincronizarLeaks');
+    cron.schedule('*/3 * * * *', async () => {
+      logger.info('🔄 Ejecutando sincronización automática de leaks...');
+      try {
+        const resultado = await sincronizarLeaksAutomaticamente();
+        if (resultado.success) {
+          logger.info(`✅ Sincronización automática completada: ${resultado.creados} creados, ${resultado.duplicados} duplicados`);
+        } else {
+          logger.warn(`⚠️ Sincronización automática: ${resultado.message}`);
+        }
+      } catch (error) {
+        logger.error('❌ Error en sincronización automática de leaks:', error);
+      }
+    }, {
+      scheduled: true,
+      timezone: "America/New_York"
+    });
+    logger.info('✅ Job de sincronización automática de leaks configurado (cada 3 minutos)');
+
     // Iniciar el servidor
     app.listen(PORT, '0.0.0.0', () => {
       // Obtener IP de red para acceso multi-dispositivo

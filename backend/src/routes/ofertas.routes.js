@@ -35,7 +35,8 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
       servicios_adicionales = [],
       descuento = 0,
       precio_base_ajustado = null,
-      ajuste_temporada_custom = null
+      ajuste_temporada_custom = null,
+      tarifa_servicio_custom = null
     } = req.body;
 
     // Validaciones básicas
@@ -152,6 +153,42 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
     configData.forEach(config => {
       configuracion[config.clave] = parseFloat(config.valor);
     });
+
+    // Si se proporcionó una tarifa de servicio personalizada, usarla (15% - 18%)
+    if (tarifa_servicio_custom !== null && tarifa_servicio_custom !== undefined && tarifa_servicio_custom !== '') {
+      const tarifaCustom = parseFloat(tarifa_servicio_custom);
+      if (!isNaN(tarifaCustom) && tarifaCustom >= 15 && tarifaCustom <= 18) {
+        configuracion.tarifa_servicio = tarifaCustom;
+      }
+    }
+
+    // Si el paquete es personalizado, agregar automáticamente el costo de comida ($12 por persona)
+    // Solo para el servicio específicamente llamado "Comida", no para otros servicios relacionados
+    const esPaquetePersonalizado = paquete.nombre?.toLowerCase().includes('personalizado');
+    if (esPaquetePersonalizado) {
+      // Buscar si ya existe un servicio específicamente llamado "Comida" en los servicios adicionales
+      const tieneComidaEnServicios = servicios.some(s => {
+        const nombre = s.nombre?.toLowerCase() || '';
+        return nombre === 'comida' || nombre.trim() === 'comida';
+      });
+
+      // Si no tiene comida en servicios adicionales, agregarla automáticamente
+      if (!tieneComidaEnServicios) {
+        const precioComidaPorPersona = 12.00;
+        const cantidadInvitadosNum = parseInt(cantidad_invitados);
+        
+        // Agregar como servicio adicional automático
+        // El cálculo se hará automáticamente en calcularServiciosAdicionales usando tipo_cobro: 'por_persona'
+        servicios.push({
+          id: 'comida_automatica',
+          nombre: 'Comida (Personalizado)',
+          precio_base: precioComidaPorPersona,
+          precio_unitario: precioComidaPorPersona,
+          tipo_cobro: 'por_persona',
+          cantidad: 1
+        });
+      }
+    }
 
     // Calcular precio total
     let calculo;
@@ -465,6 +502,14 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     configData.forEach(config => {
       configuracion[config.clave] = parseFloat(config.valor);
     });
+
+    // Si se proporcionó una tarifa de servicio personalizada, usarla (15% - 18%)
+    if (datos.tarifa_servicio_custom !== null && datos.tarifa_servicio_custom !== undefined && datos.tarifa_servicio_custom !== '') {
+      const tarifaCustom = parseFloat(datos.tarifa_servicio_custom);
+      if (!isNaN(tarifaCustom) && tarifaCustom >= 15 && tarifaCustom <= 18) {
+        configuracion.tarifa_servicio = tarifaCustom;
+      }
+    }
 
     // Calcular precio total
     let calculo;

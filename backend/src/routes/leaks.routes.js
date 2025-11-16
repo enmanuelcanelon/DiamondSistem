@@ -99,37 +99,212 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
 });
 
 /**
+ * @route   GET /api/leaks/stats
+ * @desc    Obtener estadísticas de leaks del vendedor
+ * @access  Private (Vendedor)
+ */
+router.get('/stats', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const vendedorId = req.user.id;
+
+    // Total leaks disponibles (sin asignar)
+    // Contar TODOS los leaks disponibles (incluyendo duplicados y asignados, solo excluir convertidos)
+    const totalDisponibles = await prisma.leaks.count({
+      where: {
+        estado: { not: 'convertido' }
+      }
+    });
+
+    // Total mis leaks
+    const totalMios = await prisma.leaks.count({
+      where: {
+        vendedor_id: vendedorId
+      }
+    });
+
+    // Leaks por estado (mis leaks)
+    const leaksPorEstado = await prisma.leaks.groupBy({
+      by: ['estado'],
+      where: {
+        vendedor_id: vendedorId
+      },
+      _count: {
+        id: true
+      }
+    });
+
+    // Leaks por salón (mis leaks)
+    const leaksPorSalon = await prisma.leaks.groupBy({
+      by: ['salon_preferido'],
+      where: {
+        vendedor_id: vendedorId
+      },
+      _count: {
+        id: true
+      }
+    });
+
+    // Leaks convertidos a clientes
+    const leaksConvertidos = await prisma.leaks.count({
+      where: {
+        vendedor_id: vendedorId,
+        estado: 'convertido'
+      }
+    });
+
+    // Tasa de conversión
+    const tasaConversion = totalMios > 0 
+      ? ((leaksConvertidos / totalMios) * 100).toFixed(2)
+      : '0.00';
+
+    // Leaks pendientes de contacto (con fecha_proximo_contacto <= hoy)
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const pendientesContacto = await prisma.leaks.count({
+      where: {
+        vendedor_id: vendedorId,
+        fecha_proximo_contacto: {
+          lte: hoy
+        },
+        estado: {
+          in: ['contactado_llamar_luego', 'no_contesta_llamar_luego']
+        }
+      }
+    });
+
+    // Leaks por fecha (últimos 30 días)
+    const fechaInicio = new Date();
+    fechaInicio.setDate(fechaInicio.getDate() - 30);
+    fechaInicio.setHours(0, 0, 0, 0);
+
+    const leaksPorFecha = await prisma.leaks.findMany({
+      where: {
+        vendedor_id: vendedorId,
+        fecha_recepcion: {
+          gte: fechaInicio
+        }
+      },
+      select: {
+        fecha_recepcion: true
+      }
+    });
+
+    // Agrupar por día
+    const leaksPorDia = {};
+    leaksPorFecha.forEach(leak => {
+      const fecha = new Date(leak.fecha_recepcion);
+      const fechaStr = fecha.toISOString().split('T')[0];
+      leaksPorDia[fechaStr] = (leaksPorDia[fechaStr] || 0) + 1;
+    });
+
+    // Convertir a array para gráfica
+    const graficaPorFecha = Object.entries(leaksPorDia)
+      .map(([fecha, count]) => ({
+        fecha,
+        cantidad: count
+      }))
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    res.json({
+      success: true,
+      stats: {
+        totalDisponibles,
+        totalMios,
+        leaksConvertidos,
+        tasaConversion: `${tasaConversion}%`,
+        pendientesContacto,
+        porEstado: leaksPorEstado.map(item => ({
+          estado: item.estado || 'sin_estado',
+          cantidad: item._count.id
+        })),
+        porSalon: leaksPorSalon.map(item => ({
+          salon: item.salon_preferido || 'Desconocido',
+          cantidad: item._count.id
+        })),
+        graficaPorFecha
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * @route   GET /api/leaks/disponibles
  * @desc    Listar leaks disponibles para tomar (sin asignar)
  * @access  Private (Vendedor)
  */
 router.get('/disponibles', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { salon } = req.query;
+    const { salon, ordenar } = req.query;
 
+    // Mostrar TODOS los leaks, incluyendo duplicados y asignados (solo excluir convertidos)
     const where = {
-      vendedor_id: null,
       estado: { not: 'convertido' }
     };
 
     if (salon) {
-      where.salon_preferido = salon;
+      if (salon === '?') {
+        where.salon_preferido = '?';
+      } else {
+        where.salon_preferido = salon;
+      }
     }
 
-    const { getPaginationParams, createPaginationResponse } = require('../utils/pagination');
-    const { page, limit, skip } = getPaginationParams(req.query);
+    // Ordenamiento por fecha_recepcion: 'asc' (más antigua) o 'desc' (más reciente)
+    // Cuando es 'desc' (más reciente), ordenar primero por fecha_recepcion descendente
+    // pero asegurar que las fechas futuras no aparezcan antes que las actuales
+    const orderBy = ordenar === 'asc' 
+      ? { fecha_recepcion: 'asc' }
+      : { fecha_recepcion: 'desc' };
 
+    // Obtener TODOS los leaks sin paginación
     const [leaks, total] = await Promise.all([
       prisma.leaks.findMany({
         where,
-        orderBy: { fecha_recepcion: 'desc' },
-        take: limit,
-        skip: skip
+        orderBy
       }),
       prisma.leaks.count({ where })
     ]);
 
-    res.json(createPaginationResponse(leaks, total, page, limit));
+    // Si el ordenamiento es 'desc' (más reciente), ordenar manualmente para que:
+    // 1. Fechas hasta hoy (más recientes primero)
+    // 2. Fechas futuras (al final)
+    if (ordenar === 'desc') {
+      const hoy = new Date();
+      hoy.setHours(23, 59, 59, 999); // Fin del día de hoy
+      
+      leaks.sort((a, b) => {
+        const fechaA = new Date(a.fecha_recepcion);
+        const fechaB = new Date(b.fecha_recepcion);
+        
+        // Normalizar fechas a medianoche para comparación
+        fechaA.setHours(0, 0, 0, 0);
+        fechaB.setHours(0, 0, 0, 0);
+        const hoyNormalizado = new Date(hoy);
+        hoyNormalizado.setHours(0, 0, 0, 0);
+        
+        const esFuturoA = fechaA > hoyNormalizado;
+        const esFuturoB = fechaB > hoyNormalizado;
+        
+        // Si ambas son futuras o ambas son pasadas/presentes, ordenar por fecha
+        if (esFuturoA === esFuturoB) {
+          return fechaB - fechaA; // Descendente (más reciente primero)
+        }
+        
+        // Las fechas pasadas/presentes van antes que las futuras
+        return esFuturoA ? 1 : -1;
+      });
+    }
+
+    // Devolver todos los leaks sin paginación
+    res.json({
+      success: true,
+      count: leaks.length,
+      total,
+      data: leaks
+    });
 
   } catch (error) {
     next(error);
@@ -542,10 +717,33 @@ router.delete('/:id', authenticate, requireVendedor, async (req, res, next) => {
 
 /**
  * @route   POST /api/leaks/sincronizar
- * @desc    Sincronizar leaks desde Google Sheets
+ * @desc    Sincronizar leaks desde Google Sheets (manual)
  * @access  Private (Vendedor)
  */
 router.post('/sincronizar', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    // Usar la función de sincronización automática
+    const { sincronizarLeaksAutomaticamente } = require('../utils/sincronizarLeaks');
+    const resultado = await sincronizarLeaksAutomaticamente();
+    
+    res.json({
+      success: resultado.success,
+      message: resultado.message,
+      creados: resultado.creados,
+      duplicados: resultado.duplicados,
+      errores: resultado.errores
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/leaks/sincronizar (OLD - DEPRECATED)
+ * @desc    Sincronizar leaks desde Google Sheets
+ * @access  Private (Vendedor)
+ */
+router.post('/sincronizar-old', authenticate, requireVendedor, async (req, res, next) => {
   try {
     // Obtener datos del Google Sheet
     const datos = await obtenerDatosGoogleSheet();
@@ -613,23 +811,68 @@ router.post('/sincronizar', authenticate, requireVendedor, async (req, res, next
       }
 
       let fechaRecepcion = new Date();
+      // Normalizar a medianoche para evitar problemas de ordenamiento
+      fechaRecepcion.setHours(0, 0, 0, 0);
+      
       const fechaRecepcionExcel = obtenerValor(fila, mapeoColumnas.fecha_recepcion);
       if (fechaRecepcionExcel) {
         try {
           // Parsear fecha sin problemas de zona horaria
           const fechaStr = String(fechaRecepcionExcel).trim();
-          if (fechaStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            // Formato YYYY-MM-DD, parsear como fecha local
-            const [year, month, day] = fechaStr.split('-').map(Number);
-            fechaRecepcion = new Date(year, month - 1, day);
-          } else {
-            // Otro formato, intentar parseo normal
-            const fechaParsed = new Date(fechaRecepcionExcel);
-            if (!isNaN(fechaParsed.getTime())) {
-              fechaRecepcion = fechaParsed;
+          
+          // Formato YYYY-MM-DD (preferido)
+          if (fechaStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+            const datePart = fechaStr.split('T')[0];
+            const [year, month, day] = datePart.split('-').map(Number);
+            // Validar que los valores sean razonables
+            if (year >= 2000 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+              fechaRecepcion = new Date(year, month - 1, day);
+              fechaRecepcion.setHours(0, 0, 0, 0);
             }
           }
-        } catch (e) {}
+          // Formato con barras: El Excel usa DD/MM/YYYY (día-mes-año)
+          else if (fechaStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+            const parts = fechaStr.split('/');
+            const first = parseInt(parts[0], 10);
+            const second = parseInt(parts[1], 10);
+            const year = parseInt(parts[2], 10);
+            
+            // Validar año
+            if (year >= 2000 && year <= 2100) {
+              // El Excel usa DD/MM/YYYY, así que first = día, second = mes
+              const day = first;
+              const month = second;
+              
+              // Validar que mes y día sean razonables
+              if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                // Crear la fecha directamente (JavaScript maneja fechas inválidas automáticamente)
+                fechaRecepcion = new Date(year, month - 1, day);
+                // Verificar que la fecha es válida (no es NaN)
+                if (!isNaN(fechaRecepcion.getTime())) {
+                  fechaRecepcion.setHours(0, 0, 0, 0);
+                } else {
+                  // Si la fecha es inválida (ej: 31/02), usar fecha por defecto
+                  fechaRecepcion = new Date();
+                  fechaRecepcion.setHours(0, 0, 0, 0);
+                }
+              }
+            }
+          }
+          // Otro formato, intentar parseo normal (último recurso)
+          else {
+            const fechaParsed = new Date(fechaRecepcionExcel);
+            if (!isNaN(fechaParsed.getTime())) {
+              // Verificar que la fecha parseada sea razonable
+              const year = fechaParsed.getFullYear();
+              if (year >= 2000 && year <= 2100) {
+                fechaRecepcion = new Date(fechaParsed);
+                fechaRecepcion.setHours(0, 0, 0, 0);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Error al parsear fecha_recepcion:', fechaRecepcionExcel, e);
+        }
       }
 
       const tipoEventoRaw = obtenerValor(fila, mapeoColumnas.tipo_evento);
@@ -709,8 +952,10 @@ router.post('/sincronizar', authenticate, requireVendedor, async (req, res, next
     const leaksDuplicados = [];
     const errores = [];
 
+    // Crear leaks verificando duplicados
     for (const leakData of leaksParaImportar) {
       try {
+        // Verificar si ya existe un leak con este email o teléfono
         const leakExistente = await prisma.leaks.findFirst({
           where: {
             OR: [
@@ -750,6 +995,7 @@ router.post('/sincronizar', authenticate, requireVendedor, async (req, res, next
       } catch (error) {
         errores.push({
           email: leakData.email,
+          telefono: leakData.telefono,
           error: error.message
         });
       }
@@ -757,7 +1003,7 @@ router.post('/sincronizar', authenticate, requireVendedor, async (req, res, next
 
     res.json({
       success: true,
-      message: `Sincronización completada: ${leaksCreados.length} creados, ${leaksDuplicados.length} duplicados, ${errores.length} errores`,
+      message: `Sincronización completada: ${leaksCreados.length} creados, ${leaksDuplicados.length} duplicados${errores.length > 0 ? `, ${errores.length} errores` : ''}`,
       creados: leaksCreados.length,
       duplicados: leaksDuplicados.length,
       errores: errores.length,
@@ -773,5 +1019,109 @@ router.post('/sincronizar', authenticate, requireVendedor, async (req, res, next
   }
 });
 
+/**
+ * @route   GET /api/leaks/debug/duplicados
+ * @desc    Buscar leaks duplicados en la base de datos
+ * @access  Private (Vendedor)
+ */
+router.get('/debug/duplicados', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    // Buscar duplicados por email
+    const duplicadosEmail = await prisma.$queryRaw`
+      SELECT email, COUNT(*)::int as cantidad
+      FROM leaks
+      WHERE email IS NOT NULL AND email != ''
+      GROUP BY email
+      HAVING COUNT(*) > 1
+      ORDER BY cantidad DESC
+    `;
+
+    // Buscar duplicados por teléfono
+    const duplicadosTelefono = await prisma.$queryRaw`
+      SELECT telefono, COUNT(*)::int as cantidad
+      FROM leaks
+      WHERE telefono IS NOT NULL AND telefono != ''
+      GROUP BY telefono
+      HAVING COUNT(*) > 1
+      ORDER BY cantidad DESC
+    `;
+
+    // Obtener detalles de los duplicados
+    const detallesEmail = [];
+    for (const dup of duplicadosEmail) {
+      const leaks = await prisma.leaks.findMany({
+        where: { email: dup.email },
+        select: {
+          id: true,
+          nombre_completo: true,
+          email: true,
+          telefono: true,
+          fecha_recepcion: true,
+          estado: true,
+          vendedor_id: true,
+          fecha_creacion: true
+        },
+        orderBy: { fecha_creacion: 'asc' }
+      });
+      detallesEmail.push({
+        email: dup.email,
+        cantidad: dup.cantidad,
+        leaks
+      });
+    }
+
+    const detallesTelefono = [];
+    for (const dup of duplicadosTelefono) {
+      const leaks = await prisma.leaks.findMany({
+        where: { telefono: dup.telefono },
+        select: {
+          id: true,
+          nombre_completo: true,
+          email: true,
+          telefono: true,
+          fecha_recepcion: true,
+          estado: true,
+          vendedor_id: true,
+          fecha_creacion: true
+        },
+        orderBy: { fecha_creacion: 'asc' }
+      });
+      detallesTelefono.push({
+        telefono: dup.telefono,
+        cantidad: dup.cantidad,
+        leaks
+      });
+    }
+
+    // Contar totales
+    const totalLeaks = await prisma.leaks.count();
+    const totalSinConvertidos = await prisma.leaks.count({
+      where: { estado: { not: 'convertido' } }
+    });
+    const totalConvertidos = await prisma.leaks.count({
+      where: { estado: 'convertido' }
+    });
+
+    res.json({
+      success: true,
+      resumen: {
+        totalLeaks,
+        totalSinConvertidos,
+        totalConvertidos,
+        duplicadosPorEmail: duplicadosEmail.length,
+        duplicadosPorTelefono: duplicadosTelefono.length
+      },
+      duplicadosEmail: detallesEmail,
+      duplicadosTelefono: detallesTelefono
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
+
+
+
 

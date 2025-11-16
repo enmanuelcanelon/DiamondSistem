@@ -96,6 +96,7 @@ model leaks {
   @@index([salon_preferido], map: "idx_leaks_salon")
   @@index([fecha_proximo_contacto], map: "idx_leaks_fecha_proximo")
   @@index([email], map: "idx_leaks_email")
+  @@index([fecha_recepcion], map: "idx_leaks_fecha_recepcion")
   @@index([telefono], map: "idx_leaks_telefono")
 }
 
