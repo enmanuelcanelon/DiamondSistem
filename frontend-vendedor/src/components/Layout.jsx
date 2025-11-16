@@ -12,11 +12,15 @@ import {
   CalendarCheck,
   CreditCard,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MessageSquare
 } from 'lucide-react';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import useAuthStore from '../store/useAuthStore';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import api from '../config/api';
 
 function Layout() {
   const location = useLocation();
@@ -30,9 +34,27 @@ function Layout() {
     navigate('/login');
   };
 
+  // Obtener leaks pendientes de contacto (para el badge)
+  const { data: pendientesData } = useQuery({
+    queryKey: ['leaks-pendientes-badge'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/leaks/pendientes-contacto');
+        return response.data;
+      } catch (error) {
+        return { count: 0 };
+      }
+    },
+    refetchInterval: 60000, // Refrescar cada minuto
+    enabled: !!user, // Solo si hay usuario autenticado
+  });
+
+  const pendientesCount = pendientesData?.count || 0;
+
   const navigation = {
     principal: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { name: 'Leaks', href: '/leaks', icon: MessageSquare },
       { name: 'Clientes', href: '/clientes', icon: Users },
       { name: 'Ofertas', href: '/ofertas', icon: FileText },
       { name: 'Contratos', href: '/contratos', icon: FileCheck },
@@ -83,6 +105,7 @@ function Layout() {
                 {navigation.principal.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
+                  const mostrarBadge = item.name === 'Leaks' && pendientesCount > 0;
                   return (
                     <button
                       key={item.name}
@@ -90,14 +113,21 @@ function Layout() {
                         navigate(item.href);
                         setSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         active
                           ? 'bg-primary text-primary-foreground'
                           : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }`}
                     >
-                      <Icon className="h-5 w-5" />
-                      <span>{item.name}</span>
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </div>
+                      {mostrarBadge && (
+                        <Badge variant="destructive" className="ml-auto">
+                          {pendientesCount}
+                        </Badge>
+                      )}
                     </button>
                   );
                 })}
@@ -229,6 +259,7 @@ function Layout() {
               {navigation.principal.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
+                const mostrarBadge = item.name === 'Leaks' && pendientesCount > 0;
                 return (
                   <button
                     key={item.name}
@@ -242,8 +273,15 @@ function Layout() {
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                   >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
-                    {!sidebarCollapsed && <span>{item.name}</span>}
+                    <div className="flex items-center gap-3 flex-1">
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      {!sidebarCollapsed && <span>{item.name}</span>}
+                    </div>
+                    {!sidebarCollapsed && mostrarBadge && (
+                      <Badge variant="destructive" className="ml-auto">
+                        {pendientesCount}
+                      </Badge>
+                    )}
                   </button>
                 );
               })}

@@ -13,6 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Link } from 'react-router-dom';
+import { buttonVariants } from '../components/ui/button';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -809,36 +810,27 @@ function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <Button
-              variant="outline"
-              className="h-auto flex-col gap-3 py-6"
-              asChild
+            <Link
+              to="/clientes/nuevo"
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-auto flex-col gap-3 py-6`}
             >
-              <a href="/clientes/nuevo">
-                <Users className="h-5 w-5" />
-                <span className="font-medium">Nuevo Cliente</span>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col gap-3 py-6"
-              asChild
+              <Users className="h-5 w-5" />
+              <span className="font-medium">Nuevo Cliente</span>
+            </Link>
+            <Link
+              to="/ofertas/nueva"
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-auto flex-col gap-3 py-6`}
             >
-              <a href="/ofertas/nueva">
-                <FileText className="h-5 w-5" />
-                <span className="font-medium">Nueva Oferta</span>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col gap-3 py-6"
-              asChild
+              <FileText className="h-5 w-5" />
+              <span className="font-medium">Nueva Oferta</span>
+            </Link>
+            <Link
+              to="/contratos"
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-auto flex-col gap-3 py-6`}
             >
-              <a href="/contratos">
-                <FileCheck className="h-5 w-5" />
-                <span className="font-medium">Ver Contratos</span>
-              </a>
-            </Button>
+              <FileCheck className="h-5 w-5" />
+              <span className="font-medium">Ver Contratos</span>
+            </Link>
           </div>
         </CardContent>
       </Card>
@@ -851,9 +843,12 @@ function Dashboard() {
               <CardTitle>Contratos</CardTitle>
               <CardDescription>Resumen de contratos del mes seleccionado</CardDescription>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/contratos">Ver Todos</Link>
-            </Button>
+            <Link
+              to="/contratos"
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-9 rounded-md px-3`}
+            >
+              Ver Todos
+            </Link>
           </div>
         </CardHeader>
         <CardContent>
