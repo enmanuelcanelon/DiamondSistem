@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, ChevronLeft, ChevronRight, Clock, Users, MapPin, DollarSign, Loader2 } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, DollarSign, Loader2 } from 'lucide-react';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -277,7 +277,7 @@ function CalendarioMensual() {
           {calendarioData && (
             <>
               <Separator className="my-4" />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <Calendar className="w-4 h-4 text-primary" />
@@ -299,24 +299,13 @@ function CalendarioMensual() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <div className="p-2 bg-red-500/10 rounded-lg">
+                    <DollarSign className="w-4 h-4 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Invitados</p>
+                    <p className="text-xs text-muted-foreground">Pendientes</p>
                     <p className="text-lg font-bold text-foreground">
-                      {calendarioData.eventos?.reduce((sum, e) => sum + (e.cantidad_invitados || 0), 0) || 0}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <MapPin className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Salones Únicos</p>
-                    <p className="text-lg font-bold text-foreground">
-                      {new Set(calendarioData.eventos?.map(e => e.salones?.nombre).filter(Boolean)).size || 0}
+                      {calendarioData.eventos?.filter(e => e.estado_pago === 'pendiente').length || 0}
                     </p>
                   </div>
                 </div>

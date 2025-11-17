@@ -102,22 +102,27 @@ export const calcularDuracion = (horaInicio, horaFin) => {
     const [hInicio, mInicio] = horaInicioStr.split(':').map(Number);
     const [hFin, mFin] = horaFinStr.split(':').map(Number);
     
-    let horas = hFin - hInicio;
-    let minutos = mFin - mInicio;
+    // Convertir ambas horas a minutos desde medianoche
+    let minutosInicio = hInicio * 60 + mInicio;
+    let minutosFin = hFin * 60 + mFin;
     
-    // Ajustar si los minutos son negativos
-    if (minutos < 0) {
-      horas -= 1;
-      minutos += 60;
+    // Determinar si el evento cruza medianoche
+    // Caso 1: Hora de fin es <= 2 AM (0, 1, 2) y hora de inicio es >= 12 PM (mediodía)
+    //         Esto indica que el evento termina en la madrugada del día siguiente
+    // Caso 2: Hora de fin es menor que hora de inicio (ej: 20:00 a 05:00)
+    const cruzaMedianoche = (hFin <= 2 && hInicio >= 12) || (hFin < hInicio);
+    
+    // Si cruza medianoche, agregar 24 horas (1440 minutos) a la hora de fin
+    if (cruzaMedianoche) {
+      minutosFin += 24 * 60;
     }
     
-    // Si la hora de fin es menor que la de inicio, significa que cruza medianoche
-    if (horas < 0) {
-      horas += 24;
-    }
+    // Calcular la diferencia en minutos y convertir a horas
+    const diferenciaMinutos = minutosFin - minutosInicio;
+    const duracionTotal = diferenciaMinutos / 60;
     
-    const duracionTotal = horas + (minutos / 60);
-    return duracionTotal;
+    // Asegurar que la duración sea positiva
+    return Math.max(0, duracionTotal);
   } catch (e) {
     console.error('Error calculando duración:', e, { horaInicio, horaFin });
     return 0;
@@ -183,12 +188,12 @@ export const formatearFechaHora = (dateString) => {
  * @returns {string} Nueva hora de fin en formato HH:MM
  */
 export const calcularHoraFinConExtras = (horaFinOriginal, horasAdicionales = 0) => {
-  if (!horaFinOriginal || horasAdicionales === 0) {
+  if (!horaFinOriginal) {
     return horaFinOriginal;
   }
 
   try {
-    // Extraer hora y minutos
+    // Extraer hora y minutos - siempre normalizar a formato HH:MM
     let horaFinStr;
     if (horaFinOriginal instanceof Date) {
       const h = horaFinOriginal.getHours();
@@ -207,6 +212,11 @@ export const calcularHoraFinConExtras = (horaFinOriginal, horasAdicionales = 0) 
       }
     } else {
       return horaFinOriginal;
+    }
+    
+    // Si no hay horas adicionales, devolver la hora normalizada en formato HH:MM
+    if (horasAdicionales === 0) {
+      return horaFinStr;
     }
 
     const [horaFin, minutoFin] = horaFinStr.split(':').map(Number);

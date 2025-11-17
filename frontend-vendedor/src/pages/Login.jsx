@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, Loader2, Diamond, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Loader2, Diamond, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 
 function Login() {
   const navigate = useNavigate();
@@ -28,107 +32,103 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="w-full max-w-md space-y-8">
         {/* Logo y Título */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="bg-indigo-600 p-4 rounded-2xl shadow-lg">
-              <Diamond className="w-12 h-12 text-white" />
-            </div>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-lg">
+            <Diamond className="w-8 h-8" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Party Venue</h1>
-          <p className="text-gray-600">Generador de Contratos</p>
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Party Venue</h1>
+            <p className="text-muted-foreground">Generador de Contratos</p>
+          </div>
         </div>
 
         {/* Formulario */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Iniciar Sesión</h2>
-            <p className="text-gray-600 text-sm">Ingresa tus credenciales de vendedor</p>
-          </div>
-
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="codigo_vendedor" className="block text-sm font-medium text-gray-700 mb-2">
-                Código de Vendedor
-              </label>
-              <input
-                type="text"
-                id="codigo_vendedor"
-                name="codigo_vendedor"
-                value={formData.codigo_vendedor}
-                onChange={handleChange}
-                placeholder="ADMIN001"
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={mostrarPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  required
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-                />
-                <button
-                  type="button"
-                  onClick={() => setMostrarPassword(!mostrarPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
-                  title={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                >
-                  {mostrarPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-semibold tracking-tight">Iniciar Sesión</CardTitle>
+            <CardDescription>
+              Ingresa tus credenciales de vendedor para acceder al sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error && (
+              <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-destructive">{error}</p>
               </div>
-            </div>
+            )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Iniciando sesión...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5 mr-2" />
-                  Iniciar Sesión
-                </>
-              )}
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="codigo_vendedor">Código de Vendedor</Label>
+                <Input
+                  id="codigo_vendedor"
+                  name="codigo_vendedor"
+                  type="text"
+                  placeholder="Ingresa tu código de vendedor"
+                  value={formData.codigo_vendedor}
+                  onChange={handleChange}
+                  required
+                  autoComplete="username"
+                />
+              </div>
 
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
-              Credenciales de prueba: <span className="font-medium">ADMIN001 / Admin123!</span>
-            </p>
-          </div>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={mostrarPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    autoComplete="current-password"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarPassword(!mostrarPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    title={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  >
+                    {mostrarPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full"
+                size="lg"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Iniciando sesión...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Iniciar Sesión
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
         {/* Footer */}
-        <p className="text-center text-sm text-gray-600 mt-8">
+        <p className="text-center text-sm text-muted-foreground">
           © 2025 Party Venue. Todos los derechos reservados.
         </p>
       </div>
