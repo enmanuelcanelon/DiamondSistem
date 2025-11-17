@@ -23,8 +23,8 @@ INSERT INTO configuracion_sistema (clave, valor, tipo, descripcion) VALUES
 
 INSERT INTO temporadas (nombre, meses, ajuste_precio, descripcion, activo) VALUES
 ('Baja', 'enero,febrero,agosto,septiembre', 0.00, 'Temporada Baja - Sin ajuste de precio', TRUE),
-('Media', 'marzo,abril,julio,octubre', 2000.00, 'Temporada Media - Ajuste de +$2,000', TRUE),
-('Alta', 'noviembre,diciembre,mayo,junio', 4000.00, 'Temporada Alta - Ajuste de +$4,000', TRUE);
+('Media', 'marzo,abril,julio,octubre', 0.00, 'Temporada Media - Sin ajuste de precio', TRUE),
+('Alta', 'noviembre,diciembre,mayo,junio', 1000.00, 'Temporada Alta - Ajuste de +$1,000', TRUE);
 
 -- ============================================
 -- 3. PAQUETES
