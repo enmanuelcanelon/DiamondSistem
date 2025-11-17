@@ -265,11 +265,12 @@ async function sincronizarLeaksAutomaticamente() {
     const leaksDuplicados = [];
     const errores = [];
 
-    // Crear o actualizar leaks - evitar duplicados entre leaks disponibles
+    // Crear o actualizar leaks - evitar duplicados
+    // IMPORTANTE: Si un leak ya está asignado a un vendedor, NO crear duplicado ni actualizarlo
     for (const leakData of leaksParaImportar) {
       try {
-        // Verificar si ya existe un leak DISPONIBLE (no asignado y no convertido) con este email o teléfono
-        const leakExistente = await prisma.leaks.findFirst({
+        // Primero verificar si existe CUALQUIER leak con este email o teléfono (asignado o no)
+        const leakExistenteCualquiera = await prisma.leaks.findFirst({
           where: {
             AND: [
               {
@@ -278,48 +279,61 @@ async function sincronizarLeaksAutomaticamente() {
                   { telefono: leakData.telefono }
                 ]
               },
-              { vendedor_id: null },
               { estado: { not: 'convertido' } }
             ]
           }
         });
 
-        if (leakExistente) {
-          // Si existe un leak disponible, actualizarlo con la información más reciente
+        // Si existe un leak y ya está asignado a un vendedor, saltarlo (no crear duplicado)
+        if (leakExistenteCualquiera && leakExistenteCualquiera.vendedor_id !== null) {
+          leaksDuplicados.push({
+            id_existente: leakExistenteCualquiera.id,
+            nombre: leakData.nombre_completo,
+            email: leakData.email,
+            telefono: leakData.telefono,
+            accion: 'omitido_ya_asignado',
+            vendedor_id: leakExistenteCualquiera.vendedor_id,
+            razon: 'Leak ya está asignado a un vendedor'
+          });
+          continue; // Saltar este leak, no crear duplicado
+        }
+
+        // Si existe un leak DISPONIBLE (sin asignar), actualizarlo
+        if (leakExistenteCualquiera && leakExistenteCualquiera.vendedor_id === null) {
           const leakActualizado = await prisma.leaks.update({
-            where: { id: leakExistente.id },
+            where: { id: leakExistenteCualquiera.id },
             data: {
               fecha_recepcion: leakData.fecha_recepcion,
               nombre_completo: leakData.nombre_completo,
               telefono: leakData.telefono,
               email: leakData.email,
-              tipo_evento: leakData.tipo_evento || leakExistente.tipo_evento,
-              cantidad_invitados: leakData.cantidad_invitados || leakExistente.cantidad_invitados,
+              tipo_evento: leakData.tipo_evento || leakExistenteCualquiera.tipo_evento,
+              cantidad_invitados: leakData.cantidad_invitados || leakExistenteCualquiera.cantidad_invitados,
               // Si el nuevo salón es "?", siempre usar "?" (incluso si el existente tiene otro valor)
-              salon_preferido: leakData.salon_preferido === '?' ? '?' : (leakData.salon_preferido || leakExistente.salon_preferido),
-              fecha_evento: leakData.fecha_evento || leakExistente.fecha_evento,
-              fuente: leakData.fuente || leakExistente.fuente,
-              horario_contactar: leakData.horario_contactar || leakExistente.horario_contactar,
-              observaciones: leakData.observaciones || leakExistente.observaciones,
+              salon_preferido: leakData.salon_preferido === '?' ? '?' : (leakData.salon_preferido || leakExistenteCualquiera.salon_preferido),
+              fecha_evento: leakData.fecha_evento || leakExistenteCualquiera.fecha_evento,
+              fuente: leakData.fuente || leakExistenteCualquiera.fuente,
+              horario_contactar: leakData.horario_contactar || leakExistenteCualquiera.horario_contactar,
+              observaciones: leakData.observaciones || leakExistenteCualquiera.observaciones,
               // Mantener el estado actual si ya tiene uno diferente de 'nuevo'
-              estado: leakExistente.estado === 'nuevo' ? 'nuevo' : leakExistente.estado
+              estado: leakExistenteCualquiera.estado === 'nuevo' ? 'nuevo' : leakExistenteCualquiera.estado
             }
           });
 
           leaksActualizados.push(leakActualizado);
           leaksDuplicados.push({
-            id_existente: leakExistente.id,
+            id_existente: leakExistenteCualquiera.id,
             nombre: leakData.nombre_completo,
             email: leakData.email,
             telefono: leakData.telefono,
             accion: 'actualizado',
-            fecha_recepcion_anterior: leakExistente.fecha_recepcion,
+            fecha_recepcion_anterior: leakExistenteCualquiera.fecha_recepcion,
             fecha_recepcion_nueva: leakData.fecha_recepcion
           });
           continue;
         }
 
-        // Si no existe un leak disponible, crear uno nuevo
+        // Si no existe ningún leak, crear uno nuevo
         const leak = await prisma.leaks.create({
           data: {
             fecha_recepcion: leakData.fecha_recepcion,

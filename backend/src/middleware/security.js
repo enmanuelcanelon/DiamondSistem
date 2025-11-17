@@ -19,7 +19,8 @@ const generalLimiter = rateLimit({
   skip: (req) => {
     return req.path.startsWith('/api/mensajes') || 
            req.path.startsWith('/api/fotos') ||
-           req.path.startsWith('/api/auth');
+           req.path.startsWith('/api/auth') ||
+           req.path.startsWith('/api/leaks'); // Excluir leaks porque tiene su propio limiter más permisivo
   }
 });
 
@@ -76,11 +77,34 @@ const mensajesLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiting permisivo para leaks (múltiples vendedores, auto-refresh, etc.)
+const leaksLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 500, // Máximo 500 requests por minuto (aumentado para múltiples vendedores y auto-refresh)
+  message: {
+    error: 'Demasiadas solicitudes de leaks',
+    message: 'Has excedido el límite de solicitudes. Por favor espera un momento antes de intentar nuevamente.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Usar keyGenerator para diferenciar por usuario autenticado si es posible
+  keyGenerator: (req) => {
+    // Si hay usuario autenticado, usar su ID, sino usar IP
+    return req.user?.id ? `leaks:${req.user.id}` : req.ip;
+  },
+  // No contar requests que fallan con 429 (evitar que se acumulen)
+  skip: (req) => {
+    // Esto se maneja en el handler de errores
+    return false;
+  },
+});
+
 module.exports = {
   generalLimiter,
   authLimiter,
   createLimiter,
   fotosLimiter,
-  mensajesLimiter
+  mensajesLimiter,
+  leaksLimiter
 };
 

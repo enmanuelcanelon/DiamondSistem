@@ -49,7 +49,7 @@ const { asignarInventarioAutomatico } = require('./jobs/inventarioAutoAsignacion
 // Middleware personalizado
 const { errorHandler } = require('./middleware/errorHandler');
 const { requestLogger } = require('./middleware/logger');
-const { generalLimiter, authLimiter, fotosLimiter, mensajesLimiter } = require('./middleware/security');
+const { generalLimiter, authLimiter, fotosLimiter, mensajesLimiter, leaksLimiter } = require('./middleware/security');
 
 // Crear directorio de logs si no existe
 const logsDir = path.join(__dirname, '../logs');
@@ -298,7 +298,8 @@ app.use('/api/managers', managersRoutes);
 app.use('/api/gerentes', gerentesRoutes);
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/inventario/comisiones', comisionesRoutes);
-app.use('/api/leaks', leaksRoutes);
+// Rutas de leaks con rate limiting permisivo (múltiples vendedores, auto-refresh)
+app.use('/api/leaks', leaksLimiter, leaksRoutes);
 
 // Ruta 404 - Debe ir al final de todas las rutas
 app.use((req, res) => {

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import useAuthStore from './store/useAuthStore';
+import RateLimitAlert from './components/RateLimitAlert';
 
 // Pages - Vendedor
 import Login from './pages/Login';
@@ -61,6 +62,25 @@ const queryClient = new QueryClient({
   },
 });
 
+// Función para pausar todas las queries cuando se detecta rate limiting
+const pauseAllQueries = () => {
+  queryClient.getQueryCache().getAll().forEach(query => {
+    if (query.state.status === 'success' || query.state.status === 'error') {
+      // Pausar refetchInterval temporalmente
+      query.setOptions({
+        refetchInterval: false,
+        refetchIntervalInBackground: false,
+      });
+    }
+  });
+};
+
+// Función para reanudar todas las queries
+const resumeAllQueries = () => {
+  // Las queries se reanudarán automáticamente cuando se actualicen sus opciones
+  // o cuando se invaliden
+};
+
 // Protected Route Component (Vendedores)
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -113,6 +133,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster position="top-right" />
+      <RateLimitAlert />
       <Router>
         <Routes>
           {/* Vendedor Routes */}

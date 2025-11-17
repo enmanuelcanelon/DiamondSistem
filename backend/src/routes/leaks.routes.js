@@ -107,11 +107,12 @@ router.get('/stats', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const vendedorId = req.user.id;
 
-    // Total leaks disponibles (sin asignar)
-    // Contar TODOS los leaks disponibles (incluyendo duplicados y asignados, solo excluir convertidos)
+    // Total leaks disponibles (sin asignar y no convertidos)
+    // Debe coincidir con el filtro de /api/leaks/disponibles
     const totalDisponibles = await prisma.leaks.count({
       where: {
-        estado: { not: 'convertido' }
+        vendedor_id: null, // Solo leaks sin asignar
+        estado: { not: 'convertido' } // Excluir convertidos
       }
     });
 
@@ -239,9 +240,12 @@ router.get('/disponibles', authenticate, requireVendedor, async (req, res, next)
   try {
     const { salon, ordenar, search, mes, año, ano, limit } = req.query;
 
-    // Mostrar TODOS los leaks, incluyendo duplicados y asignados (solo excluir convertidos)
+    // Mostrar solo leaks DISPONIBLES (sin asignar a ningún vendedor y no convertidos)
+    // Esto permite que todos los vendedores vean los mismos leaks disponibles
+    // Cuando un vendedor toma un leak, desaparece de esta lista para todos
     const where = {
-      estado: { not: 'convertido' }
+      vendedor_id: null, // Solo leaks sin asignar
+      estado: { not: 'convertido' } // Excluir convertidos
     };
 
     if (salon) {
@@ -280,12 +284,27 @@ router.get('/disponibles', authenticate, requireVendedor, async (req, res, next)
       }
     }
 
-    // Ordenamiento por fecha_recepcion: 'asc' (más antigua) o 'desc' (más reciente)
-    // Cuando es 'desc' (más reciente), ordenar primero por fecha_recepcion descendente
-    // pero asegurar que las fechas futuras no aparezcan antes que las actuales
-    const orderBy = ordenar === 'asc' 
-      ? { fecha_recepcion: 'asc' }
-      : { fecha_recepcion: 'desc' };
+    // Ordenamiento: soporta fecha_evento y fecha_recepcion
+    // Priorizar fecha_evento si está especificado, sino usar fecha_recepcion
+    let orderBy = { fecha_recepcion: 'desc' }; // Por defecto
+    let ordenarPorFechaEvento = false;
+    let direccionFechaEvento = null;
+    
+    if (ordenar && ordenar.startsWith('fecha_evento_')) {
+      ordenarPorFechaEvento = true;
+      direccionFechaEvento = ordenar.replace('fecha_evento_', '');
+      // Para ordenamiento inteligente, primero obtenemos todos y luego ordenamos manualmente
+      orderBy = { fecha_evento: 'asc' }; // Orden temporal, se reordenará después
+    } else if (ordenar && ordenar.startsWith('fecha_recepcion_')) {
+      const direccion = ordenar.replace('fecha_recepcion_', '');
+      orderBy = { fecha_recepcion: direccion === 'asc' ? 'asc' : 'desc' };
+    } else if (ordenar === 'asc') {
+      // Compatibilidad con el valor anterior
+      orderBy = { fecha_recepcion: 'asc' };
+    } else if (ordenar === 'desc') {
+      // Compatibilidad con el valor anterior
+      orderBy = { fecha_recepcion: 'desc' };
+    }
 
     // Obtener leaks con o sin paginación según el parámetro limit
     const limitNum = limit && limit !== 'todos' ? parseInt(limit) : undefined;
@@ -302,10 +321,58 @@ router.get('/disponibles', authenticate, requireVendedor, async (req, res, next)
       prisma.leaks.count({ where })
     ]);
 
-    // Si el ordenamiento es 'desc' (más reciente), ordenar manualmente para que:
-    // 1. Fechas hasta hoy (más recientes primero)
-    // 2. Fechas futuras (al final)
-    if (ordenar === 'desc') {
+    // Ordenamiento inteligente por fecha_evento (más cercano a hoy)
+    if (ordenarPorFechaEvento && direccionFechaEvento) {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0); // Inicio del día de hoy
+      
+      leaks.sort((a, b) => {
+        const fechaA = a.fecha_evento ? new Date(a.fecha_evento) : null;
+        const fechaB = b.fecha_evento ? new Date(b.fecha_evento) : null;
+        
+        // Si alguna fecha es null, ponerla al final
+        if (!fechaA && !fechaB) return 0;
+        if (!fechaA) return 1;
+        if (!fechaB) return -1;
+        
+        // Normalizar fechas a medianoche para comparación
+        fechaA.setHours(0, 0, 0, 0);
+        fechaB.setHours(0, 0, 0, 0);
+        
+        // Calcular diferencia absoluta con hoy (en días)
+        const diffA = Math.abs(fechaA - hoy);
+        const diffB = Math.abs(fechaB - hoy);
+        
+        if (direccionFechaEvento === 'desc') {
+          // "Más reciente" = más cercano a hoy
+          // Primero los eventos futuros más cercanos, luego los pasados más recientes
+          const esFuturoA = fechaA >= hoy;
+          const esFuturoB = fechaB >= hoy;
+          
+          // Priorizar eventos futuros sobre pasados
+          if (esFuturoA && !esFuturoB) return -1;
+          if (!esFuturoA && esFuturoB) return 1;
+          
+          // Si ambos son futuros o ambos son pasados, ordenar por proximidad a hoy
+          return diffA - diffB;
+        } else {
+          // "Más antigua" = más lejano a hoy
+          // Primero los eventos pasados más antiguos, luego los futuros más lejanos
+          const esFuturoA = fechaA >= hoy;
+          const esFuturoB = fechaB >= hoy;
+          
+          // Priorizar eventos pasados sobre futuros
+          if (!esFuturoA && esFuturoB) return -1;
+          if (esFuturoA && !esFuturoB) return 1;
+          
+          // Si ambos son pasados o ambos son futuros, ordenar por distancia a hoy (mayor primero)
+          return diffB - diffA;
+        }
+      });
+    }
+
+    // Si el ordenamiento es 'desc' (más reciente) para fecha_recepcion, ordenar manualmente
+    if (ordenar === 'desc' && !ordenarPorFechaEvento) {
       const hoy = new Date();
       hoy.setHours(23, 59, 59, 999); // Fin del día de hoy
       

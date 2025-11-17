@@ -81,7 +81,8 @@ function LeaksDisponibles() {
   const queryClient = useQueryClient();
   const fechaActual = new Date();
   const [filtroSalon, setFiltroSalon] = useState('');
-  const [ordenarPor, setOrdenarPor] = useState('desc'); // 'asc' = más antigua, 'desc' = más reciente
+  const [ordenarPorFechaEvento, setOrdenarPorFechaEvento] = useState(''); // '' = no usar, 'asc' = más antigua, 'desc' = más reciente (fecha_evento)
+  const [ordenarPorFechaRecepcion, setOrdenarPorFechaRecepcion] = useState(''); // '' = no usar, 'asc' = más antigua, 'desc' = más reciente (fecha_recepcion)
   const [searchTerm, setSearchTerm] = useState('');
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
   const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
@@ -122,12 +123,26 @@ function LeaksDisponibles() {
   };
 
   // Query para leaks disponibles
-  const { data: disponiblesData, isLoading: isLoadingDisponibles } = useQuery({
-    queryKey: ['leaks-disponibles', filtroSalon, ordenarPor, searchTerm, mesSeleccionado, añoSeleccionado, limiteMostrar],
+  const { 
+    data: disponiblesData, 
+    isLoading: isLoadingDisponibles,
+    isRefetching: isRefetchingDisponibles,
+    refetch: refetchDisponibles
+  } = useQuery({
+    queryKey: ['leaks-disponibles', filtroSalon, ordenarPorFechaEvento, ordenarPorFechaRecepcion, searchTerm, mesSeleccionado, añoSeleccionado, limiteMostrar],
     queryFn: async () => {
       const params = {};
       if (filtroSalon) params.salon = filtroSalon;
-      if (ordenarPor) params.ordenar = ordenarPor;
+      // Priorizar ordenamiento por fecha_evento si está activo, sino usar fecha_recepcion
+      if (ordenarPorFechaEvento && ordenarPorFechaEvento !== '') {
+        params.ordenar = `fecha_evento_${ordenarPorFechaEvento}`;
+      } else if (ordenarPorFechaRecepcion && ordenarPorFechaRecepcion !== '') {
+        params.ordenar = `fecha_recepcion_${ordenarPorFechaRecepcion}`;
+      }
+      // Si ninguno está activo, usar ordenamiento por defecto (fecha_recepcion desc)
+      if (!params.ordenar) {
+        params.ordenar = 'fecha_recepcion_desc';
+      }
       if (searchTerm) params.search = searchTerm;
       if (mesSeleccionado) params.mes = mesSeleccionado.toString();
       if (añoSeleccionado) params.año = añoSeleccionado.toString();
@@ -135,6 +150,18 @@ function LeaksDisponibles() {
       const response = await api.get('/leaks/disponibles', { params });
       return response.data;
     },
+    staleTime: 10000, // Los datos se consideran frescos por 10 segundos
+    cacheTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
+    refetchInterval: 60000, // Auto-refresh cada 60 segundos (reducido de 30)
+    refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
+    refetchOnWindowFocus: true, // Refetch cuando la ventana recupera el foco
+    refetchOnReconnect: true, // Refetch cuando se reconecta
+    retry: (failureCount, error) => {
+      // No reintentar si es error 429 (rate limit)
+      if (error?.response?.status === 429) return false;
+      return failureCount < 2; // Máximo 2 reintentos
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
   });
 
   // Mutation para tomar un leak
@@ -143,15 +170,50 @@ function LeaksDisponibles() {
       const response = await api.post(`/leaks/${leakId}/tomar`);
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['leaks-disponibles']);
-      queryClient.invalidateQueries(['leaks-mios']);
-      queryClient.invalidateQueries(['leaks-stats']);
+    onSuccess: async (data, leakId) => {
+      // Optimistic update: remover el leak de la lista local inmediatamente
+      queryClient.setQueryData(
+        ['leaks-disponibles', filtroSalon, ordenarPorFechaEvento, ordenarPorFechaRecepcion, searchTerm, mesSeleccionado, añoSeleccionado, limiteMostrar],
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            data: (oldData.data || []).filter(leak => leak.id !== leakId),
+            total: (oldData.total || oldData.count || 0) - 1,
+            count: (oldData.count || oldData.total || 0) - 1
+          };
+        }
+      );
+      
+      // Invalidar queries sin refetch inmediato (se refetchearán en el próximo intervalo)
+      // Esto evita múltiples requests simultáneos
+      queryClient.invalidateQueries(['leaks-disponibles'], { refetchType: 'none' });
+      queryClient.invalidateQueries(['leaks-mios'], { refetchType: 'none' });
+      queryClient.invalidateQueries(['leaks-stats'], { refetchType: 'none' });
+      
+      // NO hacer refetch inmediato - dejar que el refetchInterval lo maneje
+      // Esto previene acumulación de requests
+      
       toast.success('Leak asignado exitosamente');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al tomar el leak');
+      // Si hay error, solo invalidar sin refetch inmediato
+      queryClient.invalidateQueries(['leaks-disponibles'], { refetchType: 'none' });
+      
+      // NO hacer refetch automático - dejar que el refetchInterval lo maneje
+      // Esto previene acumulación de requests cuando hay rate limiting
+      
+      const errorMessage = error?.isRateLimit || error.response?.status === 429 
+        ? 'Demasiadas solicitudes. El sistema se pausará automáticamente. Por favor espera un momento.'
+        : error.response?.data?.message || 'Error al tomar el leak';
+      toast.error(errorMessage);
     },
+    retry: (failureCount, error) => {
+      // No reintentar si es error 429 (rate limit)
+      if (error.response?.status === 429) return false;
+      return failureCount < 2; // Reintentar máximo 2 veces
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 
   // Mutation para limpiar leaks disponibles
@@ -187,8 +249,15 @@ function LeaksDisponibles() {
   });
 
 
+  const [leakTomandoId, setLeakTomandoId] = useState(null);
+
   const handleTomarLeak = (leakId) => {
-    tomarLeakMutation.mutate(leakId);
+    setLeakTomandoId(leakId);
+    tomarLeakMutation.mutate(leakId, {
+      onSettled: () => {
+        setLeakTomandoId(null);
+      }
+    });
   };
 
   const handleVerDetalle = (leak) => {
@@ -329,11 +398,20 @@ function LeaksDisponibles() {
                     <Button
                       size="sm"
                       onClick={() => handleTomarLeak(leak.id)}
-                      disabled={tomarLeakMutation.isPending}
+                      disabled={tomarLeakMutation.isPending || leakTomandoId === leak.id}
                       className="h-7 text-xs px-2"
                     >
-                      <UserPlus className="w-3 h-3 mr-1" />
-                      Tomar
+                      {leakTomandoId === leak.id ? (
+                        <>
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          Tomando...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-3 h-3 mr-1" />
+                          Tomar
+                        </>
+                      )}
                     </Button>
                     <Button
                       size="sm"
@@ -375,30 +453,51 @@ function LeaksDisponibles() {
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Leaks Disponibles</h2>
             <p className="text-muted-foreground">
-              Leaks sin asignar que puedes tomar. Se sincronizan automáticamente cada 3 minutos.
+              Leaks sin asignar que puedes tomar. Se actualizan automáticamente cada minuto.
             </p>
           </div>
         </div>
-        <Button
-          onClick={() => {
-            setResultadoSincronizacion(null);
-            sincronizarMutation.mutate();
-          }}
-          disabled={sincronizarMutation.isPending}
-          variant="outline"
-        >
-          {sincronizarMutation.isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Sincronizando...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Sincronizar Ahora
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => refetchDisponibles()}
+            disabled={isRefetchingDisponibles || isLoadingDisponibles}
+            variant="outline"
+            className="gap-2"
+          >
+            {isRefetchingDisponibles ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Refrescando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Refrescar
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={() => {
+              setResultadoSincronizacion(null);
+              sincronizarMutation.mutate();
+            }}
+            disabled={sincronizarMutation.isPending}
+            variant="outline"
+            className="gap-2"
+          >
+            {sincronizarMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Sincronizando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Sincronizar Ahora
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Resultado de sincronización */}
@@ -466,26 +565,36 @@ function LeaksDisponibles() {
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Ordenar por:</span>
-              <Select value={ordenarPor} onValueChange={setOrdenarPor}>
-                <SelectTrigger className="w-[200px]">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Ordenar por Fecha Evento:</span>
+              <Select value={ordenarPorFechaEvento || 'none'} onValueChange={(value) => setOrdenarPorFechaEvento(value === 'none' ? '' : value)}>
+                <SelectTrigger className="w-[180px]">
                   <SelectValue>
-                    {ordenarPor === 'asc' ? 'Fecha más antigua' : 'Fecha más reciente'}
+                    {ordenarPorFechaEvento === 'desc' ? 'Más reciente' : 
+                     ordenarPorFechaEvento === 'asc' ? 'Más antigua' : 
+                     'No usar'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="desc">
-                    <div className="flex items-center gap-2">
-                      <ArrowDown className="w-4 h-4" />
-                      Fecha más reciente
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="asc">
-                    <div className="flex items-center gap-2">
-                      <ArrowUp className="w-4 h-4" />
-                      Fecha más antigua
-                    </div>
-                  </SelectItem>
+                  <SelectItem value="none">No usar</SelectItem>
+                  <SelectItem value="desc">Más reciente</SelectItem>
+                  <SelectItem value="asc">Más antigua</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Ordenar por Fecha Recepción:</span>
+              <Select value={ordenarPorFechaRecepcion || 'none'} onValueChange={(value) => setOrdenarPorFechaRecepcion(value === 'none' ? '' : value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue>
+                    {ordenarPorFechaRecepcion === 'desc' ? 'Más reciente' : 
+                     ordenarPorFechaRecepcion === 'asc' ? 'Más antigua' : 
+                     'No usar'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No usar</SelectItem>
+                  <SelectItem value="desc">Más reciente</SelectItem>
+                  <SelectItem value="asc">Más antigua</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -526,7 +635,10 @@ function LeaksDisponibles() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                {Array.from({ length: Math.max(8, 2030 - fechaActual.getFullYear() + 3) }, (_, i) => {
+                  const año = fechaActual.getFullYear() - 2 + i;
+                  return año <= 2030 ? año : null;
+                }).filter(año => año !== null).map(año => (
                   <SelectItem key={año} value={año.toString()}>
                     {año}
                   </SelectItem>

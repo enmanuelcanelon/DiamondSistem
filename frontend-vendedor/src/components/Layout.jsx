@@ -45,8 +45,18 @@ function Layout() {
         return { count: 0 };
       }
     },
-    refetchInterval: 60000, // Refrescar cada minuto
+    staleTime: 60000, // Los datos se consideran frescos por 60 segundos
+    cacheTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
+    refetchInterval: 120000, // Refrescar cada 2 minutos (reducido)
+    refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
+    refetchOnWindowFocus: false, // No refetch al enfocar ventana (evitar spam)
     enabled: !!user, // Solo si hay usuario autenticado
+    retry: (failureCount, error) => {
+      // No reintentar si es error 429 (rate limit)
+      if (error?.isRateLimit || error?.response?.status === 429) return false;
+      return failureCount < 1; // Máximo 1 reintento
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 
   const pendientesCount = pendientesData?.count || 0;

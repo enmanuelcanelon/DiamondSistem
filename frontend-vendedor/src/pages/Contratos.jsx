@@ -476,7 +476,10 @@ function Contratos() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 5 }, (_, i) => fechaActual.getFullYear() - 2 + i).map(año => (
+                {Array.from({ length: Math.max(8, 2030 - fechaActual.getFullYear() + 3) }, (_, i) => {
+                  const año = fechaActual.getFullYear() - 2 + i;
+                  return año <= 2030 ? año : null;
+                }).filter(año => año !== null).map(año => (
                   <SelectItem key={año} value={año.toString()}>
                     {año}
                   </SelectItem>
