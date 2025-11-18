@@ -32,7 +32,12 @@ Esta guía explica cómo configurar la integración con Google Calendar usando O
    - Agrega los **scopes** necesarios:
      - `https://www.googleapis.com/auth/calendar.readonly`
      - `https://www.googleapis.com/auth/calendar.events.readonly`
-   - Agrega usuarios de prueba (tus vendedores) si la app está en modo "Testing"
+   - **IMPORTANTE - Agregar Usuarios de Prueba**:
+     - En la sección **"Usuarios de prueba"** (o "Test users" si está en inglés), haz clic en **"+ AGREGAR USUARIOS"** (o "+ ADD USERS")
+     - Agrega el email de cada vendedor que vaya a usar la aplicación (ej: `revolutionpartyvenueleads@gmail.com`)
+     - Puedes agregar hasta 100 usuarios de prueba
+     - Haz clic en **"AGREGAR"** (o "ADD") y luego en **"GUARDAR"** (o "SAVE")
+     - **Sin esto, verás el error "Access blocked" (403: access_denied)**
    - Guarda y continúa
 
 4. Crea el **OAuth Client ID**:
@@ -142,8 +147,32 @@ Los managers pueden ver todos los calendarios de todos los vendedores en la vist
 - Asegúrate de incluir `http://` o `https://` según corresponda
 - No incluyas una barra final (`/`) a menos que esté en ambas configuraciones
 
-### Error: "access_denied"
+### Error: "access_denied" o "Access blocked" (403)
 
+**Causa más común**: La aplicación está en modo "Testing" (Pruebas) y el usuario no está agregado como tester.
+
+**Solución (Interfaz en Español)**:
+1. Ve a [Google Cloud Console](https://console.cloud.google.com/)
+2. Selecciona tu proyecto
+3. Ve a **"APIs y servicios"** > **"Pantalla de consentimiento de OAuth"**
+4. En la sección **"Usuarios de prueba"**, haz clic en **"+ AGREGAR USUARIOS"** o **"+ ADD USERS"**
+5. Agrega el email del usuario que está intentando conectarse (ej: `revolutionpartyvenueleads@gmail.com`)
+6. Haz clic en **"AGREGAR"** o **"ADD"**
+7. Si hay un botón **"GUARDAR"** o **"SAVE"**, haz clic en él
+8. El usuario debe esperar unos minutos (2-5 minutos) y luego intentar conectarse nuevamente
+
+**Solución (Interfaz en Inglés)**:
+1. Ve a [Google Cloud Console](https://console.cloud.google.com/)
+2. Selecciona tu proyecto
+3. Ve a **"APIs & Services"** > **"OAuth consent screen"**
+4. En la sección **"Test users"**, haz clic en **"+ ADD USERS"**
+5. Agrega el email del usuario que está intentando conectarse (ej: `revolutionpartyvenueleads@gmail.com`)
+6. Haz clic en **"ADD"**
+7. El usuario debe esperar unos minutos y luego intentar conectarse nuevamente
+
+**Nota**: Si la aplicación está en modo "Testing", solo los usuarios agregados como testers pueden acceder. Para que cualquiera pueda usar la app, necesitas publicarla (requiere verificación de Google, que puede tardar varios días).
+
+**Otras causas**:
 - El usuario canceló la autorización
 - Intenta conectarlo nuevamente desde Configuración
 

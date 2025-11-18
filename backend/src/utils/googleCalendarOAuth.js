@@ -40,7 +40,8 @@ function getAuthUrl(state) {
 
   const scopes = [
     'https://www.googleapis.com/auth/calendar.readonly',
-    'https://www.googleapis.com/auth/calendar.events.readonly'
+    'https://www.googleapis.com/auth/calendar.events.readonly',
+    'https://www.googleapis.com/auth/calendar.events' // Permiso de escritura para crear eventos
   ];
 
   return oauth2Client.generateAuthUrl({

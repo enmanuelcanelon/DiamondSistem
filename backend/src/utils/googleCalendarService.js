@@ -85,13 +85,13 @@ async function getValidTokens(vendedorId) {
 }
 
 /**
- * Obtener eventos de Google Calendar para un vendedor
+ * Obtener eventos del calendario principal del vendedor
  * @param {number} vendedorId - ID del vendedor
  * @param {Date} fechaInicio - Fecha de inicio
  * @param {Date} fechaFin - Fecha de fin
  * @returns {Promise<Array>} Array de eventos
  */
-async function obtenerEventosGoogleCalendar(vendedorId, fechaInicio, fechaFin) {
+async function obtenerEventosCalendarioPrincipal(vendedorId, fechaInicio, fechaFin) {
   try {
     const vendedor = await prisma.vendedores.findUnique({
       where: { id: vendedorId },
@@ -107,7 +107,6 @@ async function obtenerEventosGoogleCalendar(vendedorId, fechaInicio, fechaFin) {
 
     const tokens = await getValidTokens(vendedorId);
     if (!tokens) {
-      logger.warn(`Vendedor ${vendedorId} no tiene tokens válidos de Google Calendar`);
       return [];
     }
 
@@ -117,8 +116,6 @@ async function obtenerEventosGoogleCalendar(vendedorId, fechaInicio, fechaFin) {
     }
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-    // Convertir fechas a formato ISO
     const timeMin = fechaInicio.toISOString();
     const timeMax = fechaFin.toISOString();
 
@@ -131,10 +128,7 @@ async function obtenerEventosGoogleCalendar(vendedorId, fechaInicio, fechaFin) {
       maxResults: 2500
     });
 
-    const eventos = response.data.items || [];
-
-    // Formatear eventos
-    const eventosFormateados = eventos.map(evento => {
+    const eventos = (response.data.items || []).map(evento => {
       const inicio = evento.start?.dateTime || evento.start?.date;
       const fin = evento.end?.dateTime || evento.end?.date;
       
@@ -149,11 +143,193 @@ async function obtenerEventosGoogleCalendar(vendedorId, fechaInicio, fechaFin) {
         organizador: evento.organizer?.email || '',
         estado: evento.status || 'confirmed',
         htmlLink: evento.htmlLink || '',
+        calendario: 'principal'
       };
     });
 
-    logger.info(`✅ Obtenidos ${eventosFormateados.length} eventos de Google Calendar para vendedor ${vendedorId}`);
-    return eventosFormateados;
+    logger.info(`✅ Obtenidos ${eventos.length} eventos del calendario principal para vendedor ${vendedorId}`);
+    return eventos;
+  } catch (error) {
+    logger.error(`❌ Error al obtener eventos del calendario principal para vendedor ${vendedorId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Crear evento en el calendario CITAS compartido
+ * @param {number} vendedorId - ID del vendedor
+ * @param {Object} datosEvento - Datos del evento
+ * @param {string} datosEvento.titulo - Título del evento
+ * @param {Date} datosEvento.fechaInicio - Fecha y hora de inicio
+ * @param {Date} datosEvento.fechaFin - Fecha y hora de fin
+ * @param {string} datosEvento.descripcion - Descripción del evento
+ * @param {string} datosEvento.ubicacion - Ubicación/salón
+ * @returns {Promise<Object>} Evento creado
+ */
+async function crearEventoCitas(vendedorId, datosEvento) {
+  try {
+    const calendarioCitasId = process.env.GOOGLE_CALENDAR_CITAS_ID;
+    if (!calendarioCitasId) {
+      logger.warn('⚠️ GOOGLE_CALENDAR_CITAS_ID no configurado');
+      return null;
+    }
+
+    const vendedor = await prisma.vendedores.findUnique({
+      where: { id: vendedorId },
+      select: {
+        google_calendar_sync_enabled: true
+      }
+    });
+
+    if (!vendedor || !vendedor.google_calendar_sync_enabled) {
+      logger.warn(`⚠️ Vendedor ${vendedorId} no tiene Google Calendar habilitado`);
+      return null;
+    }
+
+    const tokens = await getValidTokens(vendedorId);
+    if (!tokens) {
+      logger.warn(`⚠️ Vendedor ${vendedorId} no tiene tokens válidos`);
+      return null;
+    }
+
+    const oauth2Client = createAuthenticatedClient(tokens.access_token, tokens.refresh_token);
+    if (!oauth2Client) {
+      return null;
+    }
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    // Formatear fechas para Google Calendar
+    const fechaInicioISO = datosEvento.fechaInicio.toISOString();
+    const fechaFinISO = datosEvento.fechaFin.toISOString();
+
+    const evento = {
+      summary: datosEvento.titulo || 'Cita de Lead',
+      description: datosEvento.descripcion || '',
+      location: datosEvento.ubicacion || '',
+      start: {
+        dateTime: fechaInicioISO,
+        timeZone: 'America/New_York'
+      },
+      end: {
+        dateTime: fechaFinISO,
+        timeZone: 'America/New_York'
+      }
+    };
+
+    const response = await calendar.events.insert({
+      calendarId: calendarioCitasId,
+      resource: evento
+    });
+
+    logger.info(`✅ Evento creado en calendario CITAS: ${response.data.id}`);
+    return {
+      id: response.data.id,
+      htmlLink: response.data.htmlLink,
+      titulo: response.data.summary
+    };
+  } catch (error) {
+    logger.error(`❌ Error al crear evento en calendario CITAS:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Obtener eventos del calendario CITAS compartido
+ * @param {number} vendedorId - ID del vendedor (para obtener tokens)
+ * @param {Date} fechaInicio - Fecha de inicio
+ * @param {Date} fechaFin - Fecha de fin
+ * @returns {Promise<Array>} Array de eventos
+ */
+async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) {
+  try {
+    const calendarioCitasId = process.env.GOOGLE_CALENDAR_CITAS_ID;
+    if (!calendarioCitasId) {
+      return [];
+    }
+
+    const vendedor = await prisma.vendedores.findUnique({
+      where: { id: vendedorId },
+      select: {
+        google_calendar_sync_enabled: true
+      }
+    });
+
+    if (!vendedor || !vendedor.google_calendar_sync_enabled) {
+      return [];
+    }
+
+    const tokens = await getValidTokens(vendedorId);
+    if (!tokens) {
+      return [];
+    }
+
+    const oauth2Client = createAuthenticatedClient(tokens.access_token, tokens.refresh_token);
+    if (!oauth2Client) {
+      return [];
+    }
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    const timeMin = fechaInicio.toISOString();
+    const timeMax = fechaFin.toISOString();
+
+    const response = await calendar.events.list({
+      calendarId: calendarioCitasId,
+      timeMin: timeMin,
+      timeMax: timeMax,
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: 2500
+    });
+
+    const eventos = (response.data.items || []).map(evento => {
+      const inicio = evento.start?.dateTime || evento.start?.date;
+      const fin = evento.end?.dateTime || evento.end?.date;
+      
+      return {
+        id: evento.id,
+        titulo: evento.summary || 'Sin título',
+        descripcion: evento.description || '',
+        fecha_inicio: inicio,
+        fecha_fin: fin,
+        ubicacion: evento.location || '',
+        creador: evento.creator?.email || '',
+        organizador: evento.organizer?.email || '',
+        estado: evento.status || 'confirmed',
+        htmlLink: evento.htmlLink || '',
+        calendario: 'citas'
+      };
+    });
+
+    logger.info(`✅ Obtenidos ${eventos.length} eventos del calendario CITAS`);
+    return eventos;
+  } catch (error) {
+    logger.warn(`⚠️ Error al obtener eventos del calendario CITAS:`, error);
+    return [];
+  }
+}
+
+/**
+ * Obtener eventos de Google Calendar para un vendedor (incluye calendario principal y CITAS compartido)
+ * @param {number} vendedorId - ID del vendedor
+ * @param {Date} fechaInicio - Fecha de inicio
+ * @param {Date} fechaFin - Fecha de fin
+ * @returns {Promise<Array>} Array de eventos
+ */
+async function obtenerEventosGoogleCalendar(vendedorId, fechaInicio, fechaFin) {
+  try {
+    const eventos = [];
+    
+    // 1. Obtener eventos del calendario principal
+    const eventosPrincipal = await obtenerEventosCalendarioPrincipal(vendedorId, fechaInicio, fechaFin);
+    eventos.push(...eventosPrincipal);
+
+    // 2. Obtener eventos del calendario CITAS
+    const eventosCitas = await obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin);
+    eventos.push(...eventosCitas);
+
+    logger.info(`✅ Obtenidos ${eventos.length} eventos totales de Google Calendar para vendedor ${vendedorId}`);
+    return eventos;
   } catch (error) {
     logger.error(`❌ Error al obtener eventos de Google Calendar para vendedor ${vendedorId}:`, error);
     return [];
@@ -219,12 +395,16 @@ async function verificarDisponibilidad(vendedorId, fechaInicio, fechaFin) {
 
 /**
  * Obtener eventos de todos los vendedores (solo para managers)
+ * Incluye: calendarios principales de todos los vendedores + calendario CITAS compartido
  * @param {Date} fechaInicio - Fecha de inicio
  * @param {Date} fechaFin - Fecha de fin
  * @returns {Promise<Array>} Array de eventos con información del vendedor
  */
 async function obtenerEventosTodosVendedores(fechaInicio, fechaFin) {
   try {
+    const todosLosEventos = [];
+
+    // 1. Obtener eventos de los calendarios principales de todos los vendedores
     const vendedores = await prisma.vendedores.findMany({
       where: {
         google_calendar_sync_enabled: true,
@@ -238,11 +418,9 @@ async function obtenerEventosTodosVendedores(fechaInicio, fechaFin) {
       }
     });
 
-    const todosLosEventos = [];
-
     for (const vendedor of vendedores) {
       try {
-        const eventos = await obtenerEventosGoogleCalendar(vendedor.id, fechaInicio, fechaFin);
+        const eventos = await obtenerEventosCalendarioPrincipal(vendedor.id, fechaInicio, fechaFin);
         
         eventos.forEach(evento => {
           todosLosEventos.push({
@@ -257,6 +435,24 @@ async function obtenerEventosTodosVendedores(fechaInicio, fechaFin) {
       }
     }
 
+    // 2. Obtener eventos del calendario CITAS compartido (usar el primer vendedor con tokens válidos)
+    const vendedorConTokens = vendedores.find(v => v.google_calendar_sync_enabled);
+    if (vendedorConTokens) {
+      try {
+        const eventosCitas = await obtenerEventosCalendarioCitas(vendedorConTokens.id, fechaInicio, fechaFin);
+        eventosCitas.forEach(evento => {
+          todosLosEventos.push({
+            ...evento,
+            vendedor_id: null,
+            vendedor_nombre: 'CITAS',
+            vendedor_codigo: 'CITAS'
+          });
+        });
+      } catch (error) {
+        logger.warn('Error al obtener eventos del calendario CITAS:', error);
+      }
+    }
+
     return todosLosEventos;
   } catch (error) {
     logger.error('Error al obtener eventos de todos los vendedores:', error);
@@ -266,6 +462,9 @@ async function obtenerEventosTodosVendedores(fechaInicio, fechaFin) {
 
 module.exports = {
   obtenerEventosGoogleCalendar,
+  obtenerEventosCalendarioPrincipal,
+  obtenerEventosCalendarioCitas,
+  crearEventoCitas,
   obtenerEventosPorMes,
   obtenerEventosPorDia,
   verificarDisponibilidad,

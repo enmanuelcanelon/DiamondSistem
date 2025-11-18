@@ -694,6 +694,8 @@ router.put('/:id/estado', authenticate, requireVendedor, async (req, res, next) 
       }
     });
 
+    // El leak ya está guardado con fecha_cita_salon, aparecerá automáticamente en el calendario de CITAS
+
     res.json({
       success: true,
       message: 'Estado actualizado exitosamente',

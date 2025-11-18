@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, X } from 'lucide-react';
 import api from '../config/api';
-import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { formatearHora } from '../utils/formatters';
 
@@ -11,60 +10,37 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
   const [añoSeleccionado, setAñoSeleccionado] = useState(new Date().getFullYear());
   const [mostrarCalendario, setMostrarCalendario] = useState(false);
 
-  // Obtener eventos de Google Calendar para el mes (del vendedor autenticado)
+  // Obtener eventos de Google Calendar
   const { data: eventosGoogleCalendar } = useQuery({
     queryKey: ['google-calendar-eventos', mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
       try {
         const response = await api.get(`/google-calendar/eventos/mes/${mesSeleccionado}/${añoSeleccionado}`);
         return response.data.eventos || [];
-      } catch (error) {
-        // Si no está configurado o no hay conexión, retornar array vacío
+      } catch {
         return [];
       }
     },
     enabled: mostrarCalendario,
-    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Nombres de los meses
   const nombresMeses = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
 
-  // Nombres de los días de la semana
   const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-  // Obtener el primer día del mes y cuántos días tiene
   const obtenerDiasDelMes = () => {
     const primerDia = new Date(añoSeleccionado, mesSeleccionado - 1, 1);
-    const ultimoDia = new Date(añoSeleccionado, mesSeleccionado, 0);
-    const diasEnMes = ultimoDia.getDate();
+    const diasEnMes = new Date(añoSeleccionado, mesSeleccionado, 0).getDate();
     const diaInicioSemana = primerDia.getDay();
     return { diasEnMes, diaInicioSemana };
   };
 
-  // Verificar si un día tiene eventos de Google Calendar
-  const tieneEventosGoogle = (dia) => {
-    if (!eventosGoogleCalendar || eventosGoogleCalendar.length === 0) return false;
-    
-    return eventosGoogleCalendar.some(evento => {
-      try {
-        const fechaEvento = new Date(evento.fecha_inicio);
-        return fechaEvento.getDate() === dia && 
-               fechaEvento.getMonth() + 1 === mesSeleccionado &&
-               fechaEvento.getFullYear() === añoSeleccionado;
-      } catch {
-        return false;
-      }
-    });
-  };
-
-  // Obtener eventos de un día específico
   const obtenerEventosDelDia = (dia) => {
-    if (!eventosGoogleCalendar || eventosGoogleCalendar.length === 0) return [];
-    
+    if (!eventosGoogleCalendar?.length) return [];
     return eventosGoogleCalendar.filter(evento => {
       try {
         const fechaEvento = new Date(evento.fecha_inicio);
@@ -77,7 +53,6 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
     });
   };
 
-  // Cambiar mes
   const cambiarMes = (direccion) => {
     if (direccion === 'anterior') {
       if (mesSeleccionado === 1) {
@@ -96,16 +71,11 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
     }
   };
 
-  // Formatear fecha para input date (YYYY-MM-DD)
   const formatearFechaParaInput = (dia) => {
     const fecha = new Date(añoSeleccionado, mesSeleccionado - 1, dia);
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(dia).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
   };
 
-  // Verificar si una fecha es válida (no pasada)
   const esFechaValida = (dia) => {
     const fecha = new Date(añoSeleccionado, mesSeleccionado - 1, dia);
     const hoy = fechaMinima ? new Date(fechaMinima) : new Date();
@@ -114,7 +84,6 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
     return fecha >= hoy;
   };
 
-  // Verificar si una fecha está seleccionada
   const esFechaSeleccionada = (dia) => {
     if (!fechaSeleccionada) return false;
     const fecha = new Date(fechaSeleccionada);
@@ -123,7 +92,13 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
            fecha.getFullYear() === añoSeleccionado;
   };
 
-  // Sincronizar mes/año con fecha seleccionada
+  const esHoy = (dia) => {
+    const hoy = new Date();
+    return dia === hoy.getDate() && 
+           mesSeleccionado === hoy.getMonth() + 1 &&
+           añoSeleccionado === hoy.getFullYear();
+  };
+
   useEffect(() => {
     if (fechaSeleccionada) {
       const fecha = new Date(fechaSeleccionada);
@@ -135,12 +110,12 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
   const { diasEnMes, diaInicioSemana } = obtenerDiasDelMes();
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <Button
         type="button"
         variant="outline"
         onClick={() => setMostrarCalendario(!mostrarCalendario)}
-        className="w-full justify-start"
+        className="w-full justify-start text-left font-normal h-11"
       >
         <Calendar className="mr-2 h-4 w-4" />
         {fechaSeleccionada 
@@ -153,59 +128,72 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
       </Button>
 
       {mostrarCalendario && (
-        <Card className="absolute z-50 mt-2 w-full max-w-sm shadow-lg">
-          <CardContent className="p-4">
-            {/* Navegación */}
-            <div className="flex items-center justify-between mb-4">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => cambiarMes('anterior')}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="font-semibold">
-                {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+            onClick={() => setMostrarCalendario(false)}
+          />
+          
+          <div className="absolute z-50 mt-2 w-full max-w-md bg-background border border-border rounded-lg shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-muted/30">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => cambiarMes('anterior')}
+                  className="p-1.5 hover:bg-background rounded-md transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <h3 className="font-semibold text-base min-w-[140px] text-center">
+                  {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => cambiarMes('siguiente')}
+                  className="p-1.5 hover:bg-background rounded-md transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => cambiarMes('siguiente')}
+                onClick={() => setMostrarCalendario(false)}
+                className="p-1.5 hover:bg-background rounded-md transition-colors"
               >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            {/* Días de la semana */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {diasSemana.map((dia) => (
-                <div key={dia} className="text-center text-xs font-medium text-muted-foreground py-1">
-                  {dia}
-                </div>
-              ))}
-            </div>
+            {/* Calendario */}
+            <div className="p-4">
+              {/* Días de la semana */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {diasSemana.map((dia) => (
+                  <div key={dia} className="text-center text-xs font-medium text-muted-foreground py-2">
+                    {dia}
+                  </div>
+                ))}
+              </div>
 
-            {/* Días del mes */}
-            <div className="grid grid-cols-7 gap-1">
-              {/* Días vacíos al inicio */}
-              {Array.from({ length: diaInicioSemana }).map((_, i) => (
-                <div key={`empty-${i}`} className="aspect-square" />
-              ))}
+              {/* Grid de días */}
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: diaInicioSemana }).map((_, i) => (
+                  <div key={`empty-${i}`} className="aspect-square" />
+                ))}
 
-              {/* Días del mes */}
-              {Array.from({ length: diasEnMes }).map((_, i) => {
-                const dia = i + 1;
-                const fechaStr = formatearFechaParaInput(dia);
-                const esValida = esFechaValida(dia);
-                const esSeleccionada = esFechaSeleccionada(dia);
-                const tieneEventos = tieneEventosGoogle(dia);
-                const eventosDelDia = obtenerEventosDelDia(dia);
+                {Array.from({ length: diasEnMes }).map((_, i) => {
+                  const dia = i + 1;
+                  const fechaStr = formatearFechaParaInput(dia);
+                  const esValida = esFechaValida(dia);
+                  const esSeleccionada = esFechaSeleccionada(dia);
+                  const esHoyDia = esHoy(dia);
+                  const eventosDelDia = obtenerEventosDelDia(dia);
+                  const tieneEventos = eventosDelDia.length > 0;
 
-                return (
-                  <div key={dia} className="relative">
+                  return (
                     <button
+                      key={dia}
                       type="button"
                       onClick={() => {
                         if (esValida) {
@@ -215,52 +203,91 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
                       }}
                       disabled={!esValida}
                       className={`
-                        w-full aspect-square rounded-md text-sm transition-colors
+                        relative aspect-square rounded-md text-sm font-medium
+                        transition-all duration-150
                         ${!esValida 
-                          ? 'text-muted-foreground/50 cursor-not-allowed' 
+                          ? 'text-muted-foreground/30 cursor-not-allowed' 
                           : esSeleccionada
-                          ? 'bg-primary text-primary-foreground font-semibold'
-                          : 'hover:bg-accent hover:text-accent-foreground'
+                          ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                          : esHoyDia
+                          ? 'bg-accent text-accent-foreground font-semibold ring-1 ring-primary/20'
+                          : 'hover:bg-accent hover:text-accent-foreground text-foreground'
                         }
-                        ${tieneEventos && esValida ? 'ring-2 ring-blue-400' : ''}
                       `}
-                      title={tieneEventos && eventosDelDia.length > 0
-                        ? eventosDelDia.map(e => e.titulo).join(', ')
-                        : ''}
                     >
-                      {dia}
+                      <span>{dia}</span>
+                      {tieneEventos && esValida && (
+                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
+                          {eventosDelDia.slice(0, 2).map((_, idx) => (
+                            <div 
+                              key={idx} 
+                              className={`w-1 h-1 rounded-full ${
+                                esSeleccionada ? 'bg-primary-foreground/60' : 'bg-blue-500'
+                              }`} 
+                            />
+                          ))}
+                          {eventosDelDia.length > 2 && (
+                            <div 
+                              className={`w-1 h-1 rounded-full ${
+                                esSeleccionada ? 'bg-primary-foreground/40' : 'bg-blue-400'
+                              }`} 
+                            />
+                          )}
+                        </div>
+                      )}
                     </button>
-                    {tieneEventos && esValida && (
-                      <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-blue-500 rounded-full" />
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Leyenda */}
-            {eventosGoogleCalendar && eventosGoogleCalendar.length > 0 && (
-              <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500" />
-                  <span>Eventos de Google Calendar</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            {/* Eventos del día seleccionado */}
+            {fechaSeleccionada && (() => {
+              const fecha = new Date(fechaSeleccionada);
+              const dia = fecha.getDate();
+              const eventos = obtenerEventosDelDia(dia);
+              
+              if (eventos.length === 0) return null;
 
-      {/* Overlay para cerrar al hacer click fuera */}
-      {mostrarCalendario && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setMostrarCalendario(false)}
-        />
+              return (
+                <div className="border-t bg-muted/20 px-4 py-3">
+                  <div className="text-xs font-medium text-muted-foreground mb-2">
+                    Eventos este día
+                  </div>
+                  <div className="space-y-1.5">
+                    {eventos.slice(0, 3).map((evento, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 text-xs p-2 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800"
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-blue-900 dark:text-blue-100 truncate">
+                            {evento.titulo || evento.summary || 'Evento'}
+                          </div>
+                          {evento.hora_inicio && (
+                            <div className="flex items-center gap-1 text-blue-700 dark:text-blue-300 mt-0.5">
+                              <Clock className="w-3 h-3" />
+                              <span>{formatearHora(evento.hora_inicio)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {eventos.length > 3 && (
+                      <div className="text-xs text-muted-foreground text-center py-1">
+                        +{eventos.length - 3} más
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </>
       )}
     </div>
   );
 }
 
 export default CalendarioSelector;
-

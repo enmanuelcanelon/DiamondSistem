@@ -671,55 +671,70 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
       }
     });
 
-    // Obtener eventos de Google Calendar del vendedor autenticado
-    let eventosGoogleCalendar = [];
+    // Obtener eventos de Google Calendar del vendedor (calendario principal)
+    const { obtenerEventosCalendarioPrincipal, obtenerEventosCalendarioCitas } = require('../utils/googleCalendarService');
+    
+    let eventosCalendarioPrincipal = [];
+    let eventosCalendarioCitas = [];
+    
     try {
-      const { obtenerEventosPorMes } = require('../utils/googleCalendarService');
-      // Solo obtener eventos del vendedor autenticado (no de otros)
-      eventosGoogleCalendar = await obtenerEventosPorMes(parseInt(id), mesFiltro, añoFiltro);
+      eventosCalendarioPrincipal = await obtenerEventosCalendarioPrincipal(parseInt(id), fechaInicio, fechaFin);
     } catch (error) {
-      logger.warn('Error al obtener eventos de Google Calendar:', error);
-      // Continuar sin eventos de Google Calendar si hay error
+      logger.warn('Error al obtener eventos del calendario principal:', error);
     }
 
-    // Combinar eventos de contratos y Google Calendar
-    const eventosCombinados = [...eventosContratos];
+    try {
+      eventosCalendarioCitas = await obtenerEventosCalendarioCitas(parseInt(id), fechaInicio, fechaFin);
+    } catch (error) {
+      logger.warn('Error al obtener eventos del calendario CITAS:', error);
+    }
 
-    // Agregar eventos de Google Calendar formateados
-    eventosGoogleCalendar.forEach(eventoGoogle => {
+    // CALENDARIO 1: Solo contratos del vendedor (sin Google Calendar)
+    const calendarioContratos = eventosContratos.map(evento => ({
+      ...evento,
+      tipo: 'contrato',
+      calendario: 'contratos'
+    }));
+
+    // CALENDARIO 3: Eventos del calendario CITAS
+    const calendarioCitas = eventosCalendarioCitas.map(eventoGoogle => {
       try {
-        // Parsear fecha de inicio del evento de Google Calendar
         const fechaInicioEvento = new Date(eventoGoogle.fecha_inicio);
         const fechaFinEvento = new Date(eventoGoogle.fecha_fin);
         
-        // Solo incluir si está en el mes correcto
-        if (fechaInicioEvento.getMonth() + 1 === mesFiltro && fechaInicioEvento.getFullYear() === añoFiltro) {
-          eventosCombinados.push({
-            id: `google_${eventoGoogle.id}`,
-            codigo_contrato: null,
-            fecha_evento: fechaInicioEvento,
-            hora_inicio: fechaInicioEvento,
-            hora_fin: fechaFinEvento,
-            cantidad_invitados: null,
-            estado_pago: null,
-            clientes: {
-              nombre_completo: eventoGoogle.titulo,
-              email: eventoGoogle.creador,
-              telefono: null
-            },
-            salones: {
-              nombre: eventoGoogle.ubicacion || 'Google Calendar'
-            },
-            eventos: null,
-            es_google_calendar: true,
-            descripcion: eventoGoogle.descripcion,
-            htmlLink: eventoGoogle.htmlLink
-          });
-        }
+        return {
+          id: `citas_${eventoGoogle.id}`,
+          codigo_contrato: null,
+          fecha_evento: fechaInicioEvento,
+          hora_inicio: fechaInicioEvento,
+          hora_fin: fechaFinEvento,
+          cantidad_invitados: null,
+          estado_pago: null,
+          clientes: {
+            nombre_completo: eventoGoogle.titulo,
+            email: eventoGoogle.creador,
+            telefono: null
+          },
+          salones: {
+            nombre: eventoGoogle.ubicacion || 'CITAS'
+          },
+          eventos: null,
+          es_google_calendar: true,
+          es_citas: true,
+          descripcion: eventoGoogle.descripcion,
+          htmlLink: eventoGoogle.htmlLink,
+          tipo: 'citas',
+          calendario: 'citas'
+        };
       } catch (error) {
-        logger.warn('Error al procesar evento de Google Calendar:', error);
+        logger.warn('Error al procesar evento de CITAS:', error);
+        return null;
       }
-    });
+    }).filter(e => e !== null && e.fecha_evento.getMonth() + 1 === mesFiltro && e.fecha_evento.getFullYear() === añoFiltro);
+
+    // Para el calendario del vendedor, solo incluir contratos (sin Google Calendar principal)
+    // El calendario principal se muestra en el endpoint general
+    const eventosCombinados = [...calendarioContratos];
 
     // Agrupar eventos por día
     const eventosPorDia = {};
@@ -743,8 +758,21 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
       total_eventos: eventosCombinados.length,
       eventos_por_dia: eventosPorDia,
       eventos: eventosCombinados,
-      eventos_contratos: eventosContratos.length,
-      eventos_google_calendar: eventosGoogleCalendar.length
+      // Separar por tipo de calendario
+      calendario_contratos: calendarioContratos,
+      calendario_citas: calendarioCitas,
+      calendario_principal: eventosCalendarioPrincipal.filter(e => {
+        const fecha = new Date(e.fecha_inicio);
+        return fecha.getMonth() + 1 === mesFiltro && fecha.getFullYear() === añoFiltro;
+      }),
+      estadisticas: {
+        eventos_contratos: eventosContratos.length,
+        eventos_citas: calendarioCitas.length,
+        eventos_principal: eventosCalendarioPrincipal.filter(e => {
+          const fecha = new Date(e.fecha_inicio);
+          return fecha.getMonth() + 1 === mesFiltro && fecha.getFullYear() === añoFiltro;
+        }).length
+      }
     });
 
   } catch (error) {
