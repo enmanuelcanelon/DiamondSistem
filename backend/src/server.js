@@ -41,6 +41,7 @@ const gerentesRoutes = require('./routes/gerentes.routes');
 const inventarioRoutes = require('./routes/inventario.routes');
 const comisionesRoutes = require('./routes/comisiones.routes');
 const leaksRoutes = require('./routes/leaks.routes');
+const googleCalendarRoutes = require('./routes/googleCalendar.routes');
 
 // Jobs
 const cron = require('node-cron');
@@ -300,6 +301,7 @@ app.use('/api/inventario', inventarioRoutes);
 app.use('/api/inventario/comisiones', comisionesRoutes);
 // Rutas de leaks con rate limiting permisivo (múltiples vendedores, auto-refresh)
 app.use('/api/leaks', leaksLimiter, leaksRoutes);
+app.use('/api/google-calendar', googleCalendarRoutes);
 
 // Ruta 404 - Debe ir al final de todas las rutas
 app.use((req, res) => {

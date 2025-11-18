@@ -256,7 +256,33 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
       return haySolapamiento(horaInicioStr, horaFinStr, horaInicioOferta, horaFinOferta);
     });
 
-    const disponible = contratosOcupados.length === 0 && ofertasOcupadas.length === 0;
+    // Verificar disponibilidad en Google Calendar (sin mostrar detalles)
+    let googleCalendarOcupado = false;
+    try {
+      const { verificarDisponibilidad } = require('../utils/googleCalendarService');
+      const vendedorId = req.user.id;
+      
+      // Crear fechas completas con hora para verificar en Google Calendar
+      const fechaInicioCompleta = new Date(fechaEvento);
+      const [horaInicioH, horaInicioM] = horaInicioStr.split(':').map(Number);
+      fechaInicioCompleta.setHours(horaInicioH, horaInicioM, 0, 0);
+      
+      const fechaFinCompleta = new Date(fechaEvento);
+      const [horaFinH, horaFinM] = horaFinStr.split(':').map(Number);
+      fechaFinCompleta.setHours(horaFinH, horaFinM, 0, 0);
+      
+      // Si la hora de fin es menor que la de inicio, asumir que cruza medianoche
+      if (fechaFinCompleta < fechaInicioCompleta) {
+        fechaFinCompleta.setDate(fechaFinCompleta.getDate() + 1);
+      }
+      
+      googleCalendarOcupado = await verificarDisponibilidad(vendedorId, fechaInicioCompleta, fechaFinCompleta);
+    } catch (error) {
+      logger.warn('Error al verificar disponibilidad en Google Calendar:', error);
+      // Continuar sin considerar Google Calendar si hay error
+    }
+
+    const disponible = contratosOcupados.length === 0 && ofertasOcupadas.length === 0 && !googleCalendarOcupado;
 
     res.json({
       success: true,
@@ -273,7 +299,8 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
           cliente: o.clientes?.nombre_completo,
           hora_inicio: o.hora_inicio,
           hora_fin: o.hora_fin
-        }))
+        })),
+        google_calendar: googleCalendarOcupado ? [{ ocupado: true }] : [] // Solo indicar que está ocupado, sin detalles
       }
     });
   } catch (error) {

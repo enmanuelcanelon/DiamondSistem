@@ -630,7 +630,8 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
     const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
     const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
 
-    const eventos = await prisma.contratos.findMany({
+    // Obtener eventos de contratos
+    const eventosContratos = await prisma.contratos.findMany({
       where: {
         vendedor_id: parseInt(id),
         fecha_evento: {
@@ -670,9 +671,59 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
       }
     });
 
+    // Obtener eventos de Google Calendar del vendedor autenticado
+    let eventosGoogleCalendar = [];
+    try {
+      const { obtenerEventosPorMes } = require('../utils/googleCalendarService');
+      // Solo obtener eventos del vendedor autenticado (no de otros)
+      eventosGoogleCalendar = await obtenerEventosPorMes(parseInt(id), mesFiltro, añoFiltro);
+    } catch (error) {
+      logger.warn('Error al obtener eventos de Google Calendar:', error);
+      // Continuar sin eventos de Google Calendar si hay error
+    }
+
+    // Combinar eventos de contratos y Google Calendar
+    const eventosCombinados = [...eventosContratos];
+
+    // Agregar eventos de Google Calendar formateados
+    eventosGoogleCalendar.forEach(eventoGoogle => {
+      try {
+        // Parsear fecha de inicio del evento de Google Calendar
+        const fechaInicioEvento = new Date(eventoGoogle.fecha_inicio);
+        const fechaFinEvento = new Date(eventoGoogle.fecha_fin);
+        
+        // Solo incluir si está en el mes correcto
+        if (fechaInicioEvento.getMonth() + 1 === mesFiltro && fechaInicioEvento.getFullYear() === añoFiltro) {
+          eventosCombinados.push({
+            id: `google_${eventoGoogle.id}`,
+            codigo_contrato: null,
+            fecha_evento: fechaInicioEvento,
+            hora_inicio: fechaInicioEvento,
+            hora_fin: fechaFinEvento,
+            cantidad_invitados: null,
+            estado_pago: null,
+            clientes: {
+              nombre_completo: eventoGoogle.titulo,
+              email: eventoGoogle.creador,
+              telefono: null
+            },
+            salones: {
+              nombre: eventoGoogle.ubicacion || 'Google Calendar'
+            },
+            eventos: null,
+            es_google_calendar: true,
+            descripcion: eventoGoogle.descripcion,
+            htmlLink: eventoGoogle.htmlLink
+          });
+        }
+      } catch (error) {
+        logger.warn('Error al procesar evento de Google Calendar:', error);
+      }
+    });
+
     // Agrupar eventos por día
     const eventosPorDia = {};
-    eventos.forEach(evento => {
+    eventosCombinados.forEach(evento => {
       const fecha = new Date(evento.fecha_evento);
       const dia = fecha.getDate();
       if (!eventosPorDia[dia]) {
@@ -689,9 +740,11 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
         fecha_inicio: fechaInicio.toISOString(),
         fecha_fin: fechaFin.toISOString()
       },
-      total_eventos: eventos.length,
+      total_eventos: eventosCombinados.length,
       eventos_por_dia: eventosPorDia,
-      eventos: eventos
+      eventos: eventosCombinados,
+      eventos_contratos: eventosContratos.length,
+      eventos_google_calendar: eventosGoogleCalendar.length
     });
 
   } catch (error) {

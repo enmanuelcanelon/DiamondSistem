@@ -3,6 +3,7 @@
  */
 
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
 
 // Rate limiting general para todas las rutas
 // Aumentado para permitir uso normal del sistema (dashboard, listas, etc.)
@@ -89,8 +90,12 @@ const leaksLimiter = rateLimit({
   legacyHeaders: false,
   // Usar keyGenerator para diferenciar por usuario autenticado si es posible
   keyGenerator: (req) => {
-    // Si hay usuario autenticado, usar su ID, sino usar IP
-    return req.user?.id ? `leaks:${req.user.id}` : req.ip;
+    // Si hay usuario autenticado, usar su ID, sino usar IP con helper para IPv6
+    if (req.user?.id) {
+      return `leaks:${req.user.id}`;
+    }
+    // Usar el helper de express-rate-limit para manejar IPv6 correctamente
+    return ipKeyGenerator(req);
   },
   // No contar requests que fallan con 429 (evitar que se acumulen)
   skip: (req) => {

@@ -21,6 +21,13 @@ model vendedores {
   activo              Boolean?  @default(true)
   fecha_registro      DateTime? @default(now()) @db.Timestamp(6)
   fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+  
+  // Google Calendar OAuth
+  google_calendar_id          String?   @db.VarChar(255)
+  google_access_token         String?   @db.Text  // Encriptado
+  google_refresh_token        String?   @db.Text  // Encriptado
+  google_token_expires_at     DateTime? @db.Timestamp(6)
+  google_calendar_sync_enabled Boolean?  @default(false)
 
   // Relaciones
   clientes                clientes[]
