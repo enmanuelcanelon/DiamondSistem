@@ -146,24 +146,42 @@ function CalendarioMensual() {
             {eventosDelDia.length === 0 ? (
               <div className="text-xs text-muted-foreground text-center mt-1">Sin eventos</div>
             ) : (
-              eventosDelDia.map((evento, index) => (
-                <div
-                  key={evento.id}
-                  onClick={() => navigate(`/contratos/${evento.id}`)}
-                  className={`text-xs p-1.5 rounded cursor-pointer hover:opacity-80 transition border ${obtenerColorEstado(evento.estado_pago)}`}
-                  title={`${evento.clientes?.nombre_completo || 'Cliente'} - ${evento.salones?.nombre || 'Salón'} - ${formatearHora(evento.hora_inicio)}`}
-                >
-                  <div className="font-medium truncate">
-                    {evento.clientes?.nombre_completo || 'Sin nombre'}
+              eventosDelDia.map((evento, index) => {
+                const esGoogleCalendar = evento.es_google_calendar || evento.id?.toString().startsWith('google_');
+                const colorClase = esGoogleCalendar 
+                  ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300'
+                  : obtenerColorEstado(evento.estado_pago);
+                
+                return (
+                  <div
+                    key={evento.id}
+                    onClick={() => {
+                      if (esGoogleCalendar && evento.htmlLink) {
+                        window.open(evento.htmlLink, '_blank');
+                      } else if (!esGoogleCalendar) {
+                        navigate(`/contratos/${evento.id}`);
+                      }
+                    }}
+                    className={`text-xs p-1.5 rounded cursor-pointer hover:opacity-80 transition border ${colorClase}`}
+                    title={esGoogleCalendar 
+                      ? `${evento.clientes?.nombre_completo || 'Evento'} - ${evento.salones?.nombre || 'Google Calendar'} - ${formatearHora(evento.hora_inicio)}`
+                      : `${evento.clientes?.nombre_completo || 'Cliente'} - ${evento.salones?.nombre || 'Salón'} - ${formatearHora(evento.hora_inicio)}`}
+                  >
+                    <div className="font-medium truncate flex items-center gap-1">
+                      {esGoogleCalendar && (
+                        <span className="text-[8px]">📅</span>
+                      )}
+                      {evento.clientes?.nombre_completo || 'Sin nombre'}
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] mt-0.5">
+                      {evento.hora_inicio && (
+                        <Clock className="w-3 h-3" />
+                      )}
+                      {formatearHora(evento.hora_inicio)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] mt-0.5">
-                    {evento.hora_inicio && (
-                      <Clock className="w-3 h-3" />
-                    )}
-                    {formatearHora(evento.hora_inicio)}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

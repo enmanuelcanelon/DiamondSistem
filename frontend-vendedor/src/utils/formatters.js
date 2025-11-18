@@ -16,8 +16,11 @@ export const formatearHora = (isoString) => {
     
     // Verificar si es una fecha válida
     if (!isNaN(fecha.getTime())) {
-      const horas = fecha.getHours();
-      const minutos = fecha.getMinutes();
+      // Usar UTC para evitar problemas de zona horaria
+      // El backend guarda las horas como "1970-01-01T13:00:00Z" (UTC)
+      // Por lo tanto, debemos leerlas como UTC también
+      const horas = fecha.getUTCHours();
+      const minutos = fecha.getUTCMinutes();
       const ampm = horas >= 12 ? 'p.m.' : 'a.m.';
       const hour12 = horas % 12 || 12;
       return `${hour12}:${String(minutos).padStart(2, '0')} ${ampm}`;

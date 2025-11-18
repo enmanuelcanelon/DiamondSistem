@@ -25,6 +25,7 @@ import ComisionesVendedor from './pages/ComisionesVendedor';
 import Leaks from './pages/Leaks';
 import LeaksDisponibles from './pages/LeaksDisponibles';
 import LeaksMios from './pages/LeaksMios';
+import Configuracion from './pages/Configuracion';
 
 // Pages - Cliente (ELIMINADAS - Ahora están en frontend-cliente)
 
@@ -163,6 +164,7 @@ function App() {
             <Route path="leaks" element={<Leaks />} />
             <Route path="leaks/disponibles" element={<LeaksDisponibles />} />
             <Route path="leaks/misleaks" element={<LeaksMios />} />
+            <Route path="configuracion" element={<Configuracion />} />
             <Route path="solicitudes/:id" element={<DetalleSolicitud />} />
             <Route path="chat/:contratoId" element={<ChatVendedor />} />
             <Route path="ajustes/:contratoId" element={<AjustesEventoVendedor />} />

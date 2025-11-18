@@ -4,6 +4,7 @@ import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, Chevron
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import ModalCrearCliente from '../components/ModalCrearCliente';
+import CalendarioSelector from '../components/CalendarioSelector';
 import { calcularDuracion, formatearHora } from '../utils/formatters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -346,15 +347,8 @@ function CrearOferta() {
       return { necesarias: 0, duracionEvento: 0, duracionTotal: 0 };
     }
 
-    const [horaInicioH, horaInicioM] = formData.hora_inicio.split(':').map(Number);
-    const [horaFinH, horaFinM] = formData.hora_fin.split(':').map(Number);
-    
-    let duracionEvento = (horaFinH + (horaFinM / 60)) - (horaInicioH + (horaInicioM / 60));
-    
-    // Si la hora de fin es menor, el evento cruza la medianoche
-    if (duracionEvento < 0) {
-      duracionEvento += 24;
-    }
+    // Usar la función calcularDuracion que maneja correctamente el cruce de medianoche
+    const duracionEvento = calcularDuracion(formData.hora_inicio, formData.hora_fin);
 
     // La duración del paquete es solo la duración base (NO se suman horas extras incluidas)
     const duracionTotal = paqueteSeleccionado.duracion_horas || 0;
@@ -365,24 +359,67 @@ function CrearOferta() {
     return { necesarias: horasExtrasNecesarias, duracionEvento, duracionTotal };
   };
 
-  // Validar horas extras cuando cambien las horas
+  // Agregar automáticamente horas extras cuando sean necesarias
   useEffect(() => {
-    const { necesarias, duracionEvento } = calcularHorasExtras();
+    // Solo ejecutar si tenemos todos los datos necesarios
+    if (!paqueteSeleccionado || !formData.hora_inicio || !formData.hora_fin || !servicios) {
+      return;
+    }
+
+    const { necesarias } = calcularHorasExtras();
     
     if (necesarias > 0) {
-      const horaExtraServicio = servicios?.find(s => s.nombre === 'Hora Extra');
+      const horaExtraServicio = servicios.find(s => s.nombre === 'Hora Extra');
       if (!horaExtraServicio) return;
 
-      const cantidadAgregada = serviciosSeleccionados.find(
+      const servicioExistente = serviciosSeleccionados.find(
         s => s.servicio_id === horaExtraServicio.id
-      )?.cantidad || 0;
+      );
 
+      const cantidadAgregada = servicioExistente?.cantidad || 0;
+
+      // Si faltan horas extras, agregarlas automáticamente
       if (cantidadAgregada < necesarias) {
-        // const faltante = necesarias - cantidadAgregada;
-        // console.warn(`⚠️ Faltan ${faltante} hora(s) extra. Evento: ${duracionEvento.toFixed(1)}h, Paquete: ${paqueteSeleccionado.duracion_horas}h`);
+        if (servicioExistente) {
+          // Si ya existe, solo actualizar la cantidad (mantener el precio_ajustado si fue editado)
+          setServiciosSeleccionados(
+            serviciosSeleccionados.map(s =>
+              s.servicio_id === horaExtraServicio.id
+                ? { ...s, cantidad: necesarias }
+                : s
+            )
+          );
+        } else {
+          // Si no existe, agregarlo con la cantidad necesaria y precio por defecto de $800 (editable)
+          setServiciosSeleccionados([
+            ...serviciosSeleccionados,
+            {
+              servicio_id: horaExtraServicio.id,
+              cantidad: necesarias,
+              opcion_seleccionada: '',
+              precio_ajustado: 800.00 // Precio por defecto de $800, editable
+            }
+          ]);
+        }
+      } else if (cantidadAgregada > necesarias) {
+        // Si hay más horas extras de las necesarias, reducir a las necesarias
+        // (pero no eliminar completamente si el usuario las agregó manualmente)
+        if (cantidadAgregada > necesarias + 1) {
+          // Solo reducir si hay más de 1 hora extra de diferencia
+          setServiciosSeleccionados(
+            serviciosSeleccionados.map(s =>
+              s.servicio_id === horaExtraServicio.id
+                ? { ...s, cantidad: necesarias }
+                : s
+            )
+          );
+        }
       }
     }
-  }, [formData.hora_inicio, formData.hora_fin, paqueteSeleccionado, serviciosSeleccionados, servicios]);
+    // Nota: No eliminamos automáticamente las horas extras si no se necesitan,
+    // para permitir que el usuario las mantenga si las agregó manualmente
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.hora_inicio, formData.hora_fin, paqueteSeleccionado?.duracion_horas, servicios]);
 
   // Mutation para crear oferta
   const mutation = useMutation({
@@ -1708,30 +1745,43 @@ function CrearOferta() {
                 <Label htmlFor="fecha_evento">
                   Fecha del Evento <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="fecha_evento"
-                  type="date"
-                  name="fecha_evento"
-                  value={formData.fecha_evento}
-                  onChange={handleChange}
-                  min={obtenerFechaMinima()}
-                  required
-                  disabled={!formData.salon_id || formData.salon_id === ''}
-                  className={errorFecha ? 'border-destructive' : ''}
-                />
                 {!formData.salon_id || formData.salon_id === '' ? (
-                  <p className="text-xs text-muted-foreground">
-                    ⚠️ Primero selecciona un lugar para el evento
-                  </p>
-                ) : errorFecha ? (
-                  <p className="text-sm text-destructive flex items-start gap-2">
-                    <span>⚠</span>
-                    <span>{errorFecha}</span>
-                  </p>
-                ) : formData.fecha_evento && (
-                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                    ✓ Fecha seleccionada correctamente
-                  </p>
+                  <>
+                    <Input
+                      id="fecha_evento"
+                      type="date"
+                      name="fecha_evento"
+                      value={formData.fecha_evento}
+                      onChange={handleChange}
+                      min={obtenerFechaMinima()}
+                      required
+                      disabled
+                      className={errorFecha ? 'border-destructive' : ''}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      ⚠️ Primero selecciona un lugar para el evento
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <CalendarioSelector
+                      fechaSeleccionada={formData.fecha_evento}
+                      onFechaSeleccionada={(fecha) => {
+                        handleChange({ target: { name: 'fecha_evento', value: fecha } });
+                      }}
+                      fechaMinima={obtenerFechaMinima()}
+                    />
+                    {errorFecha ? (
+                      <p className="text-sm text-destructive flex items-start gap-2">
+                        <span>⚠</span>
+                        <span>{errorFecha}</span>
+                      </p>
+                    ) : formData.fecha_evento && (
+                      <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                        ✓ Fecha seleccionada correctamente
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
