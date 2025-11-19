@@ -392,24 +392,24 @@ function Dashboard() {
 
   // Descargar reporte
   const descargarReporte = async () => {
-    try {
-      const response = await api.get(`/vendedores/${user.id}/reporte-mensual/${mesSeleccionado}/${añoSeleccionado}`, {
-        responseType: 'blob'
-      });
-      
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Reporte-Mensual-${nombresMeses[mesSeleccionado - 1]}-${añoSeleccionado}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error al descargar reporte:', error);
-      alert('Error al descargar el reporte');
-    }
+                    try {
+                      const response = await api.get(`/vendedores/${user.id}/reporte-mensual/${mesSeleccionado}/${añoSeleccionado}`, {
+                        responseType: 'blob'
+                      });
+                      
+                      const blob = new Blob([response.data], { type: 'application/pdf' });
+                      const url = window.URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `Reporte-Mensual-${nombresMeses[mesSeleccionado - 1]}-${añoSeleccionado}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      window.URL.revokeObjectURL(url);
+                    } catch (error) {
+                      console.error('Error al descargar reporte:', error);
+                      alert('Error al descargar el reporte');
+                    }
   };
 
   // Calcular tasa de conversión como número
@@ -600,7 +600,7 @@ function Dashboard() {
                         <span className="text-xs font-semibold">
                           {esPositivo ? '+' : '-'}{cambioAbsoluto}
                         </span>
-                      </div>
+                </div>
                     </Badge>
                   )}
                   {esCero && (
@@ -612,7 +612,7 @@ function Dashboard() {
                         <span className="text-xs font-semibold">
                           0
                         </span>
-                      </div>
+              </div>
                     </Badge>
                   )}
                 </CardHeader>
@@ -643,19 +643,19 @@ function Dashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Pendientes</span>
                 <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                  {stats?.estadisticas?.ofertas?.pendientes || 0}
+                {stats?.estadisticas?.ofertas?.pendientes || 0}
                 </Badge>
-              </div>
+            </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Aceptadas</span>
                 <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
-                  {stats?.estadisticas?.ofertas?.aceptadas || 0}
+                {stats?.estadisticas?.ofertas?.aceptadas || 0}
                 </Badge>
-              </div>
+            </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Rechazadas</span>
                 <Badge variant="outline" className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
-                  {stats?.estadisticas?.ofertas?.rechazadas || 0}
+                {stats?.estadisticas?.ofertas?.rechazadas || 0}
                 </Badge>
               </div>
               <Separator />
@@ -666,7 +666,7 @@ function Dashboard() {
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     <span className="font-semibold">{stats?.estadisticas?.ofertas?.tasa_conversion || '0%'}</span>
                   </div>
-                </div>
+            </div>
                 {/* Gráfico de Tasa de Conversión */}
                 <div className="h-[200px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -737,9 +737,9 @@ function Dashboard() {
                       />
                     </AreaChart>
                   </ResponsiveContainer>
-                </div>
-              </div>
             </div>
+          </div>
+        </div>
           </CardContent>
         </Card>
 
@@ -754,7 +754,7 @@ function Dashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Porcentaje</span>
                 <Badge variant="secondary">
-                  {stats?.estadisticas?.finanzas?.comision_porcentaje || 0}%
+                {stats?.estadisticas?.finanzas?.comision_porcentaje || 0}%
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
@@ -763,8 +763,8 @@ function Dashboard() {
                   {mostrarDatos 
                     ? `$${parseFloat(stats?.estadisticas?.comisiones?.total || stats?.estadisticas?.finanzas?.total_comisiones || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : '••••••'}
-                </span>
-              </div>
+              </span>
+            </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Desbloqueadas</span>
                 <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
@@ -780,12 +780,12 @@ function Dashboard() {
                     ? `$${parseFloat(stats?.estadisticas?.comisiones?.pendientes || stats?.estadisticas?.finanzas?.total_comisiones_pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : '••••••'}
                 </Badge>
-              </div>
+            </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Contratos Pagados</span>
                 <Badge variant="default">
-                  {stats?.estadisticas?.contratos?.pagados_completo || 0}
+                {stats?.estadisticas?.contratos?.pagados_completo || 0}
                 </Badge>
               </div>
 
@@ -807,12 +807,12 @@ function Dashboard() {
                               {mostrarDatos 
                                 ? `$${item.total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                 : '••••••'}
-                            </span>
-                          </div>
+              </span>
+            </div>
                         );
                       })}
-                    </div>
-                  </div>
+          </div>
+        </div>
                 </>
               )}
             </div>
@@ -833,21 +833,21 @@ function Dashboard() {
               className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-auto flex-col gap-3 py-6`}
             >
               <Users className="h-5 w-5" />
-              <span className="font-medium">Nuevo Cliente</span>
+            <span className="font-medium">Nuevo Cliente</span>
             </Link>
             <Link
               to="/ofertas/nueva"
               className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-auto flex-col gap-3 py-6`}
             >
               <FileText className="h-5 w-5" />
-              <span className="font-medium">Nueva Oferta</span>
+            <span className="font-medium">Nueva Oferta</span>
             </Link>
             <Link
               to="/contratos"
               className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-auto flex-col gap-3 py-6`}
             >
               <FileCheck className="h-5 w-5" />
-              <span className="font-medium">Ver Contratos</span>
+            <span className="font-medium">Ver Contratos</span>
             </Link>
           </div>
         </CardContent>
@@ -875,11 +875,11 @@ function Dashboard() {
               {[...Array(5)].map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
-            </div>
+        </div>
           ) : contratos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No hay contratos para el mes seleccionado
-            </div>
+      </div>
           ) : (
             <Table>
               <TableHeader>

@@ -452,6 +452,7 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
         hora_fin: true,
         salones: {
           select: {
+            id: true,
             nombre: true
           }
         }
@@ -476,6 +477,10 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
         fecha_evento: c.fecha_evento,
         hora_inicio: c.hora_inicio,
         hora_fin: c.hora_fin,
+        salones: c.salones ? {
+          id: c.salones.id,
+          nombre: c.salones.nombre
+        } : null,
         salon: c.salones?.nombre || null,
         ubicacion: c.salones?.nombre || null,
         tipo: 'contrato',

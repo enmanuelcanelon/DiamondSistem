@@ -252,7 +252,7 @@ router.get('/disponibles', authenticate, requireVendedor, async (req, res, next)
       if (salon === '?') {
         where.salon_preferido = '?';
       } else {
-        where.salon_preferido = salon;
+      where.salon_preferido = salon;
       }
     }
 
@@ -618,7 +618,7 @@ router.put('/:id/estado', authenticate, requireVendedor, async (req, res, next) 
     const { estado, fecha_cita_salon, detalles_interesado, motivo_no_interesado, fecha_proximo_contacto, notas_vendedor } = req.body;
 
     const estadosValidos = ['nuevo', 'interesado', 'contactado_llamar_luego', 'no_contesta_llamar_luego', 'contactado_no_interesado'];
-
+    
     if (!estado || !estadosValidos.includes(estado)) {
       throw new ValidationError('Estado inválido');
     }
@@ -660,8 +660,8 @@ router.put('/:id/estado', authenticate, requireVendedor, async (req, res, next) 
 
     // Campos específicos según el estado
     if (estado === 'interesado') {
-      if (fecha_cita_salon) {
-        dataUpdate.fecha_cita_salon = new Date(fecha_cita_salon);
+    if (fecha_cita_salon) {
+      dataUpdate.fecha_cita_salon = new Date(fecha_cita_salon);
       }
       if (detalles_interesado) {
         dataUpdate.detalles_interesado = detalles_interesado;
@@ -1167,7 +1167,7 @@ router.post('/sincronizar-old', authenticate, requireVendedor, async (req, res, 
         errores.push({
           email: leakData.email,
           telefono: leakData.telefono,
-          error: error.message
+            error: error.message
         });
       }
     }
