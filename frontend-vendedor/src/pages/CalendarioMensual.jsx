@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
@@ -16,7 +16,8 @@ import {
   Phone,
   Mail,
   ExternalLink,
-  DollarSign
+  DollarSign,
+  RefreshCw
 } from 'lucide-react';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
@@ -31,6 +32,7 @@ import { formatearHora, calcularDuracion, formatearMoneda } from '../utils/forma
 function CalendarioMensual() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const fechaActual = new Date();
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
@@ -47,36 +49,65 @@ function CalendarioMensual() {
     otros: true
   });
   const [tipoCalendario, setTipoCalendario] = useState('vendedor'); // 'general', 'vendedor', 'leads'
+  const [refrescar, setRefrescar] = useState(false);
 
   // Obtener eventos del vendedor (solo contratos del vendedor)
-  const { data: calendarioVendedor, isLoading: cargandoVendedor } = useQuery({
+  const { data: calendarioVendedor, isLoading: cargandoVendedor, refetch: refetchVendedor } = useQuery({
     queryKey: ['calendario-mensual', user?.id, mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
       const response = await api.get(`/vendedores/${user.id}/calendario/mes/${mesSeleccionado}/${añoSeleccionado}`);
       return response.data;
     },
     enabled: !!user?.id && tipoCalendario === 'vendedor',
+    staleTime: 0, // Los datos siempre se consideran obsoletos - forzar refresco
+    refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
   });
 
   // Obtener todos los eventos (calendario general)
-  const { data: calendarioTodos, isLoading: cargandoTodos } = useQuery({
+  const { data: calendarioTodos, isLoading: cargandoTodos, refetch: refetchTodos } = useQuery({
     queryKey: ['calendario-todos', mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
       const response = await api.get(`/google-calendar/eventos/todos-vendedores/${mesSeleccionado}/${añoSeleccionado}`);
       return response.data;
     },
     enabled: !!user?.id && tipoCalendario === 'general',
+    staleTime: 0, // Los datos siempre se consideran obsoletos - forzar refresco
+    refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
+    refetchInterval: 30000, // Refrescar automáticamente cada 30 segundos para Google Calendar
   });
 
   // Obtener solo eventos de CITAS (leads)
-  const { data: calendarioLeads, isLoading: cargandoLeads } = useQuery({
+  const { data: calendarioLeads, isLoading: cargandoLeads, refetch: refetchLeads } = useQuery({
     queryKey: ['calendario-citas', user?.id, mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
       const response = await api.get(`/google-calendar/eventos/citas/${mesSeleccionado}/${añoSeleccionado}`);
       return response.data;
     },
     enabled: !!user?.id && tipoCalendario === 'leads',
+    staleTime: 0, // Los datos siempre se consideran obsoletos - forzar refresco
+    refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
+    refetchInterval: 30000, // Refrescar automáticamente cada 30 segundos para Google Calendar
   });
+
+  // Función para refrescar manualmente
+  const handleRefrescar = async () => {
+    setRefrescar(true);
+    try {
+      if (tipoCalendario === 'general') {
+        await refetchTodos();
+      } else if (tipoCalendario === 'leads') {
+        await refetchLeads();
+      } else {
+        await refetchVendedor();
+      }
+      // Invalidar todas las queries relacionadas para forzar actualización
+      queryClient.invalidateQueries({ queryKey: ['calendario-todos'] });
+      queryClient.invalidateQueries({ queryKey: ['calendario-citas'] });
+      queryClient.invalidateQueries({ queryKey: ['calendario-mensual'] });
+    } finally {
+      setRefrescar(false);
+    }
+  };
 
   const nombresMeses = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -362,12 +393,13 @@ function CalendarioMensual() {
                     text-xs px-2 py-0.5 rounded-r cursor-pointer
                     hover:opacity-80 transition-opacity truncate
                   `}
-                  title={`${evento.clientes?.nombre_completo || evento.summary || 'Evento'} - ${formatearHora(evento.hora_inicio)} - ${evento.salones?.nombre || evento.salon || 'Sin salón'}`}
+                    title={`${evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}${evento.es_todo_el_dia ? ' - Todo el día' : ` - ${formatearHora(evento.hora_inicio)}`} - ${evento.salones?.nombre || evento.salon || evento.ubicacion || 'Sin salón'}`}
                 >
                   <div className="flex items-center gap-1">
                     <div className={`w-1.5 h-1.5 rounded-full ${color.dot} flex-shrink-0`} />
                     <span className="truncate">
-                      {formatearHora(evento.hora_inicio)} {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
+                      {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
+                      {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
                     </span>
                   </div>
                 </div>
@@ -446,6 +478,18 @@ function CalendarioMensual() {
                 <SelectItem value="leads">📋 Calendario Leads (CITAS)</SelectItem>
               </SelectContent>
             </Select>
+            
+            {/* Botón de refrescar */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefrescar}
+              disabled={refrescar}
+              className="h-8 w-8"
+              title="Refrescar eventos de Google Calendar"
+            >
+              <RefreshCw className={`h-4 w-4 ${refrescar ? 'animate-spin' : ''}`} />
+            </Button>
             
             <Button
               variant="outline"
@@ -663,7 +707,8 @@ function CalendarioMensual() {
                                 <div className="flex items-center gap-1">
                                   <div className={`w-1.5 h-1.5 rounded-full ${color.dot} flex-shrink-0`} />
                                   <span className="truncate">
-                                    {formatearHora(evento.hora_inicio)} {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
+                                    {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
+                                    {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
                                   </span>
                                 </div>
                               </div>
@@ -722,7 +767,12 @@ function CalendarioMensual() {
                                 {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
                               </div>
                               <div className="space-y-1 text-sm">
-                                {evento.hora_inicio && (
+                                {evento.es_todo_el_dia ? (
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4" />
+                                    <span className="font-medium">Todo el día</span>
+                                  </div>
+                                ) : evento.hora_inicio && (
                                   <div className="flex items-center gap-2">
                                     <Clock className="w-4 h-4" />
                                     <span>
@@ -951,7 +1001,12 @@ function CalendarioMensual() {
                                   {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
                                 </div>
                                 <div className="space-y-1 text-xs opacity-90">
-                                  {evento.hora_inicio && (
+                                  {evento.es_todo_el_dia ? (
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      <span className="font-medium">Todo el día</span>
+                                    </div>
+                                  ) : evento.hora_inicio && (
                                     <div className="flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
                                       <span>
@@ -989,42 +1044,6 @@ function CalendarioMensual() {
                   </div>
                 </div>
 
-              {/* Eventos de otros vendedores */}
-              {eventosTodosDiaSeleccionado.length > eventosDiaSeleccionado.length && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Otros Eventos ({eventosTodosDiaSeleccionado.length - eventosDiaSeleccionado.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {eventosTodosDiaSeleccionado
-                      .filter(e => !eventosDiaSeleccionado.some(me => me.id === e.id))
-                      .map((evento, index) => (
-                        <div
-                          key={evento.id || index}
-                          className="bg-blue-50 dark:bg-blue-950/20 border-l-4 border-blue-500 text-blue-900 dark:text-blue-100 rounded-r-lg p-3 text-xs"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate mb-0.5">
-                                {evento.salon || 'Evento'}
-                              </div>
-                              {evento.hora_inicio && (
-                                <div className="flex items-center gap-1 text-blue-700 dark:text-blue-300">
-                                  <Clock className="w-3 h-3" />
-                                  <span>{formatearHora(evento.hora_inicio)}</span>
-                                  {evento.hora_fin && (
-                                    <span> - {formatearHora(evento.hora_fin)}</span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -1050,7 +1069,7 @@ function CalendarioMensual() {
                       <div className={`w-4 h-4 rounded-full ${color.dot}`} />
                     );
                   })()}
-                  {eventoSeleccionado.clientes?.nombre_completo || eventoSeleccionado.summary || 'Evento'}
+                  {eventoSeleccionado.clientes?.nombre_completo || eventoSeleccionado.titulo || eventoSeleccionado.summary || 'Evento'}
                 </DialogTitle>
                 <DialogDescription>
                   {eventoSeleccionado.es_google_calendar ? 'Evento de Google Calendar' : 'Contrato de evento'}
@@ -1058,35 +1077,79 @@ function CalendarioMensual() {
               </DialogHeader>
 
               <div className="space-y-6 mt-4">
-                {/* Información del Cliente */}
-                {eventoSeleccionado.clientes && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      Información del Cliente
-                    </h3>
-                    <div className="space-y-2 pl-6">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Nombre:</span>
-                        <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.clientes.nombre_completo}</span>
+                {/* Información del Vendedor (para eventos de Google Calendar) */}
+                {(eventoSeleccionado.vendedor_nombre || eventoSeleccionado.vendedor_codigo) && (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Vendedor
+                      </h3>
+                      <div className="space-y-2 pl-6">
+                        {eventoSeleccionado.vendedor_nombre && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Nombre:</span>
+                            <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.vendedor_nombre}</span>
+                          </div>
+                        )}
+                        {eventoSeleccionado.vendedor_codigo && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Código:</span>
+                            <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">{eventoSeleccionado.vendedor_codigo}</span>
+                          </div>
+                        )}
                       </div>
-                      {eventoSeleccionado.clientes.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.clientes.email}</span>
-                        </div>
-                      )}
-                      {eventoSeleccionado.clientes.telefono && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.clientes.telefono}</span>
-                        </div>
-                      )}
                     </div>
-                  </div>
+                    <Separator />
+                  </>
                 )}
 
-                <Separator />
+                {/* Información del Cliente */}
+                {eventoSeleccionado.clientes && (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Información del Cliente
+                      </h3>
+                      <div className="space-y-2 pl-6">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Nombre:</span>
+                          <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.clientes.nombre_completo}</span>
+                        </div>
+                        {eventoSeleccionado.clientes.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.clientes.email}</span>
+                          </div>
+                        )}
+                        {eventoSeleccionado.clientes.telefono && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.clientes.telefono}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
+                {/* Título del Evento (para Google Calendar) */}
+                {eventoSeleccionado.es_google_calendar && (eventoSeleccionado.titulo || eventoSeleccionado.summary) && 
+                 (eventoSeleccionado.titulo || eventoSeleccionado.summary) !== (eventoSeleccionado.clientes?.nombre_completo || '') && (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Título del Evento</h3>
+                      <div className="pl-6">
+                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          {eventoSeleccionado.titulo || eventoSeleccionado.summary}
+                        </span>
+                      </div>
+                    </div>
+                    <Separator />
+                  </>
+                )}
 
                 {/* Fecha y Hora */}
                 <div>
@@ -1098,23 +1161,49 @@ function CalendarioMensual() {
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-400" />
                       <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {new Date(eventoSeleccionado.fecha_evento).toLocaleDateString('es-ES', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                        {(() => {
+                          // Para eventos de todo el día, parsear la fecha correctamente
+                          let fechaParaMostrar = eventoSeleccionado.fecha_evento || eventoSeleccionado.fecha_inicio || eventoSeleccionado.hora_inicio;
+                          
+                          if (eventoSeleccionado.es_todo_el_dia && eventoSeleccionado.fecha_inicio) {
+                            // Si es evento de todo el día, usar la fecha directamente sin conversión de zona horaria
+                            // La fecha viene como "2025-11-19T00:00:00-05:00", extraer solo la parte de fecha
+                            const fechaStr = eventoSeleccionado.fecha_inicio.split('T')[0];
+                            const [year, month, day] = fechaStr.split('-').map(Number);
+                            fechaParaMostrar = new Date(year, month - 1, day);
+                          }
+                          
+                          return new Date(fechaParaMostrar).toLocaleDateString('es-ES', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            timeZone: eventoSeleccionado.timeZone || 'America/New_York'
+                          });
+                        })()}
                       </span>
                     </div>
-                    {eventoSeleccionado.hora_inicio && (
+                    {eventoSeleccionado.es_todo_el_dia ? (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          Todo el día
+                        </span>
+                      </div>
+                    ) : (eventoSeleccionado.hora_inicio || eventoSeleccionado.fecha_inicio) && (
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-gray-400" />
                         <span className="text-sm text-gray-900 dark:text-gray-100">
-                          {formatearHora(eventoSeleccionado.hora_inicio)}
-                          {eventoSeleccionado.hora_fin && ` - ${formatearHora(eventoSeleccionado.hora_fin)}`}
+                          {formatearHora(eventoSeleccionado.hora_inicio || eventoSeleccionado.fecha_inicio)}
+                          {(eventoSeleccionado.hora_fin || eventoSeleccionado.fecha_fin) && ` - ${formatearHora(eventoSeleccionado.hora_fin || eventoSeleccionado.fecha_fin)}`}
                           {(() => {
-                            const duracion = calcularDuracion(eventoSeleccionado.hora_inicio, eventoSeleccionado.hora_fin);
-                            return duracion > 0 ? ` (${Math.round(duracion * 10) / 10} horas)` : '';
+                            const inicio = eventoSeleccionado.hora_inicio || eventoSeleccionado.fecha_inicio;
+                            const fin = eventoSeleccionado.hora_fin || eventoSeleccionado.fecha_fin;
+                            if (inicio && fin) {
+                              const duracion = calcularDuracion(inicio, fin);
+                              return duracion > 0 ? ` (${Math.round(duracion * 10) / 10} horas)` : '';
+                            }
+                            return '';
                           })()}
                         </span>
                       </div>
@@ -1125,16 +1214,21 @@ function CalendarioMensual() {
                 <Separator />
 
                 {/* Ubicación */}
-                {eventoSeleccionado.salones?.nombre && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      Ubicación
-                    </h3>
-                    <div className="pl-6">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.salones.nombre}</span>
+                {(eventoSeleccionado.salones?.nombre || eventoSeleccionado.ubicacion || eventoSeleccionado.salon || eventoSeleccionado.location) && (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        Ubicación
+                      </h3>
+                      <div className="pl-6">
+                        <span className="text-sm text-gray-900 dark:text-gray-100">
+                          {eventoSeleccionado.salones?.nombre || eventoSeleccionado.ubicacion || eventoSeleccionado.salon || eventoSeleccionado.location}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                    <Separator />
+                  </>
                 )}
 
                 {/* Estado de Pago (solo para contratos) */}
@@ -1183,32 +1277,104 @@ function CalendarioMensual() {
                   </>
                 )}
 
+                {/* Información del Creador/Organizador (Google Calendar) */}
+                {(eventoSeleccionado.creador || eventoSeleccionado.organizador) && (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        Creador / Organizador
+                      </h3>
+                      <div className="space-y-2 pl-6">
+                        {eventoSeleccionado.creador && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Creador:</span>
+                            <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.creador}</span>
+                          </div>
+                        )}
+                        {eventoSeleccionado.organizador && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Organizador:</span>
+                            <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.organizador}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
+                {/* Estado del Evento (Google Calendar) */}
+                {eventoSeleccionado.es_google_calendar && eventoSeleccionado.estado && (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        Estado
+                      </h3>
+                      <div className="pl-6">
+                        <Badge
+                          variant="outline"
+                          className={
+                            eventoSeleccionado.estado === 'confirmed'
+                              ? 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300'
+                              : eventoSeleccionado.estado === 'tentative'
+                              ? 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300'
+                              : 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900/30 dark:text-gray-300'
+                          }
+                        >
+                          {eventoSeleccionado.estado === 'confirmed' && <CheckCircle2 className="w-3 h-3 mr-1" />}
+                          {eventoSeleccionado.estado === 'tentative' && <AlertCircle className="w-3 h-3 mr-1" />}
+                          {eventoSeleccionado.estado === 'confirmed' ? 'Confirmado' : 
+                           eventoSeleccionado.estado === 'tentative' ? 'Tentativo' : 
+                           eventoSeleccionado.estado === 'cancelled' ? 'Cancelado' : eventoSeleccionado.estado}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
                 {/* Descripción (Google Calendar) */}
                 {eventoSeleccionado.descripcion && (
                   <>
-                    <Separator />
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Descripción</h3>
                       <div className="pl-6">
-                        <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                        <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
                           {eventoSeleccionado.descripcion}
                         </p>
                       </div>
                     </div>
+                    <Separator />
                   </>
                 )}
 
                 {/* Código de Contrato */}
                 {eventoSeleccionado.codigo_contrato && (
                   <>
-                    <Separator />
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Código de Contrato</h3>
                       <div className="pl-6">
-                        <span className="text-sm font-mono text-gray-900 dark:text-gray-100">{eventoSeleccionado.codigo_contrato}</span>
+                        <span className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded">{eventoSeleccionado.codigo_contrato}</span>
                       </div>
                     </div>
+                    <Separator />
                   </>
+                )}
+
+                {/* Tipo de Calendario */}
+                {eventoSeleccionado.calendario && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Tipo de Calendario</h3>
+                    <div className="pl-6">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300">
+                        {eventoSeleccionado.calendario === 'principal' ? 'Calendario Principal' :
+                         eventoSeleccionado.calendario === 'citas' ? 'Calendario CITAS' :
+                         eventoSeleccionado.calendario === 'contratos' ? 'Contratos' :
+                         eventoSeleccionado.calendario}
+                      </Badge>
+                    </div>
+                  </div>
                 )}
               </div>
 

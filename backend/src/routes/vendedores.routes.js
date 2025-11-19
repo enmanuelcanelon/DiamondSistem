@@ -699,13 +699,24 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
     // CALENDARIO 3: Eventos del calendario CITAS
     const calendarioCitas = eventosCalendarioCitas.map(eventoGoogle => {
       try {
-        const fechaInicioEvento = new Date(eventoGoogle.fecha_inicio);
-        const fechaFinEvento = new Date(eventoGoogle.fecha_fin);
+        // Para eventos de todo el día, parsear la fecha correctamente
+        let fechaInicioEvento;
+        if (eventoGoogle.es_todo_el_dia && eventoGoogle.fecha_inicio) {
+          const fechaStr = eventoGoogle.fecha_inicio.split('T')[0];
+          const [year, month, day] = fechaStr.split('-').map(Number);
+          fechaInicioEvento = new Date(year, month - 1, day);
+        } else {
+          fechaInicioEvento = new Date(eventoGoogle.fecha_inicio);
+        }
+        
+        const fechaFinEvento = eventoGoogle.fecha_fin ? new Date(eventoGoogle.fecha_fin) : null;
         
         return {
           id: `citas_${eventoGoogle.id}`,
           codigo_contrato: null,
           fecha_evento: fechaInicioEvento,
+          fecha_inicio: eventoGoogle.fecha_inicio,
+          fecha_fin: eventoGoogle.fecha_fin,
           hora_inicio: fechaInicioEvento,
           hora_fin: fechaFinEvento,
           cantidad_invitados: null,
@@ -721,6 +732,8 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
           eventos: null,
           es_google_calendar: true,
           es_citas: true,
+          es_todo_el_dia: eventoGoogle.es_todo_el_dia || false,
+          timeZone: eventoGoogle.timeZone || 'America/New_York',
           descripcion: eventoGoogle.descripcion,
           htmlLink: eventoGoogle.htmlLink,
           tipo: 'citas',

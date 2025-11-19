@@ -16,14 +16,26 @@ export const formatearHora = (isoString) => {
     
     // Verificar si es una fecha válida
     if (!isNaN(fecha.getTime())) {
-      // Usar UTC para evitar problemas de zona horaria
-      // El backend guarda las horas como "1970-01-01T13:00:00Z" (UTC)
-      // Por lo tanto, debemos leerlas como UTC también
-      const horas = fecha.getUTCHours();
-      const minutos = fecha.getUTCMinutes();
-      const ampm = horas >= 12 ? 'p.m.' : 'a.m.';
-      const hour12 = horas % 12 || 12;
-      return `${hour12}:${String(minutos).padStart(2, '0')} ${ampm}`;
+      // Para eventos de Google Calendar, usar hora local (getHours)
+      // Para eventos de la base de datos (que vienen como "1970-01-01T13:00:00Z"), usar UTC
+      // Detectar si es un evento de Google Calendar: si la fecha es reciente (no 1970)
+      const esEventoGoogleCalendar = fecha.getFullYear() > 2000;
+      
+      if (esEventoGoogleCalendar) {
+        // Usar hora local para eventos de Google Calendar
+        const horas = fecha.getHours();
+        const minutos = fecha.getMinutes();
+        const ampm = horas >= 12 ? 'p.m.' : 'a.m.';
+        const hour12 = horas % 12 || 12;
+        return `${hour12}:${String(minutos).padStart(2, '0')} ${ampm}`;
+      } else {
+        // Usar UTC para eventos de la base de datos (formato "1970-01-01T13:00:00Z")
+        const horas = fecha.getUTCHours();
+        const minutos = fecha.getUTCMinutes();
+        const ampm = horas >= 12 ? 'p.m.' : 'a.m.';
+        const hour12 = horas % 12 || 12;
+        return `${hour12}:${String(minutos).padStart(2, '0')} ${ampm}`;
+      }
     }
   } catch (error) {
     // Continuar con el siguiente intento

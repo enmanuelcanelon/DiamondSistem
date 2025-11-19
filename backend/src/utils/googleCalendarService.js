@@ -125,29 +125,64 @@ async function obtenerEventosCalendarioPrincipal(vendedorId, fechaInicio, fechaF
       timeMax: timeMax,
       singleEvents: true,
       orderBy: 'startTime',
-      maxResults: 2500
+      maxResults: 2500,
+      showDeleted: false,
+      // Forzar actualización evitando caché
+      alwaysIncludeEmail: false
     });
 
     const eventos = (response.data.items || []).map(evento => {
+      // Obtener fechas/horas - priorizar dateTime sobre date
       const inicio = evento.start?.dateTime || evento.start?.date;
       const fin = evento.end?.dateTime || evento.end?.date;
+      
+      // Detectar si es evento de todo el día (usa 'date' en lugar de 'dateTime')
+      const esTodoElDia = !evento.start?.dateTime && !!evento.start?.date;
+      
+      let fechaInicio = inicio || null;
+      let fechaFin = fin || null;
+      
+      // Para eventos de todo el día, parsear correctamente en zona horaria de Miami
+      if (esTodoElDia && inicio && !inicio.includes('T')) {
+        // Formato: "2025-11-19" -> agregar hora en zona horaria de Miami
+        // Miami está en America/New_York (EST: UTC-5, EDT: UTC-4)
+        // Usar EST por defecto (-05:00), se ajustará automáticamente según la fecha
+        fechaInicio = `${inicio}T00:00:00-05:00`;
+      }
+      
+      if (esTodoElDia && fin && !fin.includes('T')) {
+        // Para eventos de todo el día, Google Calendar usa el día siguiente como fin
+        // Ejemplo: evento del 19, fin es "2025-11-20" (día siguiente a medianoche)
+        fechaFin = `${fin}T00:00:00-05:00`;
+      }
       
       return {
         id: evento.id,
         titulo: evento.summary || 'Sin título',
         descripcion: evento.description || '',
-        fecha_inicio: inicio,
-        fecha_fin: fin,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        es_todo_el_dia: esTodoElDia, // Marcar como evento de todo el día
+        timeZone: evento.start?.timeZone || evento.end?.timeZone || 'America/New_York',
         ubicacion: evento.location || '',
         creador: evento.creator?.email || '',
         organizador: evento.organizer?.email || '',
         estado: evento.status || 'confirmed',
         htmlLink: evento.htmlLink || '',
-        calendario: 'principal'
+        calendario: 'principal',
+        // Incluir información de actualización para debugging
+        updated: evento.updated || null
       };
     });
 
-    logger.info(`✅ Obtenidos ${eventos.length} eventos del calendario principal para vendedor ${vendedorId}`);
+    // Log de ejemplo para debugging (solo el primer evento)
+    if (eventos.length > 0) {
+      const primerEvento = eventos[0];
+      logger.info(`✅ Obtenidos ${eventos.length} eventos del calendario principal para vendedor ${vendedorId}`);
+      logger.debug(`Ejemplo evento: ${primerEvento.titulo} - Inicio: ${primerEvento.fecha_inicio}, Fin: ${primerEvento.fecha_fin}, Actualizado: ${primerEvento.updated}`);
+    } else {
+      logger.info(`✅ No se encontraron eventos en el calendario principal para vendedor ${vendedorId}`);
+    }
     return eventos;
   } catch (error) {
     logger.error(`❌ Error al obtener eventos del calendario principal para vendedor ${vendedorId}:`, error);
@@ -279,25 +314,53 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
       timeMax: timeMax,
       singleEvents: true,
       orderBy: 'startTime',
-      maxResults: 2500
+      maxResults: 2500,
+      showDeleted: false,
+      // Forzar actualización evitando caché
+      alwaysIncludeEmail: false
     });
 
     const eventos = (response.data.items || []).map(evento => {
+      // Obtener fechas/horas - priorizar dateTime sobre date
       const inicio = evento.start?.dateTime || evento.start?.date;
       const fin = evento.end?.dateTime || evento.end?.date;
+      
+      // Detectar si es evento de todo el día (usa 'date' en lugar de 'dateTime')
+      const esTodoElDia = !evento.start?.dateTime && !!evento.start?.date;
+      
+      let fechaInicio = inicio || null;
+      let fechaFin = fin || null;
+      
+      // Para eventos de todo el día, parsear correctamente en zona horaria de Miami
+      if (esTodoElDia && inicio && !inicio.includes('T')) {
+        // Formato: "2025-11-19" -> agregar hora en zona horaria de Miami
+        // Miami está en America/New_York (EST: UTC-5, EDT: UTC-4)
+        // Usar EST por defecto (-05:00), se ajustará automáticamente según la fecha
+        fechaInicio = `${inicio}T00:00:00-05:00`;
+      }
+      
+      if (esTodoElDia && fin && !fin.includes('T')) {
+        // Para eventos de todo el día, Google Calendar usa el día siguiente como fin
+        // Ejemplo: evento del 19, fin es "2025-11-20" (día siguiente a medianoche)
+        fechaFin = `${fin}T00:00:00-05:00`;
+      }
       
       return {
         id: evento.id,
         titulo: evento.summary || 'Sin título',
         descripcion: evento.description || '',
-        fecha_inicio: inicio,
-        fecha_fin: fin,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        es_todo_el_dia: esTodoElDia, // Marcar como evento de todo el día
+        timeZone: evento.start?.timeZone || evento.end?.timeZone || 'America/New_York',
         ubicacion: evento.location || '',
         creador: evento.creator?.email || '',
         organizador: evento.organizer?.email || '',
         estado: evento.status || 'confirmed',
         htmlLink: evento.htmlLink || '',
-        calendario: 'citas'
+        calendario: 'citas',
+        // Incluir información de actualización para debugging
+        updated: evento.updated || null
       };
     });
 

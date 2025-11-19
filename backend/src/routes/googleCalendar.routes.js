@@ -469,7 +469,7 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
       logger.warn('Error al obtener eventos de Google Calendar:', error);
     }
 
-    // Combinar y formatear eventos (solo información necesaria para verificar conflictos)
+    // Combinar y formatear eventos con toda la información necesaria
     const eventosCombinados = [
       ...contratos.map(c => ({
         id: `contrato_${c.id}`,
@@ -477,22 +477,63 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
         hora_inicio: c.hora_inicio,
         hora_fin: c.hora_fin,
         salon: c.salones?.nombre || null,
-        tipo: 'contrato'
+        ubicacion: c.salones?.nombre || null,
+        tipo: 'contrato',
+        es_google_calendar: false
       })),
-      ...eventosGoogleCalendar.map(e => ({
+      ...eventosGoogleCalendar.map(e => {
+        // Para eventos de todo el día, parsear la fecha correctamente
+        let fechaEvento;
+        if (e.es_todo_el_dia && e.fecha_inicio) {
+          const fechaStr = e.fecha_inicio.split('T')[0];
+          const [year, month, day] = fechaStr.split('-').map(Number);
+          fechaEvento = new Date(year, month - 1, day);
+        } else {
+          fechaEvento = new Date(e.fecha_inicio);
+        }
+        
+        return {
         id: `google_${e.id}`,
-        fecha_evento: new Date(e.fecha_inicio),
+        fecha_evento: fechaEvento,
+        fecha_inicio: e.fecha_inicio,
+        fecha_fin: e.fecha_fin,
         hora_inicio: new Date(e.fecha_inicio),
         hora_fin: new Date(e.fecha_fin),
         salon: e.ubicacion || null,
-        tipo: 'google_calendar'
-      }))
+        ubicacion: e.ubicacion || null,
+        location: e.ubicacion || null,
+        summary: e.titulo || null,
+        descripcion: e.descripcion || null,
+        creador: e.creador || null,
+        organizador: e.organizador || null,
+        estado: e.estado || 'confirmed',
+        htmlLink: e.htmlLink || null,
+        vendedor_nombre: e.vendedor_nombre || null,
+        vendedor_codigo: e.vendedor_codigo || null,
+        calendario: e.calendario || 'principal',
+        tipo: 'google_calendar',
+        es_google_calendar: true,
+        es_todo_el_dia: e.es_todo_el_dia || false, // Incluir flag de todo el día
+        timeZone: e.timeZone || 'America/New_York' // Incluir zona horaria
+        };
+      })
     ];
 
     // Agrupar por día
     const eventosPorDia = {};
     eventosCombinados.forEach(evento => {
-      const fecha = new Date(evento.fecha_evento);
+      let fecha;
+      
+      // Para eventos de todo el día, parsear la fecha correctamente
+      if (evento.es_todo_el_dia && evento.fecha_inicio) {
+        // Extraer la fecha del string (formato: "2025-11-19T00:00:00-05:00")
+        const fechaStr = evento.fecha_inicio.split('T')[0];
+        const [year, month, day] = fechaStr.split('-').map(Number);
+        fecha = new Date(year, month - 1, day);
+      } else {
+        fecha = new Date(evento.fecha_evento);
+      }
+      
       const dia = fecha.getDate();
       if (!eventosPorDia[dia]) {
         eventosPorDia[dia] = [];
