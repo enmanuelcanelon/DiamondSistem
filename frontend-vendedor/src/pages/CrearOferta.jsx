@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, ChevronRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, ChevronRight, ChevronLeft, CheckCircle2, Calendar, Clock, MapPin, Mail, Phone, Users } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import ModalCrearCliente from '../components/ModalCrearCliente';
 import CalendarioSelector from '../components/CalendarioSelector';
 import { calcularDuracion, formatearHora } from '../utils/formatters';
+import useAuthStore from '../store/useAuthStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
@@ -18,6 +19,7 @@ import toast from 'react-hot-toast';
 function CrearOferta() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [searchParams] = useSearchParams();
   const clienteIdFromUrl = searchParams.get('cliente_id');
   
@@ -46,6 +48,7 @@ function CrearOferta() {
   const [paqueteSeleccionado, setPaqueteSeleccionado] = useState(null);
   const [salonSeleccionado, setSalonSeleccionado] = useState(null);
   const [lugarPersonalizado, setLugarPersonalizado] = useState('');
+  const [filtroSalonCalendario, setFiltroSalonCalendario] = useState('todos'); // 'todos' o id del salón
   const [precioBaseAjustado, setPrecioBaseAjustado] = useState('');
   const [ajusteTemporadaCustom, setAjusteTemporadaCustom] = useState('');
   const [tarifaServicioCustom, setTarifaServicioCustom] = useState('');
@@ -67,6 +70,12 @@ function CrearOferta() {
   
   // Estado para servicios excluyentes del paquete (ej: Photobooth 360 o Print)
   const [serviciosExcluyentesSeleccionados, setServiciosExcluyentesSeleccionados] = useState({});
+  
+  // Estados para el calendario del paso 2
+  const fechaActual = new Date();
+  const [mesCalendario, setMesCalendario] = useState(fechaActual.getMonth() + 1);
+  const [añoCalendario, setAñoCalendario] = useState(fechaActual.getFullYear());
+  const [diaSeleccionadoCalendario, setDiaSeleccionadoCalendario] = useState(null);
 
   // Obtener fecha mínima (hoy) en formato YYYY-MM-DD
   const obtenerFechaMinima = () => {
@@ -230,6 +239,18 @@ function CrearOferta() {
       }
     },
     enabled: !!formData.paquete_id,
+  });
+  
+  // Query para obtener eventos del calendario (solo cuando estamos en paso 2 y hay salón seleccionado)
+  const { data: eventosCalendario, isLoading: cargandoEventosCalendario } = useQuery({
+    queryKey: ['calendario-ofertas', user?.id, mesCalendario, añoCalendario],
+    queryFn: async () => {
+      const response = await api.get(`/google-calendar/eventos/todos-vendedores/${mesCalendario}/${añoCalendario}`);
+      return response.data;
+    },
+    enabled: !!user?.id && pasoActual === 2 && !!formData.salon_id,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Detectar temporada automáticamente cuando cambia la fecha
@@ -1567,6 +1588,230 @@ function CrearOferta() {
     'Servicios Adicionales',
     'Descuento'
   ];
+  
+  // Funciones auxiliares para el calendario del paso 2
+  const nombresMeses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  
+  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const diasSemanaCompletos = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  
+  // Función para obtener el día de la semana de una fecha
+  const obtenerDiaSemana = (dia, mes, año) => {
+    const fecha = new Date(año, mes - 1, dia);
+    return diasSemanaCompletos[fecha.getDay()];
+  };
+  
+  const obtenerDiasDelMes = () => {
+    const primerDia = new Date(añoCalendario, mesCalendario - 1, 1);
+    const diasEnMes = new Date(añoCalendario, mesCalendario, 0).getDate();
+    const diaInicioSemana = primerDia.getDay();
+    return { diasEnMes, diaInicioSemana };
+  };
+  
+  const obtenerEventosDelDiaCalendario = (dia) => {
+    console.log('obtenerEventosDelDiaCalendario llamado con día:', dia);
+    console.log('eventosCalendario:', eventosCalendario);
+    if (!eventosCalendario?.eventos_por_dia) {
+      console.log('No hay eventos_por_dia en eventosCalendario');
+      return [];
+    }
+    console.log('eventos_por_dia keys:', Object.keys(eventosCalendario.eventos_por_dia));
+    let eventos = eventosCalendario.eventos_por_dia[dia] || [];
+    console.log(`Eventos del día ${dia}:`, eventos, 'Total:', eventos.length);
+    
+    // Filtrar por salón si hay un filtro activo
+    if (filtroSalonCalendario !== 'todos' && filtroSalonCalendario !== '') {
+      // Obtener el nombre del salón seleccionado para comparar
+      const salonFiltro = salones?.find(s => s.id.toString() === filtroSalonCalendario.toString());
+      const nombreSalonFiltro = salonFiltro?.nombre?.toLowerCase().trim();
+      
+      eventos = eventos.filter(evento => {
+        // Si el evento tiene un salón con ID (contratos), comparar por ID
+        if (evento.salones?.id) {
+          return evento.salones.id.toString() === filtroSalonCalendario.toString();
+        }
+        
+        // Si el evento tiene nombre de salón (Google Calendar o otros), comparar por nombre
+        let nombreSalonEvento = '';
+        if (evento.salones?.nombre) {
+          nombreSalonEvento = String(evento.salones.nombre).toLowerCase().trim();
+        } else if (evento.salon) {
+          nombreSalonEvento = String(evento.salon).toLowerCase().trim();
+        } else if (evento.ubicacion) {
+          nombreSalonEvento = String(evento.ubicacion).toLowerCase().trim();
+        }
+        
+        nombreSalonEvento = nombreSalonEvento.toLowerCase().trim().replace(/\s+/g, ' ');
+        
+        if (nombreSalonEvento && nombreSalonFiltro) {
+          // Lógica de clasificación: Diamond tiene prioridad sobre Doral
+          // Si el evento es "DIAMOND AT DORAL", debe coincidir solo con filtro Diamond
+          const esDiamond = nombreSalonEvento.includes('diamond');
+          const esDoral = nombreSalonEvento.includes('doral') && !nombreSalonEvento.includes('diamond');
+          const esKendall = nombreSalonEvento.includes('kendall') || nombreSalonEvento.includes('kendal') || nombreSalonEvento.includes('kentall');
+          
+          const nombreFiltroLower = nombreSalonFiltro.toLowerCase();
+          const filtroEsDiamond = nombreFiltroLower.includes('diamond');
+          const filtroEsDoral = nombreFiltroLower.includes('doral') && !nombreFiltroLower.includes('diamond');
+          const filtroEsKendall = nombreFiltroLower.includes('kendall') || nombreFiltroLower.includes('kendal');
+          
+          // Comparar según la clasificación correcta
+          if (esDiamond && filtroEsDiamond) return true;
+          if (esDoral && filtroEsDoral) return true;
+          if (esKendall && filtroEsKendall) return true;
+          
+          // Si no coincide con la clasificación específica, usar comparación parcial como fallback
+          return nombreSalonEvento.includes(nombreSalonFiltro) || nombreSalonFiltro.includes(nombreSalonEvento);
+        }
+        
+        // Si no tiene salón identificable, no incluirlo cuando se filtra por salón específico
+        return false;
+      });
+    }
+    
+    return eventos;
+  };
+  
+  const obtenerColorEventoCalendario = (evento) => {
+    let nombreSalon = '';
+    if (evento.salones?.nombre) {
+      nombreSalon = String(evento.salones.nombre).toLowerCase();
+    } else if (evento.salon) {
+      nombreSalon = String(evento.salon).toLowerCase();
+    } else if (evento.ubicacion) {
+      nombreSalon = String(evento.ubicacion).toLowerCase();
+    }
+    
+    nombreSalon = nombreSalon.toLowerCase().trim().replace(/\s+/g, ' ');
+    
+    // Naranja = Diamond (claro y visible)
+    // PRIORIDAD: Diamond debe verificarse ANTES que Doral porque "DIAMOND AT DORAL" contiene ambas palabras
+    // Si dice "diamond at doral" o "diamond at doral 1", es Diamond
+    if (nombreSalon && nombreSalon.includes('diamond')) {
+      return {
+        bg: 'bg-orange-50 dark:bg-orange-900/20',
+        border: 'border-l-4 border-orange-500',
+        text: 'text-orange-800 dark:text-orange-200',
+        dot: 'bg-orange-500'
+      };
+    }
+    
+    // Verde = Doral (claro y visible)
+    // Solo clasificar como Doral si NO contiene "diamond"
+    // "doral 1", "doral", "doral 2", etc. son Doral
+    if (nombreSalon && nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
+      return {
+        bg: 'bg-green-50 dark:bg-green-900/20',
+        border: 'border-l-4 border-green-500',
+        text: 'text-green-800 dark:text-green-200',
+        dot: 'bg-green-500'
+      };
+    }
+    
+    // Azul = Kendall (claro y visible)
+    if (nombreSalon && (nombreSalon.includes('kendall') || nombreSalon.includes('kendal') || nombreSalon.includes('kentall'))) {
+      return {
+        bg: 'bg-blue-50 dark:bg-blue-900/20',
+        border: 'border-l-4 border-blue-500',
+        text: 'text-blue-800 dark:text-blue-200',
+        dot: 'bg-blue-500'
+      };
+    }
+    // Morado = Otros (Google Calendar y otros eventos sin salón específico)
+    if (evento.es_google_calendar || evento.id?.toString().startsWith('google_')) {
+      return {
+        bg: 'bg-purple-50 dark:bg-purple-900/20',
+        border: 'border-l-4 border-purple-500',
+        text: 'text-purple-800 dark:text-purple-200',
+        dot: 'bg-purple-500'
+      };
+    }
+    return {
+      bg: 'bg-gray-100 dark:bg-gray-900/30',
+      border: 'border-l-4 border-gray-500',
+      text: 'text-gray-900 dark:text-gray-100',
+      dot: 'bg-gray-500'
+    };
+  };
+  
+  const cambiarMesCalendario = (direccion) => {
+    if (direccion === 'anterior') {
+      if (mesCalendario === 1) {
+        setMesCalendario(12);
+        setAñoCalendario(añoCalendario - 1);
+      } else {
+        setMesCalendario(mesCalendario - 1);
+      }
+    } else {
+      if (mesCalendario === 12) {
+        setMesCalendario(1);
+        setAñoCalendario(añoCalendario + 1);
+      } else {
+        setMesCalendario(mesCalendario + 1);
+      }
+    }
+  };
+  
+  const formatearFechaParaInput = (dia) => {
+    return `${añoCalendario}-${String(mesCalendario).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+  };
+  
+  const esFechaValidaCalendario = (dia) => {
+    const fecha = new Date(añoCalendario, mesCalendario - 1, dia);
+    const hoy = new Date(obtenerFechaMinima());
+    hoy.setHours(0, 0, 0, 0);
+    fecha.setHours(0, 0, 0, 0);
+    return fecha >= hoy;
+  };
+  
+  const esFechaSeleccionadaCalendario = (dia) => {
+    if (!formData.fecha_evento) return false;
+    const fechaStr = formData.fecha_evento.split('T')[0];
+    const [año, mes, diaFecha] = fechaStr.split('-').map(Number);
+    return diaFecha === dia && 
+           mes === mesCalendario &&
+           año === añoCalendario;
+  };
+  
+  const esHoyCalendario = (dia) => {
+    const hoy = new Date();
+    return dia === hoy.getDate() && 
+           mesCalendario === hoy.getMonth() + 1 &&
+           añoCalendario === hoy.getFullYear();
+  };
+  
+  const handleSeleccionarDia = (dia) => {
+    console.log('handleSeleccionarDia llamado con día:', dia);
+    if (esFechaValidaCalendario(dia)) {
+      const fechaStr = formatearFechaParaInput(dia);
+      handleChange({ target: { name: 'fecha_evento', value: fechaStr } });
+      // Guardar el día seleccionado para mostrar eventos detallados
+      setDiaSeleccionadoCalendario(dia);
+      console.log('Día seleccionado actualizado a:', dia);
+    } else {
+      console.log('Fecha no válida para día:', dia);
+    }
+  };
+  
+  // Sincronizar mes/año del calendario cuando cambia la fecha seleccionada
+  useEffect(() => {
+    if (formData.fecha_evento) {
+      const fechaStr = formData.fecha_evento.split('T')[0];
+      const [año, mes] = fechaStr.split('-').map(Number);
+      if (mes !== mesCalendario || año !== añoCalendario) {
+        setMesCalendario(mes);
+        setAñoCalendario(año);
+      }
+      const [, , dia] = fechaStr.split('-').map(Number);
+      // Solo actualizar si el día es diferente al actual para evitar resetear cuando se hace clic
+      if (dia !== diaSeleccionadoCalendario) {
+        setDiaSeleccionadoCalendario(dia);
+      }
+    }
+  }, [formData.fecha_evento]);
 
   return (
     <div className="space-y-6">
@@ -1675,152 +1920,109 @@ function CrearOferta() {
 
           {/* PASO 2: Detalles del Evento */}
           {pasoActual === 2 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalles del Evento</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="homenajeado">Homenajeado/a</Label>
-                <Input
-                  id="homenajeado"
-                  type="text"
-                  name="homenajeado"
-                  value={formData.homenajeado}
-                  onChange={handleChange}
-                  placeholder="Ej: María López, Juan Pérez"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Nombre de la persona homenajeada en el evento (opcional)
-                </p>
-              </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Lugar del Evento - PRIMERO */}
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="salon_id">
-                  Lugar del Evento <span className="text-destructive">*</span>
-                </Label>
-                <select
-                  id="salon_id"
-                  name="salon_id"
-                  value={formData.salon_id}
-                  onChange={handleChange}
-                  required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="">Seleccione un lugar</option>
-                  {salones?.map((salon) => (
-                    <option key={salon.id} value={salon.id}>
-                      {salon.nombre} - Capacidad: {salon.capacidad_maxima} invitados
-                    </option>
-                  ))}
-                  <option value="otro">Otro (Sede Externa - Sin cargo de salón)</option>
-                </select>
-                {salonSeleccionado && formData.salon_id !== 'otro' && (
-                  <p className="text-xs text-muted-foreground">
-                    Capacidad máxima: {salonSeleccionado.capacidad_maxima} invitados
-                  </p>
-                )}
-                {formData.salon_id === 'otro' && (
-                  <div className="space-y-2">
-                    <Input
-                      type="text"
-                      value={lugarPersonalizado}
-                      onChange={(e) => setLugarPersonalizado(e.target.value)}
-                      placeholder="Especifica el lugar (ej: Universidad de Miami, Auditorio XYZ)"
-                      required
-                      maxLength={255}
-                      className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800"
-                    />
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      💡 Importante: Para sedes externas NO se cobra el salón. Solo se cobran los servicios.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Fecha del Evento - SEGUNDO */}
-              <div className="space-y-2">
-                <Label htmlFor="fecha_evento">
-                  Fecha del Evento <span className="text-destructive">*</span>
-                </Label>
-                {!formData.salon_id || formData.salon_id === '' ? (
-                  <>
-                    <Input
-                      id="fecha_evento"
-                      type="date"
-                      name="fecha_evento"
-                      value={formData.fecha_evento}
-                      onChange={handleChange}
-                      min={obtenerFechaMinima()}
-                      required
-                      disabled
-                      className={errorFecha ? 'border-destructive' : ''}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      ⚠️ Primero selecciona un lugar para el evento
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <CalendarioSelector
-                      fechaSeleccionada={formData.fecha_evento}
-                      onFechaSeleccionada={(fecha) => {
-                        handleChange({ target: { name: 'fecha_evento', value: fecha } });
-                      }}
-                      fechaMinima={obtenerFechaMinima()}
-                    />
-                    {errorFecha ? (
-                      <p className="text-sm text-destructive flex items-start gap-2">
-                        <span>⚠</span>
-                        <span>{errorFecha}</span>
+            <div className="space-y-6">
+            {/* Formulario */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Detalles del Evento</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="homenajeado">Homenajeado/a</Label>
+                      <Input
+                        id="homenajeado"
+                        type="text"
+                        name="homenajeado"
+                        value={formData.homenajeado}
+                        onChange={handleChange}
+                        placeholder="Ej: María López, Juan Pérez"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Nombre de la persona homenajeada en el evento (opcional)
                       </p>
-                    ) : formData.fecha_evento && (
-                      <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                        ✓ Fecha seleccionada correctamente
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
+                    </div>
 
-              {/* Cantidad de Invitados */}
-              <div className="space-y-2">
-                <Label htmlFor="cantidad_invitados">
-                  Cantidad de Invitados <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="cantidad_invitados"
-                  type="number"
-                  name="cantidad_invitados"
-                  value={formData.cantidad_invitados}
-                  onChange={handleChange}
-                  min="1"
-                  step="1"
-                  required
-                  placeholder="Ej: 50"
-                  className={excedeCapacidad ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20' : ''}
-                />
-                {excedeCapacidad && salonSeleccionado ? (
-                  <p className="text-sm text-amber-600 dark:text-amber-400 flex items-start gap-2">
-                    <span>⚠</span>
-                    <span>Excede la capacidad máxima del salón <strong>{salonSeleccionado.nombre}</strong> ({salonSeleccionado.capacidad_maxima} invitados). Puedes continuar, pero se te pedirá confirmación.</span>
-                  </p>
-                ) : formData.cantidad_invitados && parseInt(formData.cantidad_invitados) > 0 && (
-                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                    ✓ {parseInt(formData.cantidad_invitados).toLocaleString()} {parseInt(formData.cantidad_invitados) === 1 ? 'invitado' : 'invitados'}
-                  </p>
-                )}
-              </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Lugar del Evento */}
+                      <div className="md:col-span-2 space-y-2">
+                        <Label htmlFor="salon_id">
+                          Lugar del Evento <span className="text-destructive">*</span>
+                        </Label>
+                        <select
+                          id="salon_id"
+                          name="salon_id"
+                          value={formData.salon_id}
+                          onChange={handleChange}
+                          required
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="">Seleccione un lugar</option>
+                          {salones?.map((salon) => (
+                            <option key={salon.id} value={salon.id}>
+                              {salon.nombre} - Capacidad: {salon.capacidad_maxima} invitados
+                            </option>
+                          ))}
+                          <option value="otro">Otro (Sede Externa - Sin cargo de salón)</option>
+                        </select>
+                        {salonSeleccionado && formData.salon_id !== 'otro' && (
+                          <p className="text-xs text-muted-foreground">
+                            Capacidad máxima: {salonSeleccionado.capacidad_maxima} invitados
+                          </p>
+                        )}
+                        {formData.salon_id === 'otro' && (
+                          <div className="space-y-2">
+                            <Input
+                              type="text"
+                              value={lugarPersonalizado}
+                              onChange={(e) => setLugarPersonalizado(e.target.value)}
+                              placeholder="Especifica el lugar (ej: Universidad de Miami, Auditorio XYZ)"
+                              required
+                              maxLength={255}
+                              className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800"
+                            />
+                            <p className="text-xs text-amber-700 dark:text-amber-400">
+                              💡 Importante: Para sedes externas NO se cobra el salón. Solo se cobran los servicios.
+                            </p>
+                          </div>
+                        )}
+                      </div>
 
-              {/* Hora Inicio - Selector mejorado - TERCERO */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hora Inicio *
-                </label>
-                <div className="flex gap-2">
-                  <select
+                      {/* Cantidad de Invitados */}
+                      <div className="space-y-2">
+                        <Label htmlFor="cantidad_invitados">
+                          Cantidad de Invitados <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="cantidad_invitados"
+                          type="number"
+                          name="cantidad_invitados"
+                          value={formData.cantidad_invitados}
+                          onChange={handleChange}
+                          min="1"
+                          step="1"
+                          required
+                          placeholder="Ej: 50"
+                          className={excedeCapacidad ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20' : ''}
+                        />
+                        {excedeCapacidad && salonSeleccionado ? (
+                          <p className="text-sm text-amber-600 dark:text-amber-400 flex items-start gap-2">
+                            <span>⚠</span>
+                            <span>Excede la capacidad máxima del salón <strong>{salonSeleccionado.nombre}</strong> ({salonSeleccionado.capacidad_maxima} invitados). Puedes continuar, pero se te pedirá confirmación.</span>
+                          </p>
+                        ) : formData.cantidad_invitados && parseInt(formData.cantidad_invitados) > 0 && (
+                          <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                            ✓ {parseInt(formData.cantidad_invitados).toLocaleString()} {parseInt(formData.cantidad_invitados) === 1 ? 'invitado' : 'invitados'}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Hora Inicio */}
+                      <div className="md:col-span-2">
+                      <Label htmlFor="hora_inicio">
+                        Hora Inicio <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="flex gap-2">
+                        <select
                     name="hora_inicio_h"
                     value={formData.hora_inicio ? formData.hora_inicio.split(':')[0] : ''}
                     onChange={(e) => {
@@ -1893,15 +2095,15 @@ function CrearOferta() {
                     </svg>
                     Horario permitido: desde las 10:00 AM
                 </p>
-                )}
-              </div>
+                      )}
+                      </div>
 
-              {/* Hora Fin - Selector mejorado - TERCERO */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hora Fin *
-                </label>
-                <div className="flex gap-2">
+                    {/* Hora Fin */}
+                    <div className="md:col-span-2">
+                    <Label htmlFor="hora_fin">
+                      Hora Fin <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="flex gap-2">
                   <select
                     name="hora_fin_h"
                     value={formData.hora_fin ? formData.hora_fin.split(':')[0] : ''}
@@ -1989,69 +2191,223 @@ function CrearOferta() {
                       </p>
                     );
                   }
-                  return null;
-                })()}
-              </div>
-
-              {errorHorario && (
-                <div className="md:col-span-2 bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm text-red-600 flex items-start gap-2">
-                    <span className="text-red-500 font-bold text-lg">⚠</span>
-                    <span>
-                      <strong>Error de horario:</strong> {errorHorario}
-                      <br />
-                      <span className="text-xs mt-1 block">
-                        💡 Horario de inicio: desde 10:00 AM | Horario de fin: hasta 2:00 AM (restricción legal)
-                      </span>
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              {/* Mensaje de verificación de disponibilidad - Solo cuando hay salón, fecha y horas */}
-              {formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento && formData.hora_inicio && formData.hora_fin && !errorHorario && (
-              <div className="md:col-span-2">
-                  {verificandoDisponibilidad && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-sm text-blue-600 flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Verificando disponibilidad del salón...</span>
-                      </p>
+                    return null;
+                  })()}
                     </div>
-                  )}
-                  
-                  {errorDisponibilidad && !verificandoDisponibilidad && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <p className="text-sm text-red-600 flex items-start gap-2">
-                        <span className="text-red-500 font-bold text-lg">🚫</span>
-                        <span className="flex-1">
-                          <strong>Salón no disponible:</strong>
-                          <pre className="mt-2 text-xs whitespace-pre-wrap font-mono bg-red-100 p-2 rounded border border-red-300">
-                            {errorDisponibilidad}
-                          </pre>
-                          <span className="text-xs mt-2 block text-red-700">
-                            ⚠️ No podrás continuar hasta que selecciones un horario disponible.
-                          </span>
+                </div>
+
+                {errorHorario && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-600 flex items-start gap-2">
+                      <span className="text-red-500 font-bold text-lg">⚠</span>
+                      <span>
+                        <strong>Error de horario:</strong> {errorHorario}
+                        <br />
+                        <span className="text-xs mt-1 block">
+                          💡 Horario de inicio: desde 10:00 AM | Horario de fin: hasta 2:00 AM (restricción legal)
                         </span>
+                      </span>
                     </p>
                   </div>
                 )}
-                  
-                  {!errorDisponibilidad && !verificandoDisponibilidad && formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento && formData.hora_inicio && formData.hora_fin && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-sm text-green-600 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>✓ El salón está disponible en este horario</span>
-                      </p>
-              </div>
-                  )}
-                </div>
-              )}
 
+                {/* Mensaje de verificación de disponibilidad */}
+                {formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento && formData.hora_inicio && formData.hora_fin && !errorHorario && (
+                  <div>
+                    {verificandoDisponibilidad && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-blue-600 flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Verificando disponibilidad del salón...</span>
+                        </p>
+                      </div>
+                    )}
+                    
+                    {errorDisponibilidad && !verificandoDisponibilidad && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-sm text-red-600 flex items-start gap-2">
+                          <span className="text-red-500 font-bold text-lg">🚫</span>
+                          <span className="flex-1">
+                            <strong>Salón no disponible:</strong>
+                            <pre className="mt-2 text-xs whitespace-pre-wrap font-mono bg-red-100 p-2 rounded border border-red-300">
+                              {errorDisponibilidad}
+                            </pre>
+                            <span className="text-xs mt-2 block text-red-700">
+                              ⚠️ No podrás continuar hasta que selecciones un horario disponible.
+                            </span>
+                          </span>
+                        </p>
+                      </div>
+                    )}
+                    
+                    {!errorDisponibilidad && !verificandoDisponibilidad && formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento && formData.hora_inicio && formData.hora_fin && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-sm text-green-600 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>✓ El salón está disponible en este horario</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
+            {/* Calendario - Centrado */}
+            {formData.salon_id && formData.salon_id !== '' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Calendario</CardTitle>
+                </CardHeader>
+                <CardContent>
+                      {!formData.salon_id || formData.salon_id === '' ? (
+                        <p className="text-xs text-muted-foreground text-center py-8">
+                          ⚠️ Primero selecciona un lugar para el evento
+                        </p>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Filtro por salón */}
+                          <div className="space-y-2">
+                            <Label htmlFor="filtro_salon_calendario" className="text-sm font-medium">
+                              Filtrar por salón:
+                            </Label>
+                            <select
+                              id="filtro_salon_calendario"
+                              value={filtroSalonCalendario}
+                              onChange={(e) => setFiltroSalonCalendario(e.target.value)}
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <option value="todos">Todos los salones</option>
+                              {salones?.map((salon) => (
+                                <option key={salon.id} value={salon.id}>
+                                  {salon.nombre}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Header del calendario */}
+                          <div className="flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => cambiarMesCalendario('anterior')}
+                              className="p-1.5 hover:bg-accent rounded-md transition-colors"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <h3 className="font-semibold text-base">
+                              {nombresMeses[mesCalendario - 1]} {añoCalendario}
+                            </h3>
+                            <button
+                              type="button"
+                              onClick={() => cambiarMesCalendario('siguiente')}
+                              className="p-1.5 hover:bg-accent rounded-md transition-colors"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          {/* Días de la semana - Header */}
+                          <div className="grid grid-cols-7 border-t border-l border-gray-200 dark:border-gray-800">
+                            {diasSemana.map((dia) => (
+                              <div key={dia} className="text-center text-xs font-medium text-gray-600 dark:text-gray-400 py-2 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+                                {dia}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Grid de días - Estilo Google Calendar */}
+                          <div className="grid grid-cols-7 border-l border-gray-200 dark:border-gray-800">
+                            {Array.from({ length: obtenerDiasDelMes().diaInicioSemana }).map((_, i) => (
+                              <div key={`empty-${i}`} className="min-h-[120px] border-r border-b border-gray-200 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-900/20" />
+                            ))}
+
+                            {Array.from({ length: obtenerDiasDelMes().diasEnMes }).map((_, i) => {
+                              const dia = i + 1;
+                              const esValida = esFechaValidaCalendario(dia);
+                              const esSeleccionada = esFechaSeleccionadaCalendario(dia);
+                              const esHoyDia = esHoyCalendario(dia);
+                              const eventosDelDia = obtenerEventosDelDiaCalendario(dia);
+                              const fechaActual = new Date();
+
+                              return (
+                                <div
+                                  key={dia}
+                                  onClick={() => esValida && handleSeleccionarDia(dia)}
+                                  className={`
+                                    min-h-[120px] border-r border-b border-gray-200 dark:border-gray-800 p-1
+                                    transition-colors
+                                    ${!esValida 
+                                      ? 'bg-gray-50/30 dark:bg-gray-900/20 cursor-not-allowed opacity-50' 
+                                      : esSeleccionada
+                                      ? 'bg-blue-50 dark:bg-blue-950/20 cursor-pointer'
+                                      : esHoyDia
+                                      ? 'bg-blue-50/50 dark:bg-blue-950/10 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/20'
+                                      : 'hover:bg-gray-50 dark:hover:bg-gray-900/50 cursor-pointer'
+                                    }
+                                  `}
+                                >
+                                  {/* Número del día */}
+                                  <div className={`
+                                    text-sm font-medium mb-1 px-1
+                                    ${!esValida
+                                      ? 'text-gray-400 dark:text-gray-600'
+                                      : esHoyDia 
+                                      ? 'text-blue-600 dark:text-blue-400 font-bold' 
+                                      : esSeleccionada
+                                      ? 'text-blue-600 dark:text-blue-400'
+                                      : 'text-gray-700 dark:text-gray-300'
+                                    }
+                                  `}>
+                                    {dia}
+                                  </div>
+
+                                  {/* Eventos */}
+                                  <div className="space-y-0.5">
+                                    {eventosDelDia.slice(0, 3).map((evento, index) => {
+                                      const color = obtenerColorEventoCalendario(evento);
+                                      return (
+                                        <div
+                                          key={evento.id || index}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                          }}
+                                          className={`
+                                            ${color.bg} ${color.border} ${color.text}
+                                            text-xs px-2 py-0.5 rounded-r cursor-pointer
+                                            hover:opacity-80 transition-opacity truncate
+                                          `}
+                                          title={`${evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}${evento.es_todo_el_dia ? ' - Todo el día' : ` - ${formatearHora(evento.hora_inicio)}`} - ${evento.salones?.nombre || evento.salon || evento.ubicacion || 'Sin salón'}`}
+                                        >
+                                          <div className="flex items-center gap-1">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${color.dot} flex-shrink-0`} />
+                                            <span className="truncate">
+                                              {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
+                                              {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                    
+                                    {/* Indicador de más eventos */}
+                                    {eventosDelDia.length > 3 && (
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 px-2 py-0.5">
+                                        +{eventosDelDia.length - 3} más
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                        </div>
+                      )}
+                </CardContent>
+              </Card>
+            )}
             </div>
-            </CardContent>
-          </Card>
           )}
 
           {/* PASO 3: Paquete y Temporada */}
@@ -3270,7 +3626,7 @@ function CrearOferta() {
         </div>
 
         {/* Panel de Calculadora */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -3384,6 +3740,156 @@ function CrearOferta() {
             )}
             </CardContent>
           </Card>
+
+          {/* Panel de Eventos del Día Seleccionado - Solo en paso 2 */}
+          {pasoActual === 2 && formData.salon_id && formData.salon_id !== '' && (
+            <Card className="sticky bottom-6 mt-auto">
+              <CardHeader className="pb-3">
+                {diaSeleccionadoCalendario ? (
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                      {obtenerDiaSemana(diaSeleccionadoCalendario, mesCalendario, añoCalendario)}
+                    </div>
+                    <div className="text-base text-gray-600 dark:text-gray-400">
+                      {diaSeleccionadoCalendario} de {nombresMeses[mesCalendario - 1]} {añoCalendario}
+                    </div>
+                  </div>
+                ) : (
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Eventos del Día
+                  </CardTitle>
+                )}
+              </CardHeader>
+              <CardContent>
+                {!diaSeleccionadoCalendario ? (
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Haz clic en un día del calendario para ver los eventos
+                    </p>
+                  </div>
+                ) : cargandoEventosCalendario ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Cargando eventos...
+                    </p>
+                  </div>
+                ) : (() => {
+                  if (!eventosCalendario) {
+                    return (
+                      <div className="text-center py-8">
+                        <Calendar className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground">
+                          No se han cargado los eventos del calendario
+                        </p>
+                      </div>
+                    );
+                  }
+                  
+                  const eventos = obtenerEventosDelDiaCalendario(diaSeleccionadoCalendario);
+                  
+                  if (eventos.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <Calendar className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground">
+                          No hay eventos programados este día
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                        Mis Eventos ({eventos.length})
+                      </div>
+                      <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                        {eventos.map((evento, idx) => {
+                          const color = obtenerColorEventoCalendario(evento);
+                          return (
+                            <div
+                              key={evento.id || idx}
+                              className={`
+                                ${color.bg} ${color.border} ${color.text}
+                                rounded-lg p-4 border-l-4
+                                hover:shadow-md transition-shadow
+                              `}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`w-2.5 h-2.5 rounded-full ${color.dot} mt-1.5 flex-shrink-0`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold mb-2 text-base">
+                                    {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
+                                  </div>
+                                  <div className="space-y-1.5 text-sm">
+                                    {evento.es_todo_el_dia ? (
+                                      <div className="flex items-center gap-2">
+                                        <Clock className="w-4 h-4 opacity-70" />
+                                        <span className="font-medium">Todo el día</span>
+                                      </div>
+                                    ) : evento.hora_inicio && (
+                                      <div className="flex items-center gap-2">
+                                        <Clock className="w-4 h-4 opacity-70" />
+                                        <span>
+                                          {formatearHora(evento.hora_inicio)}
+                                          {evento.hora_fin && ` - ${formatearHora(evento.hora_fin)}`}
+                                          {evento.hora_inicio && evento.hora_fin && (() => {
+                                            const duracion = calcularDuracion(evento.hora_inicio, evento.hora_fin);
+                                            if (duracion > 0) {
+                                              // Redondear a 1 decimal (ej: 3.5h)
+                                              const duracionRedondeada = Math.round(duracion * 10) / 10;
+                                              return ` (${duracionRedondeada}h)`;
+                                            }
+                                            return '';
+                                          })()}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {evento.salones?.nombre && (
+                                      <div className="flex items-center gap-2">
+                                        <MapPin className="w-4 h-4 opacity-70" />
+                                        <span className="font-medium">{evento.salones.nombre}</span>
+                                      </div>
+                                    )}
+                                    {evento.clientes?.email && (
+                                      <div className="flex items-center gap-2">
+                                        <Mail className="w-4 h-4 opacity-70" />
+                                        <span className="text-xs">{evento.clientes.email}</span>
+                                      </div>
+                                    )}
+                                    {evento.clientes?.telefono && (
+                                      <div className="flex items-center gap-2">
+                                        <Phone className="w-4 h-4 opacity-70" />
+                                        <span className="text-xs">{evento.clientes.telefono}</span>
+                                      </div>
+                                    )}
+                                    {evento.cantidad_invitados && (
+                                      <div className="flex items-center gap-2">
+                                        <Users className="w-4 h-4 opacity-70" />
+                                        <span>{evento.cantidad_invitados} invitados</span>
+                                      </div>
+                                    )}
+                                    {evento.descripcion && (
+                                      <div className="mt-2 pt-2 border-t border-current/20">
+                                        <p className="text-xs opacity-80 line-clamp-2">{evento.descripcion}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </form>
 

@@ -217,12 +217,18 @@ function CalendarioMensual() {
         nombreSalon = String(evento.ubicacion).toLowerCase();
       }
       
+      // Normalizar el nombre del salón
+      nombreSalon = nombreSalon.toLowerCase().trim().replace(/\s+/g, ' ');
+      
       // Verificar si el evento coincide con algún filtro activo
-      if (nombreSalon.includes('doral')) {
-        return filtrosSalones.doral;
-      }
+      // PRIORIDAD: Diamond debe verificarse ANTES que Doral porque "DIAMOND AT DORAL" contiene ambas palabras
       if (nombreSalon.includes('diamond')) {
         return filtrosSalones.diamond;
+      }
+      // Solo clasificar como Doral si NO contiene "diamond"
+      // "doral 1", "doral", "doral 2", etc. son Doral
+      if (nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
+        return filtrosSalones.doral;
       }
       if (nombreSalon.includes('kendall') || nombreSalon.includes('kendal') || nombreSalon.includes('kentall')) {
         return filtrosSalones.kendall;
@@ -252,44 +258,47 @@ function CalendarioMensual() {
     // Normalizar a minúsculas y limpiar (remover espacios extra)
     nombreSalon = nombreSalon.toLowerCase().trim().replace(/\s+/g, ' ');
     
-    // Diamond tiene prioridad porque puede venir como "DIAMOND AT DORAL"
-    // Buscar "diamond" primero para evitar que se clasifique como Doral
+    // Naranja = Diamond (claro y visible)
+    // PRIORIDAD: Diamond debe verificarse ANTES que Doral porque "DIAMOND AT DORAL" contiene ambas palabras
+    // Si dice "diamond at doral" o "diamond at doral 1", es Diamond
     if (nombreSalon && nombreSalon.includes('diamond')) {
       return {
-        bg: 'bg-cyan-100 dark:bg-cyan-900/30',
-        border: 'border-l-4 border-cyan-500',
-        text: 'text-cyan-900 dark:text-cyan-100',
-        dot: 'bg-cyan-500'
-      };
-    }
-    
-    // Doral puede venir como "DORAL", "doral", "Doral 1", "doral 1", "DORAL 1", "doral1", etc.
-    if (nombreSalon && nombreSalon.includes('doral')) {
-      return {
-        bg: 'bg-purple-100 dark:bg-purple-900/30',
-        border: 'border-l-4 border-purple-500',
-        text: 'text-purple-900 dark:text-purple-100',
-        dot: 'bg-purple-500'
-      };
-    }
-    
-    // Kendall puede venir como "kendall", "Kendall", "KENDALL", "kendal", "kentall" (typo común)
-    if (nombreSalon && (nombreSalon.includes('kendall') || nombreSalon.includes('kendal') || nombreSalon.includes('kentall'))) {
-      return {
-        bg: 'bg-orange-100 dark:bg-orange-900/30',
+        bg: 'bg-orange-50 dark:bg-orange-900/20',
         border: 'border-l-4 border-orange-500',
-        text: 'text-orange-900 dark:text-orange-100',
+        text: 'text-orange-800 dark:text-orange-200',
         dot: 'bg-orange-500'
       };
     }
     
-    // Si es evento de Google Calendar y no tiene salón específico, usar azul
+    // Verde = Doral (claro y visible)
+    // Solo clasificar como Doral si NO contiene "diamond"
+    // "doral 1", "doral", "doral 2", etc. son Doral
+    if (nombreSalon && nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
+      return {
+        bg: 'bg-green-50 dark:bg-green-900/20',
+        border: 'border-l-4 border-green-500',
+        text: 'text-green-800 dark:text-green-200',
+        dot: 'bg-green-500'
+      };
+    }
+    
+    // Azul = Kendall (claro y visible)
+    if (nombreSalon && (nombreSalon.includes('kendall') || nombreSalon.includes('kendal') || nombreSalon.includes('kentall'))) {
+      return {
+        bg: 'bg-blue-50 dark:bg-blue-900/20',
+        border: 'border-l-4 border-blue-500',
+        text: 'text-blue-800 dark:text-blue-200',
+        dot: 'bg-blue-500'
+      };
+    }
+    
+    // Morado = Otros (Google Calendar y otros eventos sin salón específico)
     if (evento.es_google_calendar || evento.id?.toString().startsWith('google_')) {
       return {
-        bg: 'bg-blue-100 dark:bg-blue-900/30',
-        border: 'border-l-4 border-blue-500',
-        text: 'text-blue-900 dark:text-blue-100',
-        dot: 'bg-blue-500'
+        bg: 'bg-purple-50 dark:bg-purple-900/20',
+        border: 'border-l-4 border-purple-500',
+        text: 'text-purple-800 dark:text-purple-200',
+        dot: 'bg-purple-500'
       };
     }
     
@@ -317,11 +326,12 @@ function CalendarioMensual() {
           dot: 'bg-red-500'
         };
       default:
+        // Morado = Otros (eventos sin salón específico)
         return {
-          bg: 'bg-gray-100 dark:bg-gray-800',
-          border: 'border-l-4 border-gray-400',
-          text: 'text-gray-900 dark:text-gray-100',
-          dot: 'bg-gray-400'
+          bg: 'bg-purple-50 dark:bg-purple-900/20',
+          border: 'border-l-4 border-purple-500',
+          text: 'text-purple-800 dark:text-purple-200',
+          dot: 'bg-purple-500'
         };
     }
   };
@@ -820,10 +830,10 @@ function CalendarioMensual() {
                   type="checkbox"
                   checked={filtrosSalones.doral}
                   onChange={(e) => setFiltrosSalones(prev => ({ ...prev, doral: e.target.checked }))}
-                  className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                 />
                 <div className="flex items-center gap-2 flex-1">
-                  <div className="w-3 h-3 rounded-full bg-purple-500 flex-shrink-0" />
+                  <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Doral</span>
                 </div>
               </label>
@@ -833,10 +843,10 @@ function CalendarioMensual() {
                   type="checkbox"
                   checked={filtrosSalones.kendall}
                   onChange={(e) => setFiltrosSalones(prev => ({ ...prev, kendall: e.target.checked }))}
-                  className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <div className="flex items-center gap-2 flex-1">
-                  <div className="w-3 h-3 rounded-full bg-orange-500 flex-shrink-0" />
+                  <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Kendall</span>
                 </div>
               </label>
@@ -846,10 +856,10 @@ function CalendarioMensual() {
                   type="checkbox"
                   checked={filtrosSalones.diamond}
                   onChange={(e) => setFiltrosSalones(prev => ({ ...prev, diamond: e.target.checked }))}
-                  className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                  className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                 />
                 <div className="flex items-center gap-2 flex-1">
-                  <div className="w-3 h-3 rounded-full bg-cyan-500 flex-shrink-0" />
+                  <div className="w-3 h-3 rounded-full bg-orange-500 flex-shrink-0" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Diamond</span>
                 </div>
               </label>
@@ -859,10 +869,10 @@ function CalendarioMensual() {
                   type="checkbox"
                   checked={filtrosSalones.otros}
                   onChange={(e) => setFiltrosSalones(prev => ({ ...prev, otros: e.target.checked }))}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                 />
                 <div className="flex items-center gap-2 flex-1">
-                  <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
+                  <div className="w-3 h-3 rounded-full bg-purple-500 flex-shrink-0" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Otros / Google Calendar</span>
                 </div>
               </label>

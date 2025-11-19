@@ -72,8 +72,9 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
   };
 
   const formatearFechaParaInput = (dia) => {
-    const fecha = new Date(añoSeleccionado, mesSeleccionado - 1, dia);
-    return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    // Usar directamente los valores sin crear Date para evitar problemas de zona horaria
+    // Formato: YYYY-MM-DD
+    return `${añoSeleccionado}-${String(mesSeleccionado).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
   };
 
   const esFechaValida = (dia) => {
@@ -86,10 +87,12 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
 
   const esFechaSeleccionada = (dia) => {
     if (!fechaSeleccionada) return false;
-    const fecha = new Date(fechaSeleccionada);
-    return fecha.getDate() === dia && 
-           fecha.getMonth() + 1 === mesSeleccionado &&
-           fecha.getFullYear() === añoSeleccionado;
+    // Parsear la fecha directamente del string YYYY-MM-DD para evitar problemas de zona horaria
+    const fechaStr = fechaSeleccionada.split('T')[0]; // Si viene con hora, tomar solo la fecha
+    const [año, mes, diaFecha] = fechaStr.split('-').map(Number);
+    return diaFecha === dia && 
+           mes === mesSeleccionado &&
+           año === añoSeleccionado;
   };
 
   const esHoy = (dia) => {
@@ -101,9 +104,11 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
 
   useEffect(() => {
     if (fechaSeleccionada) {
-      const fecha = new Date(fechaSeleccionada);
-      setMesSeleccionado(fecha.getMonth() + 1);
-      setAñoSeleccionado(fecha.getFullYear());
+      // Parsear la fecha directamente del string YYYY-MM-DD para evitar problemas de zona horaria
+      const fechaStr = fechaSeleccionada.split('T')[0]; // Si viene con hora, tomar solo la fecha
+      const [año, mes] = fechaStr.split('-').map(Number);
+      setMesSeleccionado(mes);
+      setAñoSeleccionado(año);
     }
   }, [fechaSeleccionada]);
 
@@ -243,8 +248,9 @@ function CalendarioSelector({ fechaSeleccionada, onFechaSeleccionada, fechaMinim
 
             {/* Eventos del día seleccionado */}
             {fechaSeleccionada && (() => {
-              const fecha = new Date(fechaSeleccionada);
-              const dia = fecha.getDate();
+              // Parsear la fecha directamente del string YYYY-MM-DD para evitar problemas de zona horaria
+              const fechaStr = fechaSeleccionada.split('T')[0];
+              const [año, mes, dia] = fechaStr.split('-').map(Number);
               const eventos = obtenerEventosDelDia(dia);
               
               if (eventos.length === 0) return null;
