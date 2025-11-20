@@ -194,6 +194,10 @@ function Ofertas() {
     onSuccess: () => {
       queryClient.invalidateQueries(['ofertas']);
       queryClient.invalidateQueries(['contratos']);
+      // Invalidar queries del calendario para que se actualice automáticamente
+      queryClient.invalidateQueries({ queryKey: ['calendario-todos'] });
+      queryClient.invalidateQueries({ queryKey: ['calendario-mensual'] });
+      queryClient.invalidateQueries({ queryKey: ['calendario-citas'] });
       setModalPlanPagoOpen(false);
       setOfertaSeleccionada(null);
       toast.success('¡Contrato creado exitosamente!');
@@ -538,6 +542,11 @@ function Ofertas() {
                         </span>
                       )}
                     </p>
+                    {oferta.clientes?.tipo_evento && (
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Tipo de evento: <span className="font-medium text-foreground capitalize">{oferta.clientes.tipo_evento}</span>
+                      </p>
+                    )}
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
                       {oferta.fecha_evento && (
                         <div className="flex items-center gap-1.5">

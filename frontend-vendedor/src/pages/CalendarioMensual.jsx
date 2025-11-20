@@ -73,7 +73,8 @@ function CalendarioMensual() {
     enabled: !!user?.id && tipoCalendario === 'general',
     staleTime: 0, // Los datos siempre se consideran obsoletos - forzar refresco
     refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
-    refetchInterval: 30000, // Refrescar automáticamente cada 30 segundos para Google Calendar
+    refetchInterval: 10000, // Refrescar automáticamente cada 10 segundos para detectar cambios en Google Calendar
+    cacheTime: 0, // No cachear los datos para siempre obtener la versión más reciente
   });
 
   // Obtener solo eventos de CITAS (leads)
@@ -86,7 +87,8 @@ function CalendarioMensual() {
     enabled: !!user?.id && tipoCalendario === 'leads',
     staleTime: 0, // Los datos siempre se consideran obsoletos - forzar refresco
     refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
-    refetchInterval: 30000, // Refrescar automáticamente cada 30 segundos para Google Calendar
+    refetchInterval: 10000, // Refrescar automáticamente cada 10 segundos para detectar cambios en Google Calendar
+    cacheTime: 0, // No cachear los datos para siempre obtener la versión más reciente
   });
 
   // Función para refrescar manualmente
@@ -410,6 +412,9 @@ function CalendarioMensual() {
                     <span className="truncate">
                       {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
                       {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
+                      {evento.clientes?.tipo_evento && (
+                        <span className="text-xs opacity-75 ml-1">({evento.clientes.tipo_evento})</span>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -719,6 +724,9 @@ function CalendarioMensual() {
                                   <span className="truncate">
                                     {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
                                     {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
+                                    {evento.clientes?.tipo_evento && (
+                                      <span className="text-xs opacity-75 ml-1">({evento.clientes.tipo_evento})</span>
+                                    )}
                                   </span>
                                 </div>
                               </div>
@@ -775,6 +783,9 @@ function CalendarioMensual() {
                             <div className="flex-1">
                               <div className="font-semibold text-base mb-2">
                                 {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
+                                {evento.clientes?.tipo_evento && (
+                                  <span className="text-sm font-normal text-gray-600 dark:text-gray-400 ml-2 capitalize">({evento.clientes.tipo_evento})</span>
+                                )}
                               </div>
                               <div className="space-y-1 text-sm">
                                 {evento.es_todo_el_dia ? (
@@ -1009,6 +1020,9 @@ function CalendarioMensual() {
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-sm mb-1 truncate">
                                   {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
+                                  {evento.clientes?.tipo_evento && (
+                                    <span className="text-xs font-normal text-gray-600 dark:text-gray-400 ml-1 capitalize">({evento.clientes.tipo_evento})</span>
+                                  )}
                                 </div>
                                 <div className="space-y-1 text-xs opacity-90">
                                   {evento.es_todo_el_dia ? (
@@ -1127,6 +1141,12 @@ function CalendarioMensual() {
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Nombre:</span>
                           <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.clientes.nombre_completo}</span>
                         </div>
+                        {eventoSeleccionado.clientes.tipo_evento && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Tipo de evento:</span>
+                            <span className="text-sm text-gray-900 dark:text-gray-100 capitalize">{eventoSeleccionado.clientes.tipo_evento}</span>
+                          </div>
+                        )}
                         {eventoSeleccionado.clientes.email && (
                           <div className="flex items-center gap-2">
                             <Mail className="w-4 h-4 text-gray-400" />

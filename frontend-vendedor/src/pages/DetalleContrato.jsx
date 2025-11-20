@@ -94,7 +94,6 @@ function DetalleContrato() {
     },
   });
 
-
   const handleDescargarContrato = async () => {
     try {
       const response = await api.get(`/contratos/${id}/pdf-contrato`, {

@@ -622,6 +622,11 @@ function Contratos() {
                         </span>
                       )}
                     </p>
+                    {contrato.clientes?.tipo_evento && (
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Tipo de evento: <span className="font-medium text-foreground capitalize">{contrato.clientes.tipo_evento}</span>
+                      </p>
+                    )}
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
                       {contrato.fecha_evento && (
                         <div className="flex items-center gap-1.5">

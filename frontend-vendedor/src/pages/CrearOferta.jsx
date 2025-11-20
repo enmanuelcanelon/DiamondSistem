@@ -455,7 +455,7 @@ function CrearOferta() {
       if (!esDiamond && serviciosSeleccionados.length > 0) {
         const serviciosExclusivosDiamond = [
           'Lounge Set + Coctel Dream',
-          'Terraza decorada con cajas con letra'
+          'Terraza decorada'
         ];
         
         const serviciosAEliminar = serviciosSeleccionados.filter(sel => {
@@ -1027,7 +1027,34 @@ function CrearOferta() {
       return 'Limosina (15 Millas)';
     }
     
+    // Reemplazar "Terraza decorada con cajas con letra" o "Terraza decorada con cajas con letra baby" por "Terraza decorada"
+    if (nombreServicio === 'Terraza decorada con cajas con letra' || nombreServicio === 'Terraza decorada con cajas con letra baby') {
+      return 'Terraza decorada';
+    }
+    
+    // También manejar el caso si contiene el texto (por si hay variaciones)
+    if (nombreServicio && nombreServicio.includes('Terraza decorada con cajas con letra')) {
+      return 'Terraza decorada';
+    }
+    
     return nombreServicio;
+  };
+
+  // Función helper para limpiar descripciones de servicios
+  const obtenerDescripcionServicio = (descripcion) => {
+    if (!descripcion) return descripcion;
+    
+    // Limpiar " con cajas con letra baby" de las descripciones
+    if (descripcion.includes(' con cajas con letra baby')) {
+      return descripcion.replace(' con cajas con letra baby', '');
+    }
+    
+    // También limpiar " con cajas con letra" por si acaso
+    if (descripcion.includes(' con cajas con letra')) {
+      return descripcion.replace(' con cajas con letra', '');
+    }
+    
+    return descripcion;
   };
 
   // Función helper para determinar la categoría de un servicio
@@ -3311,7 +3338,7 @@ function CrearOferta() {
                     // Filtrar servicios exclusivos de Diamond si el salón NO es Diamond
                     const serviciosExclusivosDiamond = [
                       'Lounge Set + Coctel Dream',
-                      'Terraza decorada con cajas con letra'
+                      'Terraza decorada'
                     ];
                     
                     if (serviciosExclusivosDiamond.includes(nombreServicio)) {
@@ -3339,7 +3366,7 @@ function CrearOferta() {
                           // Filtrar servicios exclusivos de Diamond si el salón NO es Diamond
                           const serviciosExclusivosDiamond = [
                             'Lounge Set + Coctel Dream',
-                            'Terraza decorada con cajas con letra'
+                            'Terraza decorada'
                           ];
                           
                           if (serviciosExclusivosDiamond.includes(otroNombre)) {
@@ -3485,7 +3512,7 @@ function CrearOferta() {
                                       </p>
                                       {ps.servicios?.descripcion && (
                                         <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                                          {ps.servicios.descripcion}
+                                          {obtenerDescripcionServicio(ps.servicios.descripcion)}
                                         </p>
                                       )}
                                     </div>
@@ -3539,7 +3566,7 @@ function CrearOferta() {
                                     </span>
                                     {ps.servicios?.descripcion && (
                                       <span className="text-xs text-muted-foreground block mt-1">
-                                        {ps.servicios.descripcion}
+                                        {obtenerDescripcionServicio(ps.servicios.descripcion)}
                                       </span>
                                     )}
                                   </div>
@@ -3821,10 +3848,10 @@ function CrearOferta() {
                 }
                 
                 // REGLA: Servicios de decoración exclusivos de Diamond
-                // "Lounge Set + Coctel Dream" y "Terraza decorada con cajas con letra" solo disponibles en Diamond
+                // "Lounge Set + Coctel Dream" y "Terraza decorada" solo disponibles en Diamond
                 const serviciosExclusivosDiamond = [
                   'Lounge Set + Coctel Dream',
-                  'Terraza decorada con cajas con letra'
+                  'Terraza decorada'
                 ];
                 
                 if (serviciosExclusivosDiamond.includes(s.nombre)) {
@@ -4030,7 +4057,7 @@ function CrearOferta() {
                                     </h4>
                                     {servicio.descripcion && (
                                       <p className="text-xs text-gray-500 line-clamp-2">
-                                        {servicio.descripcion}
+                                        {obtenerDescripcionServicio(servicio.descripcion)}
                                       </p>
                                     )}
                                     <p className={`text-sm font-semibold mt-2 ${necesitaHoraExtra ? 'text-red-700' : 'text-indigo-600'}`}>
@@ -4542,12 +4569,23 @@ function CrearOferta() {
                   )}
 
                   {/* Servicios Adicionales */}
-                  {precioCalculado.desglose.serviciosAdicionales.subtotal > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Servicios Adicionales:</span>
-                      <span className="font-medium text-foreground">${parseFloat(precioCalculado.desglose.serviciosAdicionales.subtotal).toLocaleString()}</span>
-                    </div>
-                  )}
+                  {(() => {
+                    // Solo mostrar si hay servicios adicionales reales (no solo la comida automática del paquete personalizado)
+                    const tieneServiciosReales = serviciosSeleccionados && serviciosSeleccionados.length > 0;
+                    const subtotalServicios = parseFloat(precioCalculado.desglose.serviciosAdicionales.subtotal || 0);
+                    
+                    // Si hay subtotal pero no hay servicios seleccionados, es la comida automática del personalizado
+                    // No la mostramos como "Servicios Adicionales" porque es parte del paquete
+                    if (subtotalServicios > 0 && tieneServiciosReales) {
+                      return (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Servicios Adicionales:</span>
+                          <span className="font-medium text-foreground">${subtotalServicios.toLocaleString()}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                   {/* Subtotal */}
                   <Separator className="my-2" />

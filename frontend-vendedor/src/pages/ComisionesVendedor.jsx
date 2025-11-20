@@ -531,6 +531,7 @@ function ComisionesVendedor() {
                             <TableHead>Código</TableHead>
                             <TableHead>Cliente</TableHead>
                             <TableHead>Fecha Evento</TableHead>
+                            <TableHead className="text-right">Total Contrato</TableHead>
                             <TableHead className="text-right">Monto Comisión</TableHead>
                             <TableHead>Motivo</TableHead>
                           </TableRow>
@@ -549,6 +550,11 @@ function ComisionesVendedor() {
                                     {comision.fecha_evento 
                                       ? format(new Date(comision.fecha_evento), 'dd/MM/yyyy', { locale: es })
                                       : '-'}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {mostrarDatos 
+                                      ? `$${parseFloat(comision.total_contrato || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                      : '••••••'}
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
                                     {mostrarDatos 
@@ -582,6 +588,7 @@ function ComisionesVendedor() {
                             <TableHead>Código</TableHead>
                             <TableHead>Cliente</TableHead>
                             <TableHead>Fecha Evento</TableHead>
+                            <TableHead className="text-right">Total Contrato</TableHead>
                             <TableHead className="text-right">Monto Comisión</TableHead>
                             <TableHead>Motivo</TableHead>
                           </TableRow>
@@ -600,6 +607,11 @@ function ComisionesVendedor() {
                                     {comision.fecha_evento 
                                       ? format(new Date(comision.fecha_evento), 'dd/MM/yyyy', { locale: es })
                                       : '-'}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {mostrarDatos 
+                                      ? `$${parseFloat(comision.total_contrato || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                      : '••••••'}
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
                                     {mostrarDatos 
