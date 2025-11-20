@@ -132,6 +132,46 @@ function CrearOferta() {
     return null; // No hay errores
   };
 
+  // Función para verificar si un rango de horas se solapa con horas ocupadas
+  const verificarRangoOcupado = (horaInicio, horaFin) => {
+    if (!horaInicio || !horaFin || horasOcupadas.length === 0) {
+      return false;
+    }
+
+    // Convertir horas a números (solo la hora, sin minutos para simplificar)
+    const [horaInicioNum] = horaInicio.split(':').map(Number);
+    let [horaFinNum] = horaFin.split(':').map(Number);
+    
+    // Si la hora de fin es menor que la de inicio, significa que cruza medianoche
+    // En ese caso, ajustar la hora de fin sumando 24
+    const cruzaMedianoche = horaFinNum < horaInicioNum;
+    if (cruzaMedianoche) {
+      horaFinNum += 24;
+    }
+
+    // Verificar si alguna hora ocupada está dentro del rango
+    // Si alguna hora ocupada está entre horaInicioNum y horaFinNum (inclusive), hay solapamiento
+    for (const horaOcupada of horasOcupadas) {
+      // Caso normal: rango no cruza medianoche
+      if (!cruzaMedianoche) {
+        // Si la hora ocupada está dentro del rango (inclusive), hay solapamiento
+        if (horaOcupada >= horaInicioNum && horaOcupada <= horaFinNum) {
+          return true;
+        }
+      } else {
+        // Caso: rango cruza medianoche (ej: 10 PM a 2 AM)
+        // Verificar si la hora ocupada está en la primera parte (horaInicioNum a 23)
+        // o en la segunda parte (0 a horaFinNum-24)
+        if ((horaOcupada >= horaInicioNum && horaOcupada <= 23) || 
+            (horaOcupada >= 0 && horaOcupada <= (horaFinNum - 24))) {
+          return true;
+        }
+      }
+    }
+
+    return false; // No hay solapamiento
+  };
+
   // Función helper para formatear hora desde timestamp a HH:mm
   const formatearHoraParaInput = (horaValue) => {
     if (!horaValue) return '';
@@ -191,8 +231,9 @@ function CrearOferta() {
     queryKey: ['paquetes-salon', formData.salon_id],
     queryFn: async () => {
       try {
-      if (!formData.salon_id) {
-        // Si no hay salón, obtener todos los paquetes
+      if (!formData.salon_id || formData.salon_id === 'otro') {
+        // Si no hay salón o es "otro" (sede externa), obtener todos los paquetes
+        // El filtro del frontend mostrará solo el personalizado cuando sea "otro"
         const response = await api.get('/paquetes');
           return response.data?.paquetes || response.data?.data || [];
       }
@@ -234,8 +275,9 @@ function CrearOferta() {
   });
 
   // Obtener detalles del paquete seleccionado con sus servicios incluidos
+  // Incluir salon_id en el queryKey para que se recargue cuando cambia el salón
   const { data: paqueteDetalle } = useQuery({
-    queryKey: ['paquete', formData.paquete_id],
+    queryKey: ['paquete', formData.paquete_id, formData.salon_id],
     queryFn: async () => {
       try {
       const response = await api.get(`/paquetes/${formData.paquete_id}`);
@@ -249,7 +291,7 @@ function CrearOferta() {
   });
   
 
-  // Query para obtener eventos del calendario (solo cuando estamos en paso 2 y hay salón seleccionado)
+  // Query para obtener eventos del calendario (solo cuando estamos en paso 2 y hay salón seleccionado, incluyendo "otro")
   const { data: eventosCalendario, isLoading: cargandoEventosCalendario } = useQuery({
     queryKey: ['calendario-ofertas', user?.id, mesCalendario, añoCalendario, formData.salon_id],
     queryFn: async () => {
@@ -316,9 +358,26 @@ function CrearOferta() {
           lugar_evento: lugarPersonalizado || 'Sede Externa'
         }));
         
-        // Resetear paquete si hay uno seleccionado (para que no cargue precio de salón)
+        // Resetear ajuste de temporada a 0 para sede externa
+        setAjusteTemporadaCustom('0');
+        
+        // Si hay un paquete seleccionado que NO es personalizado, limpiarlo
         if (formData.paquete_id) {
-          setPrecioBaseAjustado('');
+          const paqueteActual = paquetes?.find(p => p.id === parseInt(formData.paquete_id));
+          const esPersonalizado = paqueteActual?.nombre?.toLowerCase().includes('personalizado');
+          
+          if (!esPersonalizado) {
+            // Limpiar el paquete si no es personalizado
+            setFormData(prev => ({
+              ...prev,
+              paquete_id: ''
+            }));
+            setPaqueteSeleccionado(null);
+            setPrecioBaseAjustado('');
+          } else {
+            // Si es personalizado, solo resetear el precio base ajustado
+            setPrecioBaseAjustado('');
+          }
         }
       } else {
         // Caso normal: salón de la empresa
@@ -333,9 +392,11 @@ function CrearOferta() {
             }));
           }
           
-          // Si hay paquete seleccionado, resetear para forzar recarga de precio
+          // Si hay paquete seleccionado, actualizar con los datos del nuevo salón
           if (formData.paquete_id) {
             setPrecioBaseAjustado('');
+            // Invalidar el query del paquete para forzar recarga con los nuevos precios del salón
+            queryClient.invalidateQueries(['paquete', formData.paquete_id]);
           }
         }
       }
@@ -365,8 +426,16 @@ function CrearOferta() {
       }
       
       setFiltrosSalones(nuevoFiltros);
-    } else if (formData.salon_id === 'otro' || !formData.salon_id) {
-      // Si no hay salón seleccionado o es "otro", mantener todos los filtros activos
+    } else if (formData.salon_id === 'otro') {
+      // Si es "otro", activar solo el filtro de "Otros/Google Calendar"
+      setFiltrosSalones({
+        doral: false,
+        kendall: false,
+        diamond: false,
+        otros: true
+      });
+    } else if (!formData.salon_id) {
+      // Si no hay salón seleccionado, mantener todos los filtros activos
       setFiltrosSalones({
         doral: true,
         kendall: true,
@@ -432,10 +501,27 @@ function CrearOferta() {
   }, [formData.cantidad_invitados, salonSeleccionado]);
 
   // Actualizar servicios incluidos cuando cambia el paquete
+  // También actualizar cuando cambia el salón para obtener los precios correctos
   useEffect(() => {
     if (paqueteDetalle) {
-      setPaqueteSeleccionado(paqueteDetalle);
-      // Resetear precio ajustado cuando cambia el paquete
+      // Si hay un salón seleccionado y hay paquetes cargados, intentar obtener el precio específico del salón
+      if (formData.salon_id && formData.salon_id !== 'otro' && paquetes && paquetes.length > 0) {
+        const paqueteConPrecioSalon = paquetes.find(p => p.id === parseInt(formData.paquete_id));
+        if (paqueteConPrecioSalon) {
+          // Actualizar el paquete con los datos del salón (incluyendo precio_base_salon)
+          setPaqueteSeleccionado({
+            ...paqueteDetalle,
+            precio_base: paqueteConPrecioSalon.precio_base_salon || paqueteConPrecioSalon.precio_base || paqueteDetalle.precio_base,
+            precio_base_salon: paqueteConPrecioSalon.precio_base_salon,
+            invitados_minimo: paqueteConPrecioSalon.invitados_minimo_salon || paqueteConPrecioSalon.invitados_minimo || paqueteDetalle.invitados_minimo,
+          });
+        } else {
+          setPaqueteSeleccionado(paqueteDetalle);
+        }
+      } else {
+        setPaqueteSeleccionado(paqueteDetalle);
+      }
+      // Resetear precio ajustado cuando cambia el paquete o el salón
       setPrecioBaseAjustado('');
       setMostrarAjustePrecioBase(false);
     } else if (!formData.paquete_id) {
@@ -443,7 +529,7 @@ function CrearOferta() {
       setPrecioBaseAjustado('');
       setMostrarAjustePrecioBase(false);
     }
-  }, [paqueteDetalle, formData.paquete_id]);
+  }, [paqueteDetalle, formData.paquete_id, formData.salon_id, paquetes]);
 
   // Calcular si se necesitan horas extras
   const calcularHorasExtras = () => {
@@ -546,11 +632,12 @@ function CrearOferta() {
     try {
       const response = await api.post('/ofertas/calcular', {
         paquete_id: parseInt(formData.paquete_id),
-        salon_id: formData.salon_id ? parseInt(formData.salon_id) : null,
+        salon_id: formData.salon_id === 'otro' ? null : (formData.salon_id ? parseInt(formData.salon_id) : null),
         fecha_evento: formData.fecha_evento,
         cantidad_invitados: parseInt(formData.cantidad_invitados),
         precio_base_ajustado: precioBaseAjustado && precioBaseAjustado !== '' ? parseFloat(precioBaseAjustado) : null,
-        ajuste_temporada_custom: ajusteTemporadaCustom && ajusteTemporadaCustom !== '' ? parseFloat(ajusteTemporadaCustom) : null,
+        // Para sede externa, el ajuste de temporada siempre es 0
+        ajuste_temporada_custom: formData.salon_id === 'otro' ? 0 : (ajusteTemporadaCustom && ajusteTemporadaCustom !== '' ? parseFloat(ajusteTemporadaCustom) : null),
         servicios_adicionales: serviciosSeleccionados
           .filter(s => s.servicio_id)
           .map(s => ({
@@ -575,6 +662,7 @@ function CrearOferta() {
     calcularPrecio();
   }, [
     formData.paquete_id,
+    formData.salon_id, // Agregar salon_id para recalcular cuando cambia el salón
     formData.fecha_evento,
     formData.temporada_id,
     formData.cantidad_invitados,
@@ -751,11 +839,59 @@ function CrearOferta() {
     }
   };
 
+  // Función helper para verificar si un rango está ocupado usando horas ocupadas específicas
+  const verificarRangoOcupadoConHoras = (horaInicio, horaFin, horasOcupadasParaVerificar) => {
+    if (!horaInicio || !horaFin || !horasOcupadasParaVerificar || horasOcupadasParaVerificar.length === 0) {
+      return false;
+    }
+
+    const [horaInicioNum] = horaInicio.split(':').map(Number);
+    let [horaFinNum] = horaFin.split(':').map(Number);
+    
+    const cruzaMedianoche = horaFinNum < horaInicioNum;
+    if (cruzaMedianoche) {
+      horaFinNum += 24;
+    }
+
+    for (const horaOcupada of horasOcupadasParaVerificar) {
+      if (!cruzaMedianoche) {
+        if (horaOcupada >= horaInicioNum && horaOcupada <= horaFinNum) {
+          return true;
+        }
+      } else {
+        if ((horaOcupada >= horaInicioNum && horaOcupada <= 23) || 
+            (horaOcupada >= 0 && horaOcupada <= (horaFinNum - 24))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   // Effect para obtener horas ocupadas cuando cambian salón, fecha o día del calendario
   useEffect(() => {
     if (formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento) {
-      const timeoutId = setTimeout(() => {
-        obtenerHorasOcupadas(formData.salon_id, formData.fecha_evento);
+      const timeoutId = setTimeout(async () => {
+        const horasOcupadasNuevas = await obtenerHorasOcupadas(formData.salon_id, formData.fecha_evento);
+        
+        // Si hay horas seleccionadas, verificar si están ocupadas en el nuevo salón
+        if (formData.hora_inicio && formData.hora_fin && horasOcupadasNuevas && horasOcupadasNuevas.length > 0) {
+          const hayConflicto = verificarRangoOcupadoConHoras(
+            formData.hora_inicio, 
+            formData.hora_fin, 
+            horasOcupadasNuevas
+          );
+          
+          // Si hay conflicto, limpiar las horas seleccionadas
+          if (hayConflicto) {
+            setFormData(prev => ({
+              ...prev,
+              hora_inicio: '',
+              hora_fin: ''
+            }));
+            toast.error('Las horas seleccionadas no están disponibles en el nuevo salón. Por favor, selecciona otras horas.');
+          }
+        }
       }, 500);
 
       return () => clearTimeout(timeoutId);
@@ -1446,7 +1582,8 @@ function CrearOferta() {
       notas_vendedor: formData.notas_internas || null,
       // Incluir ajustes personalizados para que el backend los use al calcular
       precio_base_ajustado: precioBaseAjustado && precioBaseAjustado !== '' ? parseFloat(precioBaseAjustado) : null,
-      ajuste_temporada_custom: ajusteTemporadaCustom && ajusteTemporadaCustom !== '' ? parseFloat(ajusteTemporadaCustom) : null,
+      // Para sede externa, el ajuste de temporada siempre es 0
+      ajuste_temporada_custom: formData.salon_id === 'otro' ? 0 : (ajusteTemporadaCustom && ajusteTemporadaCustom !== '' ? parseFloat(ajusteTemporadaCustom) : null),
       tarifa_servicio_custom: tarifaServicioCustom && tarifaServicioCustom !== '' ? parseFloat(tarifaServicioCustom) : null,
       servicios_adicionales: serviciosSeleccionados.map(s => ({
         servicio_id: parseInt(s.servicio_id),
@@ -2372,7 +2509,7 @@ function CrearOferta() {
                         )}
                         
                         {/* Calendario - Debajo del campo Lugar del Evento */}
-                        {formData.salon_id && formData.salon_id !== '' && formData.salon_id !== 'otro' && (
+                        {formData.salon_id && formData.salon_id !== '' && (
                           <div className="mt-4">
                             <Card>
                               <CardHeader className="pb-3">
@@ -2546,9 +2683,28 @@ function CrearOferta() {
                       const hora = e.target.value;
                       const minutos = formData.hora_inicio ? formData.hora_inicio.split(':')[1] : '00';
                       const nuevaHora = hora ? `${hora}:${minutos}` : '';
+                      
+                      // Si hay hora de fin y la nueva hora de inicio es posterior, limpiar hora de fin
+                      if (formData.hora_fin && nuevaHora) {
+                        const [horaInicioNum] = nuevaHora.split(':').map(Number);
+                        const [horaFinNum] = formData.hora_fin.split(':').map(Number);
+                        
+                        // Si la hora de inicio es mayor que la hora de fin, limpiar hora de fin
+                        if (horaInicioNum > horaFinNum) {
+                          handleChange({ target: { name: 'hora_fin', value: '' } });
+                        } else if (horaInicioNum === horaFinNum) {
+                          // Si es la misma hora, verificar minutos
+                          const [minutosInicioNum] = nuevaHora.split(':').map(Number);
+                          const [minutosFinNum] = formData.hora_fin.split(':').map(Number);
+                          if (minutosInicioNum > minutosFinNum) {
+                            handleChange({ target: { name: 'hora_fin', value: '' } });
+                          }
+                        }
+                      }
+                      
                       handleChange({ target: { name: 'hora_inicio', value: nuevaHora } });
                     }}
-                  required
+                    required
                     disabled={!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento}
                     className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
                       errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
@@ -2577,6 +2733,21 @@ function CrearOferta() {
                       const minutos = e.target.value;
                       const hora = formData.hora_inicio ? formData.hora_inicio.split(':')[0] : '';
                       const nuevaHora = hora ? `${hora}:${minutos}` : '';
+                      
+                      // Si hay hora de fin y la nueva hora de inicio es posterior, limpiar hora de fin
+                      if (formData.hora_fin && nuevaHora) {
+                        const [horaInicioNum, minutosInicioNum] = nuevaHora.split(':').map(Number);
+                        const [horaFinNum, minutosFinNum] = formData.hora_fin.split(':').map(Number);
+                        
+                        // Si la hora de inicio es mayor que la hora de fin, limpiar hora de fin
+                        if (horaInicioNum > horaFinNum) {
+                          handleChange({ target: { name: 'hora_fin', value: '' } });
+                        } else if (horaInicioNum === horaFinNum && minutosInicioNum > minutosFinNum) {
+                          // Si es la misma hora pero minutos mayores, limpiar hora de fin
+                          handleChange({ target: { name: 'hora_fin', value: '' } });
+                        }
+                      }
+                      
                       handleChange({ target: { name: 'hora_inicio', value: nuevaHora } });
                     }}
                     className={`w-24 px-3 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors ${
@@ -2593,7 +2764,7 @@ function CrearOferta() {
                 <p className="text-xs text-gray-500 mt-1">
                     ⚠️ Primero selecciona el lugar y la fecha del evento
                   </p>
-                ) : cargandoHorasOcupadas ? (
+                ) : cargandoHorasOcupadas && formData.salon_id !== 'otro' ? (
                   <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     Verificando horarios ocupados...
@@ -2637,30 +2808,109 @@ function CrearOferta() {
                     }`}
                   >
                     <option value="">Hora</option>
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const hora = 12 + i; // Desde las 12:00 PM (12) hasta las 11:00 PM (23)
-                      const horaOcupada = horasOcupadas.includes(hora);
-                      return (
-                        <option 
-                          key={hora} 
-                          value={hora.toString().padStart(2, '0')}
-                          disabled={horaOcupada}
-                        >
-                          {hora === 12 ? '12:00 PM' : `${hora - 12}:00 PM`}
-                          {horaOcupada ? ' (Ocupada)' : ''}
-                        </option>
-                      );
-                    })}
+                    {(() => {
+                      // Obtener hora de inicio para comparar
+                      let horaInicioNum = null;
+                      let minutosInicioNum = 0;
+                      if (formData.hora_inicio) {
+                        const [horaInicio, minutosInicio] = formData.hora_inicio.split(':');
+                        horaInicioNum = parseInt(horaInicio);
+                        minutosInicioNum = parseInt(minutosInicio) || 0;
+                      }
+                      
+                      return Array.from({ length: 12 }, (_, i) => {
+                        const hora = 12 + i; // Desde las 12:00 PM (12) hasta las 11:00 PM (23)
+                        const horaOcupada = horasOcupadas.includes(hora);
+                        
+                        // Verificar si la hora es anterior a la hora de inicio
+                        let esAnteriorAInicio = false;
+                        if (horaInicioNum !== null) {
+                          if (hora < horaInicioNum) {
+                            esAnteriorAInicio = true;
+                          } else if (hora === horaInicioNum) {
+                            // Si es la misma hora, verificar minutos (pero como solo mostramos :00, siempre permitir la misma hora)
+                            // La validación de minutos se hará en el selector de minutos
+                            esAnteriorAInicio = false;
+                          }
+                        }
+                        
+                        // Verificar si el rango completo (hora_inicio a esta hora) se solapa con horas ocupadas
+                        let rangoSeSolapa = false;
+                        if (formData.hora_inicio && !esAnteriorAInicio) {
+                          const horaFinPropuesta = `${hora.toString().padStart(2, '0')}:00`;
+                          rangoSeSolapa = verificarRangoOcupado(formData.hora_inicio, horaFinPropuesta);
+                        }
+                        
+                        return (
+                          <option 
+                            key={hora} 
+                            value={hora.toString().padStart(2, '0')}
+                            disabled={horaOcupada || esAnteriorAInicio || rangoSeSolapa}
+                          >
+                            {hora === 12 ? '12:00 PM' : `${hora - 12}:00 PM`}
+                            {horaOcupada ? ' (Ocupada)' : ''}
+                            {esAnteriorAInicio ? ' (Anterior a inicio)' : ''}
+                            {rangoSeSolapa ? ' (Cruza evento ocupado)' : ''}
+                          </option>
+                        );
+                      });
+                    })()}
                     {/* Horas después de medianoche permitidas */}
-                    <option value="00" disabled={horasOcupadas.includes(0)}>
-                      12:00 AM (día siguiente){horasOcupadas.includes(0) ? ' (Ocupada)' : ''}
-                    </option>
-                    <option value="01" disabled={horasOcupadas.includes(1)}>
-                      1:00 AM (día siguiente){horasOcupadas.includes(1) ? ' (Ocupada)' : ''}
-                    </option>
-                    <option value="02" disabled={horasOcupadas.includes(2)}>
-                      2:00 AM (día siguiente){horasOcupadas.includes(2) ? ' (Ocupada)' : ''}
-                    </option>
+                    {(() => {
+                      // Obtener hora de inicio para comparar
+                      let horaInicioNum = null;
+                      if (formData.hora_inicio) {
+                        const [horaInicio] = formData.hora_inicio.split(':');
+                        horaInicioNum = parseInt(horaInicio);
+                      }
+                      
+                      // Las horas después de medianoche (00, 01, 02) siempre son válidas si la hora de inicio es tarde
+                      // porque representan el día siguiente
+                      const horasMedianoche = [
+                        { value: '00', label: '12:00 AM (día siguiente)', hora: 0 },
+                        { value: '01', label: '1:00 AM (día siguiente)', hora: 1 },
+                        { value: '02', label: '2:00 AM (día siguiente)', hora: 2 }
+                      ];
+                      
+                      return horasMedianoche.map(({ value, label, hora }) => {
+                        const horaOcupada = horasOcupadas.includes(hora);
+                        // Las horas después de medianoche (00, 01, 02) representan el día siguiente
+                        // Siempre son válidas si la hora de inicio es tarde (>= 10 PM) para permitir cruce de medianoche
+                        // O si la hora de inicio ya es después de medianoche (0, 1, 2)
+                        let esValidaMedianoche = true;
+                        if (horaInicioNum !== null) {
+                          // Si la hora de inicio es temprana (10 AM a 9:59 PM), las horas después de medianoche SÍ son válidas
+                          // porque representan el día siguiente (cruce de medianoche)
+                          // Solo no son válidas si la hora de inicio es muy temprana (antes de 10 AM)
+                          if (horaInicioNum < 10) {
+                            // Hora de inicio antes de las 10 AM - no permitir horas después de medianoche
+                            esValidaMedianoche = false;
+                          } else {
+                            // Hora de inicio >= 10 AM - permitir horas después de medianoche (cruce de medianoche)
+                            esValidaMedianoche = true;
+                          }
+                        }
+                        
+                        // Verificar si el rango completo (hora_inicio a esta hora) se solapa con horas ocupadas
+                        let rangoSeSolapa = false;
+                        if (formData.hora_inicio && esValidaMedianoche) {
+                          const horaFinPropuesta = `${value}:00`;
+                          rangoSeSolapa = verificarRangoOcupado(formData.hora_inicio, horaFinPropuesta);
+                        }
+                        
+                        return (
+                          <option 
+                            key={value} 
+                            value={value}
+                            disabled={horaOcupada || !esValidaMedianoche || rangoSeSolapa}
+                          >
+                            {label}{horaOcupada ? ' (Ocupada)' : ''}
+                            {!esValidaMedianoche ? ' (Anterior a inicio)' : ''}
+                            {rangoSeSolapa ? ' (Cruza evento ocupado)' : ''}
+                          </option>
+                        );
+                      });
+                    })()}
                   </select>
                   <select
                     name="hora_fin_m"
@@ -2675,10 +2925,50 @@ function CrearOferta() {
                       errorHorario ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-gray-400'
                   }`}
                   >
-                    <option value="00">:00</option>
-                    <option value="15">:15</option>
-                    <option value="30">:30</option>
-                    <option value="45">:45</option>
+                    {(() => {
+                      // Obtener hora y minutos de inicio para comparar
+                      let horaInicioNum = null;
+                      let minutosInicioNum = 0;
+                      let horaFinNum = null;
+                      
+                      if (formData.hora_inicio) {
+                        const [horaInicio, minutosInicio] = formData.hora_inicio.split(':');
+                        horaInicioNum = parseInt(horaInicio);
+                        minutosInicioNum = parseInt(minutosInicio) || 0;
+                      }
+                      
+                      if (formData.hora_fin) {
+                        const [horaFin] = formData.hora_fin.split(':');
+                        horaFinNum = parseInt(horaFin);
+                      }
+                      
+                      const opcionesMinutos = [
+                        { value: '00', minutos: 0 },
+                        { value: '15', minutos: 15 },
+                        { value: '30', minutos: 30 },
+                        { value: '45', minutos: 45 }
+                      ];
+                      
+                      return opcionesMinutos.map(({ value, minutos }) => {
+                        // Si la hora de fin es la misma que la de inicio, los minutos deben ser >= minutos de inicio
+                        let esAnteriorAInicio = false;
+                        if (horaInicioNum !== null && horaFinNum !== null && horaFinNum === horaInicioNum) {
+                          if (minutos < minutosInicioNum) {
+                            esAnteriorAInicio = true;
+                          }
+                        }
+                        
+                        return (
+                          <option 
+                            key={value} 
+                            value={value}
+                            disabled={esAnteriorAInicio}
+                          >
+                            :{value}
+                          </option>
+                        );
+                      });
+                    })()}
                   </select>
                 </div>
                 <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
@@ -2800,7 +3090,8 @@ function CrearOferta() {
                   {paquetes?.filter(p => {
                     // Si es sede externa (otro), solo mostrar paquete personalizado
                     if (formData.salon_id === 'otro') {
-                      return p.nombre?.toLowerCase().includes('personalizado');
+                      const nombrePaquete = p.nombre?.toLowerCase().trim() || '';
+                      return nombrePaquete.includes('personalizado');
                     }
                     
                     // Si es salón de la empresa, filtrar los disponibles
@@ -2933,7 +3224,8 @@ function CrearOferta() {
                             Temporada {temporadas.find(t => t.id === parseInt(formData.temporada_id))?.nombre || 'N/A'}
                           </p>
                           <p className="text-xs text-gray-600">
-                            Ajuste: +${temporadas.find(t => t.id === parseInt(formData.temporada_id))?.ajuste_precio || 0}
+                            Ajuste: +${formData.salon_id === 'otro' ? 0 : (temporadas.find(t => t.id === parseInt(formData.temporada_id))?.ajuste_precio || 0)}
+                            {formData.salon_id === 'otro' && ' (Sede externa: sin ajuste de temporada)'}
                           </p>
                           <p className="text-xs text-green-600 mt-1">
                             💡 Auto-detectada según la fecha del evento
@@ -2958,10 +3250,17 @@ function CrearOferta() {
                         <input
                           type="number"
                           step="0.01"
-                          placeholder={`Original: $${temporadas.find(t => t.id === parseInt(formData.temporada_id))?.ajuste_precio || 0}`}
-                          value={ajusteTemporadaCustom}
-                          onChange={(e) => setAjusteTemporadaCustom(e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                          placeholder={`Original: $${formData.salon_id === 'otro' ? 0 : (temporadas.find(t => t.id === parseInt(formData.temporada_id))?.ajuste_precio || 0)}`}
+                          value={formData.salon_id === 'otro' ? '0' : ajusteTemporadaCustom}
+                          onChange={(e) => {
+                            if (formData.salon_id === 'otro') {
+                              // No permitir cambiar el ajuste si es sede externa
+                              return;
+                            }
+                            setAjusteTemporadaCustom(e.target.value);
+                          }}
+                          disabled={formData.salon_id === 'otro'}
+                          className="w-full px-2 py-1 text-sm border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                         />
                         <p className="text-xs text-amber-600 mt-1">
                           Opcional: Ajustar el incremento por temporada
@@ -4039,7 +4338,7 @@ function CrearOferta() {
         {/* Panel de Calculadora y Calendario */}
         <div className="lg:col-span-1 space-y-6">
           {/* Panel de Filtros y Eventos del Calendario - Solo en paso 2 */}
-          {pasoActual === 2 && formData.salon_id && formData.salon_id !== '' && formData.salon_id !== 'otro' && (
+          {pasoActual === 2 && formData.salon_id && formData.salon_id !== '' && (
             <Card className="sticky top-6">
               <CardContent className="p-0">
                 <div className="flex flex-col h-[calc(100vh-200px)]">
