@@ -109,7 +109,7 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Cambiar Estado del Leak</DialogTitle>
+          <DialogTitle>Cambiar Estado del Lead</DialogTitle>
           <DialogDescription>
             Actualiza el estado de contacto para {leak?.nombre_completo}
           </DialogDescription>

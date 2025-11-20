@@ -63,7 +63,7 @@ function Leaks() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Leaks</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
           <p className="text-muted-foreground">
             Gestiona los clientes potenciales de tus campañas
           </p>
@@ -76,7 +76,7 @@ function Leaks() {
           </Button>
           <Button asChild variant="outline">
             <Link to="/leaks/misleaks">
-              Ver Mis Leaks
+              Ver Mis Leads
             </Link>
           </Button>
         </div>
@@ -104,7 +104,7 @@ function Leaks() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Leaks Disponibles
+                  Leads Disponibles
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -116,7 +116,7 @@ function Leaks() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Mis Leaks
+                  Mis Leads
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -207,7 +207,7 @@ function Leaks() {
                             borderRadius: '6px',
                             padding: '8px 12px'
                           }}
-                          formatter={(value, name) => [value, 'Leaks']}
+                          formatter={(value, name) => [value, 'Leads']}
                           labelFormatter={(label) => `Fecha: ${label}`}
                         />
                         <Area
@@ -233,7 +233,7 @@ function Leaks() {
                   <CardHeader>
                     <div>
                       <CardTitle className="text-sm font-medium">Distribución por Estado</CardTitle>
-                      <p className="text-xs text-muted-foreground mt-1">Mis leaks</p>
+                      <p className="text-xs text-muted-foreground mt-1">Mis leads</p>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -297,7 +297,7 @@ function Leaks() {
                   <CardHeader>
                     <div>
                       <CardTitle className="text-sm font-medium">Distribución por Estado</CardTitle>
-                      <p className="text-xs text-muted-foreground mt-1">Mis leaks</p>
+                      <p className="text-xs text-muted-foreground mt-1">Mis leads</p>
                     </div>
                   </CardHeader>
                   <CardContent>

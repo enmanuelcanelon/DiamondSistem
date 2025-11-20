@@ -236,6 +236,10 @@ function CalendarioMensual() {
         return filtrosSalones.kendall;
       }
       // Si no coincide con ningún salón específico, usar el filtro "otros"
+      // También incluir eventos de CITAS (es_citas) en el filtro "otros"
+      if (evento.es_citas || evento.calendario === 'citas') {
+        return filtrosSalones.otros;
+      }
       return filtrosSalones.otros;
     });
   };

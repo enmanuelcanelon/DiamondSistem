@@ -1,4 +1,4 @@
-import { X, Phone, Mail, Calendar, Users, MapPin, ExternalLink, Clock, FileText, User, UserPlus, Loader2 } from 'lucide-react';
+import { X, Phone, Mail, Calendar, Users, MapPin, ExternalLink, Clock, FileText, User, UserPlus, Loader2, CalendarPlus } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
@@ -67,7 +67,7 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
       queryClient.invalidateQueries(['leaks-mios']);
       queryClient.invalidateQueries(['leaks-disponibles']);
       queryClient.invalidateQueries(['clientes']);
-      toast.success('Leak convertido en cliente exitosamente');
+      toast.success('Lead convertido en cliente exitosamente');
       onClose();
       // Opcional: navegar a la página del cliente
       if (data.cliente) {
@@ -75,12 +75,31 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
       }
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al convertir leak en cliente');
+      toast.error(error.response?.data?.message || 'Error al convertir lead en cliente');
+    },
+  });
+
+  const agregarACalendarioMutation = useMutation({
+    mutationFn: async (leakId) => {
+      const response = await api.post(`/google-calendar/leaks/${leakId}/agregar`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['leaks-mios']);
+      queryClient.invalidateQueries(['calendario-citas']);
+      toast.success(data.message || 'Evento agregado a Google Calendar exitosamente');
+      if (data.evento?.htmlLink) {
+        // Opcional: abrir el evento en Google Calendar
+        window.open(data.evento.htmlLink, '_blank');
+      }
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Error al agregar el evento a Google Calendar');
     },
   });
 
   const handleConvertirCliente = () => {
-    if (window.confirm('¿Estás seguro de convertir este leak en cliente? Esto creará un nuevo cliente en el sistema.')) {
+    if (window.confirm('¿Estás seguro de convertir este lead en cliente? Esto creará un nuevo cliente en el sistema.')) {
       convertirClienteMutation.mutate(leak.id);
     }
   };
@@ -105,7 +124,7 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Detalle del Leak</span>
+            <span>Detalle del Lead</span>
             <Badge variant={estadoInfo.variant}>{estadoInfo.label}</Badge>
           </DialogTitle>
           <DialogDescription>
@@ -310,24 +329,45 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
         </div>
 
         <div className="flex justify-between items-center mt-6">
-          {leak.estado !== 'convertido' && !leak.cliente_id && (
-            <Button
-              onClick={handleConvertirCliente}
-              disabled={convertirClienteMutation.isPending}
-            >
-              {convertirClienteMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Convirtiendo...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Convertir a Cliente
-                </>
-              )}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {leak.estado !== 'convertido' && !leak.cliente_id && (
+              <Button
+                onClick={handleConvertirCliente}
+                disabled={convertirClienteMutation.isPending}
+              >
+                {convertirClienteMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Convirtiendo...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Convertir a Cliente
+                  </>
+                )}
+              </Button>
+            )}
+            {leak.estado === 'interesado' && leak.fecha_cita_salon && (
+              <Button
+                variant="outline"
+                onClick={() => agregarACalendarioMutation.mutate(leak.id)}
+                disabled={agregarACalendarioMutation.isPending}
+              >
+                {agregarACalendarioMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Agregando...
+                  </>
+                ) : (
+                  <>
+                    <CalendarPlus className="w-4 h-4 mr-2" />
+                    Agregar a Google Calendar
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
           <div className="ml-auto">
             <Button variant="outline" onClick={onClose}>
               Cerrar

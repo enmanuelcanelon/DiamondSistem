@@ -270,6 +270,13 @@ async function crearEventoCitas(vendedorId, datosEvento) {
     };
   } catch (error) {
     logger.error(`❌ Error al crear evento en calendario CITAS:`, error);
+    if (error.response) {
+      logger.error(`❌ Respuesta del error de Google Calendar API:`, error.response.data);
+      logger.error(`❌ Código de estado:`, error.response.status);
+    }
+    if (error.code) {
+      logger.error(`❌ Código de error:`, error.code);
+    }
     throw error;
   }
 }
@@ -466,7 +473,6 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
       orderBy: 'startTime',
       maxResults: 2500,
       showDeleted: false,
-      // Forzar actualización evitando caché
       alwaysIncludeEmail: false
     });
 
@@ -519,7 +525,6 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
       };
     });
 
-    logger.info(`✅ Obtenidos ${eventos.length} eventos del calendario CITAS`);
     return eventos;
   } catch (error) {
     logger.warn(`⚠️ Error al obtener eventos del calendario CITAS:`, error);

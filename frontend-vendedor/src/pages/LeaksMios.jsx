@@ -75,7 +75,7 @@ const parsearFechaLocal = (fecha) => {
 
 function LeaksMios() {
   const queryClient = useQueryClient();
-  const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('nuevo');
   const [filtroSalon, setFiltroSalon] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [leakSeleccionado, setLeakSeleccionado] = useState(null);
@@ -115,10 +115,10 @@ function LeaksMios() {
     onSuccess: (data) => {
       queryClient.invalidateQueries(['leaks-mios']);
       queryClient.invalidateQueries(['leaks-stats']);
-      toast.success(data.message || 'Mis leaks eliminados exitosamente');
+      toast.success(data.message || 'Mis leads eliminados exitosamente');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al eliminar mis leaks');
+      toast.error(error.response?.data?.message || 'Error al eliminar mis leads');
     },
   });
 
@@ -316,7 +316,7 @@ function LeaksMios() {
             </Link>
           </Button>
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Mis Leaks</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Mis Leads</h2>
             <p className="text-muted-foreground">
               Leaks asignados a ti
             </p>
@@ -337,7 +337,6 @@ function LeaksMios() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
                   <SelectItem value="nuevo">Nuevos</SelectItem>
                   <SelectItem value="interesado">Interesado</SelectItem>
                   <SelectItem value="contactado_llamar_luego">Contactado Llamar Luego</SelectItem>
@@ -382,7 +381,7 @@ function LeaksMios() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CardTitle>Mis Leaks</CardTitle>
+              <CardTitle>Mis Leads</CardTitle>
               <Badge variant="secondary">
                 {totalMios} total
               </Badge>

@@ -65,7 +65,7 @@ function Layout() {
   const navigation = {
     principal: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { name: 'Leaks', href: '/leaks', icon: MessageSquare },
+      { name: 'Leads', href: '/leaks', icon: MessageSquare },
       { name: 'Clientes', href: '/clientes', icon: Users },
       { name: 'Ofertas', href: '/ofertas', icon: FileText },
       { name: 'Contratos', href: '/contratos', icon: FileCheck },
@@ -119,7 +119,7 @@ function Layout() {
                 {navigation.principal.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
-                  const mostrarBadge = item.name === 'Leaks' && pendientesCount > 0;
+                  const mostrarBadge = item.name === 'Leads' && pendientesCount > 0;
                   return (
                     <button
                       key={item.name}
@@ -301,7 +301,7 @@ function Layout() {
               {navigation.principal.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
-                const mostrarBadge = item.name === 'Leaks' && pendientesCount > 0;
+                const mostrarBadge = item.name === 'Leads' && pendientesCount > 0;
                 return (
                   <button
                     key={item.name}

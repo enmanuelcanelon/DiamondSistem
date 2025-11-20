@@ -225,10 +225,10 @@ function LeaksDisponibles() {
     onSuccess: (data) => {
       queryClient.invalidateQueries(['leaks-disponibles']);
       queryClient.invalidateQueries(['leaks-stats']);
-      toast.success(data.message || 'Leaks disponibles eliminados exitosamente');
+      toast.success(data.message || 'Leads disponibles eliminados exitosamente');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al eliminar leaks disponibles');
+      toast.error(error.response?.data?.message || 'Error al eliminar leads disponibles');
     },
   });
 
@@ -272,7 +272,7 @@ function LeaksDisponibles() {
   };
 
   const handleLimpiarDisponibles = () => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar TODOS los leaks disponibles? Esta acción no se puede deshacer.')) {
+    if (window.confirm('¿Estás seguro de que deseas eliminar TODOS los leads disponibles? Esta acción no se puede deshacer.')) {
       limpiarDisponiblesMutation.mutate();
     }
   };
@@ -312,7 +312,7 @@ function LeaksDisponibles() {
     if (leaks.length === 0) {
       return (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">No hay leaks disponibles</p>
+          <p className="text-muted-foreground">No hay leads disponibles</p>
         </div>
       );
     }
@@ -451,7 +451,7 @@ function LeaksDisponibles() {
             </Link>
           </Button>
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Leaks Disponibles</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Leads Disponibles</h2>
             <p className="text-muted-foreground">
               Leaks sin asignar que puedes tomar. Se actualizan automáticamente cada minuto.
             </p>
@@ -674,7 +674,7 @@ function LeaksDisponibles() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CardTitle>Leaks Disponibles</CardTitle>
+                <CardTitle>Leads Disponibles</CardTitle>
                 <Badge variant="secondary">
                   {totalDisponibles} total
                 </Badge>

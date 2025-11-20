@@ -359,6 +359,8 @@ router.get('/eventos/citas/:mes/:año', authenticate, requireVendedor, async (re
       eventosPorDia[dia].push(evento);
     });
 
+    logger.info(`📅 Eventos agrupados por día: ${Object.keys(eventosPorDia).length} días con eventos`);
+
     res.json({
       success: true,
       periodo: {
@@ -740,6 +742,152 @@ router.post('/contratos/:contratoId/agregar', authenticate, requireVendedor, asy
 
   } catch (error) {
     logger.error('Error al agregar evento de contrato a Google Calendar:', error);
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/google-calendar/leaks/:leakId/agregar
+ * @desc    Agregar un lead (interesado) a Google Calendar
+ * @access  Private (Vendedor)
+ */
+router.post('/leaks/:leakId/agregar', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { leakId } = req.params;
+    const vendedorId = req.user.id;
+
+    logger.info(`🔍 Intentando agregar lead ${leakId} a Google Calendar para vendedor ${vendedorId}`);
+
+    const { getPrismaClient } = require('../config/database');
+    const prisma = getPrismaClient();
+
+    // Obtener el lead
+    const leak = await prisma.leaks.findUnique({
+      where: { id: parseInt(leakId) },
+      select: {
+        id: true,
+        nombre_completo: true,
+        telefono: true,
+        email: true,
+        tipo_evento: true,
+        cantidad_invitados: true,
+        salon_preferido: true,
+        fecha_cita_salon: true,
+        estado: true,
+        vendedor_id: true,
+        detalles_interesado: true,
+        notas_vendedor: true
+      }
+    });
+
+    if (!leak) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lead no encontrado'
+      });
+    }
+
+    // Verificar que el lead pertenece al vendedor
+    if (leak.vendedor_id !== vendedorId) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permiso para acceder a este lead'
+      });
+    }
+
+    // Verificar que el lead esté en estado "interesado"
+    if (leak.estado !== 'interesado') {
+      return res.status(400).json({
+        success: false,
+        error: 'Solo se pueden agregar a Google Calendar los leads en estado "interesado"'
+      });
+    }
+
+    // Verificar que tenga fecha_cita_salon
+    if (!leak.fecha_cita_salon) {
+      return res.status(400).json({
+        success: false,
+        error: 'El lead debe tener una fecha de cita al salón para agregarlo a Google Calendar'
+      });
+    }
+
+    // Crear el evento en Google Calendar
+    const { crearEventoCitas } = require('../utils/googleCalendarService');
+    
+    // Calcular fecha de fin (1 hora después por defecto)
+    // Asegurar que fecha_cita_salon sea un objeto Date válido
+    let fechaInicio;
+    if (leak.fecha_cita_salon instanceof Date) {
+      fechaInicio = new Date(leak.fecha_cita_salon);
+    } else if (typeof leak.fecha_cita_salon === 'string') {
+      fechaInicio = new Date(leak.fecha_cita_salon);
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'La fecha de cita no tiene un formato válido'
+      });
+    }
+
+    // Validar que la fecha sea válida
+    if (isNaN(fechaInicio.getTime())) {
+      return res.status(400).json({
+        success: false,
+        error: 'La fecha de cita no es válida'
+      });
+    }
+
+    const fechaFin = new Date(fechaInicio);
+    fechaFin.setHours(fechaFin.getHours() + 1);
+
+    // Crear título del evento
+    let titulo = leak.tipo_evento || 'Cita';
+    if (leak.nombre_completo) {
+      titulo += ` - ${leak.nombre_completo}`;
+    }
+
+    // Crear descripción
+    const descripcion = [
+      `Cliente: ${leak.nombre_completo}`,
+      `Teléfono: ${leak.telefono}`,
+      leak.email ? `Email: ${leak.email}` : '',
+      leak.cantidad_invitados ? `Invitados: ${leak.cantidad_invitados}` : '',
+      leak.detalles_interesado ? `Detalles: ${leak.detalles_interesado}` : '',
+      leak.notas_vendedor ? `Notas: ${leak.notas_vendedor}` : ''
+    ].filter(Boolean).join('\n');
+
+    let eventoGoogleCalendar;
+    try {
+      eventoGoogleCalendar = await crearEventoCitas(vendedorId, {
+        titulo: titulo,
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+        descripcion: descripcion,
+        ubicacion: leak.salon_preferido || ''
+      });
+    } catch (error) {
+      logger.error('Error al llamar crearEventoCitas:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Error al crear el evento en Google Calendar',
+        detalles: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+
+    if (!eventoGoogleCalendar) {
+      return res.status(500).json({
+        success: false,
+        error: 'No se pudo agregar el evento a Google Calendar. Verifica que tengas Google Calendar habilitado y que el calendario CITAS esté configurado.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Evento agregado a Google Calendar exitosamente',
+      evento: eventoGoogleCalendar
+    });
+
+  } catch (error) {
+    logger.error('Error al agregar lead a Google Calendar:', error);
     next(error);
   }
 });
