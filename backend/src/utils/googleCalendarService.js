@@ -131,49 +131,54 @@ async function obtenerEventosCalendarioPrincipal(vendedorId, fechaInicio, fechaF
       alwaysIncludeEmail: false
     });
 
-    const eventos = (response.data.items || []).map(evento => {
-      // Obtener fechas/horas - priorizar dateTime sobre date
-      const inicio = evento.start?.dateTime || evento.start?.date;
-      const fin = evento.end?.dateTime || evento.end?.date;
-      
-      // Detectar si es evento de todo el día (usa 'date' en lugar de 'dateTime')
-      const esTodoElDia = !evento.start?.dateTime && !!evento.start?.date;
-      
-      let fechaInicio = inicio || null;
-      let fechaFin = fin || null;
-      
-      // Para eventos de todo el día, parsear correctamente en zona horaria de Miami
-      if (esTodoElDia && inicio && !inicio.includes('T')) {
-        // Formato: "2025-11-19" -> agregar hora en zona horaria de Miami
-        // Miami está en America/New_York (EST: UTC-5, EDT: UTC-4)
-        // Usar EST por defecto (-05:00), se ajustará automáticamente según la fecha
-        fechaInicio = `${inicio}T00:00:00-05:00`;
-      }
-      
-      if (esTodoElDia && fin && !fin.includes('T')) {
-        // Para eventos de todo el día, Google Calendar usa el día siguiente como fin
-        // Ejemplo: evento del 19, fin es "2025-11-20" (día siguiente a medianoche)
-        fechaFin = `${fin}T00:00:00-05:00`;
-      }
-      
-      return {
-        id: evento.id,
-        titulo: evento.summary || 'Sin título',
-        descripcion: evento.description || '',
-        fecha_inicio: fechaInicio,
-        fecha_fin: fechaFin,
-        es_todo_el_dia: esTodoElDia, // Marcar como evento de todo el día
-        timeZone: evento.start?.timeZone || evento.end?.timeZone || 'America/New_York',
-        ubicacion: evento.location || '',
-        creador: evento.creator?.email || '',
-        organizador: evento.organizer?.email || '',
-        estado: evento.status || 'confirmed',
-        htmlLink: evento.htmlLink || '',
-        calendario: 'principal',
-        // Incluir información de actualización para debugging
-        updated: evento.updated || null
-      };
-    });
+    const eventos = (response.data.items || [])
+      .filter(evento => {
+        // Filtrar eventos cancelados o eliminados
+        return evento.status !== 'cancelled' && evento.status !== 'cancelled';
+      })
+      .map(evento => {
+        // Obtener fechas/horas - priorizar dateTime sobre date
+        const inicio = evento.start?.dateTime || evento.start?.date;
+        const fin = evento.end?.dateTime || evento.end?.date;
+        
+        // Detectar si es evento de todo el día (usa 'date' en lugar de 'dateTime')
+        const esTodoElDia = !evento.start?.dateTime && !!evento.start?.date;
+        
+        let fechaInicio = inicio || null;
+        let fechaFin = fin || null;
+        
+        // Para eventos de todo el día, parsear correctamente en zona horaria de Miami
+        if (esTodoElDia && inicio && !inicio.includes('T')) {
+          // Formato: "2025-11-19" -> agregar hora en zona horaria de Miami
+          // Miami está en America/New_York (EST: UTC-5, EDT: UTC-4)
+          // Usar EST por defecto (-05:00), se ajustará automáticamente según la fecha
+          fechaInicio = `${inicio}T00:00:00-05:00`;
+        }
+        
+        if (esTodoElDia && fin && !fin.includes('T')) {
+          // Para eventos de todo el día, Google Calendar usa el día siguiente como fin
+          // Ejemplo: evento del 19, fin es "2025-11-20" (día siguiente a medianoche)
+          fechaFin = `${fin}T00:00:00-05:00`;
+        }
+        
+        return {
+          id: evento.id,
+          titulo: evento.summary || 'Sin título',
+          descripcion: evento.description || '',
+          fecha_inicio: fechaInicio,
+          fecha_fin: fechaFin,
+          es_todo_el_dia: esTodoElDia, // Marcar como evento de todo el día
+          timeZone: evento.start?.timeZone || evento.end?.timeZone || 'America/New_York',
+          ubicacion: evento.location || '',
+          creador: evento.creator?.email || '',
+          organizador: evento.organizer?.email || '',
+          estado: evento.status || 'confirmed',
+          htmlLink: evento.htmlLink || '',
+          calendario: 'principal',
+          // Incluir información de actualización para debugging
+          updated: evento.updated || null
+        };
+      });
 
     // Log de ejemplo para debugging (solo el primer evento)
     if (eventos.length > 0) {
@@ -270,6 +275,151 @@ async function crearEventoCitas(vendedorId, datosEvento) {
 }
 
 /**
+ * Crear evento de contrato en Google Calendar
+ * @param {number} vendedorId - ID del vendedor
+ * @param {Object} datosContrato - Datos del contrato
+ * @param {string} datosContrato.codigoContrato - Código del contrato
+ * @param {string} datosContrato.nombreCliente - Nombre del cliente
+ * @param {string} datosContrato.tipoEvento - Tipo de evento
+ * @param {string} datosContrato.homenajeado - Nombre del homenajeado (opcional)
+ * @param {Date} datosContrato.fechaEvento - Fecha del evento
+ * @param {Date} datosContrato.horaInicio - Hora de inicio
+ * @param {Date} datosContrato.horaFin - Hora de fin
+ * @param {string} datosContrato.ubicacion - Ubicación/salón
+ * @param {number} datosContrato.cantidadInvitados - Cantidad de invitados
+ * @returns {Promise<Object>} Evento creado
+ */
+async function crearEventoContrato(vendedorId, datosContrato) {
+  try {
+    // Intentar usar el calendario CITAS compartido, si no está disponible, usar el calendario principal del vendedor
+    let calendarioId = process.env.GOOGLE_CALENDAR_CITAS_ID;
+    
+    const vendedor = await prisma.vendedores.findUnique({
+      where: { id: vendedorId },
+      select: {
+        google_calendar_sync_enabled: true,
+        google_calendar_id: true
+      }
+    });
+
+    if (!vendedor || !vendedor.google_calendar_sync_enabled) {
+      logger.warn(`⚠️ Vendedor ${vendedorId} no tiene Google Calendar habilitado`);
+      return null;
+    }
+
+    // Si no hay calendario CITAS configurado, usar el calendario principal del vendedor
+    if (!calendarioId) {
+      if (!vendedor.google_calendar_id) {
+        logger.warn(`⚠️ Vendedor ${vendedorId} no tiene calendario configurado`);
+        return null;
+      }
+      calendarioId = vendedor.google_calendar_id;
+      logger.info(`📅 Usando calendario principal del vendedor: ${calendarioId}`);
+    }
+
+    const tokens = await getValidTokens(vendedorId);
+    if (!tokens) {
+      logger.warn(`⚠️ Vendedor ${vendedorId} no tiene tokens válidos`);
+      return null;
+    }
+
+    const oauth2Client = createAuthenticatedClient(tokens.access_token, tokens.refresh_token);
+    if (!oauth2Client) {
+      return null;
+    }
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    // Construir título del evento
+    let titulo = `${datosContrato.tipoEvento || 'Evento'}`;
+    if (datosContrato.homenajeado) {
+      titulo += ` - ${datosContrato.homenajeado}`;
+    }
+    titulo += ` (${datosContrato.codigoContrato})`;
+
+    // Construir descripción
+    const descripcion = [
+      `Cliente: ${datosContrato.nombreCliente}`,
+      `Código: ${datosContrato.codigoContrato}`,
+      `Invitados: ${datosContrato.cantidadInvitados}`,
+      datosContrato.ubicacion ? `Ubicación: ${datosContrato.ubicacion}` : ''
+    ].filter(Boolean).join('\n');
+
+    // Combinar fecha y hora para crear Date objects
+    const fechaEvento = new Date(datosContrato.fechaEvento);
+    
+    // Manejar hora_inicio y hora_fin (pueden ser Date objects de Prisma o strings)
+    let horaInicioDate, horaFinDate;
+    
+    if (datosContrato.horaInicio instanceof Date) {
+      horaInicioDate = datosContrato.horaInicio;
+    } else if (typeof datosContrato.horaInicio === 'string') {
+      const [horaInicioH, horaInicioM] = datosContrato.horaInicio.split(':').map(Number);
+      horaInicioDate = new Date();
+      horaInicioDate.setHours(horaInicioH, horaInicioM, 0, 0);
+    } else {
+      throw new Error('Formato de hora_inicio no válido');
+    }
+    
+    if (datosContrato.horaFin instanceof Date) {
+      horaFinDate = datosContrato.horaFin;
+    } else if (typeof datosContrato.horaFin === 'string') {
+      const [horaFinH, horaFinM] = datosContrato.horaFin.split(':').map(Number);
+      horaFinDate = new Date();
+      horaFinDate.setHours(horaFinH, horaFinM, 0, 0);
+    } else {
+      throw new Error('Formato de hora_fin no válido');
+    }
+    
+    // Combinar fecha y hora
+    const fechaInicio = new Date(fechaEvento);
+    fechaInicio.setHours(horaInicioDate.getHours(), horaInicioDate.getMinutes(), 0, 0);
+    
+    const fechaFin = new Date(fechaEvento);
+    fechaFin.setHours(horaFinDate.getHours(), horaFinDate.getMinutes(), 0, 0);
+    
+    // Si la hora de fin es menor que la de inicio, significa que cruza medianoche
+    if (fechaFin < fechaInicio) {
+      fechaFin.setDate(fechaFin.getDate() + 1);
+    }
+
+    // Formatear fechas para Google Calendar
+    const fechaInicioISO = fechaInicio.toISOString();
+    const fechaFinISO = fechaFin.toISOString();
+
+    const evento = {
+      summary: titulo,
+      description: descripcion,
+      location: datosContrato.ubicacion || '',
+      start: {
+        dateTime: fechaInicioISO,
+        timeZone: 'America/New_York'
+      },
+      end: {
+        dateTime: fechaFinISO,
+        timeZone: 'America/New_York'
+      }
+    };
+
+    const response = await calendar.events.insert({
+      calendarId: calendarioId,
+      resource: evento
+    });
+
+    logger.info(`✅ Evento de contrato creado en Google Calendar (${calendarioId === process.env.GOOGLE_CALENDAR_CITAS_ID ? 'CITAS' : 'Principal'}): ${response.data.id} para contrato ${datosContrato.codigoContrato}`);
+    return {
+      id: response.data.id,
+      htmlLink: response.data.htmlLink,
+      titulo: response.data.summary
+    };
+  } catch (error) {
+    logger.error(`❌ Error al crear evento de contrato en Google Calendar:`, error);
+    // No lanzar el error para que no falle la creación del contrato
+    return null;
+  }
+}
+
+/**
  * Obtener eventos del calendario CITAS compartido
  * @param {number} vendedorId - ID del vendedor (para obtener tokens)
  * @param {Date} fechaInicio - Fecha de inicio
@@ -320,7 +470,12 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
       alwaysIncludeEmail: false
     });
 
-    const eventos = (response.data.items || []).map(evento => {
+    const eventos = (response.data.items || [])
+      .filter(evento => {
+        // Filtrar eventos cancelados o eliminados
+        return evento.status !== 'cancelled';
+      })
+      .map(evento => {
       // Obtener fechas/horas - priorizar dateTime sobre date
       const inicio = evento.start?.dateTime || evento.start?.date;
       const fin = evento.end?.dateTime || evento.end?.date;
@@ -528,6 +683,7 @@ module.exports = {
   obtenerEventosCalendarioPrincipal,
   obtenerEventosCalendarioCitas,
   crearEventoCitas,
+  crearEventoContrato,
   obtenerEventosPorMes,
   obtenerEventosPorDia,
   verificarDisponibilidad,

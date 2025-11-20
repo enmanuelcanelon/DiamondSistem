@@ -651,7 +651,8 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
           select: {
             nombre_completo: true,
             email: true,
-            telefono: true
+            telefono: true,
+            tipo_evento: true
           }
         },
         salones: {

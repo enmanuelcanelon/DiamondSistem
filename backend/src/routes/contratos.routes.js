@@ -12,6 +12,7 @@ const { calcularComisionVendedor, calcularPagosFinanciamiento } = require('../ut
 const { generarPDFContrato } = require('../utils/pdfContrato');
 const { generarFacturaProforma } = require('../utils/pdfFactura');
 const { generarFacturaProformaHTML } = require('../utils/pdfFacturaHTML');
+const logger = require('../utils/logger');
 
 const prisma = getPrismaClient();
 
@@ -97,7 +98,8 @@ router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next
               id: true,
               nombre_completo: true,
               email: true,
-              telefono: true
+              telefono: true,
+              tipo_evento: true
             }
           },
           paquetes: {
@@ -470,6 +472,29 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
 
       return nuevoContrato;
     });
+
+    // Crear evento en Google Calendar si el vendedor tiene Google Calendar habilitado
+    try {
+      const { crearEventoContrato } = require('../utils/googleCalendarService');
+      const eventoGoogleCalendar = await crearEventoContrato(oferta.vendedor_id, {
+        codigoContrato: codigo_contrato,
+        nombreCliente: oferta.clientes.nombre_completo,
+        tipoEvento: oferta.clientes.tipo_evento || 'Evento',
+        homenajeado: oferta.homenajeado || null,
+        fechaEvento: oferta.fecha_evento,
+        horaInicio: oferta.hora_inicio,
+        horaFin: oferta.hora_fin,
+        ubicacion: oferta.lugar_salon || oferta.salones?.nombre || null,
+        cantidadInvitados: oferta.cantidad_invitados
+      });
+
+      if (eventoGoogleCalendar) {
+        logger.info(`✅ Evento de contrato ${codigo_contrato} agregado a Google Calendar: ${eventoGoogleCalendar.id}`);
+      }
+    } catch (error) {
+      // No fallar la creación del contrato si falla Google Calendar
+      logger.error(`⚠️ Error al agregar evento a Google Calendar (no crítico):`, error);
+    }
 
     // Obtener contrato completo
     const contratoCompleto = await prisma.contratos.findUnique({

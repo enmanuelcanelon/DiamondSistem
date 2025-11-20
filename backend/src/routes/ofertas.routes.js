@@ -278,7 +278,8 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
               id: true,
               nombre_completo: true,
               email: true,
-              telefono: true
+              telefono: true,
+              tipo_evento: true
             }
           },
           paquetes: {

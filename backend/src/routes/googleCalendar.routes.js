@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, requireVendedor, requireManager } = require('../middleware/auth');
 const { getAuthUrl, getTokensFromCode, getPrimaryCalendarId } = require('../utils/googleCalendarOAuth');
-const { obtenerEventosPorMes, obtenerEventosPorDia, obtenerEventosTodosVendedores, verificarDisponibilidad } = require('../utils/googleCalendarService');
+const { obtenerEventosPorMes, obtenerEventosPorDia, obtenerEventosTodosVendedores, verificarDisponibilidad, crearEventoContrato } = require('../utils/googleCalendarService');
 const { encrypt } = require('../utils/encryption');
 const { getPrismaClient } = require('../config/database');
 const { ValidationError, UnauthorizedError } = require('../middleware/errorHandler');
@@ -450,6 +450,16 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
         fecha_evento: true,
         hora_inicio: true,
         hora_fin: true,
+        cantidad_invitados: true,
+        estado_pago: true,
+        clientes: {
+          select: {
+            nombre_completo: true,
+            email: true,
+            telefono: true,
+            tipo_evento: true
+          }
+        },
         salones: {
           select: {
             id: true,
@@ -477,6 +487,14 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
         fecha_evento: c.fecha_evento,
         hora_inicio: c.hora_inicio,
         hora_fin: c.hora_fin,
+        cantidad_invitados: c.cantidad_invitados,
+        estado_pago: c.estado_pago,
+        clientes: c.clientes ? {
+          nombre_completo: c.clientes.nombre_completo,
+          email: c.clientes.email,
+          telefono: c.clientes.telefono,
+          tipo_evento: c.clientes.tipo_evento
+        } : null,
         salones: c.salones ? {
           id: c.salones.id,
           nombre: c.salones.nombre
@@ -613,6 +631,115 @@ router.get('/disponibilidad/:fecha', authenticate, requireVendedor, async (req, 
 
   } catch (error) {
     logger.error('Error al verificar disponibilidad:', error);
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/google-calendar/contratos/:contratoId/agregar
+ * @desc    Agregar evento de contrato a Google Calendar
+ * @access  Private (Vendedor)
+ */
+router.post('/contratos/:contratoId/agregar', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { contratoId } = req.params;
+    const vendedorId = req.user.id;
+
+    // Obtener el contrato con toda su información
+    const contrato = await prisma.contratos.findUnique({
+      where: { id: parseInt(contratoId) },
+      include: {
+        clientes: true,
+        salones: {
+          select: {
+            id: true,
+            nombre: true
+          }
+        },
+        ofertas: {
+          select: {
+            homenajeado: true
+          }
+        }
+      }
+    });
+
+    if (!contrato) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contrato no encontrado'
+      });
+    }
+
+    // Verificar que el contrato pertenece al vendedor
+    if (contrato.vendedor_id !== vendedorId) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permiso para acceder a este contrato'
+      });
+    }
+
+    // Verificar que el contrato tenga al menos $500 pagados
+    const totalPagado = parseFloat(contrato.total_pagado || 0);
+    if (totalPagado < 500) {
+      return res.status(400).json({
+        success: false,
+        error: 'El contrato debe tener al menos $500 pagados para agregarlo a Google Calendar'
+      });
+    }
+
+    // Verificar que el vendedor tenga Google Calendar habilitado
+    const vendedor = await prisma.vendedores.findUnique({
+      where: { id: vendedorId },
+      select: {
+        google_calendar_sync_enabled: true,
+        google_calendar_id: true
+      }
+    });
+
+    if (!vendedor || !vendedor.google_calendar_sync_enabled) {
+      return res.status(400).json({
+        success: false,
+        error: 'Google Calendar no está habilitado para tu cuenta. Por favor, conéctalo primero en la configuración.'
+      });
+    }
+
+    // Verificar que el vendedor tenga un calendario configurado (principal o CITAS)
+    if (!vendedor.google_calendar_id && !process.env.GOOGLE_CALENDAR_CITAS_ID) {
+      return res.status(400).json({
+        success: false,
+        error: 'No se encontró un calendario configurado. Por favor, verifica tu configuración de Google Calendar.'
+      });
+    }
+
+    // Crear el evento en Google Calendar
+    const eventoGoogleCalendar = await crearEventoContrato(vendedorId, {
+      codigoContrato: contrato.codigo_contrato,
+      nombreCliente: contrato.clientes?.nombre_completo || 'Sin cliente',
+      tipoEvento: contrato.clientes?.tipo_evento || 'Evento',
+      homenajeado: contrato.homenajeado || contrato.ofertas?.homenajeado || null,
+      fechaEvento: contrato.fecha_evento,
+      horaInicio: contrato.hora_inicio,
+      horaFin: contrato.hora_fin,
+      ubicacion: contrato.lugar_salon || contrato.salones?.nombre || null,
+      cantidadInvitados: contrato.cantidad_invitados
+    });
+
+    if (!eventoGoogleCalendar) {
+      return res.status(500).json({
+        success: false,
+        error: 'No se pudo agregar el evento a Google Calendar. Verifica que tengas Google Calendar habilitado y tokens válidos.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Evento agregado a Google Calendar exitosamente',
+      evento: eventoGoogleCalendar
+    });
+
+  } catch (error) {
+    logger.error('Error al agregar evento de contrato a Google Calendar:', error);
     next(error);
   }
 });
