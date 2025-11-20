@@ -376,6 +376,47 @@ function CrearOferta() {
     }
   }, [formData.salon_id, salonSeleccionado]);
 
+  // Limpiar servicios exclusivos de Diamond si se cambia a otro salón
+  useEffect(() => {
+    if (formData.salon_id && formData.salon_id !== 'otro' && salonSeleccionado) {
+      const nombreSalon = salonSeleccionado.nombre?.toLowerCase().trim() || '';
+      const esDiamond = nombreSalon.includes('diamond');
+      
+      // Si NO es Diamond, eliminar servicios exclusivos de Diamond de servicios adicionales
+      if (!esDiamond && serviciosSeleccionados.length > 0) {
+        const serviciosExclusivosDiamond = [
+          'Lounge Set + Coctel Dream',
+          'Terraza decorada con cajas con letra'
+        ];
+        
+        const serviciosAEliminar = serviciosSeleccionados.filter(sel => {
+          const servicioData = servicios?.find(s => s.id === parseInt(sel.servicio_id));
+          return servicioData && serviciosExclusivosDiamond.includes(servicioData.nombre);
+        });
+        
+        if (serviciosAEliminar.length > 0) {
+          const nuevosServicios = serviciosSeleccionados.filter(sel => {
+            const servicioData = servicios?.find(s => s.id === parseInt(sel.servicio_id));
+            return !servicioData || !serviciosExclusivosDiamond.includes(servicioData.nombre);
+          });
+          
+          setServiciosSeleccionados(nuevosServicios);
+          
+          // Actualizar formData
+          setFormData(prev => ({
+            ...prev,
+            servicios_adicionales: nuevosServicios.map(s => ({
+              servicio_id: parseInt(s.servicio_id),
+              cantidad: parseInt(s.cantidad),
+              precio_ajustado: s.precio_ajustado ? parseFloat(s.precio_ajustado) : null,
+              opcion_seleccionada: s.opcion_seleccionada || null,
+            })).filter(s => s.servicio_id)
+          }));
+        }
+      }
+    }
+  }, [formData.salon_id, salonSeleccionado, servicios]);
+
   // Validar capacidad del salón cuando cambian los invitados
   useEffect(() => {
     if (salonSeleccionado && formData.cantidad_invitados) {
@@ -3447,6 +3488,24 @@ function CrearOferta() {
                   }
                   if (s.nombre === 'Decoración Básica' && tieneDecoracionPlus) {
                     return false; // NO mostrar Básica si tiene Plus (excluyentes)
+                  }
+                }
+                
+                // REGLA: Servicios de decoración exclusivos de Diamond
+                // "Lounge Set + Coctel Dream" y "Terraza decorada con cajas con letra" solo disponibles en Diamond
+                const serviciosExclusivosDiamond = [
+                  'Lounge Set + Coctel Dream',
+                  'Terraza decorada con cajas con letra'
+                ];
+                
+                if (serviciosExclusivosDiamond.includes(s.nombre)) {
+                  // Verificar si el salón seleccionado es Diamond
+                  const salonSeleccionado = salones?.find(sal => sal.id === parseInt(formData.salon_id));
+                  const nombreSalonSeleccionado = salonSeleccionado?.nombre?.toLowerCase().trim() || '';
+                  const esDiamond = nombreSalonSeleccionado.includes('diamond');
+                  
+                  if (!esDiamond) {
+                    return false; // No mostrar estos servicios si no es Diamond
                   }
                 }
                 
