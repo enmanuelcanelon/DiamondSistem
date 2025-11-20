@@ -3009,6 +3009,21 @@ function CrearOferta() {
                       return;
                     }
                     
+                    // Filtrar servicios exclusivos de Diamond si el salón NO es Diamond
+                    const serviciosExclusivosDiamond = [
+                      'Lounge Set + Coctel Dream',
+                      'Terraza decorada con cajas con letra'
+                    ];
+                    
+                    if (serviciosExclusivosDiamond.includes(nombreServicio)) {
+                      const nombreSalon = salonSeleccionado?.nombre?.toLowerCase().trim() || '';
+                      const esDiamond = nombreSalon.includes('diamond');
+                      
+                      if (!esDiamond) {
+                        return; // No mostrar estos servicios si no es Diamond
+                      }
+                    }
+                    
                     // Saltar Sidra y Champaña aquí, las procesaremos después
                     if (nombreServicio === 'Sidra' || nombreServicio === 'Champaña') {
                       return;
@@ -3021,6 +3036,21 @@ function CrearOferta() {
                       const grupoExcluyente = paqueteSeleccionado.paquetes_servicios.filter(
                         (otroPs) => {
                           const otroNombre = otroPs.servicios?.nombre;
+                          
+                          // Filtrar servicios exclusivos de Diamond si el salón NO es Diamond
+                          const serviciosExclusivosDiamond = [
+                            'Lounge Set + Coctel Dream',
+                            'Terraza decorada con cajas con letra'
+                          ];
+                          
+                          if (serviciosExclusivosDiamond.includes(otroNombre)) {
+                            const nombreSalon = salonSeleccionado?.nombre?.toLowerCase().trim() || '';
+                            const esDiamond = nombreSalon.includes('diamond');
+                            if (!esDiamond) {
+                              return false; // Excluir del grupo si no es Diamond
+                            }
+                          }
+                          
                           return otroNombre === nombreServicio || excluyentes.includes(otroNombre);
                         }
                       );
