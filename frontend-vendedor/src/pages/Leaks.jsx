@@ -11,7 +11,7 @@ import {
   TrendingUp,
   Target
 } from 'lucide-react';
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
+import { ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
 import api from '../config/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -155,78 +155,6 @@ function Leaks() {
           {/* Gráficas */}
           {statsData?.stats && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
-              {/* Gráfica de leaks por fecha - Area Chart mejorado */}
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-sm font-medium">Leaks por Fecha</CardTitle>
-                      <p className="text-xs text-muted-foreground mt-1">Últimos 30 días</p>
-                    </div>
-                    {statsData.stats.graficaPorFecha && statsData.stats.graficaPorFecha.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          Total: {statsData.stats.graficaPorFecha.reduce((sum, item) => sum + item.cantidad, 0)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {statsData.stats.graficaPorFecha && statsData.stats.graficaPorFecha.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <AreaChart
-                        data={statsData.stats.graficaPorFecha.map(item => ({
-                          fecha: format(new Date(item.fecha), 'dd/MM', { locale: es }),
-                          fechaCompleta: format(new Date(item.fecha), 'dd MMM yyyy', { locale: es }),
-                          cantidad: item.cantidad
-                        }))}
-                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                      >
-                        <defs>
-                          <linearGradient id="colorLeaks" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis 
-                          dataKey="fecha" 
-                          tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                          style={{ fontSize: '12px' }}
-                        />
-                        <YAxis 
-                          tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                          style={{ fontSize: '12px' }}
-                        />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--popover))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '6px',
-                            padding: '8px 12px'
-                          }}
-                          formatter={(value, name) => [value, 'Leads']}
-                          labelFormatter={(label) => `Fecha: ${label}`}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="cantidad"
-                          stroke="hsl(var(--primary))"
-                          fillOpacity={1}
-                          fill="url(#colorLeaks)"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                      <p className="text-sm">No hay datos de leaks en los últimos 30 días</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
               {/* Gráfica de distribución por estado - Pie Chart mejorado */}
               {statsData.stats.porEstado && statsData.stats.porEstado.length > 0 ? (
                 <Card>

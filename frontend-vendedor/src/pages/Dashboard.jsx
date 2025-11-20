@@ -87,9 +87,8 @@ function Dashboard() {
         ? ((ofertasAceptadas / totalOfertas) * 100).toFixed(2)
         : '0.00';
 
-      // Obtener contratos del período actual (filtrar por fecha de creación del contrato)
-      // Necesitamos obtener todos los contratos y filtrar por fecha_creacion_contrato en el frontend
-      // ya que el backend filtra por fecha_evento
+      // Obtener contratos del período actual (filtrar por fecha del primer pago de $500)
+      // Necesitamos obtener todos los contratos y filtrar por fecha del primer pago de $500 en el frontend
       const contratosResponse = await api.get('/contratos', {
         params: {
           page: 1,
@@ -97,16 +96,25 @@ function Dashboard() {
         }
       });
       
-      // Filtrar contratos por fecha_creacion_contrato en el frontend
+      // Filtrar contratos por fecha del primer pago de $500 en el frontend
       const todosContratos = contratosResponse.data?.data || [];
       const contratos = todosContratos.filter(contrato => {
-        if (!contrato.fecha_creacion_contrato) return false;
-        const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
-        // Normalizar fechas para comparación (solo fecha, sin hora)
-        const fechaCreacionNormalizada = new Date(fechaCreacion.getFullYear(), fechaCreacion.getMonth(), fechaCreacion.getDate());
+        // Obtener el primer pago de $500 o más
+        if (!contrato.pagos || contrato.pagos.length === 0) return false;
+        
+        // Buscar el primer pago completado de $500 o más
+        const primerPago500 = contrato.pagos.find(pago => 
+          pago.estado === 'completado' && 
+          parseFloat(pago.monto_total || 0) >= 500
+        );
+        
+        if (!primerPago500 || !primerPago500.fecha_pago) return false;
+        
+        const fechaPrimerPago = new Date(primerPago500.fecha_pago);
+        const fechaPrimerPagoNormalizada = new Date(fechaPrimerPago.getFullYear(), fechaPrimerPago.getMonth(), fechaPrimerPago.getDate());
         const fechaInicioNormalizada = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), fechaInicio.getDate());
         const fechaFinNormalizada = new Date(fechaFin.getFullYear(), fechaFin.getMonth(), fechaFin.getDate());
-        return fechaCreacionNormalizada >= fechaInicioNormalizada && fechaCreacionNormalizada <= fechaFinNormalizada;
+        return fechaPrimerPagoNormalizada >= fechaInicioNormalizada && fechaPrimerPagoNormalizada <= fechaFinNormalizada;
       });
       const contratosActivos = contratos.filter(c => c.estado === 'activo').length;
       const contratosPagadosCompleto = contratos.filter(c => c.estado_pago === 'completado').length;
@@ -306,19 +314,29 @@ function Dashboard() {
         }
       });
       
-      // Filtrar contratos por fecha_creacion_contrato del mes seleccionado
+      // Filtrar contratos por fecha del primer pago de $500 del mes seleccionado
       const todosContratos = response.data?.data || [];
       const fechaInicioMes = new Date(añoSeleccionado, mesSeleccionado - 1, 1);
       fechaInicioMes.setHours(0, 0, 0, 0);
       const fechaFinMes = new Date(añoSeleccionado, mesSeleccionado, 0, 23, 59, 59);
       
       const contratosFiltrados = todosContratos.filter(contrato => {
-        if (!contrato.fecha_creacion_contrato) return false;
-        const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
-        const fechaCreacionNormalizada = new Date(fechaCreacion.getFullYear(), fechaCreacion.getMonth(), fechaCreacion.getDate());
+        // Obtener el primer pago de $500 o más
+        if (!contrato.pagos || contrato.pagos.length === 0) return false;
+        
+        // Buscar el primer pago completado de $500 o más
+        const primerPago500 = contrato.pagos.find(pago => 
+          pago.estado === 'completado' && 
+          parseFloat(pago.monto_total || 0) >= 500
+        );
+        
+        if (!primerPago500 || !primerPago500.fecha_pago) return false;
+        
+        const fechaPrimerPago = new Date(primerPago500.fecha_pago);
+        const fechaPrimerPagoNormalizada = new Date(fechaPrimerPago.getFullYear(), fechaPrimerPago.getMonth(), fechaPrimerPago.getDate());
         const fechaInicioNormalizada = new Date(fechaInicioMes.getFullYear(), fechaInicioMes.getMonth(), fechaInicioMes.getDate());
         const fechaFinNormalizada = new Date(fechaFinMes.getFullYear(), fechaFinMes.getMonth(), fechaFinMes.getDate());
-        return fechaCreacionNormalizada >= fechaInicioNormalizada && fechaCreacionNormalizada <= fechaFinNormalizada;
+        return fechaPrimerPagoNormalizada >= fechaInicioNormalizada && fechaPrimerPagoNormalizada <= fechaFinNormalizada;
       });
       
       return {

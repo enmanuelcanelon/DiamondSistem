@@ -298,9 +298,8 @@ async function crearEventoCitas(vendedorId, datosEvento) {
  */
 async function crearEventoContrato(vendedorId, datosContrato) {
   try {
-    // Intentar usar el calendario CITAS compartido, si no está disponible, usar el calendario principal del vendedor
-    let calendarioId = process.env.GOOGLE_CALENDAR_CITAS_ID;
-    
+    // Para contratos/eventos, usar el calendario principal del vendedor (Revolution Party)
+    // NO usar GOOGLE_CALENDAR_CITAS_ID que es solo para citas de leads
     const vendedor = await prisma.vendedores.findUnique({
       where: { id: vendedorId },
       select: {
@@ -314,15 +313,14 @@ async function crearEventoContrato(vendedorId, datosContrato) {
       return null;
     }
 
-    // Si no hay calendario CITAS configurado, usar el calendario principal del vendedor
-    if (!calendarioId) {
-      if (!vendedor.google_calendar_id) {
-        logger.warn(`⚠️ Vendedor ${vendedorId} no tiene calendario configurado`);
-        return null;
-      }
-      calendarioId = vendedor.google_calendar_id;
-      logger.info(`📅 Usando calendario principal del vendedor: ${calendarioId}`);
+    // Usar el calendario principal del vendedor para contratos/eventos
+    if (!vendedor.google_calendar_id) {
+      logger.warn(`⚠️ Vendedor ${vendedorId} no tiene calendario principal configurado`);
+      return null;
     }
+    
+    const calendarioId = vendedor.google_calendar_id;
+    logger.info(`📅 Usando calendario principal del vendedor (Revolution Party) para contrato: ${calendarioId}`);
 
     const tokens = await getValidTokens(vendedorId);
     if (!tokens) {
@@ -413,7 +411,7 @@ async function crearEventoContrato(vendedorId, datosContrato) {
       resource: evento
     });
 
-    logger.info(`✅ Evento de contrato creado en Google Calendar (${calendarioId === process.env.GOOGLE_CALENDAR_CITAS_ID ? 'CITAS' : 'Principal'}): ${response.data.id} para contrato ${datosContrato.codigoContrato}`);
+    logger.info(`✅ Evento de contrato creado en Google Calendar (Revolution Party): ${response.data.id} para contrato ${datosContrato.codigoContrato}`);
     return {
       id: response.data.id,
       htmlLink: response.data.htmlLink,

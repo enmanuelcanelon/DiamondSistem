@@ -148,6 +148,21 @@ router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next
             id: true,
             estado: true
           }
+        },
+        pagos: {
+          where: {
+            estado: 'completado'
+          },
+          select: {
+            id: true,
+            monto: true,
+            monto_total: true,
+            fecha_pago: true,
+            estado: true
+          },
+          orderBy: {
+            fecha_pago: 'asc'
+          }
         }
       },
       orderBy: { fecha_firma: 'desc' },

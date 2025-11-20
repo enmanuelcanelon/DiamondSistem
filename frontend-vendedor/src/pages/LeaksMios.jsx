@@ -106,22 +106,6 @@ function LeaksMios() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
-  // Mutation para limpiar mis leaks
-  const limpiarMisLeaksMutation = useMutation({
-    mutationFn: async () => {
-      const response = await api.delete('/leaks/mios');
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['leaks-mios']);
-      queryClient.invalidateQueries(['leaks-stats']);
-      toast.success(data.message || 'Mis leads eliminados exitosamente');
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al eliminar mis leads');
-    },
-  });
-
   // Mutation para eliminar un leak individual
   const eliminarLeakMutation = useMutation({
     mutationFn: async (leakId) => {
@@ -151,12 +135,6 @@ function LeaksMios() {
   const handleEliminarLeak = (leakId, nombreCompleto) => {
     if (window.confirm(`¿Estás seguro de que deseas eliminar el leak de ${nombreCompleto}? Esta acción no se puede deshacer.`)) {
       eliminarLeakMutation.mutate(leakId);
-    }
-  };
-
-  const handleLimpiarMisLeaks = () => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar TODOS tus leaks? Esta acción no se puede deshacer.')) {
-      limpiarMisLeaksMutation.mutate();
     }
   };
 
@@ -386,26 +364,6 @@ function LeaksMios() {
                 {totalMios} total
               </Badge>
             </div>
-            {leaksMios.length > 0 && (
-              <Button
-                onClick={handleLimpiarMisLeaks}
-                disabled={limpiarMisLeaksMutation.isPending}
-                variant="destructive"
-                size="sm"
-              >
-                {limpiarMisLeaksMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Limpiar Todos
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-6">
