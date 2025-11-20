@@ -214,35 +214,51 @@ async function limpiarTodoDatos() {
     // 7. RESETEAR SECUENCIAS DE IDs (PostgreSQL)
     // ============================================
     console.log('\n🔄 Paso 7: Reseteando secuencias de IDs...');
-    try {
-      // Obtener el nombre de la base de datos desde DATABASE_URL
-      const dbUrl = process.env.DATABASE_URL || '';
-      const dbNameMatch = dbUrl.match(/\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
-      const dbName = dbNameMatch ? dbNameMatch[5] : 'diamondsistem';
-      
-      // Resetear secuencias usando el nombre correcto de la tabla
-      await prisma.$executeRawUnsafe(`
-        SELECT setval(pg_get_serial_sequence('clientes', 'id'), 1, false);
-        SELECT setval(pg_get_serial_sequence('contratos', 'id'), 1, false);
-        SELECT setval(pg_get_serial_sequence('ofertas', 'id'), 1, false);
-      `);
-      console.log('   ✅ Secuencias de IDs reseteadas');
-    } catch (error) {
-      // Intentar con nombres directos si el método anterior falla
+    const secuencias = [
+      'clientes_id_seq',
+      'contratos_id_seq',
+      'ofertas_id_seq',
+      'eventos_id_seq',
+      'leaks_id_seq',
+      'pagos_id_seq',
+      'invitados_id_seq',
+      'mesas_id_seq',
+      'mensajes_id_seq',
+      'solicitudes_cliente_id_seq',
+      'versiones_contratos_pdf_id_seq',
+      'ajustes_evento_id_seq',
+      'playlist_canciones_id_seq',
+      'checklist_servicios_externos_id_seq',
+      'asignaciones_inventario_id_seq',
+      'movimientos_inventario_id_seq',
+      'contratos_servicios_id_seq',
+      'ofertas_servicios_adicionales_id_seq'
+    ];
+
+    let secuenciasReseteadas = 0;
+    for (const secuencia of secuencias) {
       try {
-        await prisma.$executeRawUnsafe(`
-          SELECT setval('clientes_id_seq', 1, false);
-          SELECT setval('contratos_id_seq', 1, false);
-          SELECT setval('ofertas_id_seq', 1, false);
-        `);
-        console.log('   ✅ Secuencias de IDs reseteadas (método alternativo)');
-      } catch (error2) {
-        console.log('   ⚠️  No se pudieron resetear las secuencias automáticamente');
-        console.log('   ℹ️  Puedes resetearlas manualmente con:');
-        console.log('      ALTER SEQUENCE clientes_id_seq RESTART WITH 1;');
-        console.log('      ALTER SEQUENCE contratos_id_seq RESTART WITH 1;');
-        console.log('      ALTER SEQUENCE ofertas_id_seq RESTART WITH 1;');
+        // Verificar si la secuencia existe antes de resetearla
+        const existe = await prisma.$queryRawUnsafe(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_sequences WHERE schemaname = 'public' AND sequencename = $1
+          );
+        `, secuencia);
+        
+        if (existe && existe[0]?.exists) {
+          await prisma.$executeRawUnsafe(`ALTER SEQUENCE ${secuencia} RESTART WITH 1;`);
+          secuenciasReseteadas++;
+        }
+      } catch (error) {
+        // Ignorar errores de secuencias que no existen
       }
+    }
+    
+    if (secuenciasReseteadas > 0) {
+      console.log(`   ✅ ${secuenciasReseteadas} secuencias de IDs reseteadas`);
+    } else {
+      console.log('   ⚠️  No se pudieron resetear las secuencias automáticamente');
+      console.log('   ℹ️  Ejecuta: node scripts/resetear_secuencias_ids.js');
     }
 
     // ============================================
