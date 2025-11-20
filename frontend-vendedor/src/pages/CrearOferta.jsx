@@ -342,6 +342,40 @@ function CrearOferta() {
     }
   }, [formData.salon_id, salones, lugarPersonalizado]);
 
+  // Sincronizar filtros del calendario con el salón seleccionado
+  useEffect(() => {
+    if (formData.salon_id && formData.salon_id !== 'otro' && salonSeleccionado) {
+      const nombreSalon = salonSeleccionado.nombre?.toLowerCase().trim() || '';
+      
+      // Determinar qué filtros activar según el salón seleccionado
+      let nuevoFiltros = {
+        doral: false,
+        kendall: false,
+        diamond: false,
+        otros: true // Siempre mostrar "Otros/Google Calendar"
+      };
+      
+      // Activar solo el filtro correspondiente al salón seleccionado
+      if (nombreSalon.includes('diamond')) {
+        nuevoFiltros.diamond = true;
+      } else if (nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
+        nuevoFiltros.doral = true;
+      } else if (nombreSalon.includes('kendall') || nombreSalon.includes('kendal')) {
+        nuevoFiltros.kendall = true;
+      }
+      
+      setFiltrosSalones(nuevoFiltros);
+    } else if (formData.salon_id === 'otro' || !formData.salon_id) {
+      // Si no hay salón seleccionado o es "otro", mantener todos los filtros activos
+      setFiltrosSalones({
+        doral: true,
+        kendall: true,
+        diamond: true,
+        otros: true
+      });
+    }
+  }, [formData.salon_id, salonSeleccionado]);
+
   // Validar capacidad del salón cuando cambian los invitados
   useEffect(() => {
     if (salonSeleccionado && formData.cantidad_invitados) {
@@ -639,8 +673,28 @@ function CrearOferta() {
       if (response.data.success) {
         const horasBackend = response.data.horasOcupadas || [];
         
-        // Combinar ambas fuentes
-        const todasLasHoras = new Set([...horasBackend]);
+        // Obtener horas ocupadas del calendario si hay un día seleccionado y coincide con la fecha
+        let horasCalendario = [];
+        if (diaSeleccionadoCalendario) {
+          const fechaSeleccionada = fechaEvento.split('T')[0];
+          const fechaCalendario = formatearFechaParaInput(diaSeleccionadoCalendario);
+          
+          // Solo usar horas del calendario si la fecha coincide
+          if (fechaSeleccionada === fechaCalendario) {
+            horasCalendario = calcularHorasOcupadasDesdeCalendario(diaSeleccionadoCalendario, salonId);
+          }
+        } else {
+          // Si no hay día seleccionado en el calendario, intentar calcular desde la fecha del evento
+          // Extraer día, mes y año de la fecha
+          const [año, mes, dia] = fechaEvento.split('T')[0].split('-').map(Number);
+          // Verificar si la fecha está en el mes y año actual del calendario
+          if (mes === mesCalendario && año === añoCalendario) {
+            horasCalendario = calcularHorasOcupadasDesdeCalendario(dia, salonId);
+          }
+        }
+        
+        // Combinar ambas fuentes (backend y calendario)
+        const todasLasHoras = new Set([...horasBackend, ...horasCalendario]);
         const horasCombinadas = Array.from(todasLasHoras).sort((a, b) => a - b);
         
         setHorasOcupadas(horasCombinadas);
@@ -656,7 +710,7 @@ function CrearOferta() {
     }
   };
 
-  // Effect para obtener horas ocupadas cuando cambian salón o fecha
+  // Effect para obtener horas ocupadas cuando cambian salón, fecha o día del calendario
   useEffect(() => {
     if (formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento) {
       const timeoutId = setTimeout(() => {
@@ -667,7 +721,7 @@ function CrearOferta() {
     } else {
       setHorasOcupadas([]);
     }
-  }, [formData.salon_id, formData.fecha_evento]);
+  }, [formData.salon_id, formData.fecha_evento, diaSeleccionadoCalendario, eventosCalendario]);
 
   // Effect para verificar disponibilidad cuando cambian fecha, hora o salón
   // Solo verificar cuando hay salón, fecha Y horas completas
@@ -1691,6 +1745,202 @@ function CrearOferta() {
     });
   };
   
+  // Función para calcular horas ocupadas desde los eventos del calendario
+  const calcularHorasOcupadasDesdeCalendario = (dia, salonId) => {
+    if (!dia || !salonId || salonId === 'otro' || !eventosCalendario?.eventos_por_dia) {
+      return [];
+    }
+    
+    // Obtener eventos directamente del calendario SIN filtrar por filtrosSalones
+    // porque los filtros del calendario son solo para visualización
+    // Para bloquear horas, necesitamos TODOS los eventos del salón seleccionado
+    let eventos = eventosCalendario.eventos_por_dia[dia] || [];
+    
+    // Filtrar eventos pasados - solo considerar eventos de hoy en adelante (hora Miami)
+    const ahoraMiami = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const hoyMiami = new Date(ahoraMiami.getFullYear(), ahoraMiami.getMonth(), ahoraMiami.getDate());
+    hoyMiami.setHours(0, 0, 0, 0);
+    
+    eventos = eventos.filter(evento => {
+      let fechaEvento;
+      if (evento.fecha_evento) {
+        fechaEvento = new Date(evento.fecha_evento);
+      } else if (evento.fecha_inicio) {
+        fechaEvento = new Date(evento.fecha_inicio);
+      } else if (evento.hora_inicio) {
+        fechaEvento = new Date(evento.hora_inicio);
+      } else {
+        return false;
+      }
+      
+      const fechaEventoMiami = new Date(fechaEvento.toLocaleString("en-US", {timeZone: "America/New_York"}));
+      
+      if (evento.es_todo_el_dia) {
+        const fechaEventoSolo = new Date(fechaEventoMiami.getFullYear(), fechaEventoMiami.getMonth(), fechaEventoMiami.getDate());
+        fechaEventoSolo.setHours(0, 0, 0, 0);
+        return fechaEventoSolo >= hoyMiami;
+      }
+      
+      return fechaEventoMiami >= hoyMiami;
+    });
+    
+    const horasOcupadas = new Set();
+    
+    // Obtener el nombre del salón seleccionado para filtrar eventos
+    // IMPORTANTE: Comparar IDs como números o strings para evitar problemas de tipo
+    const salonSeleccionado = salones?.find(s => {
+      const salonIdNum = typeof salonId === 'string' ? parseInt(salonId) : salonId;
+      const sIdNum = typeof s.id === 'string' ? parseInt(s.id) : s.id;
+      return sIdNum === salonIdNum;
+    });
+    const nombreSalonSeleccionado = salonSeleccionado?.nombre?.toLowerCase().trim() || '';
+    
+    eventos.forEach((evento, index) => {
+      
+      // Si el evento es de todo el día, ocupar todas las horas
+      if (evento.es_todo_el_dia) {
+        for (let h = 0; h < 24; h++) {
+          horasOcupadas.add(h);
+        }
+        return;
+      }
+      
+      // NO bloquear eventos de Google Calendar / Otros SOLO si NO tienen un salón asignado
+      // Si un evento de Google Calendar tiene un salón asignado y coincide con el salón seleccionado,
+      // SÍ debe bloquear horas porque es un evento real en ese salón
+      const tieneSalonAsignado = evento.salones?.id || evento.salones?.nombre || evento.salon || evento.ubicacion;
+      
+      if ((evento.es_google_calendar || evento.id?.toString().startsWith('google_')) && !tieneSalonAsignado) {
+        return; // No bloquear horas para eventos de Google Calendar sin salón
+      }
+      
+      // Verificar si el evento pertenece al salón seleccionado
+      let nombreSalonEvento = '';
+      if (evento.salones?.nombre) {
+        nombreSalonEvento = String(evento.salones.nombre).toLowerCase().trim();
+      } else if (evento.salon) {
+        nombreSalonEvento = String(evento.salon).toLowerCase().trim();
+      } else if (evento.ubicacion) {
+        nombreSalonEvento = String(evento.ubicacion).toLowerCase().trim();
+      }
+      
+      // Verificar si el evento pertenece al salón seleccionado
+      let perteneceAlSalon = false;
+      
+      // PRIORIDAD 1: Comparar por ID (más confiable)
+      // Comparar como números para evitar problemas de tipo
+      if (evento.salones?.id) {
+        const eventoSalonIdNum = typeof evento.salones.id === 'string' ? parseInt(evento.salones.id) : evento.salones.id;
+        const salonIdNum = typeof salonId === 'string' ? parseInt(salonId) : salonId;
+        if (eventoSalonIdNum === salonIdNum) {
+          perteneceAlSalon = true;
+        }
+      }
+      
+      // PRIORIDAD 2: Comparar por nombre si no coincidió por ID
+      if (!perteneceAlSalon && nombreSalonSeleccionado && nombreSalonEvento) {
+        // PRIORIDAD 2: Comparar por nombre (normalizado)
+        // Normalizar nombres: eliminar números al final y espacios extra
+        // Ej: "doral 1" → "doral", "doral 2" → "doral", "doral" → "doral"
+        const nombreBaseSeleccionado = nombreSalonSeleccionado.replace(/\s+\d+$/, '').trim();
+        const nombreBaseEvento = nombreSalonEvento.replace(/\s+\d+$/, '').trim();
+        
+        // Verificar por nombre base (Doral, Doral 1, Doral 2 = todos son "Doral")
+        if (nombreBaseSeleccionado.includes('diamond')) {
+          perteneceAlSalon = nombreBaseEvento.includes('diamond');
+        } else if (nombreBaseSeleccionado.includes('doral') && !nombreBaseSeleccionado.includes('diamond')) {
+          perteneceAlSalon = nombreBaseEvento.includes('doral') && !nombreBaseEvento.includes('diamond');
+        } else if (nombreBaseSeleccionado.includes('kendall') || nombreBaseSeleccionado.includes('kendal')) {
+          perteneceAlSalon = nombreBaseEvento.includes('kendall') || nombreBaseEvento.includes('kendal') || nombreBaseEvento.includes('kentall');
+        } else {
+          // Comparación exacta del nombre base normalizado
+          perteneceAlSalon = nombreBaseSeleccionado === nombreBaseEvento;
+        }
+      }
+      
+      // Solo considerar eventos del salón seleccionado
+      if (!perteneceAlSalon) {
+        return;
+      }
+      
+      // Función helper para extraer la hora de diferentes formatos
+      // IMPORTANTE: Extraer la hora en la zona horaria de Miami (America/New_York)
+      const extraerHora = (hora) => {
+        if (!hora) return null;
+        
+        try {
+          let fechaHora;
+          
+          // Si es un objeto Date
+          if (hora instanceof Date) {
+            fechaHora = hora;
+          }
+          // Si es un string, intentar parsearlo
+          else if (typeof hora === 'string') {
+            // Formato "HH:mm" o "HH:mm:ss" (solo hora, sin fecha)
+            if (hora.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
+              const partes = hora.split(':');
+              if (partes.length > 0) {
+                return parseInt(partes[0]);
+              }
+            }
+            // Timestamp ISO o formato de fecha/hora
+            else {
+              fechaHora = new Date(hora);
+              if (isNaN(fechaHora.getTime())) {
+                return null;
+              }
+            }
+          } else {
+            return null;
+          }
+          
+          // Si tenemos un objeto Date, extraer la hora en la zona horaria de Miami
+          if (fechaHora) {
+            // Convertir a la zona horaria de Miami
+            const fechaMiami = new Date(fechaHora.toLocaleString("en-US", {timeZone: "America/New_York"}));
+            return fechaMiami.getHours();
+          }
+        } catch (error) {
+          // Error silencioso
+        }
+        
+        return null;
+      };
+      
+      const horaInicio = extraerHora(evento.hora_inicio);
+      const horaFin = extraerHora(evento.hora_fin);
+      
+      if (horaInicio !== null && horaFin !== null) {
+        // Agregar todas las horas desde inicio hasta fin (incluyendo ambas)
+        for (let h = horaInicio; h <= horaFin; h++) {
+          if (h >= 0 && h < 24) {
+            horasOcupadas.add(h);
+          }
+        }
+        
+        // Agregar 1 hora de buffer DESPUÉS del evento (no se puede seleccionar la hora siguiente)
+        // Esto da 1 hora de plazo para el siguiente evento
+        if (horaFin >= 0 && horaFin < 23) {
+          horasOcupadas.add(horaFin + 1);
+        }
+      } else if (horaInicio !== null) {
+        // Solo tenemos hora de inicio
+        if (horaInicio >= 0 && horaInicio < 24) {
+          // Hora del evento
+          horasOcupadas.add(horaInicio);
+          // Buffer de 1 hora después (1 hora de plazo para el siguiente evento)
+          if (horaInicio < 23) {
+            horasOcupadas.add(horaInicio + 1);
+          }
+        }
+      }
+    });
+    
+    const horasFinales = Array.from(horasOcupadas).sort((a, b) => a - b);
+    return horasFinales;
+  };
+  
   const obtenerColorEvento = (evento) => {
     let nombreSalon = '';
     if (evento.salones?.nombre) {
@@ -1877,8 +2127,8 @@ function CrearOferta() {
     setDiaSeleccionadoCalendario(null);
   };
   
-  // Generar lista de años (desde 2020 hasta 2030)
-  const añosDisponibles = Array.from({ length: 11 }, (_, i) => 2020 + i);
+  // Generar lista de años (desde 2025 en adelante)
+  const añosDisponibles = Array.from({ length: 11 }, (_, i) => 2025 + i);
   
   const esFechaValida = (dia) => {
     const ahoraMiami = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}));
@@ -2093,7 +2343,9 @@ function CrearOferta() {
                                       onValueChange={(value) => setMesCalendario(parseInt(value))}
                                     >
                                       <SelectTrigger className="w-[140px] h-8 text-xs">
-                                        <SelectValue />
+                                        <SelectValue>
+                                          {nombresMeses[mesCalendario - 1]}
+                                        </SelectValue>
                                       </SelectTrigger>
                                       <SelectContent>
                                         {nombresMeses.map((mes, index) => (
@@ -3815,12 +4067,18 @@ function CrearOferta() {
                                               </span>
                                             </div>
                                           )}
-                                          {evento.salones?.nombre && (
-                                            <div className="flex items-center gap-1">
-                                              <MapPin className="w-3 h-3" />
-                                              <span className="truncate">{evento.salones.nombre}</span>
-                                            </div>
-                                          )}
+                                          {(() => {
+                                            const nombreSalon = evento.salones?.nombre || evento.salon || evento.ubicacion;
+                                            if (nombreSalon) {
+                                              return (
+                                                <div className="flex items-center gap-1">
+                                                  <MapPin className="w-3 h-3" />
+                                                  <span className="truncate">{nombreSalon}</span>
+                                                </div>
+                                              );
+                                            }
+                                            return null;
+                                          })()}
                                           {!evento.es_google_calendar && evento.estado_pago && (
                                             <div className="flex items-center gap-1">
                                               {evento.estado_pago === 'completado' && <CheckCircle2 className="w-3 h-3" />}
