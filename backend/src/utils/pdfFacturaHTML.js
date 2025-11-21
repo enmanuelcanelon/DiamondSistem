@@ -306,6 +306,9 @@ function formatearHora(hora) {
   }
 }
 
-module.exports = { generarFacturaProformaHTML };
+module.exports = { 
+  generarFacturaProformaHTML,
+  organizarServiciosPorCategoria
+};
 
 

@@ -1,70 +1,69 @@
 const PDFDocument = require('pdfkit');
 
 // ============================================
-// CONFIGURACIÓN VISUAL - FÁCIL DE MODIFICAR
+// CONFIGURACIÓN VISUAL - PROFESIONAL Y LEGAL
 // ============================================
 
 const CONFIG_VISUAL = {
-  // COLORES (Formato: '#RRGGBB')
+  // COLORES (Diseño profesional y serio)
   colores: {
-    primario: '#1E40AF',        // Color principal del diseño
-    secundario: '#475569',      // Color secundario/subtítulos
-    texto: '#0F172A',           // Color del texto principal
-    textoClaro: '#FFFFFF',      // Texto sobre fondos oscuros
-    exito: '#059669',           // Para estados positivos
-    advertencia: '#D97706',     // Para alertas/pendientes
-    error: '#DC2626',           // Para errores/cancelaciones
-    fondoClaro: '#F8FAFC',      // Fondo de cajas/secciones
-    fondoOscuro: '#1E40AF',     // Fondo del encabezado
-    fondoPaquete: '#EEF2FF',    // Fondo para destacar paquete
-    borde: '#CBD5E1',           // Líneas y bordes
-    bordeClaro: '#C7D2FE',      // Borde para elementos destacados
+    primario: '#000000',        // Negro para títulos principales
+    secundario: '#333333',      // Gris oscuro para subtítulos
+    texto: '#000000',           // Negro para texto principal
+    textoClaro: '#FFFFFF',      // Blanco para texto sobre fondos oscuros
+    exito: '#1F5F1F',           // Verde oscuro para estados positivos
+    advertencia: '#8B4513',     // Marrón para alertas
+    error: '#8B0000',           // Rojo oscuro para errores
+    fondoClaro: '#FAFAFA',      // Fondo muy claro
+    fondoOscuro: '#1A1A1A',     // Fondo oscuro para encabezados
+    borde: '#000000',           // Bordes negros sólidos
+    bordeClaro: '#CCCCCC',      // Bordes claros para separadores
   },
 
-  // FUENTES
+  // FUENTES (Profesionales)
   fuentes: {
     normal: 'Helvetica',
     bold: 'Helvetica-Bold',
     italic: 'Helvetica-Oblique',
   },
 
-  // TAMAÑOS DE FUENTE
+  // TAMAÑOS DE FUENTE (Aumentados)
   tamanosTexto: {
-    titulo: 28,                 // Título principal
-    subtituloGrande: 22,        // Subtítulo de documento
-    subtituloMedio: 18,         // Subtítulo en portada
-    seccion: 14,                // Títulos de secciones
-    subseccion: 12,             // Subtítulos de secciones
-    subseccionPequena: 11,      // Subtítulos pequeños
+    titulo: 24,                 // Título principal
+    subtituloGrande: 18,        // Subtítulo de documento
+    subtituloMedio: 14,         // Subtítulo en portada
+    seccion: 12,                // Títulos de secciones
+    subseccion: 11,             // Subtítulos de secciones
+    subseccionPequena: 10,      // Subtítulos pequeños
     normal: 10,                 // Texto normal
     pequeno: 9,                 // Texto pequeño
     muyPequeno: 8,              // Pie de página, notas
   },
 
-  // MÁRGENES Y ESPACIADO
+  // MÁRGENES Y ESPACIADO (Compactados)
   layout: {
-    margenSuperior: 50,
-    margenInferior: 50,
-    margenIzquierdo: 50,
-    margenDerecho: 50,
-    anchoUtil: 512,             // 612 - 50 - 50 = 512
-    alturaEncabezado: 100,
-    alturaEncabezadoPagina: 50,
-    alturaPiePagina: 70,
-    espaciadoSeccion: 1.5,
-    espaciadoParrafo: 0.5,
-    bordeRedondeado: 6,
+    margenSuperior: 40,
+    margenInferior: 40,
+    margenIzquierdo: 40,
+    margenDerecho: 40,
+    anchoUtil: 532,             // 612 - 40 - 40 = 532
+    alturaEncabezado: 90,
+    alturaEncabezadoPagina: 35,
+    alturaPiePagina: 50,
+    espaciadoSeccion: 0.8,
+    espaciadoParrafo: 0.3,
+    bordeRedondeado: 0,         // Sin bordes redondeados (más profesional)
   },
 
-  // ALTURAS DE ELEMENTOS
+  // ALTURAS DE ELEMENTOS (Compactados)
   alturas: {
-    filaTabla: 20,
-    encabezadoTabla: 24,
-    cajaInfoContrato: 120,
-    cajaEvento: 90,
-    cajaFinanzas: 80,
-    cajaPaquete: 60,
-    cajaFirma: 150,
+    filaTabla: 14,
+    encabezadoTabla: 18,
+    cajaInfoContrato: 110,
+    cajaEvento: 85,
+    cajaFinanzas: 75,
+    cajaPaquete: 50,
+    cajaFirma: 120,
   },
 };
 
@@ -73,49 +72,37 @@ const CONFIG_VISUAL = {
 // ============================================
 
 /**
- * Dibuja el patrón de fondo decorativo en toda la página
+ * Dibuja el patrón de fondo decorativo sutil
  */
 function dibujarPatronFondo(doc) {
-  const fondoGris = '#F5F5F5';
-  const colorLinea = '#FFFFFF';
-  const grosorLinea = 0.3;
+  const fondoBlanco = '#FFFFFF';
+  const colorLinea = '#F0F0F0';
+  const grosorLinea = 0.2;
   
-  // Fondo gris claro
+  // Fondo blanco
   doc.rect(0, 0, 612, 792)
-    .fillAndStroke(fondoGris, fondoGris);
+    .fillAndStroke(fondoBlanco, fondoBlanco);
   
   // Guardar el estado actual
   doc.save();
   
-  // Configurar el estilo de línea
+  // Configurar el estilo de línea muy sutil
   doc.strokeColor(colorLinea)
     .lineWidth(grosorLinea);
   
-  // Dibujar patrón de líneas decorativas tipo ogee/trellis
-  const paso = 25; // Espaciado del patrón
+  // Dibujar patrón de líneas muy sutiles
+  const paso = 30;
   
-  for (let y = -paso; y < 792 + paso; y += paso) {
-    for (let x = -paso; x < 612 + paso; x += paso) {
-      const centroX = x + paso / 2;
-      const centroY = y + paso / 2;
-      const radio = paso * 0.35;
-      
-      // Dibujar arcos decorativos (formas de pétalos)
-      // Arco superior
-      doc.path(`M ${centroX - radio} ${centroY} Q ${centroX} ${centroY - radio * 0.8} ${centroX + radio} ${centroY}`)
-        .stroke();
-      
-      // Arco inferior
-      doc.path(`M ${centroX - radio} ${centroY} Q ${centroX} ${centroY + radio * 0.8} ${centroX + radio} ${centroY}`)
-        .stroke();
-      
-      // Conexiones horizontales entre elementos
-      if (x >= 0) {
-        doc.moveTo(centroX - paso, centroY)
-          .lineTo(centroX - radio, centroY)
-          .stroke();
-      }
-    }
+  for (let y = 0; y < 792; y += paso) {
+    doc.moveTo(0, y)
+      .lineTo(612, y)
+      .stroke();
+  }
+  
+  for (let x = 0; x < 612; x += paso) {
+    doc.moveTo(x, 0)
+      .lineTo(x, 792)
+      .stroke();
   }
   
   // Restaurar el estado
@@ -123,34 +110,58 @@ function dibujarPatronFondo(doc) {
 }
 
 /**
+ * Obtiene la dirección del salón basado en el nombre
+ */
+function obtenerDireccionSalon(nombreSalon) {
+  const direcciones = {
+    'Doral': '4747 NW 79th Ave, Doral, FL 33166',
+    'Kendall': '14271 Southwest 120th Street, Kendall, Miami, FL 33186',
+    'Salón Doral': '8726 NW 26th St, Doral, FL 33172',
+    'Salón kendall': '14271 Southwest 120th Street, Kendall, Miami, FL 33186',
+    'Salón Diamond': '4747 NW 79th Ave, Doral, FL 33166',
+  };
+  
+  if (!nombreSalon) return 'Dirección no especificada';
+  
+  for (const [key, value] of Object.entries(direcciones)) {
+    if (nombreSalon.toLowerCase().includes(key.toLowerCase())) {
+      return value;
+    }
+  }
+  
+  return nombreSalon;
+}
+
+/**
  * Dibuja el encabezado principal del documento (página 1)
  */
-function dibujarEncabezadoPrincipal(doc, config) {
+function dibujarEncabezadoPrincipal(doc, config, contrato) {
   const { colores, tamanosTexto, fuentes, layout } = config;
   const { alturaEncabezado } = layout;
 
-  // Fondo del encabezado
+  // Fondo del encabezado (negro sólido)
   doc.rect(0, 0, 612, alturaEncabezado)
     .fillAndStroke(colores.fondoOscuro, colores.fondoOscuro);
 
-  // Título principal (Logo/Nombre de la empresa)
+  // Título principal
   doc.fontSize(tamanosTexto.titulo)
     .fillColor(colores.textoClaro)
-    .font(config.fuentes.bold)
-    .text('DIAMONDSISTEM', { align: 'center', y: 25 });
+    .font(fuentes.bold)
+    .text('DIAMOND VENUE AT DORAL', { align: 'center', y: 15 });
 
   // Subtítulo de la empresa
-  doc.fontSize(tamanosTexto.subseccionPequena)
-    .font(config.fuentes.normal)
-    .text('Sistema Profesional de Gestión de Eventos', { align: 'center' })
-    .moveDown(0.2);
+  doc.fontSize(tamanosTexto.muyPequeno)
+    .font(fuentes.normal)
+    .text('SERVICIOS PROFESIONALES PARA EVENTOS', { align: 'center', y: 40 })
+    .moveDown(0.1);
 
-  // Información de contacto
-  doc.fontSize(config.tamanosTexto.pequeno)
-    .text('Teléfono: +1 (809) 555-0100  |  Email: info@diamondsistem.com', { align: 'center' })
-    .text('Sitio Web: www.diamondsistem.com', { align: 'center' });
+  // Información legal de la empresa
+  doc.fontSize(tamanosTexto.muyPequeno)
+    .text('4747 NW 79th Ave, Doral, FL 33166', { align: 'center', y: 55 })
+    .text('Tel: +1 (786) 332-7065  |  Email: diamondvenueatdoral@gmail.com', { align: 'center', y: 68 })
+    .text('Licencia de Negocio: [Número de Licencia]  |  Estado de Florida, USA', { align: 'center', y: 81 });
 
-  doc.y = alturaEncabezado + 20;
+  doc.y = alturaEncabezado + 10;
 }
 
 /**
@@ -159,20 +170,24 @@ function dibujarEncabezadoPrincipal(doc, config) {
 function dibujarEncabezadoPagina(doc, codigoContrato, config) {
   const { colores, tamanosTexto, fuentes, layout } = config;
 
-  doc.rect(0, 0, 612, layout.alturaEncabezadoPagina)
-    .fillAndStroke(colores.fondoClaro, colores.borde);
+  doc.strokeColor(colores.borde)
+    .lineWidth(1)
+    .moveTo(50, layout.alturaEncabezadoPagina - 1)
+    .lineTo(562, layout.alturaEncabezadoPagina - 1)
+    .stroke();
 
-  doc.fontSize(tamanosTexto.subseccionPequena)
+  doc.fontSize(tamanosTexto.muyPequeno)
     .fillColor(colores.primario)
     .font(fuentes.bold)
-    .text('DIAMONDSISTEM', 50, 15);
+    .text('DIAMOND VENUE AT DORAL', 50, 8);
 
   doc.fontSize(tamanosTexto.muyPequeno)
     .fillColor(colores.secundario)
     .font(fuentes.normal)
-    .text(`Contrato No. ${codigoContrato}`, 50, 32);
+    .text(`Contrato No. ${codigoContrato}`, 50, 20);
 
-  doc.y = 70;
+
+  doc.y = layout.alturaEncabezadoPagina + 8;
 }
 
 /**
@@ -187,7 +202,7 @@ function dibujarTituloDocumento(doc, titulo, subtitulo, config) {
     .text(titulo, { align: 'center' })
     .moveDown(0.3);
 
-  doc.fontSize(tamanosTexto.pequeno)
+  doc.fontSize(tamanosTexto.normal)
     .fillColor(colores.secundario)
     .font(fuentes.italic)
     .text(subtitulo, { align: 'center' })
@@ -202,7 +217,7 @@ function dibujarCajaInfo(doc, x, y, ancho, alto, config, colorFondo = null, colo
   const fondo = colorFondo || colores.fondoClaro;
   const borde = colorBorde || colores.borde;
 
-  doc.roundedRect(x, y, ancho, alto, layout.bordeRedondeado)
+  doc.rect(x, y, ancho, alto)
     .fillAndStroke(fondo, borde);
 }
 
@@ -220,7 +235,7 @@ function dibujarFilaEtiquetaValor(doc, x, y, etiqueta, valor, config, colorValor
   if (valor) {
     doc.font(fuentes.normal)
       .fillColor(colorValor || colores.texto)
-      .text(valor, x + 110, y, { width: anchoValor });
+      .text(valor, x + 120, y, { width: anchoValor });
   }
 }
 
@@ -231,15 +246,15 @@ function dibujarEncabezadoTabla(doc, y, columnas, config) {
   const { colores, tamanosTexto, fuentes, alturas } = config;
   const { encabezadoTabla } = alturas;
 
-  doc.rect(50, y, config.layout.anchoUtil, encabezadoTabla)
-    .fillAndStroke(colores.primario, colores.primario);
+  doc.rect(40, y, config.layout.anchoUtil, encabezadoTabla)
+    .fillAndStroke(colores.fondoOscuro, colores.borde);
 
   doc.fontSize(tamanosTexto.pequeno)
     .fillColor(colores.textoClaro)
     .font(fuentes.bold);
 
   columnas.forEach(col => {
-    doc.text(col.texto, col.x, y + 7, { width: col.ancho, align: col.alineacion || 'left' });
+    doc.text(col.texto, col.x, y + 5, { width: col.ancho, align: col.alineacion || 'left' });
   });
 
   return y + encabezadoTabla;
@@ -253,15 +268,15 @@ function dibujarFilaTabla(doc, y, columnas, indice, config) {
   const { filaTabla } = alturas;
   const colorFondo = indice % 2 === 0 ? '#FFFFFF' : colores.fondoClaro;
 
-  doc.rect(50, y, layout.anchoUtil, filaTabla)
-    .fillAndStroke(colorFondo, colores.borde);
+  doc.rect(40, y, layout.anchoUtil, filaTabla)
+    .fillAndStroke(colorFondo, colores.bordeClaro);
 
   doc.fontSize(tamanosTexto.pequeno)
     .fillColor(colores.texto)
     .font(fuentes.normal);
 
   columnas.forEach(col => {
-    doc.text(col.texto, col.x, y + 5, { width: col.ancho, align: col.alineacion || 'left' });
+    doc.text(col.texto, col.x, y + 3, { width: col.ancho, align: col.alineacion || 'left' });
   });
 
   return y + filaTabla;
@@ -274,42 +289,201 @@ function dibujarPiePagina(doc, config, textoAdicional = '') {
   const { colores, tamanosTexto, fuentes, layout } = config;
   const yFooter = doc.page.height - layout.alturaPiePagina;
 
-  doc.strokeColor(colores.borde)
-    .lineWidth(1)
-    .moveTo(50, yFooter)
-    .lineTo(562, yFooter)
+  doc.strokeColor(colores.bordeClaro)
+    .lineWidth(0.5)
+    .moveTo(40, yFooter)
+    .lineTo(572, yFooter)
     .stroke();
 
-  doc.fontSize(tamanosTexto.muyPequeno)
-    .fillColor(colores.secundario)
-    .font(fuentes.normal)
-    .text(
-      `Documento generado el ${new Date().toLocaleDateString('es-ES')}${textoAdicional}`,
-      50,
-      yFooter + 10,
-      { align: 'center', width: 512 }
-    );
 
-  doc.fontSize(tamanosTexto.pequeno)
-    .fillColor(colores.primario)
-    .font(fuentes.bold)
-    .text(
-      'DiamondSistem - Creando Momentos Inolvidables',
-      50,
-      yFooter + 30,
-      { align: 'center', width: 512 }
-    );
 }
 
 /**
  * Dibuja un título de sección
  */
 function dibujarTituloSeccion(doc, titulo, config) {
-  doc.fontSize(config.tamanosTexto.subseccion)
-    .fillColor(config.colores.primario)
-    .font(config.fuentes.bold)
-    .text(titulo)
-    .moveDown(0.5);
+  const { colores, tamanosTexto, fuentes, layout } = config;
+  
+  doc.fontSize(tamanosTexto.seccion)
+    .fillColor(colores.primario)
+    .font(fuentes.bold)
+    .text(titulo.toUpperCase())
+    .moveDown(0.1);
+  
+  // Línea debajo del título
+  doc.strokeColor(colores.borde)
+    .lineWidth(0.5)
+    .moveTo(40, doc.y - 2)
+    .lineTo(572, doc.y - 2)
+    .stroke();
+    
+  doc.moveDown(0.3);
+}
+
+/**
+ * Organiza servicios por categoría (similar a pdfFacturaHTML)
+ */
+function organizarServiciosPorCategoria(contrato) {
+  const serviciosPaquete = contrato.paquetes?.paquetes_servicios || [];
+
+  const todosServicios = serviciosPaquete.map(ps => ({
+    ...ps.servicios,
+    categoria: ps.servicios?.categoria,
+    esPaquete: true,
+    descripcion: ps.servicios?.descripcion || ps.servicios?.nombre,
+    cantidad: ps.cantidad || 1
+  }));
+
+  const organizados = {
+    venue: [],
+    cake: [],
+    decoration: [],
+    specials: [],
+    barService: [],
+    catering: [],
+    serviceCoord: []
+  };
+
+  todosServicios.forEach(servicio => {
+    const categoria = servicio.categoria?.toLowerCase() || '';
+    const nombre = servicio.nombre?.toLowerCase() || '';
+
+    if (nombre.includes('cake') || nombre.includes('torta')) {
+      organizados.cake.push(servicio);
+    } else if (categoria.includes('decoración') || categoria.includes('decoration') || nombre.includes('decoración') || nombre.includes('decoration')) {
+      organizados.decoration.push(servicio);
+    } else if (categoria.includes('bebida') || categoria.includes('bar') || categoria.includes('licor') || nombre.includes('bar') || nombre.includes('bebida')) {
+      organizados.barService.push(servicio);
+    } else if (categoria.includes('comida') || categoria.includes('catering') || categoria.includes('food') || nombre.includes('comida') || nombre.includes('catering')) {
+      organizados.catering.push(servicio);
+    } else if (categoria.includes('fotografía') || categoria.includes('video') || categoria.includes('equipo') || categoria.includes('photobooth') || categoria.includes('hora loca') || nombre.includes('photobooth') || nombre.includes('foto')) {
+      organizados.specials.push(servicio);
+    } else if (categoria.includes('coordinación') || categoria.includes('coordinador') || categoria.includes('mesero') || categoria.includes('bartender') || nombre.includes('coordinador') || nombre.includes('mesero')) {
+      organizados.serviceCoord.push(servicio);
+    } else if (categoria.includes('venue') || nombre.includes('venue') || nombre.includes('salón')) {
+      organizados.venue.push(servicio);
+    } else {
+      organizados.specials.push(servicio);
+    }
+  });
+
+  return organizados;
+}
+
+/**
+ * Organiza servicios adicionales por categoría
+ * Solo incluye servicios que NO están en el paquete
+ */
+function organizarServiciosAdicionalesPorCategoria(contrato) {
+  // Obtener IDs de servicios que están en el paquete
+  const serviciosPaqueteIds = new Set();
+  if (contrato.paquetes?.paquetes_servicios) {
+    contrato.paquetes.paquetes_servicios.forEach(ps => {
+      if (ps.servicios?.id) {
+        serviciosPaqueteIds.add(ps.servicios.id);
+      }
+    });
+  }
+
+  // Filtrar servicios adicionales para excluir los que están en el paquete
+  const serviciosAdicionales = (contrato.contratos_servicios || []).filter(cs => {
+    const servicioId = cs.servicios?.id || cs.servicio_id;
+    return servicioId && !serviciosPaqueteIds.has(servicioId);
+  });
+
+  const todosServicios = serviciosAdicionales.map(cs => {
+    const servicio = cs.servicios || {};
+    return {
+      ...servicio,
+      id: servicio.id || cs.servicio_id,
+      categoria: servicio.categoria,
+      esPaquete: false,
+      descripcion: servicio.descripcion || servicio.nombre,
+      cantidad: cs.cantidad || 1,
+      precio_unitario: parseFloat(cs.precio_unitario || 0),
+      subtotal: parseFloat(cs.subtotal || cs.precio_unitario * (cs.cantidad || 1))
+    };
+  });
+
+  const organizados = {
+    venue: [],
+    cake: [],
+    decoration: [],
+    specials: [],
+    barService: [],
+    catering: [],
+    serviceCoord: []
+  };
+
+  // Debug: Log todos los servicios que estamos procesando
+  console.log('=== DEBUG: Servicios adicionales encontrados ===');
+  console.log('Total servicios adicionales:', todosServicios.length);
+  todosServicios.forEach((s, idx) => {
+    console.log(`Servicio ${idx + 1}:`, {
+      id: s.id,
+      nombre: s.nombre,
+      categoria: s.categoria,
+      cantidad: s.cantidad,
+      precio: s.precio_unitario
+    });
+  });
+
+  todosServicios.forEach(servicio => {
+    const categoria = (servicio.categoria || '').toLowerCase();
+    const nombre = (servicio.nombre || '').toLowerCase();
+    
+    // Normalizar nombre: remover paréntesis y caracteres especiales para mejor matching
+    const nombreNormalizado = nombre.replace(/[()]/g, '').trim();
+
+    // CAKE
+    if (nombre.includes('cake') || nombre.includes('torta')) {
+      organizados.cake.push(servicio);
+    }
+    // DECORATION
+    else if (categoria.includes('decoración') || categoria.includes('decoration') || nombre.includes('decoración') || nombre.includes('decoration')) {
+      organizados.decoration.push(servicio);
+    }
+    // BAR SERVICE
+    else if (categoria.includes('bebida') || categoria.includes('bar') || categoria.includes('licor') || 
+             nombre.includes('bar') || nombre.includes('bebida') || nombre.includes('champaña') || 
+             nombre.includes('champagne') || nombre.includes('champagne')) {
+      organizados.barService.push(servicio);
+    }
+    // CATERING
+    else if (categoria.includes('comida') || categoria.includes('catering') || categoria.includes('food') || 
+             nombre.includes('comida') || nombre.includes('catering') || nombre.includes('pasapalos') || 
+             nombre.includes('dulces') || nombre.includes('mini dulces') || nombre.includes('pasapalo')) {
+      organizados.catering.push(servicio);
+    }
+    // SPECIALS - Incluye fotografía, video, photobooth, hora extra, animador, maestro de ceremonia
+    else if (categoria.includes('fotografía') || categoria.includes('fotografia') || categoria.includes('video') || 
+             categoria.includes('equipo') || categoria.includes('photobooth') || categoria.includes('hora loca') || 
+             categoria.includes('hora extra') || categoria.includes('animación') || categoria.includes('animacion') ||
+             nombre.includes('photobooth') || nombreNormalizado.includes('photobooth') || nombre.includes('print') || 
+             nombreNormalizado.includes('print') || nombre.includes('foto') || nombre.includes('video') || 
+             nombre.includes('hora extra') || nombreNormalizado.includes('hora extra') || nombre.includes('hora loca') || 
+             nombreNormalizado.includes('hora loca') || nombre.includes('animador') || nombre.includes('maestro') || 
+             nombre.includes('ceremonia') || nombre.includes('mc') || nombre.includes('fotografia') || 
+             nombre.includes('fotografo')) {
+      organizados.specials.push(servicio);
+    }
+    // SERVICE COORD
+    else if (categoria.includes('coordinación') || categoria.includes('coordinacion') || categoria.includes('coordinador') || 
+             categoria.includes('mesero') || categoria.includes('bartender') || 
+             nombre.includes('coordinador') || nombre.includes('mesero') || nombre.includes('bartender')) {
+      organizados.serviceCoord.push(servicio);
+    }
+    // VENUE
+    else if (categoria.includes('venue') || nombre.includes('venue') || nombre.includes('salón') || nombre.includes('salon')) {
+      organizados.venue.push(servicio);
+    }
+    // Por defecto, todos los servicios no categorizados van a specials
+    else {
+      organizados.specials.push(servicio);
+    }
+  });
+
+  return organizados;
 }
 
 // ============================================
@@ -342,16 +516,11 @@ function generarPDFContrato(contrato) {
   };
 
   // ============================================
-  // PÁGINA 1: PORTADA DEL CONTRATO
+  // PÁGINA 1: INFORMACIÓN DEL EVENTO Y DATOS DEL CLIENTE
   // ============================================
   
-  // Dibujar patrón de fondo en la primera página
   dibujarPatronFondo(doc);
-  
-  // SECCIÓN 1: ENCABEZADO PRINCIPAL
-  dibujarEncabezadoPrincipal(doc, config);
-
-  // SECCIÓN 2: TÍTULO DEL DOCUMENTO
+  dibujarEncabezadoPrincipal(doc, config, contrato);
   dibujarTituloDocumento(
     doc,
     'CONTRATO DE SERVICIOS PARA EVENTOS',
@@ -359,257 +528,369 @@ function generarPDFContrato(contrato) {
     config
   );
 
-  // SECCIÓN 3: INFORMACIÓN DEL CONTRATO
-  const yInfo = doc.y;
-  dibujarCajaInfo(doc, 50, yInfo, layout.anchoUtil, alturas.cajaInfoContrato, config);
-
-  const yContent = yInfo + 15;
-
-  // COLUMNA IZQUIERDA: Datos del contrato
-  dibujarFilaEtiquetaValor(
-    doc, 65, yContent,
-    'NÚMERO DE CONTRATO:',
-    contrato.codigo_contrato,
-    config
-  );
-
-  dibujarFilaEtiquetaValor(
-    doc, 65, yContent + 18,
-    'FECHA DE FIRMA:',
-    new Date(contrato.fecha_firma).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }),
-    config
-  );
-
-  dibujarFilaEtiquetaValor(
-    doc, 65, yContent + 36,
-    'FECHA DEL EVENTO:',
-    new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }),
-    config
-  );
-
-  // Estado con color dinámico
-  const estado = contrato.estado || 'activo';
-  const textoEstado = estado.toUpperCase();
-  const colorEstado = estado === 'activo' ? colores.exito : colores.advertencia;
-
-  doc.fontSize(tamanosTexto.pequeno)
-    .fillColor(colores.texto)
+  // Información del evento (estilo ofertas)
+  doc.fontSize(tamanosTexto.subtituloMedio)
+    .fillColor(colores.primario)
     .font(fuentes.bold)
-    .text('ESTADO DEL CONTRATO:', 65, yContent + 54);
-
-  doc.fillColor(colorEstado)
-    .font(fuentes.bold)
-    .text(textoEstado, 185, yContent + 54);
-
-  dibujarFilaEtiquetaValor(
-    doc, 65, yContent + 72,
-    'CÓDIGO DE ACCESO:',
-    contrato.codigo_acceso_cliente.substring(0, 12) + '...',
-    config,
-    null,
-    150
-  );
-
-  // COLUMNA DERECHA: Datos del cliente
-  dibujarFilaEtiquetaValor(
-    doc, 320, yContent,
-    'CONTRATANTE:',
-    '',
-    config
-  );
-  doc.font(fuentes.normal)
-    .fillColor(colores.texto)
-    .text(contrato.clientes?.nombre_completo || 'No especificado', 320, yContent + 14, { width: 230 });
-
-  dibujarFilaEtiquetaValor(
-    doc, 320, yContent + 36,
-    'CORREO ELECTRÓNICO:',
-    '',
-    config
-  );
-  doc.font(fuentes.normal)
-    .fillColor(colores.texto)
-    .text(contrato.clientes?.email || 'No especificado', 320, yContent + 50, { width: 230 });
-
-  dibujarFilaEtiquetaValor(
-    doc, 320, yContent + 68,
-    'TELÉFONO:',
-    '',
-    config
-  );
-  doc.font(fuentes.normal)
-    .fillColor(colores.texto)
-    .text(contrato.clientes?.telefono || 'No especificado', 320, yContent + 82);
-
-  doc.y = yInfo + alturas.cajaInfoContrato + 20;
-
-  // SECCIÓN 4: RESUMEN DEL EVENTO
-  dibujarTituloSeccion(doc, 'DATOS DEL EVENTO', config);
-
-  const yEvento = doc.y;
-  dibujarCajaInfo(doc, 50, yEvento, layout.anchoUtil, alturas.cajaEvento, config, '#FFFFFF');
-
-  const yEventoContent = yEvento + 15;
+    .text('INFORMACIÓN DEL EVENTO', 40)
+    .moveDown(0.4);
 
   const tipoEvento = contrato.clientes?.tipo_evento || 'Evento';
   const lugarEvento = contrato.lugar_salon || contrato.ofertas?.lugar_evento || 'Por definir';
-  const cantidadInvitados = contrato.cantidad_invitados;
-  const horario = `${contrato.hora_inicio} - ${contrato.hora_fin}`;
+  const direccionSalon = obtenerDireccionSalon(lugarEvento);
+  const cantidadInvitados = contrato.cantidad_invitados || 0;
+  const horaInicio = contrato.hora_inicio instanceof Date 
+    ? contrato.hora_inicio.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    : (contrato.hora_inicio || 'Por definir');
+  const horaFin = contrato.hora_fin instanceof Date
+    ? contrato.hora_fin.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    : (contrato.hora_fin || 'Por definir');
+  const horario = `${horaInicio} - ${horaFin}`;
 
-  dibujarFilaEtiquetaValor(doc, 70, yEventoContent, 'Tipo de Evento:', tipoEvento, config, null, 360);
-  dibujarFilaEtiquetaValor(doc, 70, yEventoContent + 20, 'Lugar:', lugarEvento, config, null, 360);
-  dibujarFilaEtiquetaValor(doc, 70, yEventoContent + 40, 'Cantidad de Invitados:', `${cantidadInvitados} personas`, config, null, 360);
-  dibujarFilaEtiquetaValor(doc, 70, yEventoContent + 60, 'Horario del Evento:', horario, config, null, 360);
+  // Tabla de información (estilo ofertas)
+  const infoRows = [
+    { label: 'Número de Contrato', value: contrato.codigo_contrato },
+    { label: 'Contratante', value: contrato.clientes?.nombre_completo || 'N/A' },
+    { label: 'Correo Electrónico', value: contrato.clientes?.email || 'N/A' },
+    { label: 'Teléfono de Contacto', value: contrato.clientes?.telefono || 'N/A' },
+    { label: 'Representante de Ventas', value: `${contrato.vendedores?.nombre_completo || 'N/A'} (${contrato.vendedores?.codigo_vendedor || 'N/A'})` },
+    { label: 'Fecha del Evento', value: new Date(contrato.fecha_evento).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) },
+    { label: 'Tipo de Evento', value: tipoEvento },
+    ...(contrato.homenajeado ? [{ label: 'Homenajeado/a', value: contrato.homenajeado }] : []),
+    { label: 'Horario', value: horario },
+    { label: 'Número de Invitados', value: `${cantidadInvitados} personas` },
+    { label: 'Ubicación', value: `${lugarEvento}\n${direccionSalon}` }
+  ];
 
-  doc.y = yEvento + alturas.cajaEvento + 20;
+  infoRows.forEach((row, index) => {
+    const yPos = doc.y;
+    doc.fontSize(tamanosTexto.pequeno)
+      .fillColor(colores.primario)
+      .font(fuentes.bold)
+      .text(row.label + ':', 50, yPos, { width: 200 });
+    
+    doc.fontSize(tamanosTexto.pequeno)
+      .fillColor(colores.texto)
+      .font(fuentes.normal)
+      .text(row.value, 260, yPos, { width: 312 });
+    
+    doc.moveDown(0.4);
+  });
 
-  // SECCIÓN 5: RESUMEN FINANCIERO
-  dibujarTituloSeccion(doc, 'RESUMEN FINANCIERO', config);
+  // PIE DE PÁGINA
+  dibujarPiePagina(doc, config);
 
+  // ============================================
+  // PÁGINA 2: PAQUETE CONTRATADO
+  // ============================================
+  agregarPaginaConFondo();
+  dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
+
+  doc.fontSize(tamanosTexto.subtituloMedio)
+    .fillColor(colores.primario)
+    .font(fuentes.bold)
+    .text('PAQUETE CONTRATADO', { align: 'center' })
+    .moveDown(0.3);
+
+  const nombrePaquete = contrato.paquetes?.nombre || 'No especificado';
+
+  doc.fontSize(tamanosTexto.subtituloMedio)
+    .fillColor(colores.primario)
+    .font(fuentes.bold)
+    .text(nombrePaquete, { align: 'center' })
+    .moveDown(0.3);
+
+  // Servicios incluidos en el paquete (Página 2)
+  if (contrato.paquetes?.paquetes_servicios && contrato.paquetes.paquetes_servicios.length > 0) {
+    doc.fontSize(tamanosTexto.seccion)
+      .fillColor(colores.primario)
+      .font(fuentes.bold)
+      .text('SERVICIOS INCLUIDOS EN EL PAQUETE', { align: 'center' })
+      .moveDown(0.3);
+
+    // Organizar servicios por categoría
+    const serviciosOrganizados = organizarServiciosPorCategoria(contrato);
+    
+    const categorias = [
+      { key: 'venue', titulo: 'VENUE' },
+      { key: 'cake', titulo: 'CAKE' },
+      { key: 'decoration', titulo: 'DECORATION' },
+      { key: 'specials', titulo: 'SPECIALS' },
+      { key: 'barService', titulo: 'BAR SERVICE' },
+      { key: 'catering', titulo: 'CATERING' },
+      { key: 'serviceCoord', titulo: 'SERVICE COORD & DESIGN' }
+    ];
+
+    categorias.forEach((cat, catIndex) => {
+      const servicios = serviciosOrganizados[cat.key] || [];
+      
+      if (servicios.length > 0) {
+        // Verificar si hay espacio suficiente en la página antes de agregar nueva categoría
+        // Altura aproximada: título (20) + línea (5) + servicios (15 cada uno) + espaciado (10)
+        const alturaNecesaria = 35 + (servicios.length * 15);
+        const alturaDisponible = doc.page.height - doc.y - layout.margenInferior - 50; // 50 para pie de página
+        
+        if (alturaDisponible < alturaNecesaria && catIndex > 0) {
+          // Si no hay espacio, agregar nueva página
+          agregarPaginaConFondo();
+          dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
+        }
+        
+        // Título de categoría (compacto)
+        doc.fontSize(tamanosTexto.subseccionPequena)
+          .fillColor(colores.primario)
+          .font(fuentes.bold)
+          .text(cat.titulo, 50)
+          .moveDown(0.1);
+
+        // Línea debajo del título (sutil)
+        doc.strokeColor(colores.bordeClaro)
+          .lineWidth(0.5)
+          .moveTo(50, doc.y - 2)
+          .lineTo(562, doc.y - 2)
+          .stroke();
+
+        doc.moveDown(0.1);
+
+        // Listar servicios de esta categoría (más compacto)
+        servicios.forEach((servicio, index) => {
+          const nombreServicio = servicio.servicios?.nombre || servicio.nombre || 'No especificado';
+          const descripcion = servicio.servicios?.descripcion || servicio.descripcion || '';
+          const cantidad = servicio.cantidad || servicio.servicios?.cantidad || 1;
+          
+          // Formato más compacto: solo nombre si no hay descripción, o nombre: descripción corta
+          let textoServicio;
+          if (descripcion && descripcion.length > 80) {
+            // Truncar descripción si es muy larga
+            textoServicio = `${nombreServicio}: ${descripcion.substring(0, 80)}...${cantidad > 1 ? ` (x${cantidad})` : ''}`;
+          } else {
+            textoServicio = descripcion 
+              ? `${nombreServicio}: ${descripcion}${cantidad > 1 ? ` (x${cantidad})` : ''}`
+              : `${nombreServicio}${cantidad > 1 ? ` (x${cantidad})` : ''}`;
+          }
+
+          doc.fontSize(tamanosTexto.muyPequeno)
+            .fillColor(colores.texto)
+            .font(fuentes.normal)
+            .text('•', 60, doc.y)
+            .text(textoServicio, 70, doc.y, { width: 490, align: 'left', lineGap: 1 });
+          
+          doc.moveDown(0.1);
+        });
+
+        doc.moveDown(0.15);
+      }
+    });
+  }
+
+  // PIE DE PÁGINA PÁGINA 2
+  dibujarPiePagina(doc, config);
+
+  // ============================================
+  // PÁGINA 3: SERVICIOS ADICIONALES
+  // ============================================
+  agregarPaginaConFondo();
+  dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
+
+  if (contrato.contratos_servicios && contrato.contratos_servicios.length > 0) {
+    doc.fontSize(tamanosTexto.subtituloMedio)
+      .fillColor(colores.primario)
+      .font(fuentes.bold)
+      .text('SERVICIOS ADICIONALES EXTRAS', { align: 'center' })
+      .moveDown(0.5);
+
+    // Organizar servicios adicionales por categoría
+    const serviciosAdicionalesOrganizados = organizarServiciosAdicionalesPorCategoria(contrato);
+    
+    const categorias = [
+      { key: 'venue', titulo: 'VENUE' },
+      { key: 'cake', titulo: 'CAKE' },
+      { key: 'decoration', titulo: 'DECORATION' },
+      { key: 'specials', titulo: 'SPECIALS' },
+      { key: 'barService', titulo: 'BAR SERVICE' },
+      { key: 'catering', titulo: 'CATERING' },
+      { key: 'serviceCoord', titulo: 'SERVICE COORD & DESIGN' }
+    ];
+
+    let totalServiciosAdicionales = 0;
+
+    categorias.forEach((cat) => {
+      const servicios = serviciosAdicionalesOrganizados[cat.key] || [];
+      
+      if (servicios.length > 0) {
+        // Título de categoría (compacto)
+        doc.fontSize(tamanosTexto.subseccion)
+          .fillColor(colores.primario)
+          .font(fuentes.bold)
+          .text(cat.titulo, 50)
+          .moveDown(0.15);
+
+        // Línea debajo del título (sutil)
+        doc.strokeColor(colores.bordeClaro)
+          .lineWidth(0.5)
+          .moveTo(50, doc.y - 2)
+          .lineTo(562, doc.y - 2)
+          .stroke();
+
+        doc.moveDown(0.15);
+
+        // Listar servicios de esta categoría (compacto, sin cajas)
+        servicios.forEach((servicio) => {
+          // El servicio ya viene mapeado directamente, no necesita .servicios
+          const nombreServicio = servicio.nombre || 'Servicio';
+          const cantidad = servicio.cantidad || 1;
+          const precioUnitario = parseFloat(servicio.precio_unitario || 0);
+          const subtotal = parseFloat(servicio.subtotal || precioUnitario * cantidad);
+          totalServiciosAdicionales += subtotal;
+
+          const textoServicio = `${nombreServicio}${cantidad > 1 ? ` (x${cantidad})` : ''} - $${precioUnitario.toFixed(2)} c/u = $${subtotal.toFixed(2)}`;
+
+          doc.fontSize(tamanosTexto.normal)
+            .fillColor(colores.texto)
+            .font(fuentes.normal)
+            .text('•', 60, doc.y)
+            .text(textoServicio, 70, doc.y, { width: 490, align: 'left' });
+          
+          doc.moveDown(0.2);
+        });
+
+        doc.moveDown(0.2);
+      }
+    });
+
+    // Total de servicios adicionales (compacto, sin caja)
+    if (totalServiciosAdicionales > 0) {
+      doc.moveDown(0.3);
+      doc.fontSize(tamanosTexto.normal)
+        .fillColor(colores.primario)
+        .font(fuentes.bold)
+        .text(`Total Servicios Adicionales: $${totalServiciosAdicionales.toFixed(2)}`, { align: 'center' });
+    }
+  } else {
+    doc.fontSize(tamanosTexto.normal)
+      .fillColor(colores.texto)
+      .font(fuentes.normal)
+      .text('No hay servicios adicionales contratados.', { align: 'center' });
+  }
+
+  // PIE DE PÁGINA PÁGINA 3
+  dibujarPiePagina(doc, config);
+
+  // ============================================
+  // PÁGINA 4: PAGOS
+  // ============================================
+  agregarPaginaConFondo();
+  dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
+
+  // DESGLOSE DE INVERSIÓN
+  doc.fontSize(tamanosTexto.subtituloMedio)
+    .fillColor(colores.primario)
+    .font(fuentes.bold)
+    .text('DESGLOSE DE INVERSIÓN', { align: 'center' })
+    .moveDown(0.5);
+
+  // Obtener datos del desglose desde la oferta relacionada
+  const oferta = contrato.ofertas;
+  if (oferta) {
+    const precioPaquete = parseFloat(oferta.precio_paquete_base || oferta.precio_base_ajustado || contrato.paquetes?.precio_base || 0);
+    const ajusteTemporada = parseFloat(oferta.ajuste_temporada_custom || oferta.ajuste_temporada || 0);
+    const subtotalServicios = parseFloat(oferta.subtotal_servicios || 0);
+    const descuento = parseFloat(oferta.descuento || 0);
+    const impuestoPorcentaje = parseFloat(oferta.impuesto_porcentaje || 7);
+    const impuestoMonto = parseFloat(oferta.impuesto_monto || 0);
+    const tarifaServicioPorcentaje = parseFloat(oferta.tarifa_servicio_porcentaje || 18);
+    const tarifaServicioMonto = parseFloat(oferta.tarifa_servicio_monto || 0);
+    const totalFinal = parseFloat(oferta.total_final || contrato.total_contrato || 0);
+
+    // Calcular subtotal antes de impuestos
+    const subtotalBase = precioPaquete + ajusteTemporada + subtotalServicios - descuento;
+
+    // Tabla de desglose
+    const desgloseRows = [
+      { label: 'Precio del Paquete', value: precioPaquete },
+      ...(ajusteTemporada !== 0 ? [{ label: 'Ajuste de Temporada', value: ajusteTemporada }] : []),
+      ...(subtotalServicios > 0 ? [{ label: 'Servicios Adicionales/Extras', value: subtotalServicios }] : []),
+      ...(descuento > 0 ? [{ label: 'Descuento', value: -descuento }] : []),
+      { label: 'Subtotal', value: subtotalBase },
+      { label: `Impuesto (${impuestoPorcentaje}%)`, value: impuestoMonto },
+      { label: `Tarifa de Servicio (${tarifaServicioPorcentaje}%)`, value: tarifaServicioMonto },
+      { label: 'TOTAL A PAGAR', value: totalFinal, isTotal: true }
+    ];
+
+    desgloseRows.forEach((row, index) => {
+      const yPos = doc.y;
+      const isTotal = row.isTotal || false;
+      
+      doc.fontSize(isTotal ? tamanosTexto.seccion : tamanosTexto.normal)
+        .fillColor(isTotal ? colores.primario : colores.texto)
+        .font(fuentes.bold)
+        .text(row.label + ':', 50, yPos, { width: 350 });
+      
+      const valorFormateado = `$${Math.abs(row.value).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      doc.fontSize(isTotal ? tamanosTexto.seccion : tamanosTexto.normal)
+        .fillColor(isTotal ? colores.primario : colores.texto)
+        .font(fuentes.bold)
+        .text(valorFormateado, 400, yPos, { width: 132, align: 'right' });
+      
+      doc.moveDown(0.4);
+    });
+  } else {
+    // Si no hay oferta, mostrar solo el total del contrato
+    const totalContrato = parseFloat(contrato.total_contrato || 0);
+    doc.fontSize(tamanosTexto.normal)
+      .fillColor(colores.texto)
+      .font(fuentes.normal)
+      .text('Total del Contrato:', 50)
+      .text(`$${totalContrato.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`, 400, doc.y - 14, { width: 132, align: 'right' });
+  }
+
+  doc.moveDown(0.8);
+
+  // RESUMEN FINANCIERO
   const totalContrato = parseFloat(contrato.total_contrato || 0);
   const totalPagado = parseFloat(contrato.total_pagado || 0);
   const saldoPendiente = parseFloat(contrato.saldo_pendiente || 0);
 
-  const yFinanzas = doc.y;
-  dibujarCajaInfo(doc, 50, yFinanzas, layout.anchoUtil, alturas.cajaFinanzas, config);
-
-  const yFinanzasContent = yFinanzas + 15;
+  doc.strokeColor(colores.borde)
+    .lineWidth(1.5)
+    .moveTo(40, doc.y)
+    .lineTo(572, doc.y)
+    .stroke();
+  
+  doc.moveDown(0.5);
+  
+  doc.fontSize(tamanosTexto.subtituloMedio)
+    .fillColor(colores.primario)
+    .font(fuentes.bold)
+    .text('RESUMEN FINANCIERO', { align: 'center' })
+    .moveDown(0.4);
 
   doc.fontSize(tamanosTexto.normal)
     .fillColor(colores.texto)
-    .font(fuentes.bold)
-    .text('Total del Contrato:', 70, yFinanzasContent);
+    .font(fuentes.normal)
+    .text(`Total del Contrato: $${totalContrato.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`, { align: 'center' })
+    .text(`Total Pagado: $${totalPagado.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`, { align: 'center' })
+    .text(`Saldo Pendiente: $${saldoPendiente.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`, { align: 'center' })
+    .moveDown(0.8);
 
-  doc.fillColor(colores.primario)
-    .text(`$${totalContrato.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`, 350, yFinanzasContent, { align: 'right', width: 180 });
-
-  doc.fillColor(colores.texto)
-    .text('Total Pagado:', 70, yFinanzasContent + 22);
-
-  doc.fillColor(colores.exito)
-    .text(`$${totalPagado.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`, 350, yFinanzasContent + 22, { align: 'right', width: 180 });
-
-  doc.fillColor(colores.texto)
-    .text('Saldo Pendiente:', 70, yFinanzasContent + 44);
-
-  doc.fillColor(saldoPendiente > 0 ? colores.advertencia : colores.exito)
-    .font(fuentes.bold)
-    .text(`$${saldoPendiente.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`, 350, yFinanzasContent + 44, { align: 'right', width: 180 });
-
-  doc.y = yFinanzas + alturas.cajaFinanzas + 20;
-
-  // ============================================
-  // PÁGINA 2: SERVICIOS CONTRATADOS
-  // ============================================
-  agregarPaginaConFondo();
-  dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
-
-  // SECCIÓN 6: PAQUETE CONTRATADO
-  dibujarTituloSeccion(doc, 'PAQUETE CONTRATADO', config);
-
-  const nombrePaquete = contrato.paquetes?.nombre || 'No especificado';
-  const descripcionPaquete = contrato.paquetes?.descripcion || 'Sin descripción';
-
-  const yPaquete = doc.y;
-  dibujarCajaInfo(doc, 50, yPaquete, layout.anchoUtil, alturas.cajaPaquete, config, colores.fondoPaquete, colores.bordeClaro);
-
-  doc.fontSize(tamanosTexto.subseccionPequena)
+  doc.fontSize(tamanosTexto.subtituloMedio)
     .fillColor(colores.primario)
     .font(fuentes.bold)
-    .text(nombrePaquete, 70, yPaquete + 15);
-
-  doc.fontSize(tamanosTexto.pequeno)
-    .fillColor(colores.texto)
-    .font(fuentes.normal)
-    .text(descripcionPaquete, 70, yPaquete + 35, { width: 460 });
-
-  doc.y = yPaquete + alturas.cajaPaquete + 15;
-
-  // SECCIÓN 7: SERVICIOS INCLUIDOS EN EL PAQUETE
-  if (contrato.paquetes?.paquetes_servicios && contrato.paquetes.paquetes_servicios.length > 0) {
-    doc.fontSize(tamanosTexto.subseccionPequena)
-      .fillColor(colores.primario)
-      .font(fuentes.bold)
-      .text('SERVICIOS INCLUIDOS EN EL PAQUETE')
-      .moveDown(0.5);
-
-    const serviciosIncluidos = contrato.paquetes.paquetes_servicios;
-
-    serviciosIncluidos.forEach((ps) => {
-      const nombreServicio = ps.servicios?.nombre || 'No especificado';
-      const cantidad = ps.cantidad || 1;
-
-      doc.fontSize(tamanosTexto.pequeno)
-        .fillColor(colores.exito)
-        .font(fuentes.normal)
-        .text('•', 70, doc.y)
-        .fillColor(colores.texto)
-        .text(`${nombreServicio}${cantidad > 1 ? ` (Cantidad: ${cantidad})` : ''}`, 85, doc.y, { width: 465 });
-      
-      doc.moveDown(0.3);
-    });
-
-    doc.moveDown(0.5);
-  }
-
-  // SECCIÓN 8: SERVICIOS ADICIONALES
-  if (contrato.contratos_servicios && contrato.contratos_servicios.length > 0) {
-    doc.fontSize(tamanosTexto.subseccionPequena)
-      .fillColor(colores.primario)
-      .font(fuentes.bold)
-      .text('SERVICIOS ADICIONALES CONTRATADOS')
-      .moveDown(0.5);
-
-    const yTabla = doc.y;
-
-    const columnas = [
-      { texto: 'DESCRIPCIÓN', x: 60, ancho: 310, alineacion: 'left' },
-      { texto: 'CANT.', x: 380, ancho: 50, alineacion: 'center' },
-      { texto: 'PRECIO UNIT.', x: 440, ancho: 100, alineacion: 'right' }
-    ];
-
-    let yActual = dibujarEncabezadoTabla(doc, yTabla, columnas, config);
-
-    contrato.contratos_servicios.forEach((servicio, index) => {
-      const nombreServicio = servicio.servicios?.nombre || 'Servicio';
-      const cantidad = servicio.cantidad || 1;
-      const precioUnitario = parseFloat(servicio.precio_unitario || 0);
-
-      const columnasData = [
-        { texto: nombreServicio, x: 60, ancho: 310, alineacion: 'left' },
-        { texto: cantidad.toString(), x: 380, ancho: 50, alineacion: 'center' },
-        { texto: `$${precioUnitario.toFixed(2)}`, x: 440, ancho: 100, alineacion: 'right' }
-      ];
-
-      yActual = dibujarFilaTabla(doc, yActual, columnasData, index, config);
-    });
-
-    doc.y = yActual + 10;
-  }
-
-  // ============================================
-  // PÁGINA 3: PLAN DE PAGOS
-  // ============================================
-  agregarPaginaConFondo();
-  dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
-
-  // SECCIÓN 9: PLAN DE PAGOS
-  dibujarTituloSeccion(doc, 'PLAN DE PAGOS', config);
+    .text('ACUERDO DE PAGO', { align: 'center' })
+    .moveDown(0.5);
 
   if (contrato.tipo_pago === 'unico') {
     doc.fontSize(tamanosTexto.normal)
       .fillColor(colores.texto)
+      .font(fuentes.bold)
+      .text('Modalidad: PAGO ÚNICO', 50)
+      .moveDown(0.3);
+
+    doc.fontSize(tamanosTexto.normal)
+      .fillColor(colores.texto)
       .font(fuentes.normal)
-      .text('Modalidad de Pago: Pago Único', 50)
-      .text('El pago total debe realizarse de una sola vez antes del evento.', 50);
+      .text('El pago total debe realizarse de una sola vez antes del evento. El pago completo debe estar liquidado al menos quince (15) días hábiles antes de la fecha del evento.', 50, undefined, { align: 'justify', width: 512 })
+      .moveDown(0.5);
 
   } else if (contrato.plan_pagos && (contrato.tipo_pago === 'plazos' || contrato.tipo_pago === 'financiado')) {
     const plan = typeof contrato.plan_pagos === 'string' 
@@ -621,236 +902,305 @@ function generarPDFContrato(contrato) {
         .fillColor(colores.texto)
         .font(fuentes.normal)
         .text('Modalidad de Pago: Plan de Pagos (Detalles no disponibles)', 50);
-      doc.moveDown(1);
+      doc.moveDown(0.5);
     } else {
       doc.fontSize(tamanosTexto.normal)
         .fillColor(colores.texto)
         .font(fuentes.bold)
-        .text(`Modalidad de Pago: Financiamiento en ${contrato.meses_financiamiento || plan.pagos?.length || 'N/A'} Cuotas`, 50)
-        .moveDown(1);
+        .text(`Modalidad: FINANCIAMIENTO EN ${contrato.meses_financiamiento || plan.pagos?.length || 'N/A'} CUOTAS`, 50)
+        .moveDown(0.4);
 
-      // PAGOS INICIALES OBLIGATORIOS
-      doc.fontSize(tamanosTexto.subseccionPequena)
+      // PAGOS INICIALES
+      doc.fontSize(tamanosTexto.normal)
         .fillColor(colores.primario)
         .font(fuentes.bold)
-        .text('PAGOS INICIALES OBLIGATORIOS')
-        .moveDown(0.5);
+        .text('PAGOS INICIALES:', 50)
+        .moveDown(0.2);
 
-      doc.fontSize(tamanosTexto.pequeno)
+      doc.fontSize(tamanosTexto.normal)
         .fillColor(colores.texto)
         .font(fuentes.normal);
 
       // Depósito de reserva
       if (plan.depositoReserva) {
-        doc.text(`1. Depósito de Reserva (No reembolsable): $${plan.depositoReserva.toLocaleString('es-ES')}`, 70)
-          .text('   Este pago confirma la reserva de su fecha y no es reembolsable bajo ninguna circunstancia.', 70)
-          .moveDown(0.5);
+        doc.text(`• Depósito de Reserva: $${plan.depositoReserva.toLocaleString('es-ES', { minimumFractionDigits: 2 })} (No reembolsable)`, 60)
+          .moveDown(0.2);
       }
 
-      // Segundo pago (puede ser pagoInicial o segundoPago dependiendo de la versión)
+      // Segundo pago
       const segundoPago = plan.segundoPago || plan.pagoInicial || 0;
       if (segundoPago > 0) {
-        doc.text(`2. Segundo Pago: $${segundoPago.toLocaleString('es-ES')}`, 70)
-          .text('   Debe realizarse 15 días después de la reserva.', 70)
-          .moveDown(1);
+        doc.text(`• Segundo Pago: $${segundoPago.toLocaleString('es-ES', { minimumFractionDigits: 2 })} (10 días después de la reserva)`, 60)
+          .moveDown(0.3);
       }
 
     // CUOTAS MENSUALES
     if (plan.pagos && plan.pagos.length > 0) {
-      doc.fontSize(tamanosTexto.subseccionPequena)
+      doc.fontSize(tamanosTexto.normal)
         .fillColor(colores.primario)
         .font(fuentes.bold)
-        .text('CUOTAS MENSUALES')
-        .moveDown(0.5);
-
-      const yTabla = doc.y;
-      const columnas = [
-        { texto: 'CUOTA', x: 60, ancho: 70, alineacion: 'left' },
-        { texto: 'DESCRIPCIÓN', x: 150, ancho: 280, alineacion: 'left' },
-        { texto: 'MONTO', x: 440, ancho: 100, alineacion: 'right' }
-      ];
-
-      let yActual = dibujarEncabezadoTabla(doc, yTabla, columnas, config);
+        .text('CUOTAS MENSUALES:', 50)
+        .moveDown(0.2);
 
       plan.pagos.forEach((pago, index) => {
-        const columnasData = [
-          { texto: `#${index + 1}`, x: 60, ancho: 70, alineacion: 'left' },
-          { texto: pago.descripcion, x: 150, ancho: 280, alineacion: 'left' },
-          { texto: `$${pago.monto.toLocaleString('es-ES')}`, x: 440, ancho: 100, alineacion: 'right' }
-        ];
+        const fechaVencimiento = pago.fechaVencimiento 
+          ? new Date(pago.fechaVencimiento).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          : 'Por definir';
+        const metodo = pago.metodo || 'Efectivo/Zelle';
 
-        yActual = dibujarFilaTabla(doc, yActual, columnasData, index, config);
+        doc.fontSize(tamanosTexto.normal)
+          .fillColor(colores.texto)
+          .font(fuentes.normal)
+          .text(`• Cuota #${index + 1}: $${pago.monto.toLocaleString('es-ES', { minimumFractionDigits: 2 })} - Fecha: ${fechaVencimiento} - Método: ${metodo}`, 60);
+        
+        doc.moveDown(0.15);
       });
 
-      doc.y = yActual + 10;
+      doc.moveDown(0.3);
     }
 
-      doc.moveDown(1);
-
-      // ADVERTENCIA IMPORTANTE
-      dibujarCajaInfo(doc, 50, doc.y, layout.anchoUtil, 50, config, '#FEE2E2', '#FECACA');
-
-      doc.fontSize(tamanosTexto.pequeno)
-        .fillColor(colores.error)
+      doc.fontSize(tamanosTexto.normal)
+        .fillColor(colores.advertencia)
         .font(fuentes.bold)
-        .text('ADVERTENCIA IMPORTANTE: ', 65, doc.y + 12, { continued: true })
+        .text('IMPORTANTE: ', 50, undefined, { continued: true })
         .font(fuentes.normal)
-        .text('El pago completo debe estar liquidado al menos 15 días hábiles antes del evento. El incumplimiento puede resultar en la cancelación del servicio sin derecho a reembolso.', { width: 480 });
+        .text('El pago completo debe estar liquidado al menos quince (15) días hábiles antes del evento. Todos los pagos son no reembolsables.', 50, undefined, { width: 512, align: 'justify' });
 
-      doc.moveDown(3);
+      doc.moveDown(0.4);
     }
   }
 
-  // SECCIÓN 10: HISTORIAL DE PAGOS
+  // SECCIÓN 8: PAGOS REALIZADOS (Compacto, lista simple)
   if (contrato.pagos && contrato.pagos.length > 0) {
-    doc.fontSize(tamanosTexto.subseccionPequena)
+    doc.moveDown(0.3);
+    doc.strokeColor(colores.borde)
+      .lineWidth(1)
+      .moveTo(40, doc.y)
+      .lineTo(572, doc.y)
+      .stroke();
+    
+    doc.moveDown(0.3);
+    
+    doc.fontSize(tamanosTexto.subtituloMedio)
       .fillColor(colores.primario)
       .font(fuentes.bold)
-      .text('HISTORIAL DE PAGOS REALIZADOS')
-      .moveDown(0.5);
+      .text('PAGOS REALIZADOS', { align: 'center' })
+      .moveDown(0.3);
 
     contrato.pagos.forEach((pago) => {
-      const fechaPago = new Date(pago.fecha_pago).toLocaleDateString('es-ES');
-      const monto = parseFloat(pago.monto).toFixed(2);
-      
-      doc.fontSize(tamanosTexto.pequeno)
+      const fechaPago = new Date(pago.fecha_pago).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      const monto = (parseFloat(pago.monto) || 0).toFixed(2);
+      const metodo = pago.metodo_pago || 'N/A';
+      const estadoPago = (pago.estado || 'completado').toUpperCase();
+
+      doc.fontSize(tamanosTexto.normal)
         .fillColor(colores.texto)
         .font(fuentes.normal)
-        .text(`• Fecha: ${fechaPago} | Monto: $${monto} | Método: ${pago.metodo_pago || 'N/A'}`, 70);
+        .text(`• ${fechaPago} - $${monto} - ${metodo} - ${estadoPago}`, 50);
       
-      doc.moveDown(0.3);
+      doc.moveDown(0.2);
     });
+
+    doc.moveDown(0.3);
   }
 
+  // PIE DE PÁGINA PÁGINA 4
+  dibujarPiePagina(doc, config);
+
   // ============================================
-  // PÁGINAS 4+: TÉRMINOS Y CONDICIONES
+  // PÁGINA 5: TÉRMINOS Y CONDICIONES
   // ============================================
   agregarPaginaConFondo();
   dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
-
-  // SECCIÓN 11: TÉRMINOS Y CONDICIONES
-  doc.fontSize(tamanosTexto.subseccion)
+  
+  doc.fontSize(tamanosTexto.subtituloGrande)
     .fillColor(colores.primario)
     .font(fuentes.bold)
-    .text('TÉRMINOS Y CONDICIONES DEL CONTRATO')
-    .moveDown(1);
+    .text('ACUERDO DE SERVICIO DE SALÓN DE BANQUETES', { align: 'center' })
+    .moveDown(0.5);
 
-  doc.fontSize(tamanosTexto.muyPequeno)
+  doc.fontSize(tamanosTexto.subtituloMedio)
+    .fillColor(colores.primario)
+    .font(fuentes.bold)
+    .text('TÉRMINOS Y CONDICIONES DEL CONTRATO', { align: 'center' })
+    .moveDown(0.6);
+
+  doc.fontSize(tamanosTexto.normal)
     .fillColor(colores.texto)
-    .font(fuentes.normal);
+    .font(fuentes.normal)
+    .text('"Compañía" se refiere a la entidad que proporciona los servicios para la ejecución del evento contratado, y "Cliente" se refiere a la persona o entidad que contrata los servicios para la realización de su evento. "Contrato" se refiere al conjunto de Términos y Condiciones contenidos en este documento, que ambas partes —la Compañía y el Cliente— acuerdan cumplir.', 40, undefined, { 
+      align: 'justify',
+      lineGap: 1.2,
+      width: 532
+    })
+    .moveDown(0.6);
 
   const terminos = [
     {
-      titulo: 'ARTÍCULO 1. RESERVA, DEPÓSITO Y PAGOS',
-      contenido: 'Se requiere un depósito no reembolsable de $500.00 para reservar la fecha del evento. Debe completarse un pago de $1,000.00 dentro de los diez (10) días posteriores a la reserva. Los pagos mensuales de al menos $500.00 son obligatorios hasta liquidar el saldo. El pago completo debe estar completado al menos quince (15) días hábiles antes del evento. Se aceptan pagos con Visa y MasterCard hasta 30 días antes del evento con un cargo del 3.8%. No se acepta American Express. Todos los pagos son no reembolsables.'
+      titulo: '1. RESERVA, DEPÓSITO Y CONDICIONES DE PAGO',
+      contenido: 'Se requiere un depósito no reembolsable de $500 para reservar la fecha del evento. Se deberá completar un pago de $1,000 dentro de los diez (10) días posteriores a la reserva. A partir de entonces, se requerirán pagos mensuales de al menos $500 hasta que se pague el saldo total. El pago total deberá completarse al menos quince (15) días hábiles antes del evento. Los pagos con Visa y MasterCard se aceptan solo hasta 30 días antes de la fecha del evento con una tarifa del 3.8%. No se acepta American Express. Todos los pagos no son reembolsables.'
     },
     {
-      titulo: 'ARTÍCULO 2. POLÍTICA DE CANCELACIÓN',
-      contenido: 'Todas las cancelaciones deben presentarse por escrito mediante correo electrónico. El Cliente renuncia a todos los pagos realizados y acepta no disputar ni revertir ningún pago. No se emitirán reembolsos bajo ninguna circunstancia.'
+      titulo: '2. POLÍTICA DE CANCELACIÓN DEL EVENTO',
+      contenido: 'Todas las cancelaciones deben presentarse por escrito a través de correo electrónico. El Cliente perderá todos los pagos realizados y acepta no disputar ni revertir ningún pago. No se emitirán reembolsos bajo ninguna circunstancia.'
     },
     {
-      titulo: 'ARTÍCULO 3. SERVICIOS DE TERCEROS',
-      contenido: 'La Compañía no es responsable por fallas o retrasos en servicios subcontratados a terceros como limosinas, fotógrafos, videógrafos, bailarines o entretenedores. Todos los servicios adicionales deben coordinarse a través de proveedores aprobados por la Compañía.'
+      titulo: '3. SERVICIOS DE TERCEROS',
+      contenido: 'La Compañía no se hace responsable por fallas o retrasos en los servicios subcontratados a proveedores externos, como limusinas, fotógrafos, videógrafos, bailarines o artistas. Todos los servicios adicionales deben gestionarse a través de los proveedores aprobados por la Compañía.'
     },
     {
-      titulo: 'ARTÍCULO 4. RESPONSABILIDAD POR DAÑOS',
-      contenido: 'El Cliente asume completa responsabilidad por cualquier daño a la propiedad, mobiliario o infraestructura causado por invitados, familiares o proveedores externos. Los costos de reparación serán facturados al Cliente y deben pagarse de inmediato.'
+      titulo: '4. RESPONSABILIDAD DEL CLIENTE POR DAÑOS',
+      contenido: 'El Cliente asume total responsabilidad por cualquier daño a la propiedad, muebles o infraestructura causado por invitados, miembros de la familia o proveedores externos. Los costos de reparación se facturarán al Cliente y deberán pagarse de inmediato.'
     },
     {
-      titulo: 'ARTÍCULO 5. POLÍTICA DE DECORACIÓN Y SUMINISTROS',
-      contenido: 'Todas las decoraciones o materiales traídos por el Cliente requieren aprobación previa. Las entregas solo se permiten los miércoles entre 2:00 PM y 5:00 PM. La Compañía no es responsable por artículos personales perdidos o dañados. El tiempo del personal para instalación o retiro puede ser cobrado al Cliente.'
+      titulo: '5. POLÍTICA DE DECORACIÓN Y SUMINISTROS',
+      contenido: 'Todas las decoraciones o materiales traídos por el Cliente requieren aprobación previa. La entrega solo está permitida los miércoles entre las 2:00 PM y las 5:00 PM. La Compañía no se hace responsable por artículos personales perdidos o dañados. El tiempo del personal dedicado a la instalación o remoción puede ser cargado al Cliente.'
     },
     {
-      titulo: 'ARTÍCULO 6. HORARIO Y ACCESO AL EVENTO',
-      contenido: 'El Cliente e invitados solo pueden ingresar al local a la hora establecida en el contrato. Los cambios en los detalles del evento solo se permiten hasta diez (10) días antes del evento. Los artistas o proveedores externos no aprobados por la Compañía están prohibidos por razones de seguro.'
+      titulo: '6. HORARIO Y ACCESO AL EVENTO',
+      contenido: 'El Cliente y los invitados solo pueden ingresar al lugar a la hora indicada en el contrato del evento. Los cambios en los detalles del evento solo se permiten hasta diez (10) días antes del evento. Los artistas o vendedores externos no aprobados por la Compañía están prohibidos por razones de seguro.'
     },
     {
-      titulo: 'ARTÍCULO 7. AUTORIZACIÓN DE USO DE MEDIOS',
-      contenido: 'El Cliente autoriza a la Compañía a tomar fotografías y videos del evento y usarlos con fines promocionales en redes sociales, sitio web u otros materiales de marketing.'
+      titulo: '7. AUTORIZACIÓN DE USO DE MEDIOS',
+      contenido: 'El Cliente autoriza a la Compañía a tomar fotos y videos del evento y utilizarlos con fines promocionales en redes sociales, sitios web u otros materiales de marketing.'
     },
     {
-      titulo: 'ARTÍCULO 8. FUERZA MAYOR',
-      contenido: 'La Compañía no es responsable por incumplimiento causado por eventos fuera de su control, incluyendo desastres naturales, cortes de energía, pandemias o restricciones gubernamentales.'
+      titulo: '8. FUERZA MAYOR',
+      contenido: 'La Compañía no es responsable por el incumplimiento causado por eventos fuera de su control, incluidos desastres naturales, cortes de energía, pandemias o restricciones gubernamentales.'
     },
     {
-      titulo: 'ARTÍCULO 9. LIMITACIÓN DE RESPONSABILIDAD',
+      titulo: '9. LIMITACIÓN DE RESPONSABILIDAD',
       contenido: 'La responsabilidad total de la Compañía no excederá el monto total pagado por el Cliente. La Compañía no será responsable por daños indirectos o consecuentes.'
     },
     {
-      titulo: 'ARTÍCULO 10. LEY APLICABLE Y JURISDICCIÓN',
-      contenido: 'Este Contrato se regirá por las leyes del Estado de Florida. Cualquier disputa será resuelta en los tribunales del Condado de Miami-Dade.'
+      titulo: '10. LEY APLICABLE',
+      contenido: 'Este Acuerdo se regirá por las leyes del Estado de Florida. Cualquier disputa se resolverá en los tribunales del Condado de Miami-Dade.'
+    },
+    {
+      titulo: '11. ACUERDO DE NO REEMBOLSO Y NO REVERSIÓN DE CARGOS',
+      contenido: 'El Cliente acepta y está de acuerdo en que todos los pagos realizados a Revolution Party Venues son finales y no reembolsables, bajo ninguna circunstancia, incluida la cancelación del evento, el aplazamiento o la insatisfacción con los servicios. Para los pagos realizados con tarjetas de crédito, el titular de la tarjeta acepta además no disputar, cancelar o solicitar ninguna reversión de cargo (chargeback) a través del banco emisor o la compañía de tarjeta de crédito por cualquier motivo relacionado con esta transacción. Cualquier disputa se manejará directamente con la compañía de acuerdo con el acuerdo de evento firmado.'
     }
   ];
 
   terminos.forEach((termino, index) => {
-    doc.font(fuentes.bold)
-      .text(termino.titulo, 50);
-    
-    doc.font(fuentes.normal)
-      .text(termino.contenido, 50, undefined, { 
-        align: 'justify',
-        lineGap: 2
-      })
-      .moveDown(0.7);
-
-    if (doc.y > 680 && index < terminos.length - 1) {
+    // Verificar si necesitamos una nueva página (dejar espacio para título + contenido)
+    const espacioNecesario = 80; // Espacio aproximado para título + contenido
+    if (doc.y + espacioNecesario > 750 && index < terminos.length - 1) {
       agregarPaginaConFondo();
       dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
+
+      doc.fontSize(tamanosTexto.normal)
+        .fillColor(colores.texto)
+        .font(fuentes.normal);
     }
+
+    // Título del término (alineado a la izquierda, no centrado)
+    doc.font(fuentes.bold)
+      .fontSize(tamanosTexto.seccion)
+      .fillColor(colores.primario)
+      .text(termino.titulo, 40)
+      .moveDown(0.3);
+    
+    // Contenido del término (justificado, bien espaciado)
+    doc.font(fuentes.normal)
+      .fontSize(tamanosTexto.normal)
+      .fillColor(colores.texto)
+      .text(termino.contenido, 40, undefined, { 
+        align: 'justify',
+        lineGap: 1.2,
+        width: 532
+      })
+      .moveDown(0.5);
   });
 
+  // PIE DE PÁGINA PÁGINA 5
+  dibujarPiePagina(doc, config);
+
   // ============================================
-  // PÁGINA FINAL: FIRMAS
+  // PÁGINA 6: FIRMAS Y ACEPTACIÓN
   // ============================================
   agregarPaginaConFondo();
   dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
 
-  // SECCIÓN 12: FIRMAS Y ACEPTACIÓN
-  doc.fontSize(tamanosTexto.subseccion)
+  // SECCIÓN 10: FIRMAS Y ACEPTACIÓN
+  doc.fontSize(tamanosTexto.subtituloMedio)
     .fillColor(colores.primario)
     .font(fuentes.bold)
-    .text('FIRMAS Y ACEPTACIÓN DEL CONTRATO', { align: 'center' })
-    .moveDown(1);
+    .text('FIRMAS Y ACEPTACIÓN', { align: 'center' })
+    .moveDown(0.6);
 
-  doc.fontSize(tamanosTexto.pequeno)
+  doc.fontSize(tamanosTexto.normal)
     .fillColor(colores.texto)
     .font(fuentes.normal)
-    .text('Las partes firmantes declaran haber leído, comprendido y aceptado todos los términos y condiciones establecidos en el presente contrato.', { align: 'center', width: 512 })
-    .moveDown(3);
+    .text('Las partes declaran haber leído, comprendido y aceptado todos los términos y condiciones establecidos en este contrato.', 40, undefined, { align: 'justify', width: 532 })
+    .moveDown(4);
 
-  const yFirmas = doc.y;
+  // Posicionar firmas más cerca del pie de página
+  const alturaPie = layout.alturaPiePagina;
+  const alturaFirmas = 80; // Altura necesaria para firmas y textos finales
+  const yFirmas = doc.page.height - alturaPie - alturaFirmas;
+  
+  // Asegurar que las firmas estén en la posición correcta
+  doc.y = yFirmas;
 
   // FIRMA DEL CLIENTE
   doc.strokeColor(colores.borde)
     .lineWidth(1)
-    .moveTo(80, yFirmas)
-    .lineTo(230, yFirmas)
+    .moveTo(70, yFirmas)
+    .lineTo(240, yFirmas)
     .stroke();
 
-  doc.fontSize(tamanosTexto.pequeno)
+  doc.fontSize(tamanosTexto.normal)
     .fillColor(colores.texto)
     .font(fuentes.bold)
-    .text('FIRMA DEL CONTRATANTE', 80, yFirmas + 15, { width: 150, align: 'center' });
+    .text('FIRMA DEL CONTRATANTE', 70, yFirmas + 10, { width: 170, align: 'center' });
 
   doc.font(fuentes.normal)
-    .text(contrato.clientes?.nombre_completo || '', 80, yFirmas + 35, { width: 150, align: 'center' })
-    .text(`Fecha: ${new Date(contrato.fecha_firma).toLocaleDateString('es-ES')}`, 80, yFirmas + 50, { width: 150, align: 'center' });
+    .fontSize(tamanosTexto.normal)
+    .text(contrato.clientes?.nombre_completo || '_______________________', 70, yFirmas + 30, { width: 170, align: 'center' })
+    .text(`Fecha: ${contrato.fecha_firma ? new Date(contrato.fecha_firma).toLocaleDateString('es-ES') : '___________'}`, 70, yFirmas + 48, { width: 170, align: 'center' });
 
-  // FIRMA DE LA EMPRESA
+  // FIRMA DEL VENDEDOR (REPRESENTANTE AUTORIZADO)
   doc.strokeColor(colores.borde)
     .moveTo(360, yFirmas)
-    .lineTo(510, yFirmas)
+    .lineTo(530, yFirmas)
     .stroke();
 
   doc.font(fuentes.bold)
-    .text('DIAMONDSISTEM', 360, yFirmas + 15, { width: 150, align: 'center' });
+    .fontSize(tamanosTexto.normal)
+    .text('REPRESENTANTE AUTORIZADO', 360, yFirmas + 10, { width: 170, align: 'center' });
+
+  if (contrato.vendedores) {
+    doc.font(fuentes.normal)
+      .fontSize(tamanosTexto.normal)
+      .text(contrato.vendedores.nombre_completo, 360, yFirmas + 30, { width: 170, align: 'center' });
+  } else {
+    doc.font(fuentes.normal)
+      .fontSize(tamanosTexto.normal)
+      .text('DIAMOND VENUE AT DORAL', 360, yFirmas + 30, { width: 170, align: 'center' });
+  }
 
   doc.font(fuentes.normal)
-    .text('Representante Autorizado', 360, yFirmas + 35, { width: 150, align: 'center' })
-    .text(`Fecha: ${new Date(contrato.fecha_firma).toLocaleDateString('es-ES')}`, 360, yFirmas + 50, { width: 150, align: 'center' });
+    .fontSize(tamanosTexto.normal)
+    .text(`Fecha: ${contrato.fecha_firma ? new Date(contrato.fecha_firma).toLocaleDateString('es-ES') : '___________'}`, 360, yFirmas + 48, { width: 170, align: 'center' });
+
+  // Documento legal vinculante (después de las firmas, centrado correctamente)
+  doc.moveDown(1.5);
+  const textoLegal = 'Documento legal vinculante. Todas las partes deben cumplir con los términos establecidos.';
+  const anchoTexto = 532;
+  const xInicio = 40; // Inicio del área de texto
+  
+  doc.fontSize(tamanosTexto.normal)
+    .fillColor(colores.secundario)
+    .font(fuentes.bold)
+    .text(textoLegal, xInicio, doc.y, { align: 'center', width: anchoTexto });
 
   // PIE DE PÁGINA
-  dibujarPiePagina(doc, config, ` | Código de Acceso Cliente: ${contrato.codigo_acceso_cliente}`);
+  dibujarPiePagina(doc, config);
 
   return doc;
 }

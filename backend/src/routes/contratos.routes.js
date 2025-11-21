@@ -742,16 +742,16 @@ router.get('/:id/pdf-contrato', authenticate, async (req, res, next) => {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
-    // Generar PDF
-    const doc = generarPDFContrato(contrato);
+    // Generar PDF usando HTML + Puppeteer
+    const { generarContratoHTML } = require('../utils/pdfContratoHTML');
+    const pdfBuffer = await generarContratoHTML(contrato);
 
     // Configurar headers para descarga
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Contrato-${contrato.codigo_contrato}.pdf`);
 
     // Enviar el PDF
-    doc.pipe(res);
-    doc.end();
+    res.send(pdfBuffer);
 
   } catch (error) {
     next(error);
