@@ -73,6 +73,56 @@ const CONFIG_VISUAL = {
 // ============================================
 
 /**
+ * Dibuja el patrón de fondo decorativo en toda la página
+ */
+function dibujarPatronFondo(doc) {
+  const fondoGris = '#F5F5F5';
+  const colorLinea = '#FFFFFF';
+  const grosorLinea = 0.3;
+  
+  // Fondo gris claro
+  doc.rect(0, 0, 612, 792)
+    .fillAndStroke(fondoGris, fondoGris);
+  
+  // Guardar el estado actual
+  doc.save();
+  
+  // Configurar el estilo de línea
+  doc.strokeColor(colorLinea)
+    .lineWidth(grosorLinea);
+  
+  // Dibujar patrón de líneas decorativas tipo ogee/trellis
+  const paso = 25; // Espaciado del patrón
+  
+  for (let y = -paso; y < 792 + paso; y += paso) {
+    for (let x = -paso; x < 612 + paso; x += paso) {
+      const centroX = x + paso / 2;
+      const centroY = y + paso / 2;
+      const radio = paso * 0.35;
+      
+      // Dibujar arcos decorativos (formas de pétalos)
+      // Arco superior
+      doc.path(`M ${centroX - radio} ${centroY} Q ${centroX} ${centroY - radio * 0.8} ${centroX + radio} ${centroY}`)
+        .stroke();
+      
+      // Arco inferior
+      doc.path(`M ${centroX - radio} ${centroY} Q ${centroX} ${centroY + radio * 0.8} ${centroX + radio} ${centroY}`)
+        .stroke();
+      
+      // Conexiones horizontales entre elementos
+      if (x >= 0) {
+        doc.moveTo(centroX - paso, centroY)
+          .lineTo(centroX - radio, centroY)
+          .stroke();
+      }
+    }
+  }
+  
+  // Restaurar el estado
+  doc.restore();
+}
+
+/**
  * Dibuja el encabezado principal del documento (página 1)
  */
 function dibujarEncabezadoPrincipal(doc, config) {
@@ -285,9 +335,18 @@ function generarPDFContrato(contrato) {
     }
   });
 
+  // Función helper para agregar página con patrón de fondo
+  const agregarPaginaConFondo = () => {
+    doc.addPage();
+    dibujarPatronFondo(doc);
+  };
+
   // ============================================
   // PÁGINA 1: PORTADA DEL CONTRATO
   // ============================================
+  
+  // Dibujar patrón de fondo en la primera página
+  dibujarPatronFondo(doc);
   
   // SECCIÓN 1: ENCABEZADO PRINCIPAL
   dibujarEncabezadoPrincipal(doc, config);
@@ -450,7 +509,7 @@ function generarPDFContrato(contrato) {
   // ============================================
   // PÁGINA 2: SERVICIOS CONTRATADOS
   // ============================================
-  doc.addPage();
+  agregarPaginaConFondo();
   dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
 
   // SECCIÓN 6: PAQUETE CONTRATADO
@@ -539,7 +598,7 @@ function generarPDFContrato(contrato) {
   // ============================================
   // PÁGINA 3: PLAN DE PAGOS
   // ============================================
-  doc.addPage();
+  agregarPaginaConFondo();
   dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
 
   // SECCIÓN 9: PLAN DE PAGOS
@@ -666,7 +725,7 @@ function generarPDFContrato(contrato) {
   // ============================================
   // PÁGINAS 4+: TÉRMINOS Y CONDICIONES
   // ============================================
-  doc.addPage();
+  agregarPaginaConFondo();
   dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
 
   // SECCIÓN 11: TÉRMINOS Y CONDICIONES
@@ -735,7 +794,7 @@ function generarPDFContrato(contrato) {
       .moveDown(0.7);
 
     if (doc.y > 680 && index < terminos.length - 1) {
-      doc.addPage();
+      agregarPaginaConFondo();
       dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
     }
   });
@@ -743,7 +802,7 @@ function generarPDFContrato(contrato) {
   // ============================================
   // PÁGINA FINAL: FIRMAS
   // ============================================
-  doc.addPage();
+  agregarPaginaConFondo();
   dibujarEncabezadoPagina(doc, contrato.codigo_contrato, config);
 
   // SECCIÓN 12: FIRMAS Y ACEPTACIÓN

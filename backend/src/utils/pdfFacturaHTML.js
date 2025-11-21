@@ -16,6 +16,13 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
   // Organizar servicios por categoría
   const serviciosOrganizados = organizarServiciosPorCategoria(datos);
 
+  // Separar servicios del paquete y adicionales
+  const separarServicios = (servicios) => {
+    const delPaquete = servicios.filter(s => s.esPaquete === true);
+    const adicionales = servicios.filter(s => s.esPaquete === false);
+    return { delPaquete, adicionales };
+  };
+
   // Preparar datos para reemplazar en el template
   const nombrePaquete = datos.paquetes?.nombre || 'Deluxe Package';
   const nombrePaqueteLimpio = nombrePaquete.includes('Diamond') 
@@ -24,13 +31,39 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
 
   const nombreCliente = datos.clientes?.nombre_completo || 'N/A';
   const nombreVendedor = datos.vendedores?.nombre_completo || datos.vendedor?.nombre_completo || 'N/A';
+  const telefonoVendedor = '+1 (786) 332-7065';
+  const emailVendedor = 'diamondvenueatdoral@gmail.com';
+  const homenajeado = datos.homenajeado || '';
   const tipoEvento = datos.clientes?.tipo_evento || 'Event';
   const fechaEvento = new Date(datos.fecha_evento);
+  const fechaCreacionOferta = datos.fecha_creacion 
+    ? new Date(datos.fecha_creacion).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   const horaInicio = formatearHora(datos.hora_inicio);
   const horaFin = formatearHora(datos.hora_fin);
   const cantidadInvitados = datos.cantidad_invitados || 0;
   const emailCliente = datos.clientes?.email || '';
   const telefonoCliente = datos.clientes?.telefono || '';
+
+  // Obtener información del salón y mapear direcciones
+  const salon = datos.salones || null;
+  let direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166'; // Default
+  
+  if (salon) {
+    const nombreSalon = salon.nombre || '';
+    
+    // Mapeo de direcciones según el nombre del salón
+    if (nombreSalon.toLowerCase().includes('doral')) {
+      direccionSalon = 'Salón Doral<br>8726 NW 26th St<br>Doral, FL 33172';
+    } else if (nombreSalon.toLowerCase().includes('kendall')) {
+      direccionSalon = 'Salón Kendall<br>14271 Southwest 120th Street<br>Kendall, Miami, FL 33186';
+    } else if (nombreSalon.toLowerCase().includes('diamond')) {
+      direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
+    } else {
+      // Si no coincide con ninguno, usar el nombre del salón
+      direccionSalon = `Salón ${nombreSalon}`;
+    }
+  }
 
   // Calcular precios
   const precioPaquete = parseFloat(datos.subtotal || datos.precio_base || datos.precio_paquete_base || 0);
@@ -51,37 +84,102 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const totalRestante = total - primerPago;
 
-  // Formatear servicios para cada sección
-  const formatServicios = (servicios, defaultText) => {
-    if (!servicios || servicios.length === 0) {
-      return defaultText;
-    }
-    return servicios.map(s => {
-      const desc = s.servicios?.descripcion || s.descripcion || s.servicios?.nombre || s.nombre || '';
-      return desc;
-    }).join('. ') || defaultText;
+  // Separar servicios del paquete y adicionales por categoría
+  const serviciosPaquete = {
+    venue: serviciosOrganizados.venue.filter(s => s.esPaquete === true),
+    cake: serviciosOrganizados.cake.filter(s => s.esPaquete === true),
+    decoration: serviciosOrganizados.decoration.filter(s => s.esPaquete === true),
+    specials: serviciosOrganizados.specials.filter(s => s.esPaquete === true),
+    barService: serviciosOrganizados.barService.filter(s => s.esPaquete === true),
+    catering: serviciosOrganizados.catering.filter(s => s.esPaquete === true),
+    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === true)
   };
+
+  const serviciosAdicionales = {
+    venue: serviciosOrganizados.venue.filter(s => s.esPaquete === false),
+    cake: serviciosOrganizados.cake.filter(s => s.esPaquete === false),
+    decoration: serviciosOrganizados.decoration.filter(s => s.esPaquete === false),
+    specials: serviciosOrganizados.specials.filter(s => s.esPaquete === false),
+    barService: serviciosOrganizados.barService.filter(s => s.esPaquete === false),
+    catering: serviciosOrganizados.catering.filter(s => s.esPaquete === false),
+    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === false)
+  };
+
+  // Función para generar HTML de servicios por categoría
+  const generarHTMLServicios = (serviciosPorCategoria, esPaquete) => {
+    const categorias = [
+      { key: 'venue', titulo: 'Venue', default: 'Elegant table setting with beautiful centerpieces, runners, charger plates napkins and rings.' },
+      { key: 'cake', titulo: 'Cake', default: 'Cake decorated with buttercream.' },
+      { key: 'specials', titulo: 'Specials', default: '' },
+      { key: 'decoration', titulo: 'Decoration', default: 'Stage Decor. Uplighting throughout venue. Centerpieces. Formal table setting (runners, chargers, cloth napkins, glassware).' },
+      { key: 'barService', titulo: 'Bar Service', default: 'Premium selection of liquors (whiskey, rum, vodka and wines), cocktails and soft drinks.' },
+      { key: 'catering', titulo: 'Catering', default: 'Gourmet dinner served. Cheese Table. Appetizers.' },
+      { key: 'serviceCoord', titulo: 'Service Coord & Design', default: 'Full set up & break down. Event Coordinator. Waiters & Bartender. Event planning & coordination are included.' }
+    ];
+
+    let html = '';
+    categorias.forEach(cat => {
+      const servicios = serviciosPorCategoria[cat.key] || [];
+      if (servicios.length > 0 || (esPaquete && cat.default)) {
+        const textos = servicios.length > 0
+          ? servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t).join('. ')
+          : cat.default;
+        
+        if (textos) {
+          html += `
+            <div class="service-card-clean">
+              <div class="service-card-title-clean">${cat.titulo}</div>
+              <div class="service-content-clean">${textos}</div>
+            </div>`;
+        }
+      }
+    });
+
+    return html;
+  };
+
+  const htmlServiciosPaquete = generarHTMLServicios(serviciosPaquete, true);
+  const htmlServiciosAdicionales = generarHTMLServicios(serviciosAdicionales, false);
+  
+  // Generar HTML completo de la sección de servicios adicionales si hay servicios
+  const tieneServiciosAdicionales = Object.values(serviciosAdicionales).some(arr => arr.length > 0);
+  const htmlSeccionAdicionales = tieneServiciosAdicionales
+    ? `
+        <div class="additional-services-section">
+            <div class="section-title-corporate">Servicios Adicionales</div>
+            <div class="additional-services-grid">
+                ${htmlServiciosAdicionales}
+            </div>
+        </div>`
+    : '';
+
+  // Generar fila de homenajeado si existe
+  const homenajeadoRow = homenajeado
+    ? `<tr class="info-table-row">
+        <td class="info-table-label">Homenajeado/a</td>
+        <td class="info-table-value">${homenajeado}</td>
+      </tr>`
+    : '';
 
   // Reemplazar placeholders en el HTML
   const replacements = {
     '{{PACKAGE_NAME}}': nombrePaqueteLimpio,
-    '{{VENUE_SERVICES}}': formatServicios(serviciosOrganizados.venue, 'Elegant table setting with beautiful centerpieces, runners, charger plates napkins and rings.'),
-    '{{CAKE_SERVICES}}': formatServicios(serviciosOrganizados.cake, 'Cake decorated with buttercream.'),
-    '{{DECORATION_SERVICES}}': formatServicios(serviciosOrganizados.decoration, 'Stage Decor. Uplighting throughout venue. Centerpieces. Formal table setting (runners, chargers, cloth napkins, glassware).'),
-    '{{SPECIALS_SERVICES}}': formatServicios(serviciosOrganizados.specials, ''),
-    '{{BAR_SERVICES}}': formatServicios(serviciosOrganizados.barService, 'Premium selection of liquors (whiskey, rum, vodka and wines), cocktails and soft drinks.'),
-    '{{CATERING_SERVICES}}': formatServicios(serviciosOrganizados.catering, 'Gourmet dinner served. Cheese Table. Appetizers.'),
-    '{{SERVICE_COORD_SERVICES}}': formatServicios(serviciosOrganizados.serviceCoord, 'Full set up & break down. Event Coordinator. Waiters & Bartender. Event planning & coordination are included.'),
+    '{{SERVICIOS_PAQUETE}}': htmlServiciosPaquete,
+    '{{SERVICIOS_ADICIONALES}}': htmlSeccionAdicionales,
     '{{CLIENT_NAME}}': nombreCliente,
     '{{VENDEDOR_NAME}}': nombreVendedor,
+    '{{VENDEDOR_PHONE}}': telefonoVendedor,
+    '{{VENDEDOR_EMAIL}}': emailVendedor,
+    '{{OFFER_CREATION_DATE}}': fechaCreacionOferta,
+    '{{HOMENAJEADO_ROW}}': homenajeadoRow,
     '{{EVENT_TYPE}}': tipoEvento,
     '{{EVENT_DATE}}': fechaEvento.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     '{{EVENT_TIME}}': `${horaInicio} to ${horaFin}`,
     '{{GUEST_COUNT}}': cantidadInvitados.toString(),
     '{{CLIENT_EMAIL}}': emailCliente,
     '{{CLIENT_PHONE}}': telefonoCliente,
-    '{{PACKAGE_PRICE}}': formatearMoneda(precioPaquete),
-    '{{TEMP_PRICE}}': formatearMoneda(precioEspecial),
+    '{{SALON_DIRECCION}}': direccionSalon,
+    '{{PACKAGE_PRICE}}': formatearMoneda(precioEspecial),
     '{{TAX_AMOUNT}}': formatearMoneda(impuesto),
     '{{SERVICE_FEE}}': formatearMoneda(serviceFee),
     '{{TOTAL_TO_PAY}}': formatearMoneda(total),

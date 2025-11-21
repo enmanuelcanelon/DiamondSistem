@@ -2,37 +2,112 @@ const PDFDocument = require('pdfkit');
 
 const CONFIG_VISUAL = {
   colores: {
-    primario: '#1E40AF',
-    secundario: '#475569',
-    texto: '#0F172A',
+    texto: '#000000',
     textoClaro: '#FFFFFF',
-    fondoClaro: '#F8FAFC',
     fondoOscuro: '#1E40AF',
-    borde: '#CBD5E1',
+    borde: '#CCCCCC',
   },
   fuentes: {
     normal: 'Helvetica',
     bold: 'Helvetica-Bold',
-    italic: 'Helvetica-Oblique',
   },
   tamanosTexto: {
-    titulo: 24,
-    subtitulo: 18,
-    seccion: 14,
+    titulo: 20,
+    subtitulo: 14,
     normal: 10,
-    pequeno: 9,
+    pequeno: 8,
   },
   layout: {
-    margenSuperior: 50,
-    margenInferior: 50,
+    margenSuperior: 40,
+    margenInferior: 40,
     margenIzquierdo: 50,
     margenDerecho: 50,
     anchoUtil: 512,
+    espacioEntreCampos: 15,
   },
 };
 
 /**
- * Genera PDF de ajustes del evento
+ * Obtiene todos los servicios del contrato (paquete + adicionales)
+ */
+function obtenerServiciosContrato(contrato) {
+  const servicios = [];
+  
+  // Servicios del paquete
+  if (contrato?.paquetes?.paquetes_servicios) {
+    contrato.paquetes.paquetes_servicios.forEach(ps => {
+      if (ps.servicios) {
+        servicios.push({
+          nombre: ps.servicios.nombre?.toLowerCase() || '',
+          categoria: ps.servicios.categoria?.toLowerCase() || ''
+        });
+      }
+    });
+  }
+  
+  // Servicios adicionales del contrato
+  if (contrato?.contratos_servicios) {
+    contrato.contratos_servicios.forEach(cs => {
+      if (cs.servicios) {
+        servicios.push({
+          nombre: cs.servicios.nombre?.toLowerCase() || '',
+          categoria: cs.servicios.categoria?.toLowerCase() || ''
+        });
+      }
+    });
+  }
+  
+  return servicios;
+}
+
+/**
+ * Verifica si un servicio está contratado
+ */
+function tieneServicio(servicios, nombresBuscar, contrato) {
+  const nombrePaquete = contrato?.paquetes?.nombre?.toLowerCase() || '';
+  const esPaquetePersonalizado = nombrePaquete.includes('personalizado');
+  
+  // Si NO es paquete personalizado, todos los paquetes incluyen estos servicios
+  if (!esPaquetePersonalizado) {
+    return true;
+  }
+  
+  // Si es personalizado, verificar si el servicio está en los servicios del contrato
+  return servicios.some(servicio => {
+    const nombre = servicio.nombre;
+    return nombresBuscar.some(buscar => nombre.includes(buscar.toLowerCase()));
+  });
+}
+
+/**
+ * Mapea servicios a categorías del formulario
+ */
+function mapearServiciosPaquete(servicios, contrato) {
+  const todosServicios = servicios.map(s => s.nombre);
+  
+  return {
+    pantalla: todosServicios.some(n => n.includes('pantalla') || n.includes('led') || n.includes('tv')),
+    dj: todosServicios.some(n => n.includes('dj') || n.includes('disc jockey')),
+    colores: todosServicios.some(n => n.includes('color') || n.includes('iluminación') || n.includes('luces')),
+    stage: todosServicios.some(n => n.includes('stage') || n.includes('escenario')),
+    runners: todosServicios.some(n => n.includes('runner') || n.includes('corredor')),
+    chargers: todosServicios.some(n => n.includes('charger') || n.includes('cargador')),
+    servilletas: todosServicios.some(n => n.includes('servilleta')),
+    centro_mesa: todosServicios.some(n => n.includes('centro') && n.includes('mesa')),
+    mesa_regalos: todosServicios.some(n => n.includes('mesa') && n.includes('regalo')),
+    limosina: todosServicios.some(n => n.includes('limosina') || n.includes('limousine')),
+    photobooth: todosServicios.some(n => n.includes('photobooth') || n.includes('foto booth')),
+    hora_loca: todosServicios.some(n => n.includes('hora loca')),
+    mapping: todosServicios.some(n => n.includes('mapping') || n.includes('proyección')),
+    humo: todosServicios.some(n => n.includes('humo') || n.includes('smoke')),
+    chispas: todosServicios.some(n => n.includes('chispa') || n.includes('spark')),
+    maestro_ceremonia: todosServicios.some(n => n.includes('maestro') || n.includes('ceremonia') || n.includes('coordinador')),
+    fotos_video: todosServicios.some(n => n.includes('foto') || n.includes('video') || n.includes('fotografía')),
+  };
+}
+
+/**
+ * Genera PDF de ajustes del evento en formato "INFORMATIVO DE EVENTOS"
  */
 function generarPDFAjustesEvento(ajustes, contrato) {
   const config = CONFIG_VISUAL;
@@ -48,172 +123,218 @@ function generarPDFAjustesEvento(ajustes, contrato) {
     }
   });
 
-  // Encabezado
-  doc.rect(0, 0, 612, 80)
-    .fillAndStroke(colores.fondoOscuro, colores.fondoOscuro);
+  // Obtener servicios del contrato
+  const servicios = obtenerServiciosContrato(contrato);
+  const serviciosMapeados = mapearServiciosPaquete(servicios, contrato);
 
+  // Título principal
   doc.fontSize(tamanosTexto.titulo)
-    .fillColor(colores.textoClaro)
     .font(fuentes.bold)
-    .text('AJUSTES DEL EVENTO', { align: 'center', y: 25 });
+    .fillColor(colores.texto)
+    .text('INFORMATIVO DE EVENTOS', { align: 'center', y: 30 });
 
-  doc.fontSize(tamanosTexto.normal)
-    .font(fuentes.normal)
-    .text(`Contrato: ${contrato?.codigo_contrato || 'N/A'}`, { align: 'center' })
-    .text(`Cliente: ${contrato?.clientes?.nombre_completo || 'N/A'}`, { align: 'center' })
-    .text(`Generado: ${new Date().toLocaleDateString('es-ES', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })}`, { align: 'center' });
+  let yPos = 70;
 
-  doc.y = 100;
-
-  // Función auxiliar para agregar campo
-  const agregarCampo = (label, valor) => {
-    if (!valor) return;
-    doc.fontSize(tamanosTexto.seccion)
+  // Función para agregar campo con formato label: valor
+  const agregarCampo = (label, valor, x = 50, anchoLabel = 180) => {
+    if (doc.y > 700) {
+      doc.addPage();
+      doc.y = 50;
+      yPos = 50;
+    }
+    
+    doc.fontSize(tamanosTexto.normal)
       .font(fuentes.bold)
-      .fillColor(colores.primario)
-      .text(label, { continued: false });
+      .fillColor(colores.texto)
+      .text(label, x, yPos, { width: anchoLabel });
+    
+    const valorTexto = valor || '_________________';
     doc.fontSize(tamanosTexto.normal)
       .font(fuentes.normal)
       .fillColor(colores.texto)
-      .text(valor, { indent: 20 })
-      .moveDown(0.5);
+      .text(valorTexto, x + anchoLabel + 10, yPos, { width: layout.anchoUtil - anchoLabel - 60 });
+    
+    yPos += layout.espacioEntreCampos;
+    doc.y = yPos;
   };
 
-  // Función auxiliar para agregar sección
+  // Función para agregar sección
   const agregarSeccion = (titulo) => {
     if (doc.y > 700) {
       doc.addPage();
       doc.y = 50;
+      yPos = 50;
     }
     doc.moveDown(1);
+    yPos = doc.y;
     doc.fontSize(tamanosTexto.subtitulo)
       .font(fuentes.bold)
-      .fillColor(colores.primario)
-      .text(titulo, { underline: true })
-      .moveDown(0.5);
+      .fillColor(colores.texto)
+      .text(titulo, { underline: true });
+    doc.moveDown(0.5);
+    yPos = doc.y;
   };
 
-  // TORTA
-  agregarSeccion('🎂 TORTA');
-  agregarCampo('Diseño:', ajustes?.diseno_torta || ajustes?.diseno_otro || 'No especificado');
-  agregarCampo('Sabor:', ajustes?.sabor_torta || ajustes?.sabor_otro || 'No especificado');
-  agregarCampo('Pisos:', ajustes?.pisos_torta ? `${ajustes.pisos_torta} pisos` : 'No especificado');
-  agregarCampo('Notas:', ajustes?.notas_torta || 'Sin notas adicionales');
-
-  // DECORACIÓN
-  agregarSeccion('✨ DECORACIÓN');
-  agregarCampo('Tipo de Decoración:', ajustes?.tipo_decoracion ? (ajustes.tipo_decoracion === 'premium' ? '⭐ Premium' : '📦 Básica') : 'No especificado');
-  agregarCampo('Estilo:', ajustes?.estilo_decoracion || ajustes?.estilo_decoracion_otro || 'No especificado');
-  agregarCampo('Temática:', ajustes?.tematica || 'No especificado');
-  agregarCampo('Colores Principales:', ajustes?.colores_principales || 'No especificado');
+  // ============================================
+  // 1. INFORMATIVO DE EVENTOS
+  // ============================================
+  agregarSeccion('1. INFORMATIVO DE EVENTOS');
   
-  if (ajustes?.tipo_decoracion) {
-    agregarCampo('Cojines:', ajustes?.cojines_color || 'No especificado');
-    agregarCampo('Centro de Mesa:', ajustes?.centro_mesa_1 || 'No especificado');
-    agregarCampo('Base:', ajustes?.base_color || 'No especificado');
-    agregarCampo('Challer:', ajustes?.challer_color || 'No especificado');
-    agregarCampo('Aros:', ajustes?.aros_color || 'No especificado');
-    agregarCampo('Runner:', ajustes?.runner_tipo || 'No especificado');
-    
-    if (ajustes?.servilletas && Array.isArray(ajustes.servilletas) && ajustes.servilletas.length > 0) {
-      const servilletasTexto = ajustes.servilletas.map(s => `${s.color}`).join(', ');
-      agregarCampo('Servilletas:', servilletasTexto);
+  const clienteNombre = contrato?.clientes?.nombre_completo || '';
+  const fechaEvento = contrato?.fecha_evento 
+    ? new Date(contrato.fecha_evento).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '';
+  const tipoEvento = contrato?.clientes?.tipo_evento || '';
+  const homenajeado = contrato?.homenajeado || ajustes?.invitado_honor || '';
+  const cantidadInvitados = contrato?.cantidad_invitados || 0;
+  const cantidadAdultos = cantidadInvitados - (ajustes?.cantidad_teenagers || 0);
+  const cantidadTeens = ajustes?.cantidad_teenagers || 0;
+  const contacto = contrato?.clientes?.telefono || contrato?.clientes?.email || '';
+  const salon = contrato?.salones?.nombre || contrato?.lugar_salon || '';
+  const horaInicio = contrato?.hora_inicio 
+    ? new Date(`2000-01-01T${contrato.hora_inicio}`).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    : '';
+  const horaFin = contrato?.hora_fin 
+    ? new Date(`2000-01-01T${contrato.hora_fin}`).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    : '';
+  const vendedor = contrato?.vendedores?.nombre_completo || '';
+  const tematica = ajustes?.tematica || '';
+  const colorVestido = ajustes?.vestido_nina || '';
+
+  agregarCampo('NOMBRE:', clienteNombre);
+  agregarCampo('FECHA:', fechaEvento);
+  agregarCampo('EVENTO:', tipoEvento);
+  agregarCampo('NOMBRE HOMENAJEADA:', homenajeado);
+  agregarCampo('CANTIDAD INVITADOS:', cantidadInvitados.toString());
+  agregarCampo('NRO DE ADULTOS:', cantidadAdultos.toString());
+  agregarCampo('NRO DE TEENS:', cantidadTeens.toString());
+  agregarCampo('CONTACTO:', contacto);
+  agregarCampo('SALON:', salon);
+  agregarCampo('HORA DE INICIO:', horaInicio);
+  agregarCampo('HORA DE TERMINA:', horaFin);
+  agregarCampo('VENDEDOR:', vendedor);
+  agregarCampo('FINAL REALIZADO POR:', '');
+  agregarCampo('TEMATICA:', tematica);
+  agregarCampo('COLOR DEL VESTIDO:', colorVestido);
+
+  // ============================================
+  // 2. PAQUETE
+  // ============================================
+  agregarSeccion('2. PAQUETE');
+  
+  agregarCampo('PANTALLA:', serviciosMapeados.pantalla ? '✓' : '');
+  agregarCampo('DJ:', serviciosMapeados.dj ? '✓' : '');
+  agregarCampo('COLORES:', serviciosMapeados.colores ? '✓' : '');
+  agregarCampo('STAGE:', serviciosMapeados.stage ? '✓' : '');
+  agregarCampo('RUNNERS:', serviciosMapeados.runners ? (ajustes?.runner_tipo || '✓') : '');
+  agregarCampo('CHARGERS:', serviciosMapeados.chargers ? '✓' : '');
+  
+  let servilletasTexto = '';
+  if (serviciosMapeados.servilletas && ajustes?.servilletas && Array.isArray(ajustes.servilletas) && ajustes.servilletas.length > 0) {
+    servilletasTexto = ajustes.servilletas.map(s => s.color).join(', ');
+  } else if (serviciosMapeados.servilletas) {
+    servilletasTexto = '✓';
+  }
+  agregarCampo('SERVILLETAS:', servilletasTexto);
+  
+  agregarCampo('CENTRO DE MESA:', serviciosMapeados.centro_mesa ? (ajustes?.centro_mesa_1 || '✓') : '');
+  agregarCampo('MESA DE REGALOS:', serviciosMapeados.mesa_regalos ? '✓' : '');
+  
+  let limosinaTexto = '';
+  if (serviciosMapeados.limosina) {
+    if (ajustes?.hora_limosina) {
+      const hora = typeof ajustes.hora_limosina === 'string' 
+        ? ajustes.hora_limosina 
+        : new Date(`2000-01-01T${ajustes.hora_limosina}`).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      limosinaTexto = hora;
+    } else {
+      limosinaTexto = '✓';
     }
   }
+  agregarCampo('LIMOSINA:', limosinaTexto);
   
-  agregarCampo('Notas de Decoración:', ajustes?.notas_decoracion || 'Sin notas adicionales');
+  agregarCampo('PHOTOBOOTH:', serviciosMapeados.photobooth ? (contrato?.photobooth_tipo || '✓') : '');
+  agregarCampo('HORA LOCA:', serviciosMapeados.hora_loca ? '✓' : '');
+  agregarCampo('MAPPING:', serviciosMapeados.mapping ? '✓' : '');
+  agregarCampo('HUMO:', serviciosMapeados.humo ? '✓' : '');
+  agregarCampo('CHISPAS:', serviciosMapeados.chispas ? '✓' : '');
+  agregarCampo('MAESTRO DE CEREMONIA:', serviciosMapeados.maestro_ceremonia ? '✓' : '');
+  agregarCampo('FOTOS Y VIDEO:', serviciosMapeados.fotos_video ? '✓' : '');
 
-  // MENÚ
-  agregarSeccion('🍽️ MENÚ');
-  agregarCampo('Tipo de Servicio:', ajustes?.tipo_servicio || 'No especificado');
-  agregarCampo('Entrada:', ajustes?.entrada || 'No especificado');
-  agregarCampo('Plato Principal:', ajustes?.plato_principal || 'No especificado');
-  agregarCampo('Acompañamientos:', ajustes?.acompanamientos || ajustes?.acompanamiento_seleccionado || 'No especificado');
-  agregarCampo('Opciones Vegetarianas:', ajustes?.opciones_vegetarianas || 'No especificado');
-  agregarCampo('Opciones Veganas:', ajustes?.opciones_veganas || 'No especificado');
-  agregarCampo('Restricciones Alimentarias:', ajustes?.restricciones_alimentarias || 'Sin restricciones');
-  agregarCampo('Bebidas Incluidas:', ajustes?.bebidas_incluidas || 'No especificado');
+  // ============================================
+  // 3. CATERING
+  // ============================================
+  agregarSeccion('3. CATERING');
   
-  if (ajustes?.hay_teenagers && ajustes?.cantidad_teenagers > 0) {
-    agregarCampo('Teenagers/Kids - Cantidad:', ajustes.cantidad_teenagers.toString());
-    agregarCampo('Tipo de Comida:', ajustes.teenagers_tipo_comida === 'pasta' ? 'Pasta' : 'Menú');
-    if (ajustes.teenagers_tipo_pasta) {
-      agregarCampo('Tipo de Pasta:', ajustes.teenagers_tipo_pasta);
-    }
+  const disenoTorta = ajustes?.diseno_torta || ajustes?.diseno_otro || '';
+  const saborTorta = ajustes?.sabor_torta || ajustes?.sabor_otro || '';
+  const pisosTorta = ajustes?.pisos_torta ? `${ajustes.pisos_torta} pisos` : '';
+  const tortaTexto = [disenoTorta, saborTorta, pisosTorta].filter(Boolean).join(' - ') || '';
+  
+  agregarCampo('CAKE:', tortaTexto);
+  agregarCampo('MESA DE MINIPOSTRES:', '');
+  agregarCampo('APPETIZERS:', '');
+  agregarCampo('MESA DE QUESOS:', '');
+  agregarCampo('CATERING:', '');
+  agregarCampo('  ENSALADA:', ajustes?.entrada || '');
+  agregarCampo('  PROTEINA:', ajustes?.plato_principal || '');
+  agregarCampo('  SIDE:', ajustes?.acompanamientos || ajustes?.acompanamiento_seleccionado || '');
+  agregarCampo('  SIDE:', '');
+  agregarCampo('  PAN Y MANTEQUILLA:', '✓');
+
+  // ============================================
+  // 4. BAR
+  // ============================================
+  agregarSeccion('4. BAR');
+  
+  agregarCampo('LICORES:', ajustes?.bebidas_incluidas || '');
+  agregarCampo('VINOS:', '');
+  agregarCampo('COCKTELES SIN ALCOHOL:', '');
+  agregarCampo('SODAS, AGUA Y JUGOS:', '✓');
+  agregarCampo('CHAMPAÑA:', '');
+  agregarCampo('SIDRA:', '');
+  agregarCampo('OBSERVACIONES BAR:', ajustes?.notas_menu || '');
+
+  // ============================================
+  // 5. MESAS
+  // ============================================
+  agregarSeccion('5. MESAS');
+  
+  agregarCampo('ENUMERAR MESAS:', '');
+  agregarCampo('SEATING CHART:', '');
+  agregarCampo('OBSERVACIONES:', '');
+
+  // ============================================
+  // 6. LA CLIENTE LLEVA
+  // ============================================
+  agregarSeccion('6. LA CLIENTE LLEVA');
+  
+  doc.moveDown(0.3);
+  for (let i = 0; i < 5; i++) {
+    doc.fontSize(tamanosTexto.normal)
+      .font(fuentes.normal)
+      .fillColor(colores.texto)
+      .text('___________________________________________________________', 50, doc.y);
+    doc.moveDown(0.5);
   }
+
+  // ============================================
+  // 7. PROTOCOLO
+  // ============================================
+  agregarSeccion('7. PROTOCOLO');
   
-  agregarCampo('Notas del Menú:', ajustes?.notas_menu || 'Sin notas adicionales');
-
-  // MÚSICA Y ENTRETENIMIENTO
-  agregarSeccion('🎵 MÚSICA Y ENTRETENIMIENTO');
-  agregarCampo('Música Ceremonial:', ajustes?.musica_ceremonial || 'No especificado');
-  agregarCampo('Primer Baile:', ajustes?.primer_baile || 'No especificado');
-  agregarCampo('Baile Padre-Hija:', ajustes?.baile_padre_hija || 'No especificado');
-  agregarCampo('Baile Madre-Hijo:', ajustes?.baile_madre_hijo || 'No especificado');
-  agregarCampo('Canción Sorpresa:', ajustes?.cancion_sorpresa || 'No especificado');
-  
-  if (ajustes?.bailes_adicionales) {
-    try {
-      const bailes = typeof ajustes.bailes_adicionales === 'string' 
-        ? JSON.parse(ajustes.bailes_adicionales)
-        : ajustes.bailes_adicionales;
-      if (Array.isArray(bailes) && bailes.length > 0) {
-        doc.fontSize(tamanosTexto.seccion)
-          .font(fuentes.bold)
-          .fillColor(colores.primario)
-          .text('Bailes Adicionales:', { continued: false });
-        bailes.forEach((baile, index) => {
-          doc.fontSize(tamanosTexto.normal)
-            .font(fuentes.normal)
-            .fillColor(colores.texto)
-            .text(`${index + 1}. ${baile.nombre || 'Sin nombre'}${baile.con_quien ? ` - Con: ${baile.con_quien}` : ''}`, { indent: 20 });
-        });
-        doc.moveDown(0.5);
-      }
-    } catch (e) {
-      // Ignorar error de parsing
-    }
-  }
-  
-  agregarCampo('Notas de Entretenimiento:', ajustes?.notas_entretenimiento || 'Sin notas adicionales');
-
-  // BAR
-  agregarSeccion('🍷 BAR Y BEBIDAS');
-  agregarCampo('Bebidas Incluidas:', ajustes?.bebidas_incluidas || 'Ver contrato para detalles completos');
-
-  // OTROS
-  agregarSeccion('📋 OTROS DETALLES');
-  if (ajustes?.hora_limosina) {
-    const hora = typeof ajustes.hora_limosina === 'string' 
-      ? ajustes.hora_limosina 
-      : new Date(ajustes.hora_limosina).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    agregarCampo('Hora de Limosina:', hora);
-  }
-  agregarCampo('Vestido de la Niña:', ajustes?.vestido_nina || 'No especificado');
-  agregarCampo('Observaciones Adicionales:', ajustes?.observaciones_adicionales || 'Sin observaciones');
-  agregarCampo('Items Especiales:', ajustes?.items_especiales || 'No especificado');
-  agregarCampo('Sorpresas Planeadas:', ajustes?.sorpresas_planeadas || 'No especificado');
-
-  // PROTOCOLO (si existe)
   if (ajustes?.protocolo) {
     try {
       const protocolo = typeof ajustes.protocolo === 'string' 
         ? JSON.parse(ajustes.protocolo)
         : ajustes.protocolo;
       
-      agregarSeccion('⏰ PROTOCOLO DEL EVENTO');
-      agregarCampo('Hora de Apertura:', protocolo.hora_apertura || 'No especificado');
-      agregarCampo('Anuncio de Padres:', protocolo.hora_anuncio_padres || 'No especificado');
+      agregarCampo('Hora de Apertura:', protocolo.hora_apertura || '');
+      agregarCampo('Anuncio de Padres:', protocolo.hora_anuncio_padres || '');
       if (protocolo.nombres_padres) {
         agregarCampo('Nombres de Padres:', protocolo.nombres_padres);
       }
-      agregarCampo('Anuncio del Homenajeado:', protocolo.hora_anuncio_homenajeado || 'No especificado');
+      agregarCampo('Anuncio del Homenajeado:', protocolo.hora_anuncio_homenajeado || '');
       if (protocolo.nombre_homenajeado) {
         agregarCampo('Nombre del Homenajeado:', protocolo.nombre_homenajeado);
       }
@@ -222,11 +343,27 @@ function generarPDFAjustesEvento(ajustes, contrato) {
       agregarCampo('Baile con Mamá:', protocolo.baile_mama ? 'Sí' : 'No');
       agregarCampo('Ceremonia de Velas:', protocolo.ceremonia_velas ? 'Sí' : 'No');
       agregarCampo('Brindis:', protocolo.brindis ? 'Sí' : 'No');
-      agregarCampo('Hora de Cena:', protocolo.hora_cena || 'No especificado');
-      agregarCampo('Hora Loca:', protocolo.hora_loca || 'No especificado');
-      agregarCampo('Hora de Fin:', protocolo.hora_fin || 'No especificado');
+      agregarCampo('Hora de Cena:', protocolo.hora_cena || '');
+      agregarCampo('Hora Loca:', protocolo.hora_loca || '');
+      agregarCampo('Hora de Fin:', protocolo.hora_fin || '');
     } catch (e) {
-      // Ignorar error de parsing
+      // Si hay error, dejar líneas en blanco
+      for (let i = 0; i < 10; i++) {
+        doc.fontSize(tamanosTexto.normal)
+          .font(fuentes.normal)
+          .fillColor(colores.texto)
+          .text('___________________________________________________________', 50, doc.y);
+        doc.moveDown(0.5);
+      }
+    }
+  } else {
+    // Líneas en blanco para protocolo
+    for (let i = 0; i < 10; i++) {
+      doc.fontSize(tamanosTexto.normal)
+        .font(fuentes.normal)
+        .fillColor(colores.texto)
+        .text('___________________________________________________________', 50, doc.y);
+      doc.moveDown(0.5);
     }
   }
 
@@ -240,9 +377,9 @@ function generarPDFAjustesEvento(ajustes, contrato) {
     const numeroPagina = i - startPage + 1;
     doc.fontSize(tamanosTexto.pequeno)
       .font(fuentes.normal)
-      .fillColor(colores.secundario)
+      .fillColor(colores.texto)
       .text(
-        `Página ${numeroPagina} de ${totalPages} | DiamondSistem - Ajustes del Evento`,
+        `Página ${numeroPagina} de ${totalPages} | DiamondSistem - Informativo de Eventos`,
         50,
         doc.page.height - 30,
         { align: 'center', width: layout.anchoUtil }
@@ -255,5 +392,3 @@ function generarPDFAjustesEvento(ajustes, contrato) {
 module.exports = {
   generarPDFAjustesEvento
 };
-
-

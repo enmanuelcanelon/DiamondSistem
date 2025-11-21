@@ -45,174 +45,167 @@ async function generarResumenComisionesPDF(vendedores, mes, año) {
           box-sizing: border-box;
         }
         body {
-          font-family: 'Arial', sans-serif;
+          font-family: 'Times New Roman', serif;
           padding: 40px;
-          color: #1f2937;
-          background: #fff;
+          color: #000000;
+          background: #ffffff;
+          font-size: 11pt;
+          line-height: 1.4;
         }
         .header {
           text-align: center;
-          margin-bottom: 40px;
-          border-bottom: 3px solid #3b82f6;
-          padding-bottom: 20px;
+          margin-bottom: 30px;
+          border-bottom: 2px solid #000000;
+          padding-bottom: 15px;
         }
         .header h1 {
-          font-size: 28px;
-          color: #1e40af;
-          margin-bottom: 10px;
+          font-size: 18pt;
+          font-weight: bold;
+          color: #000000;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
         .header p {
-          font-size: 14px;
-          color: #6b7280;
+          font-size: 10pt;
+          color: #000000;
+          margin: 3px 0;
         }
         .resumen-general {
-          background: #f3f4f6;
-          padding: 20px;
-          border-radius: 8px;
           margin-bottom: 30px;
+          border: 1px solid #000000;
+          padding: 15px;
         }
         .resumen-general h2 {
-          font-size: 18px;
-          margin-bottom: 15px;
-          color: #1f2937;
-        }
-        .resumen-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 15px;
-        }
-        .resumen-item {
-          background: white;
-          padding: 15px;
-          border-radius: 6px;
-          border-left: 4px solid #3b82f6;
-        }
-        .resumen-item.pendientes {
-          border-left-color: #f59e0b;
-        }
-        .resumen-item.pagadas {
-          border-left-color: #10b981;
-        }
-        .resumen-item-label {
-          font-size: 12px;
-          color: #6b7280;
-          margin-bottom: 5px;
-        }
-        .resumen-item-value {
-          font-size: 20px;
+          font-size: 12pt;
           font-weight: bold;
-          color: #1f2937;
+          margin-bottom: 12px;
+          text-transform: uppercase;
+          border-bottom: 1px solid #000000;
+          padding-bottom: 5px;
+        }
+        .resumen-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+        }
+        .resumen-table td {
+          padding: 8px 12px;
+          border: 1px solid #000000;
+          font-size: 10pt;
+        }
+        .resumen-table td:first-child {
+          font-weight: bold;
+          width: 40%;
+          background: #f5f5f5;
+        }
+        .resumen-table td:last-child {
+          text-align: right;
+          font-weight: bold;
         }
         .vendedor-section {
-          margin-bottom: 30px;
+          margin-bottom: 35px;
           page-break-inside: avoid;
         }
         .vendedor-header {
-          background: #3b82f6;
-          color: white;
-          padding: 15px;
-          border-radius: 6px 6px 0 0;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
+          border: 1px solid #000000;
+          border-bottom: none;
+          padding: 12px 15px;
+          background: #f5f5f5;
         }
         .vendedor-header h3 {
-          font-size: 16px;
-          font-weight: 600;
+          font-size: 12pt;
+          font-weight: bold;
+          color: #000000;
+          margin-bottom: 3px;
+        }
+        .vendedor-header .codigo {
+          font-size: 9pt;
+          color: #000000;
         }
         .vendedor-info {
-          background: #f9fafb;
+          border: 1px solid #000000;
           padding: 15px;
-          border: 1px solid #e5e7eb;
-          border-top: none;
         }
         .vendedor-stats {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 10px;
           margin-bottom: 15px;
         }
-        .stat-item {
-          background: white;
-          padding: 10px;
-          border-radius: 4px;
-          text-align: center;
+        .stats-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 15px;
         }
-        .stat-label {
-          font-size: 11px;
-          color: #6b7280;
-          margin-bottom: 5px;
+        .stats-table td {
+          padding: 8px 12px;
+          border: 1px solid #000000;
+          font-size: 10pt;
         }
-        .stat-value {
-          font-size: 16px;
+        .stats-table td:first-child {
           font-weight: bold;
-          color: #1f2937;
+          background: #f5f5f5;
+          width: 40%;
+        }
+        .stats-table td:last-child {
+          text-align: right;
+          font-weight: bold;
         }
         .comisiones-table {
           width: 100%;
           border-collapse: collapse;
           margin-top: 15px;
-          font-size: 11px;
+          font-size: 9pt;
         }
         .comisiones-table th {
-          background: #e5e7eb;
-          padding: 8px;
+          background: #f5f5f5;
+          padding: 8px 6px;
           text-align: left;
-          font-weight: 600;
-          color: #374151;
-          border: 1px solid #d1d5db;
+          font-weight: bold;
+          color: #000000;
+          border: 1px solid #000000;
+          font-size: 9pt;
         }
         .comisiones-table td {
-          padding: 8px;
-          border: 1px solid #e5e7eb;
+          padding: 6px;
+          border: 1px solid #000000;
+          font-size: 9pt;
         }
-        .comisiones-table tr:nth-child(even) {
-          background: #f9fafb;
+        .comisiones-table td:nth-child(4),
+        .comisiones-table td:nth-child(5),
+        .comisiones-table td:nth-child(6) {
+          text-align: right;
         }
-        .badge {
-          display: inline-block;
-          padding: 3px 8px;
-          border-radius: 12px;
-          font-size: 10px;
-          font-weight: 600;
+        .tipo-comision {
+          font-weight: normal;
+          text-transform: capitalize;
         }
-        .badge.primera {
-          background: #dbeafe;
-          color: #1e40af;
-        }
-        .badge.segunda {
-          background: #ede9fe;
-          color: #5b21b6;
-        }
-        .badge.pendiente {
-          background: #fef3c7;
-          color: #92400e;
-        }
-        .badge.pagada {
-          background: #d1fae5;
-          color: #065f46;
+        .estado-comision {
+          font-weight: normal;
         }
         .footer {
           margin-top: 40px;
-          padding-top: 20px;
-          border-top: 2px solid #e5e7eb;
+          padding-top: 15px;
+          border-top: 1px solid #000000;
           text-align: center;
-          font-size: 11px;
-          color: #6b7280;
+          font-size: 9pt;
+          color: #000000;
         }
         .no-data {
           text-align: center;
-          padding: 40px;
-          color: #9ca3af;
+          padding: 30px;
+          color: #000000;
           font-style: italic;
+          border: 1px solid #000000;
+        }
+        .separator {
+          height: 15px;
         }
       </style>
     </head>
     <body>
       <div class="header">
         <h1>Resumen de Pagos de Comisiones</h1>
-        <p>${nombreMes} ${año}</p>
-        <p>Generado el ${new Date().toLocaleDateString('es-ES', { 
+        <p><strong>Período:</strong> ${nombreMes} ${año}</p>
+        <p><strong>Fecha de Generación:</strong> ${new Date().toLocaleDateString('es-ES', { 
           year: 'numeric', 
           month: 'long', 
           day: 'numeric',
@@ -223,20 +216,20 @@ async function generarResumenComisionesPDF(vendedores, mes, año) {
 
       <div class="resumen-general">
         <h2>Resumen General</h2>
-        <div class="resumen-grid">
-          <div class="resumen-item">
-            <div class="resumen-item-label">Total Desbloqueadas</div>
-            <div class="resumen-item-value">$${totalDesbloqueadas.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          </div>
-          <div class="resumen-item pendientes">
-            <div class="resumen-item-label">Pendientes de Pago</div>
-            <div class="resumen-item-value">$${totalPendientes.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          </div>
-          <div class="resumen-item pagadas">
-            <div class="resumen-item-label">Pagadas</div>
-            <div class="resumen-item-value">$${totalPagadas.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          </div>
-        </div>
+        <table class="resumen-table">
+          <tr>
+            <td>Total Comisiones Desbloqueadas</td>
+            <td>$${totalDesbloqueadas.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          </tr>
+          <tr>
+            <td>Total Pendientes de Pago</td>
+            <td>$${totalPendientes.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          </tr>
+          <tr>
+            <td>Total Pagadas</td>
+            <td>$${totalPagadas.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          </tr>
+        </table>
       </div>
 
       ${vendedores.length === 0 ? `
@@ -252,22 +245,24 @@ async function generarResumenComisionesPDF(vendedores, mes, año) {
           <div class="vendedor-section">
             <div class="vendedor-header">
               <h3>${vendedor.vendedor.nombre_completo}</h3>
-              <span style="font-size: 12px;">${vendedor.vendedor.codigo_vendedor}</span>
+              <span class="codigo">Código: ${vendedor.vendedor.codigo_vendedor}</span>
             </div>
             <div class="vendedor-info">
               <div class="vendedor-stats">
-                <div class="stat-item">
-                  <div class="stat-label">Total Desbloqueadas</div>
-                  <div class="stat-value">$${parseFloat(vendedor.comisiones.total_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                </div>
-                <div class="stat-item">
-                  <div class="stat-label">Pendientes</div>
-                  <div class="stat-value">$${parseFloat(vendedor.comisiones.pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                </div>
-                <div class="stat-item">
-                  <div class="stat-label">Pagadas</div>
-                  <div class="stat-value">$${parseFloat(vendedor.comisiones.pagadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                </div>
+                <table class="stats-table">
+                  <tr>
+                    <td>Total Comisiones Desbloqueadas</td>
+                    <td>$${parseFloat(vendedor.comisiones.total_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr>
+                    <td>Total Pendientes de Pago</td>
+                    <td>$${parseFloat(vendedor.comisiones.pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr>
+                    <td>Total Pagadas</td>
+                    <td>$${parseFloat(vendedor.comisiones.pagadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                </table>
               </div>
 
               ${totalComisiones > 0 ? `
@@ -287,20 +282,22 @@ async function generarResumenComisionesPDF(vendedores, mes, año) {
                   <tbody>
                     ${[...comisionesPendientes, ...comisionesPagadas].map(comision => {
                       const fechaPago = comision.fecha_pago 
-                        ? new Date(comision.fecha_pago).toLocaleDateString('es-ES')
+                        ? new Date(comision.fecha_pago).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
                         : '-';
                       const montoPagado = comision.monto_pagado || 0;
                       const montoPendiente = comision.monto_pendiente || comision.monto_total || 0;
+                      const tipoTexto = comision.tipo === 'primera_mitad' ? 'Primera Mitad' : 'Segunda Mitad';
+                      const estadoTexto = comision.pagada ? 'Pagada' : 'Pendiente';
                       
                       return `
                         <tr>
                           <td>${comision.codigo_contrato}</td>
-                          <td><span class="badge ${comision.tipo === 'primera_mitad' ? 'primera' : 'segunda'}">${comision.tipo === 'primera_mitad' ? 'Primera Mitad' : 'Segunda Mitad'}</span></td>
+                          <td class="tipo-comision">${tipoTexto}</td>
                           <td>$${parseFloat(comision.total_contrato || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           <td>$${parseFloat(comision.monto_total || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           <td>$${parseFloat(montoPagado).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           <td>$${parseFloat(montoPendiente).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                          <td><span class="badge ${comision.pagada ? 'pagada' : 'pendiente'}">${comision.pagada ? 'Pagada' : 'Pendiente'}</span></td>
+                          <td class="estado-comision">${estadoTexto}</td>
                           <td>${fechaPago}</td>
                         </tr>
                       `;
@@ -314,12 +311,19 @@ async function generarResumenComisionesPDF(vendedores, mes, año) {
               `}
             </div>
           </div>
+          <div class="separator"></div>
         `;
       }).join('')}
 
       <div class="footer">
-        <p>DiamondSistem - Sistema de Gestión de Eventos</p>
-        <p>Este documento fue generado automáticamente</p>
+        <p><strong>DiamondSistem - Sistema de Gestión de Eventos</strong></p>
+        <p>Este documento fue generado automáticamente el ${new Date().toLocaleDateString('es-ES', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}</p>
       </div>
     </body>
     </html>
@@ -354,4 +358,3 @@ async function generarResumenComisionesPDF(vendedores, mes, año) {
 module.exports = {
   generarResumenComisionesPDF
 };
-

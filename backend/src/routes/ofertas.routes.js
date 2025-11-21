@@ -990,12 +990,20 @@ router.get('/:id/pdf-factura', authenticate, requireVendedor, async (req, res, n
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_vendedor: true,
+            email: true,
+            telefono: true
           }
         },
         ofertas_servicios_adicionales: {
           include: {
             servicios: true
+          }
+        },
+        salones: {
+          select: {
+            id: true,
+            nombre: true
           }
         }
       }

@@ -20,9 +20,9 @@ function EditarCliente() {
     email: '',
     telefono: '',
     direccion: '',
-    tipo_evento: '',
     como_nos_conocio: '',
   });
+  const [comoNosConocioOtro, setComoNosConocioOtro] = useState('');
 
   // Obtener datos del cliente
   const { data: cliente, isLoading } = useQuery({
@@ -41,9 +41,16 @@ function EditarCliente() {
         email: cliente.email || '',
         telefono: cliente.telefono || '',
         direccion: cliente.direccion || '',
-        tipo_evento: cliente.tipo_evento || '',
         como_nos_conocio: cliente.como_nos_conocio || '',
       });
+      // Si el valor no está en la lista de fuentes, es un valor personalizado
+      const fuentesConocimiento = ['Facebook', 'Instagram', 'Google', 'Recomendación', 'Otro'];
+      if (cliente.como_nos_conocio && !fuentesConocimiento.includes(cliente.como_nos_conocio)) {
+        setComoNosConocioOtro(cliente.como_nos_conocio);
+        setFormData(prev => ({ ...prev, como_nos_conocio: 'Otro' }));
+      } else {
+        setComoNosConocioOtro('');
+      }
     }
   }, [cliente]);
 
@@ -65,7 +72,13 @@ function EditarCliente() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    mutation.mutate(formData);
+    const dataToSubmit = {
+      ...formData,
+      como_nos_conocio: formData.como_nos_conocio === 'Otro' && comoNosConocioOtro.trim() 
+        ? comoNosConocioOtro.trim() 
+        : formData.como_nos_conocio
+    };
+    mutation.mutate(dataToSubmit);
   };
 
   const handleChange = (e) => {
@@ -74,17 +87,6 @@ function EditarCliente() {
       [e.target.name]: e.target.value,
     });
   };
-
-  const tiposEvento = [
-    'Boda',
-    'Quinceaños',
-    'Cumpleaños',
-    'Aniversario',
-    'Corporativo',
-    'Graduación',
-    'Baby Shower',
-    'Otro',
-  ];
 
   const fuentesConocimiento = [
     'Facebook',
@@ -199,31 +201,17 @@ function EditarCliente() {
             </CardHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="tipo_evento">
-                  Tipo de Evento
-                </Label>
-                <Select 
-                  value={formData.tipo_evento} 
-                  onValueChange={(value) => setFormData({ ...formData, tipo_evento: value })}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Seleccionar..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiposEvento.map((tipo) => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
                 <Label htmlFor="como_nos_conocio">
                   ¿Cómo nos conoció?
                 </Label>
                 <Select 
                   value={formData.como_nos_conocio} 
-                  onValueChange={(value) => setFormData({ ...formData, como_nos_conocio: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, como_nos_conocio: value });
+                    if (value !== 'Otro') {
+                      setComoNosConocioOtro('');
+                    }
+                  }}
                 >
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Seleccionar..." />
@@ -234,6 +222,15 @@ function EditarCliente() {
                     ))}
                   </SelectContent>
                 </Select>
+                {formData.como_nos_conocio === 'Otro' && (
+                  <Input
+                    type="text"
+                    value={comoNosConocioOtro}
+                    onChange={(e) => setComoNosConocioOtro(e.target.value)}
+                    placeholder="Especifique cómo nos conoció..."
+                    className="mt-2"
+                  />
+                )}
               </div>
             </div>
           </div>

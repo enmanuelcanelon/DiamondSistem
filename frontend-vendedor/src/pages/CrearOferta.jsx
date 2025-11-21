@@ -66,6 +66,20 @@ function CrearOferta() {
   const [conflictosDisponibilidad, setConflictosDisponibilidad] = useState(null);
   const [horasOcupadas, setHorasOcupadas] = useState([]);
   const [cargandoHorasOcupadas, setCargandoHorasOcupadas] = useState(false);
+  const [tipoEvento, setTipoEvento] = useState('');
+  const [tipoEventoOtro, setTipoEventoOtro] = useState('');
+  
+  // Tipos de evento disponibles (definido antes de los useEffect)
+  const tiposEvento = [
+    'Boda',
+    'Quinceaños',
+    'Cumpleaños',
+    'Aniversario',
+    'Corporativo',
+    'Graduación',
+    'Baby Shower',
+    'Otro'
+  ];
   
   // Estado para servicios excluyentes del paquete (ej: Photobooth 360 o Print)
   const [serviciosExcluyentesSeleccionados, setServiciosExcluyentesSeleccionados] = useState({});
@@ -403,6 +417,26 @@ function CrearOferta() {
     }
   }, [formData.salon_id, salones, lugarPersonalizado]);
 
+  // Cargar tipo de evento del cliente cuando se seleccione
+  useEffect(() => {
+    if (formData.cliente_id && clientes.length > 0) {
+      const cliente = clientes.find(c => c.id.toString() === formData.cliente_id.toString());
+      if (cliente && cliente.tipo_evento) {
+        // Si el tipo de evento no está en la lista, es un valor personalizado
+        if (tiposEvento.includes(cliente.tipo_evento)) {
+          setTipoEvento(cliente.tipo_evento);
+          setTipoEventoOtro('');
+        } else {
+          setTipoEvento('Otro');
+          setTipoEventoOtro(cliente.tipo_evento);
+        }
+      } else {
+        setTipoEvento('');
+        setTipoEventoOtro('');
+      }
+    }
+  }, [formData.cliente_id, clientes]);
+
   // Sincronizar filtros del calendario con el salón seleccionado
   useEffect(() => {
     if (formData.salon_id && formData.salon_id !== 'otro' && salonSeleccionado) {
@@ -610,6 +644,17 @@ function CrearOferta() {
     // para permitir que el usuario las mantenga si las agregó manualmente
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.hora_inicio, formData.hora_fin, paqueteSeleccionado?.duracion_horas, servicios]);
+
+  // Mutation para actualizar tipo de evento del cliente
+  const updateClienteTipoEvento = useMutation({
+    mutationFn: async ({ clienteId, tipoEvento }) => {
+      const response = await api.put(`/clientes/${clienteId}`, { tipo_evento: tipoEvento });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['clientes']);
+    },
+  });
 
   // Mutation para crear oferta
   const mutation = useMutation({
@@ -2504,6 +2549,68 @@ function CrearOferta() {
                       />
                       <p className="text-xs text-muted-foreground">
                         Nombre de la persona homenajeada en el evento (opcional)
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="tipo_evento">Tipo de Evento</Label>
+                      <Select 
+                        value={tipoEvento} 
+                        onValueChange={async (value) => {
+                          setTipoEvento(value);
+                          if (value !== 'Otro') {
+                            setTipoEventoOtro('');
+                            // Actualizar el cliente con el tipo de evento
+                            if (formData.cliente_id && value) {
+                              try {
+                                await updateClienteTipoEvento.mutateAsync({
+                                  clienteId: parseInt(formData.cliente_id),
+                                  tipoEvento: value
+                                });
+                                toast.success('Tipo de evento actualizado');
+                              } catch (error) {
+                                toast.error('Error al actualizar tipo de evento');
+                              }
+                            }
+                          }
+                        }}
+                        disabled={!formData.cliente_id}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar tipo de evento..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tiposEvento.map((tipo) => (
+                            <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {tipoEvento === 'Otro' && (
+                        <div className="mt-2">
+                          <Input
+                            type="text"
+                            value={tipoEventoOtro}
+                            onChange={(e) => setTipoEventoOtro(e.target.value)}
+                            placeholder="Especifique el tipo de evento..."
+                            onBlur={async () => {
+                              // Actualizar el cliente cuando se termine de escribir
+                              if (formData.cliente_id && tipoEventoOtro.trim()) {
+                                try {
+                                  await updateClienteTipoEvento.mutateAsync({
+                                    clienteId: parseInt(formData.cliente_id),
+                                    tipoEvento: tipoEventoOtro.trim()
+                                  });
+                                  toast.success('Tipo de evento actualizado');
+                                } catch (error) {
+                                  toast.error('Error al actualizar tipo de evento');
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Seleccione el tipo de evento para este cliente
                       </p>
                     </div>
 

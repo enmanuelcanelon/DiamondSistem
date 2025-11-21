@@ -82,6 +82,97 @@ router.put('/contrato/:contratoId', authenticate, async (req, res, next) => {
       }
     }
 
+    // Manejar campos JSON: servilletas
+    if (datosParaGuardar.servilletas !== undefined) {
+      if (Array.isArray(datosParaGuardar.servilletas)) {
+        // Ya es un array, mantenerlo así (Prisma maneja JSON automáticamente)
+        datosParaGuardar.servilletas = datosParaGuardar.servilletas;
+      } else if (typeof datosParaGuardar.servilletas === 'string') {
+        try {
+          // Intentar parsear si viene como string JSON
+          datosParaGuardar.servilletas = JSON.parse(datosParaGuardar.servilletas);
+        } catch (e) {
+          // Si falla el parse, establecer como null
+          datosParaGuardar.servilletas = null;
+        }
+      } else if (datosParaGuardar.servilletas === '' || datosParaGuardar.servilletas === null) {
+        datosParaGuardar.servilletas = null;
+      }
+    }
+
+    // Manejar campos JSON: protocolo
+    if (datosParaGuardar.protocolo !== undefined) {
+      if (typeof datosParaGuardar.protocolo === 'object' && datosParaGuardar.protocolo !== null) {
+        // Si es un objeto, convertirlo a string JSON
+        datosParaGuardar.protocolo = JSON.stringify(datosParaGuardar.protocolo);
+      } else if (typeof datosParaGuardar.protocolo === 'string') {
+        // Si ya es string, validar que sea JSON válido
+        if (datosParaGuardar.protocolo === '' || datosParaGuardar.protocolo === null) {
+          datosParaGuardar.protocolo = null;
+        } else {
+          try {
+            // Validar que sea JSON válido
+            JSON.parse(datosParaGuardar.protocolo);
+          } catch (e) {
+            // Si no es JSON válido, establecer como null
+            datosParaGuardar.protocolo = null;
+          }
+        }
+      } else if (datosParaGuardar.protocolo === '' || datosParaGuardar.protocolo === null) {
+        datosParaGuardar.protocolo = null;
+      }
+    }
+
+    // Manejar campos JSON: bailes_adicionales
+    if (datosParaGuardar.bailes_adicionales !== undefined) {
+      if (Array.isArray(datosParaGuardar.bailes_adicionales)) {
+        // Convertir array a string JSON
+        datosParaGuardar.bailes_adicionales = JSON.stringify(datosParaGuardar.bailes_adicionales);
+      } else if (typeof datosParaGuardar.bailes_adicionales === 'string') {
+        // Si ya es string, validar que sea JSON válido
+        if (datosParaGuardar.bailes_adicionales === '' || datosParaGuardar.bailes_adicionales === null) {
+          datosParaGuardar.bailes_adicionales = null;
+        } else {
+          try {
+            // Validar que sea JSON válido
+            JSON.parse(datosParaGuardar.bailes_adicionales);
+          } catch (e) {
+            // Si no es JSON válido, establecer como null
+            datosParaGuardar.bailes_adicionales = null;
+          }
+        }
+      } else if (datosParaGuardar.bailes_adicionales === '' || datosParaGuardar.bailes_adicionales === null) {
+        datosParaGuardar.bailes_adicionales = null;
+      }
+    }
+
+    // Remover campos que no existen en el schema
+    const camposValidos = [
+      'sabor_torta', 'tamano_torta', 'tipo_relleno', 'diseno_torta', 'notas_torta',
+      'estilo_decoracion', 'colores_principales', 'flores_preferidas', 'tematica', 'notas_decoracion',
+      'tipo_servicio', 'entrada', 'plato_principal', 'acompanamientos', 'opciones_vegetarianas',
+      'opciones_veganas', 'restricciones_alimentarias', 'bebidas_incluidas', 'notas_menu',
+      'musica_ceremonial', 'primer_baile', 'baile_padre_hija', 'baile_madre_hijo', 'hora_show',
+      'actividades_especiales', 'bailes_adicionales', 'cancion_sorpresa', 'notas_entretenimiento',
+      'playlist_urls', 'momentos_especiales', 'poses_especificas', 'ubicaciones_fotos', 'notas_fotografia',
+      'invitado_honor', 'brindis_especial', 'sorpresas_planeadas', 'solicitudes_especiales',
+      'vestido_nina', 'observaciones_adicionales', 'items_especiales', 'protocolo',
+      'tipo_decoracion', 'cojines_color', 'centro_mesa_1', 'centro_mesa_2', 'centro_mesa_3',
+      'base_color', 'challer_color', 'servilletas', 'aros_color', 'aros_nota',
+      'runner_tipo', 'runner_nota', 'stage_tipo', 'stage_color_globos', 'decoracion_premium_detalles',
+      'decoracion_completada', 'estilo_decoracion_otro', 'hora_limosina', 'pisos_torta',
+      'sabor_otro', 'diseno_otro', 'hay_teenagers', 'cantidad_teenagers', 'teenagers_tipo_comida',
+      'teenagers_tipo_pasta', 'acompanamiento_seleccionado'
+    ];
+
+    // Filtrar solo campos válidos
+    const datosFiltrados = {};
+    Object.keys(datosParaGuardar).forEach(key => {
+      if (camposValidos.includes(key)) {
+        datosFiltrados[key] = datosParaGuardar[key];
+      }
+    });
+
     // Buscar o crear ajustes
     let ajustes = await prisma.ajustes_evento.findUnique({
       where: { contrato_id: parseInt(contratoId) }
@@ -92,7 +183,7 @@ router.put('/contrato/:contratoId', authenticate, async (req, res, next) => {
       ajustes = await prisma.ajustes_evento.update({
         where: { contrato_id: parseInt(contratoId) },
         data: {
-          ...datosParaGuardar,
+          ...datosFiltrados,
           fecha_actualizacion: new Date()
         }
       });
@@ -101,7 +192,7 @@ router.put('/contrato/:contratoId', authenticate, async (req, res, next) => {
       ajustes = await prisma.ajustes_evento.create({
         data: {
           contrato_id: parseInt(contratoId),
-          ...datosParaGuardar
+          ...datosFiltrados
         }
       });
     }
@@ -112,7 +203,12 @@ router.put('/contrato/:contratoId', authenticate, async (req, res, next) => {
       ajustes
     });
   } catch (error) {
-    next(error);
+    console.error('Error al actualizar ajustes:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al actualizar los ajustes',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
+    });
   }
 });
 
@@ -302,7 +398,21 @@ router.get('/contrato/:contratoId/pdf', authenticate, async (req, res, next) => 
             codigo_vendedor: true
           }
         },
-        salones: true
+        salones: true,
+        paquetes: {
+          include: {
+            paquetes_servicios: {
+              include: {
+                servicios: true
+              }
+            }
+          }
+        },
+        contratos_servicios: {
+          include: {
+            servicios: true
+          }
+        }
       }
     });
 
