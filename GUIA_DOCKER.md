@@ -1,13 +1,29 @@
 # 🐳 Guía de Instalación con Docker - DiamondSistem
 
-## ¿Por qué Docker?
+## ⚠️ ADVERTENCIA IMPORTANTE
 
-Docker simplifica la instalación porque:
+**Docker tiene problemas conocidos y NO está completamente funcional en este momento.**
+
+- ❌ Los frontends (excepto vendedor) no cargan correctamente (ERR_EMPTY_RESPONSE)
+- ❌ Problemas con la resolución de módulos compartidos (`@shared`)
+- ❌ Errores de autenticación y conexión con el backend
+
+**Recomendación:** Usa la **instalación local** (ver README.md) que es el método probado y funcional.
+
+Esta guía se mantiene para referencia futura, pero **NO se recomienda usar Docker en producción o desarrollo activo**.
+
+---
+
+## ¿Por qué Docker? (Teóricamente)
+
+Docker simplificaría la instalación porque:
 - ✅ No necesitas instalar PostgreSQL manualmente
 - ✅ No necesitas configurar Node.js
 - ✅ No hay problemas de CORS
 - ✅ Funciona igual en Windows, Mac y Linux
 - ✅ Todo está aislado y no afecta tu sistema
+
+**Sin embargo, actualmente estos beneficios no se cumplen debido a problemas técnicos.**
 
 ---
 

@@ -294,28 +294,30 @@ Cada frontend necesita un archivo `.env` en su carpeta:
 
 **frontend-vendedor/.env:**
 ```env
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000/api
 ```
 
 **frontend-cliente/.env:**
 ```env
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000/api
 ```
 
 **frontend-manager/.env:**
 ```env
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000/api
 ```
 
 **frontend-gerente/.env:**
 ```env
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000/api
 ```
 
 **frontend-inventario/.env:**
 ```env
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000/api
 ```
+
+**Nota:** Todos los frontends deben usar `/api` al final de la URL.
 
 ---
 

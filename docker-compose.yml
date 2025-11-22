@@ -53,7 +53,7 @@ services:
       dockerfile: Dockerfile
     container_name: diamondsistem-vendedor
     environment:
-      VITE_API_URL: http://localhost:5000
+      VITE_API_URL: http://localhost:5000/api
     ports:
       - "5173:5173"
     volumes:
@@ -72,13 +72,13 @@ services:
       dockerfile: Dockerfile
     container_name: diamondsistem-cliente
     environment:
-      VITE_API_URL: http://localhost:5000
+      VITE_API_URL: http://localhost:5000/api
     ports:
       - "5174:5173"
     volumes:
       - ./frontend-cliente:/app
       - /app/node_modules
-      - ./shared:/app/shared
+      - ./shared:/app/shared  # Mantener volumen para hot reload
     depends_on:
       - backend
     networks:
@@ -91,7 +91,7 @@ services:
       dockerfile: Dockerfile
     container_name: diamondsistem-manager
     environment:
-      VITE_API_URL: http://localhost:5000
+      VITE_API_URL: http://localhost:5000/api
     ports:
       - "5175:5173"
     volumes:
@@ -110,7 +110,7 @@ services:
       dockerfile: Dockerfile
     container_name: diamondsistem-gerente
     environment:
-      VITE_API_URL: http://localhost:5000
+      VITE_API_URL: http://localhost:5000/api
     ports:
       - "5176:5173"
     volumes:
@@ -129,7 +129,7 @@ services:
       dockerfile: Dockerfile
     container_name: diamondsistem-administrador
     environment:
-      VITE_API_URL: http://localhost:5000
+      VITE_API_URL: http://localhost:5000/api
     ports:
       - "5177:5173"
     volumes:
