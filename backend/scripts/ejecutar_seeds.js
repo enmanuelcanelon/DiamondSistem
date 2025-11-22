@@ -8,8 +8,8 @@ async function ejecutarSeeds() {
   try {
     console.log('🌱 Ejecutando seeds de base de datos...\n');
 
-    // Leer el archivo SQL
-    const seedsPath = path.join(__dirname, '../../../database/seeds.sql');
+    // Leer el archivo SQL (desde backend/scripts/ hasta database/seeds.sql)
+    const seedsPath = path.resolve(__dirname, '../../database/seeds.sql');
     
     if (!fs.existsSync(seedsPath)) {
       console.log('⚠️  Archivo seeds.sql no encontrado, saltando seeds...');
