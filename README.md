@@ -134,15 +134,22 @@ DiamondSistem/
 
 **La instalación local es el método probado y funcional.** Sigue las instrucciones para Windows o Mac más abajo.
 
-### 🗄️ Base de Datos en la Nube (Supabase) - Opcional
+### 🗄️ Base de Datos: PostgreSQL Local o Supabase
 
-Si quieres trabajar desde varios ordenadores o desde cualquier lugar, puedes usar **Supabase** (PostgreSQL en la nube):
-- ✅ Misma base de datos en todos tus ordenadores
-- ✅ Accesible desde cualquier lugar con internet
-- ✅ Backups automáticos
-- ✅ Gratis hasta cierto límite
+Tienes dos opciones para la base de datos:
 
-**Ver:** `GUIA_SUPABASE.md` para instrucciones completas.
+**Opción 1: PostgreSQL Local** (para desarrollo en un solo ordenador)
+- Instala PostgreSQL en tu ordenador
+- Sigue los pasos de instalación más abajo
+
+**Opción 2: Supabase** (Recomendado si trabajas desde varios ordenadores)
+- Base de datos en la nube, accesible desde cualquier lugar
+- Misma base de datos en todos tus ordenadores
+- Backups automáticos
+- Gratis hasta cierto límite
+- **Ver:** `GUIA_SUPABASE.md` para instrucciones completas de Supabase
+
+**Si usas Supabase:** Salta los pasos 3 y 4 de PostgreSQL local, y ve directamente a configurar `DATABASE_URL` con tu connection string de Supabase.
 
 ### 🐳 Docker (Experimental - No Recomendado)
 
@@ -229,10 +236,21 @@ copy env.example .env
 ```
 
 3. **Editar `backend/.env`:**
-   ```env
-   # Base de Datos
-   DATABASE_URL="postgresql://postgres:root@localhost:5432/diamondsistem?connection_limit=10"
    
+   **Si usas PostgreSQL Local:**
+   ```env
+   # Base de Datos Local
+   DATABASE_URL="postgresql://postgres:root@localhost:5432/diamondsistem?connection_limit=10&pool_timeout=20"
+   ```
+   
+   **Si usas Supabase:**
+   ```env
+   # Base de Datos Supabase (reemplaza con tu connection string)
+   DATABASE_URL="postgresql://postgres:TU_PASSWORD@db.xxxxx.supabase.co:5432/postgres?connection_limit=10&pool_timeout=20"
+   ```
+   
+   **Resto de configuración (igual para ambos):**
+   ```env
    # JWT
    JWT_SECRET=tu_secreto_muy_seguro_aqui_cambiar_en_produccion
    JWT_EXPIRES_IN=7d
@@ -251,17 +269,17 @@ copy env.example .env
 # Generar Prisma Client
 npx prisma generate
 
-# Aplicar esquema a la base de datos
+# Aplicar esquema a la base de datos (crea todas las tablas)
 npx prisma db push
 
-# Cargar datos iniciales (paquetes, servicios, temporadas, vendedores)
-psql -U postgres -d diamondsistem -f ..\database\seeds.sql
+# Cargar datos iniciales (paquetes, servicios, temporadas, etc.)
+node scripts/ejecutar_seeds.js
+
+# Crear usuario de prueba para login
+node scripts/crear_usuario_prueba.js
 ```
 
-**Nota:** Si `psql` no está en el PATH, usa la ruta completa:
-```powershell
-"C:\Program Files\PostgreSQL\14\bin\psql.exe" -U postgres -d diamondsistem -f ..\database\seeds.sql
-```
+**Nota:** Si usas Supabase, estos comandos funcionan igual. Solo asegúrate de que `DATABASE_URL` en `.env` apunte a tu Supabase.
 
 ### Paso 6: Configurar Sistema de Inventario (Opcional)
 
@@ -375,7 +393,9 @@ git clone https://github.com/IamEac/DiamondSistem.git
 cd DiamondSistem
 ```
 
-### Paso 4: Configurar PostgreSQL
+### Paso 4: Configurar PostgreSQL (Solo si usas PostgreSQL Local)
+
+**Si usas Supabase, salta este paso y ve al Paso 5.**
 
 ```bash
 # Crear base de datos
@@ -401,10 +421,21 @@ cp env.example .env
 ```
 
 Editar `backend/.env`:
-```env
-# Base de Datos
-DATABASE_URL="postgresql://postgres:tu_password@localhost:5432/diamondsistem?connection_limit=10"
 
+**Si usas PostgreSQL Local:**
+```env
+# Base de Datos Local
+DATABASE_URL="postgresql://postgres:tu_password@localhost:5432/diamondsistem?connection_limit=10&pool_timeout=20"
+```
+
+**Si usas Supabase:**
+```env
+# Base de Datos Supabase (reemplaza con tu connection string)
+DATABASE_URL="postgresql://postgres:TU_PASSWORD@db.xxxxx.supabase.co:5432/postgres?connection_limit=10&pool_timeout=20"
+```
+
+**Resto de configuración (igual para ambos):**
+```env
 # JWT
 JWT_SECRET=tu_secreto_muy_seguro_aqui_cambiar_en_produccion
 JWT_EXPIRES_IN=7d
@@ -423,12 +454,17 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175,h
 # Generar Prisma Client
 npx prisma generate
 
-# Aplicar esquema
+# Aplicar esquema (crea todas las tablas)
 npx prisma db push
 
-# Cargar datos iniciales
-psql -U postgres -d diamondsistem -f ../database/seeds.sql
+# Cargar datos iniciales (paquetes, servicios, temporadas, etc.)
+node scripts/ejecutar_seeds.js
+
+# Crear usuario de prueba para login
+node scripts/crear_usuario_prueba.js
 ```
+
+**Nota:** Si usas Supabase, estos comandos funcionan igual. Solo asegúrate de que `DATABASE_URL` en `.env` apunte a tu Supabase.
 
 ### Paso 7: Configurar Sistema de Inventario (Opcional)
 
@@ -524,11 +560,13 @@ powershell -ExecutionPolicy Bypass -File ejecutar-todos-frontends.ps1
 
 ## 🔐 Credenciales de Prueba
 
-### Vendedor
+### Vendedor (Usuario de Prueba)
 ```
-Código: ADMIN001
-Password: Admin123!
+Código: PRUEBA001
+Contraseña: prueba123
 ```
+
+**Nota:** Este usuario se crea automáticamente al ejecutar `node scripts/crear_usuario_prueba.js`. Si no existe, ejecuta ese script.
 
 ### Cliente
 ```
