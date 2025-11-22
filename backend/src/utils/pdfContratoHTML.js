@@ -883,10 +883,10 @@ async function generarContratoHTML(contrato) {
   try {
     const page = await browser.newPage();
     
-    // Configurar viewport para mejor renderizado (508.0 x 285.7 mm)
-    // 508.0 mm = 1440 puntos, 285.7 mm = 810 puntos (1 mm = 2.83465 puntos)
+    // Configurar viewport para mejor renderizado (508.3 x 285.7 mm)
+    // 508.3 mm = 1442 puntos, 285.7 mm = 810 puntos (1 mm = 2.83465 puntos)
     await page.setViewport({
-      width: 1440, // 508.0 mm en puntos
+      width: 1442, // 508.3 mm en puntos
       height: 810, // 285.7 mm en puntos
       deviceScaleFactor: 2 // Mejor calidad de imagen
     });
@@ -922,8 +922,8 @@ async function generarContratoHTML(contrato) {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     const pdfBuffer = await page.pdf({
-      width: '508mm', // 508.0 mm
-      height: '285.7mm', // 285.7 mm
+      width: '508.3mm', // Ancho: 508.3 mm
+      height: '285.7mm', // Alto: 285.7 mm
       printBackground: true,
       preferCSSPageSize: false,
       margin: {

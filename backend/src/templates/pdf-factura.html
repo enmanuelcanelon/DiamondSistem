@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diamond Venue - Propuesta de Oferta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&family=Great+Vibes&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -12,31 +17,276 @@
         }
 
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #F0F0F0;
-            background-image: 
-                url("data:image/svg+xml,%3Csvg width='50' height='50' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='0.6' opacity='0.8'%3E%3Cpath d='M 12.5 0 Q 25 10 12.5 25 Q 0 10 12.5 0'/%3E%3Cpath d='M 12.5 25 Q 25 35 12.5 50 Q 0 35 12.5 25'/%3E%3Cpath d='M 37.5 0 Q 50 10 37.5 25 Q 25 10 37.5 0'/%3E%3Cpath d='M 37.5 25 Q 50 35 37.5 50 Q 25 35 37.5 25'/%3E%3Cpath d='M 12.5 12.5 L 37.5 12.5' stroke-width='0.5'/%3E%3Cpath d='M 12.5 37.5 L 37.5 37.5' stroke-width='0.5'/%3E%3Cpath d='M 0 25 L 12.5 25' stroke-width='0.5'/%3E%3Cpath d='M 37.5 25 L 50 25' stroke-width='0.5'/%3E%3C/g%3E%3C/svg%3E");
-            background-size: 50px 50px;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 500;
+            background-color: #000000;
             color: #000000;
-            width: 8.5in;
+            width: 508.3mm;
             margin: 0;
             padding: 0;
             position: relative;
         }
 
         .page {
-            width: 8.5in;
-            min-height: 11in;
+            width: 508.3mm;
+            min-height: 285.7mm;
             position: relative;
             page-break-after: always;
-            background-color: #F0F0F0;
-            background-image: 
-                url("data:image/svg+xml,%3Csvg width='50' height='50' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='0.6' opacity='0.8'%3E%3Cpath d='M 12.5 0 Q 25 10 12.5 25 Q 0 10 12.5 0'/%3E%3Cpath d='M 12.5 25 Q 25 35 12.5 50 Q 0 35 12.5 25'/%3E%3Cpath d='M 37.5 0 Q 50 10 37.5 25 Q 25 10 37.5 0'/%3E%3Cpath d='M 37.5 25 Q 50 35 37.5 50 Q 25 35 37.5 25'/%3E%3Cpath d='M 12.5 12.5 L 37.5 12.5' stroke-width='0.5'/%3E%3Cpath d='M 12.5 37.5 L 37.5 37.5' stroke-width='0.5'/%3E%3Cpath d='M 0 25 L 12.5 25' stroke-width='0.5'/%3E%3Cpath d='M 37.5 25 L 50 25' stroke-width='0.5'/%3E%3C/g%3E%3C/svg%3E");
-            background-size: 50px 50px;
+            background-color: #000000;
             padding: 0;
             overflow: visible;
             display: block;
             z-index: 1;
+        }
+
+        /* Eliminar patrones de las otras páginas también */
+        .page:not(.page-1) {
+            background-color: #f9f9f7;
+        }
+
+        /* PORTADA ELEGANTE - PÁGINA 1 */
+        .page-1 {
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .page-1-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            {{FONDO_STYLE}}
+        }
+
+        .page-1::before {
+            display: none !important; /* Eliminar completamente el patrón de líneas */
+        }
+
+        .cover-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            min-height: 285.7mm;
+            max-height: 285.7mm;
+            color: white;
+            padding: 35px 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            border: none;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        /* Logo en la parte superior derecha */
+        .cover-logo-top-right {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .cover-left-col, .cover-right-col {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cover-left-col h1 {
+            font-size: 5.5rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            color: #fff;
+            line-height: 0.9;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            text-shadow: 0 0 25px rgba(255, 255, 255, 0.6);
+        }
+
+        .cover-left-col h1 span {
+            color: #D4AF37;
+        }
+
+        .cover-packages-text {
+            font-size: 2.8rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 400;
+            color: #fff;
+            text-transform: uppercase;
+            margin-top: 8px;
+            margin-bottom: 35px;
+            letter-spacing: 3px;
+        }
+
+        .cover-section-title {
+            font-size: 2.2rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .cover-details-list {
+            margin-bottom: 25px;
+        }
+
+        .cover-details-list p {
+            font-size: 1.3rem;
+            font-family: 'Montserrat', sans-serif;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.5;
+        }
+
+        .cover-details-list span {
+            font-weight: 300;
+            color: #fff;
+            margin-left: 5px;
+        }
+
+        .cover-contact-info {
+            margin-top: 20px;
+            font-size: 1.3rem;
+            font-family: 'Montserrat', sans-serif;
+            margin-bottom: 0;
+        }
+
+        .cover-contact-info p {
+            margin-bottom: 10px;
+            color: #fff;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        .cover-right-col {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            text-align: left;
+            padding-top: 0;
+        }
+
+        .cover-logo-top-right .cover-logo {
+            max-width: 300px;
+            height: auto;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
+            margin-bottom: 15px;
+            opacity: 1;
+        }
+
+        .cover-logo-top-right .cover-logo-text {
+            color: #fff;
+            font-size: 0.7rem;
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-weight: 400;
+            line-height: 1.3;
+            margin-bottom: 15px;
+        }
+
+        .cover-logo-top-right .cover-proposal-title {
+            font-size: 1.8rem;
+            font-family: 'Montserrat', sans-serif;
+            text-transform: uppercase;
+            color: #fff;
+            font-weight: 400;
+            margin-bottom: 10px;
+        }
+
+        .cover-logo-top-right .cover-neon-name {
+            font-family: 'Great Vibes', cursive;
+            font-size: 5rem;
+            color: #D4AF37;
+            text-shadow: 0 0 10px #D4AF37, 0 0 20px #D4AF37;
+            margin: 0;
+            transform: rotate(-3deg);
+            line-height: 1.1;
+        }
+
+        .cover-footer-info {
+            width: 100%;
+            margin-top: auto;
+            margin-bottom: 30px;
+        }
+
+        .cover-socials {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+
+        .cover-socials span {
+            font-size: 1.5rem;
+        }
+
+        .cover-socials i.fa-instagram {
+            background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .cover-socials i.fa-facebook {
+            color: #3b5998;
+        }
+
+        .cover-website {
+            font-size: 1.6rem;
+            font-family: 'Montserrat', sans-serif;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .cover-contract-date {
+            position: absolute;
+            bottom: 25px;
+            left: 40px;
+            text-align: left;
+            font-family: 'Montserrat', sans-serif;
+            color: #fff;
+            font-size: 1.1rem;
+            z-index: 10;
+        }
+
+        .cover-contract-date strong {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+
+        .cover-whatsapp-bottom-right {
+            position: absolute;
+            bottom: 25px;
+            right: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Montserrat', sans-serif;
+            color: #fff;
+            font-size: 1.3rem;
+        }
+
+        .cover-whatsapp-bottom-right i {
+            color: #25D366;
+            font-size: 2rem;
+        }
+
+        .page-content {
+            width: 100%;
+            height: 100%;
+            min-height: 285.7mm;
         }
 
         /* HEADER CORPORATIVO */
@@ -221,6 +471,72 @@
             margin-right: 5px;
         }
 
+        /* NUEVO DISEÑO ELEGANTE PARA SERVICIOS (igual que contratos) */
+        .package-card {
+            background-color: #f9f9f7;
+            {{PACKAGE_CARD_BACKGROUND}}
+            width: 100%;
+            height: 100%;
+            min-height: 285.7mm;
+            display: flex;
+            flex-direction: column;
+            box-shadow: none;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            page-break-inside: avoid;
+        }
+
+        .package-content {
+            flex: 1;
+            padding: 20px 50px 30px 50px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 25px;
+            row-gap: 20px;
+            width: 100%;
+            color: #1a1a1a;
+            height: 100%;
+            align-content: start;
+            overflow: hidden;
+        }
+
+        .package-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .package-info-block {
+            margin-bottom: 30px;
+        }
+
+        .package-info-block h3 {
+            font-size: 1.8rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            color: #000;
+            font-family: 'Montserrat', sans-serif;
+            line-height: 1.2;
+        }
+
+        .package-info-block ul {
+            list-style: none;
+            margin-bottom: 0;
+            padding: 0;
+        }
+
+        .package-info-block p,
+        .package-info-block li {
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: #333;
+            font-weight: 400;
+            margin-bottom: 4px;
+            font-family: 'Montserrat', sans-serif;
+        }
+
         .services-grid-clean {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -391,132 +707,119 @@
     </style>
 </head>
 <body>
-    <!-- PÁGINA 1: DETALLES DEL EVENTO Y PAQUETE -->
-    <div class="page page-1">
-        <div class="corporate-header">
-            <div class="corporate-header-top">
-                <div class="document-title">Propuesta de Oferta</div>
-                <div class="document-number">Documento Confidencial</div>
+    <!-- PÁGINA 1: PORTADA ELEGANTE -->
+    <div class="page page-1 {{HAS_BACKGROUND_CLASS}}">
+        <div class="page-1-background"></div>
+        <div class="cover-card">
+            <!-- Logo en esquina superior derecha con Event Proposal For -->
+            <div class="cover-logo-top-right">
+                {{LOGO_HTML}}
+                <div class="cover-logo-text">{{NOMBRE_COMPANIA}}</div>
+                <p class="cover-proposal-title">EVENT PROPOSAL FOR:</p>
+                <div class="cover-neon-name">{{CLIENT_NAME}}</div>
             </div>
-            <div class="header-divider"></div>
-        </div>
-        
-        <div class="page-1-content">
-            <div class="section-title-corporate">Información del Evento</div>
-            
-            <table class="info-table">
-                <tr class="info-table-row">
-                    <td class="info-table-label">Cliente</td>
-                    <td class="info-table-value">{{CLIENT_NAME}}</td>
-                </tr>
-                <tr class="info-table-row">
-                    <td class="info-table-label">Representante de Ventas</td>
-                    <td class="info-table-value">{{VENDEDOR_NAME}}<br>{{VENDEDOR_PHONE}}<br>{{VENDEDOR_EMAIL}}</td>
-                </tr>
-                <tr class="info-table-row">
-                    <td class="info-table-label">Fecha de Creación</td>
-                    <td class="info-table-value">{{OFFER_CREATION_DATE}}</td>
-                </tr>
-                {{HOMENAJEADO_ROW}}
-                <tr class="info-table-row">
-                    <td class="info-table-label">Tipo de Evento</td>
-                    <td class="info-table-value">{{EVENT_TYPE}}</td>
-                </tr>
-                <tr class="info-table-row">
-                    <td class="info-table-label">Fecha del Evento</td>
-                    <td class="info-table-value">{{EVENT_DATE}}</td>
-                </tr>
-                <tr class="info-table-row">
-                    <td class="info-table-label">Horario</td>
-                    <td class="info-table-value">{{EVENT_TIME}}</td>
-                </tr>
-                <tr class="info-table-row">
-                    <td class="info-table-label">Número de Invitados</td>
-                    <td class="info-table-value">{{GUEST_COUNT}} personas</td>
-                </tr>
-                <tr class="info-table-row">
-                    <td class="info-table-label">Correo Electrónico</td>
-                    <td class="info-table-value">{{CLIENT_EMAIL}}</td>
-                </tr>
-                <tr class="info-table-row">
-                    <td class="info-table-label">Teléfono de Contacto</td>
-                    <td class="info-table-value">{{CLIENT_PHONE}}</td>
-                </tr>
-                <tr class="info-table-row">
-                    <td class="info-table-label">Ubicación</td>
-                    <td class="info-table-value" style="white-space: pre-line;">{{SALON_DIRECCION}}</td>
-                </tr>
-            </table>
-            
-            <div class="package-section">
-                <div class="package-label">Paquete Seleccionado</div>
-                <div class="package-name-corporate">{{PACKAGE_NAME}}</div>
+
+            <div class="cover-left-col">
+                <h1>{{EVENT_TYPE}}</h1>
+                <div class="cover-packages-text">PACKAGES</div>
+
+                <h2 class="cover-section-title">Event Details</h2>
+                
+                <div class="cover-details-list">
+                    <p>Name: <span>{{CLIENT_NAME}}</span></p>
+                    <p>Event: <span>{{EVENT_TYPE}}</span></p>
+                    <p>Location: <span>{{SALON_DIRECCION}}</span></p>
+                    <p>Date: <span>{{EVENT_DATE}}</span></p>
+                    <p>Time: <span>{{EVENT_TIME}}</span></p>
+                    <p>Number of Guests: <span>{{GUEST_COUNT}}</span></p>
+                </div>
+
+                <div class="cover-contact-info">
+                    <p>Email: {{CLIENT_EMAIL}}</p>
+                    <p>Phone number: {{CLIENT_PHONE}}</p>
+                </div>
+            </div>
+
+            <div class="cover-right-col">
+                <div class="cover-footer-info">
+                    <div class="cover-socials">
+                        <i class="fa-brands fa-instagram"></i>
+                        <i class="fa-brands fa-facebook"></i>
+                        <span>@revolutionpartyvenues</span>
+                    </div>
+                    <div class="cover-website">www.revolutionpartyvenue.com</div>
+                </div>
+            </div>
+
+            <!-- Offer Creation Date en la parte inferior izquierda -->
+            <div class="cover-contract-date">
+                <strong>Offer Creation Date:</strong>
+                <span style="text-decoration: underline;">{{OFFER_CREATION_DATE}}</span>
+            </div>
+
+            <!-- WhatsApp en esquina inferior derecha -->
+            <div class="cover-whatsapp-bottom-right">
+                <i class="fa-brands fa-whatsapp"></i>
+                <span>{{VENDEDOR_PHONE}}</span>
             </div>
         </div>
     </div>
 
     <!-- PÁGINA 2: SERVICIOS -->
     <div class="page page-2">
-        <div class="corporate-header">
-            <div class="corporate-header-top">
-                <div class="document-title">Servicios Incluidos</div>
-                <div class="document-number">Página 2 de 3</div>
-            </div>
-            <div class="header-divider"></div>
-        </div>
-        
-        <div class="page-2-content">
-            <div class="section-title-corporate">Servicios Incluidos en el Paquete</div>
-            
-            <div class="services-section">
-                <div class="services-grid-clean">
+        <div class="page-content" style="padding: 0; height: 100%;">
+            <div class="package-card">
+                <div style="padding: 15px 50px 10px 50px; text-align: left; flex-shrink: 0;">
+                    <h2 style="font-size: 2.2rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">PAQUETE {{PACKAGE_NAME}}</h2>
+                </div>
+                <div class="package-content" style="flex: 1; padding-top: 0; overflow: hidden;">
                     {{SERVICIOS_PAQUETE}}
                 </div>
             </div>
-            
-            {{SERVICIOS_ADICIONALES}}
-            
-            <div class="fees-note-corporate">
-                <strong>Nota Importante:</strong> Los precios del paquete están sujetos a 7% de impuesto y 18% de tarifa de servicio
-            </div>
         </div>
     </div>
+    
+    <!-- PÁGINA 2B: SERVICIOS ADICIONALES (si hay) -->
+    {{SERVICIOS_ADICIONALES}}
 
-    <!-- PÁGINA 3: PRECIOS -->
+    <!-- PÁGINA 3: INVERSIÓN Y TÉRMINOS -->
     <div class="page page-3">
-        <div class="corporate-header">
-            <div class="corporate-header-top">
-                <div class="document-title">Inversión y Términos</div>
-                <div class="document-number">Página 3 de 3</div>
-            </div>
-            <div class="header-divider"></div>
-        </div>
-        
-        <div class="page-3-content">
-            <div class="pricing-section-corporate">
-                <div class="pricing-title-corporate">Desglose de Inversión</div>
-                
-                <table class="pricing-table-corporate">
-                    <tr class="pricing-row-corporate">
-                        <td class="pricing-label-corporate">Precio del Paquete</td>
-                        <td class="pricing-value-corporate">{{PACKAGE_PRICE}}</td>
-                    </tr>
-                    <tr class="pricing-row-corporate">
-                        <td class="pricing-label-corporate">Impuesto (7%)</td>
-                        <td class="pricing-value-corporate">{{TAX_AMOUNT}}</td>
-                    </tr>
-                    <tr class="pricing-row-corporate">
-                        <td class="pricing-label-corporate">Tarifa de Servicio (18%)</td>
-                        <td class="pricing-value-corporate">{{SERVICE_FEE}}</td>
-                    </tr>
-                    <tr class="pricing-row-corporate pricing-total-row">
-                        <td class="pricing-label-corporate">TOTAL A PAGAR</td>
-                        <td class="pricing-value-corporate">{{TOTAL_TO_PAY}}</td>
-                    </tr>
-                </table>
-                
-                <div class="pricing-note-corporate">
-                    ESTA OFERTA ES VALIDA POR 24 HORAS DESPUES DE SER RECIBIDA
+        <div class="page-content" style="padding: 0; height: 100%;">
+            <div class="package-card" style="display: flex; flex-direction: column; height: 100%;">
+                <div style="padding: 30px 50px 20px 50px; text-align: left; flex-shrink: 0;">
+                    <h2 style="font-size: 2.4rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">Inversión y Términos</h2>
+                </div>
+                <div style="padding: 0 50px 45px 50px; flex: 1; display: flex; flex-direction: column; align-content: start;">
+                    <!-- Desglose de Inversión -->
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="font-size: 1.7rem; font-weight: 400; text-transform: uppercase; letter-spacing: 2px; color: #000; font-family: 'Montserrat', sans-serif; margin-bottom: 12px;">Desglose de Inversión</h3>
+                        <table class="info-table" style="margin: 0; font-size: 12px;">
+                            <tr class="info-table-row">
+                                <td class="info-table-label" style="padding: 10px 15px; font-size: 12px;">Precio del Paquete</td>
+                                <td class="info-table-value" style="padding: 10px 15px; font-size: 12px;">{{PACKAGE_PRICE}}</td>
+                            </tr>
+                            <tr class="info-table-row">
+                                <td class="info-table-label" style="padding: 10px 15px; font-size: 12px;">Impuesto (7%)</td>
+                                <td class="info-table-value" style="padding: 10px 15px; font-size: 12px;">{{TAX_AMOUNT}}</td>
+                            </tr>
+                            <tr class="info-table-row">
+                                <td class="info-table-label" style="padding: 10px 15px; font-size: 12px;">Tarifa de Servicio (18%)</td>
+                                <td class="info-table-value" style="padding: 10px 15px; font-size: 12px;">{{SERVICE_FEE}}</td>
+                            </tr>
+                            <tr class="info-table-row">
+                                <td class="info-table-label" style="font-weight: 600; border-top: 2px solid #000000; padding-top: 12px; font-size: 13px;">TOTAL A PAGAR</td>
+                                <td class="info-table-value" style="font-weight: 600; border-top: 2px solid #000000; padding-top: 12px; font-size: 13px;">{{TOTAL_TO_PAY}}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Nota Importante -->
+                    <div style="margin-top: auto;">
+                        <div style="font-size: 11px; line-height: 1.6; color: #333; padding: 15px; background-color: #f5f5f5; border-left: 3px solid #000;">
+                            <strong>NOTA IMPORTANTE:</strong><br>
+                            ESTA OFERTA ES VALIDA POR 24 HORAS DESPUES DE SER RECIBIDA
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

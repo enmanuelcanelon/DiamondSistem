@@ -45,23 +45,27 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
   const emailCliente = datos.clientes?.email || '';
   const telefonoCliente = datos.clientes?.telefono || '';
 
-  // Obtener información del salón y mapear direcciones
+  // Obtener información del salón y detectar compañía
   const salon = datos.salones || null;
+  const lugarSalon = datos.lugar_salon || '';
   let direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166'; // Default
+  let esRevolution = false;
+  let nombreCompania = 'Diamond Venue';
+  const nombreSalon = (salon?.nombre || lugarSalon || '').toLowerCase();
   
-  if (salon) {
-    const nombreSalon = salon.nombre || '';
-    
-    // Mapeo de direcciones según el nombre del salón
-    if (nombreSalon.toLowerCase().includes('doral')) {
+  if (nombreSalon) {
+    if (nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Doral<br>8726 NW 26th St<br>Doral, FL 33172';
-    } else if (nombreSalon.toLowerCase().includes('kendall')) {
+      esRevolution = true;
+      nombreCompania = 'Revolution Party Venues';
+    } else if (nombreSalon.includes('kendall')) {
       direccionSalon = 'Salón Kendall<br>14271 Southwest 120th Street<br>Kendall, Miami, FL 33186';
-    } else if (nombreSalon.toLowerCase().includes('diamond')) {
+      esRevolution = true;
+      nombreCompania = 'Revolution Party Venues';
+    } else if (nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
-    } else {
-      // Si no coincide con ninguno, usar el nombre del salón
-      direccionSalon = `Salón ${nombreSalon}`;
+      esRevolution = false;
+      nombreCompania = 'Diamond Venue';
     }
   }
 
@@ -105,52 +109,197 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === false)
   };
 
-  // Función para generar HTML de servicios por categoría
+  // Función para generar HTML de servicios por categoría (nuevo diseño elegante de 3 columnas)
   const generarHTMLServicios = (serviciosPorCategoria, esPaquete) => {
     const categorias = [
-      { key: 'venue', titulo: 'Venue', default: 'Elegant table setting with beautiful centerpieces, runners, charger plates napkins and rings.' },
-      { key: 'cake', titulo: 'Cake', default: 'Cake decorated with buttercream.' },
-      { key: 'specials', titulo: 'Specials', default: '' },
-      { key: 'decoration', titulo: 'Decoration', default: 'Stage Decor. Uplighting throughout venue. Centerpieces. Formal table setting (runners, chargers, cloth napkins, glassware).' },
-      { key: 'barService', titulo: 'Bar Service', default: 'Premium selection of liquors (whiskey, rum, vodka and wines), cocktails and soft drinks.' },
-      { key: 'catering', titulo: 'Catering', default: 'Gourmet dinner served. Cheese Table. Appetizers.' },
-      { key: 'serviceCoord', titulo: 'Service Coord & Design', default: 'Full set up & break down. Event Coordinator. Waiters & Bartender. Event planning & coordination are included.' }
+      { key: 'venue', titulo: 'VENUE', default: 'Elegant table setting with beautiful centerpieces, runners, charger plates napkins and rings.' },
+      { key: 'cake', titulo: 'CAKE', default: 'Cake decorated with buttercream.' },
+      { key: 'specials', titulo: 'SPECIALS', default: '' },
+      { key: 'decoration', titulo: 'DECORATION', default: 'Stage Decor. Uplighting throughout venue. Centerpieces. Formal table setting (runners, chargers, cloth napkins, glassware).' },
+      { key: 'barService', titulo: 'BAR SERVICE', default: 'Premium selection of liquors (whiskey, rum, vodka and wines), cocktails and soft drinks.' },
+      { key: 'catering', titulo: 'CATERING', default: 'Gourmet dinner served. Cheese Table. Appetizers.' },
+      { key: 'serviceCoord', titulo: 'SERVICE COORD & DESIGN', default: 'Full set up & break down. Event Coordinator. Waiters & Bartender. Event planning & coordination are included.' }
     ];
 
-    let html = '';
-    categorias.forEach(cat => {
-      const servicios = serviciosPorCategoria[cat.key] || [];
-      if (servicios.length > 0 || (esPaquete && cat.default)) {
-        const textos = servicios.length > 0
-          ? servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t).join('. ')
-          : cat.default;
+    // Distribuir categorías en 3 columnas
+    // Para paquetes: igual que antes
+    // Para extras: izquierda=barService, centro=catering+serviceCoord, derecha=specials
+    const col1 = esPaquete ? ['venue', 'decoration'] : ['barService'];
+    const col2 = esPaquete ? ['cake', 'barService'] : ['catering', 'serviceCoord'];
+    const col3 = esPaquete ? ['specials', 'catering', 'serviceCoord'] : ['specials'];
+
+    let htmlCol1 = '<div class="package-col">';
+    let htmlCol2 = '<div class="package-col">';
+    let htmlCol3 = '<div class="package-col">';
+
+    const generarCategoriaHTML = (cat, servicios) => {
+      const items = servicios.length > 0
+        ? servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t)
+        : (cat.default ? [cat.default] : []);
+      
+      if (items.length > 0) {
+        let html = `
+          <div class="package-info-block">
+            <h3>${cat.titulo}</h3>`;
         
-        if (textos) {
-          html += `
-            <div class="service-card-clean">
-              <div class="service-card-title-clean">${cat.titulo}</div>
-              <div class="service-content-clean">${textos}</div>
-            </div>`;
+        if (items.length === 1 && items[0].indexOf('.') === -1 && items[0].length < 100) {
+          html += `<p>${items[0]}</p>`;
+        } else {
+          html += `<ul>`;
+          items.forEach(item => {
+            if (item.includes('. ')) {
+              const subItems = item.split('. ').filter(s => s.trim());
+              subItems.forEach(subItem => {
+                html += `<li>${subItem.trim()}</li>`;
+              });
+            } else {
+              html += `<li>${item}</li>`;
+            }
+          });
+          html += `</ul>`;
+        }
+        
+        html += `</div>`;
+        return html;
+      }
+      return '';
+    };
+
+    // Columna 1
+    col1.forEach(key => {
+      const cat = categorias.find(c => c.key === key);
+      if (cat) {
+        const servicios = serviciosPorCategoria[cat.key] || [];
+        if (servicios.length > 0 || cat.default) {
+          htmlCol1 += generarCategoriaHTML(cat, servicios);
+        }
+      }
+    });
+    htmlCol1 += '</div>';
+
+    // Columna 2
+    col2.forEach(key => {
+      const cat = categorias.find(c => c.key === key);
+      if (cat) {
+        const servicios = serviciosPorCategoria[cat.key] || [];
+        if (servicios.length > 0 || cat.default) {
+          htmlCol2 += generarCategoriaHTML(cat, servicios);
+        }
+      }
+    });
+    htmlCol2 += '</div>';
+
+    // Columna 3
+    col3.forEach(key => {
+      const cat = categorias.find(c => c.key === key);
+      if (cat) {
+        const servicios = serviciosPorCategoria[cat.key] || [];
+        if (servicios.length > 0 || cat.default) {
+          htmlCol3 += generarCategoriaHTML(cat, servicios);
+        }
+      }
+    });
+    htmlCol3 += '</div>';
+
+    return htmlCol1 + htmlCol2 + htmlCol3;
+  };
+
+  // Función para procesar y reorganizar servicios adicionales según las instrucciones
+  const procesarServiciosAdicionales = (servicios) => {
+    const procesados = {
+      venue: [...(servicios.venue || [])],
+      cake: [...(servicios.cake || [])],
+      decoration: [...(servicios.decoration || [])],
+      specials: [...(servicios.specials || [])],
+      barService: [...(servicios.barService || [])],
+      catering: [...(servicios.catering || [])],
+      serviceCoord: [...(servicios.serviceCoord || [])]
+    };
+
+    // Buscar y mover "Animador adicional" de specials a serviceCoord
+    const animadorIndex = procesados.specials.findIndex(s => {
+      const desc = (s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').toLowerCase();
+      return desc.includes('animador') && desc.includes('adicional');
+    });
+    if (animadorIndex !== -1) {
+      procesados.serviceCoord.push(procesados.specials[animadorIndex]);
+      procesados.specials.splice(animadorIndex, 1);
+    }
+
+    // Buscar y mover "Paquete de 12 mini dulces" de catering a specials
+    const dulcesIndex = procesados.catering.findIndex(s => {
+      const desc = (s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').toLowerCase();
+      return desc.includes('12 mini dulces') || desc.includes('paquete de 12');
+    });
+    if (dulcesIndex !== -1) {
+      procesados.specials.push(procesados.catering[dulcesIndex]);
+      procesados.catering.splice(dulcesIndex, 1);
+    }
+
+    // Cambiar texto de "Hora adicional de evento" a "Hora Extra (x2)"
+    procesados.specials.forEach(s => {
+      const desc = s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '';
+      if (desc.toLowerCase().includes('hora adicional de evento') || (desc.toLowerCase().includes('hora adicional') && desc.toLowerCase().includes('máximo'))) {
+        if (s.descripcion) {
+          s.descripcion = 'Hora Extra (x2)';
+        } else if (s.servicios) {
+          if (s.servicios.descripcion) {
+            s.servicios.descripcion = 'Hora Extra (x2)';
+          } else if (s.servicios.nombre) {
+            s.servicios.nombre = 'Hora Extra (x2)';
+          }
+        } else if (s.nombre) {
+          s.nombre = 'Hora Extra (x2)';
         }
       }
     });
 
-    return html;
+    // Reordenar SPECIALS: Profesional..., Hora Extra (x2), Cobertura..., Cabina..., Paquete de 12 mini dulces
+    const ordenEspecial = [
+      'profesional para dirigir',
+      'hora extra',
+      'cobertura completa',
+      'cabina fotográfica',
+      'paquete de 12'
+    ];
+    
+    procesados.specials.sort((a, b) => {
+      const descA = (a.descripcion || a.servicios?.descripcion || a.servicios?.nombre || a.nombre || '').toLowerCase();
+      const descB = (b.descripcion || b.servicios?.descripcion || b.servicios?.nombre || b.nombre || '').toLowerCase();
+      
+      const indexA = ordenEspecial.findIndex(patron => descA.includes(patron));
+      const indexB = ordenEspecial.findIndex(patron => descB.includes(patron));
+      
+      if (indexA === -1 && indexB === -1) return 0;
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+
+    return procesados;
   };
 
   const htmlServiciosPaquete = generarHTMLServicios(serviciosPaquete, true);
-  const htmlServiciosAdicionales = generarHTMLServicios(serviciosAdicionales, false);
+  const serviciosAdicionalesProcesados = procesarServiciosAdicionales(serviciosAdicionales);
+  const htmlServiciosAdicionales = generarHTMLServicios(serviciosAdicionalesProcesados, false);
   
-  // Generar HTML completo de la sección de servicios adicionales si hay servicios
-  const tieneServiciosAdicionales = Object.values(serviciosAdicionales).some(arr => arr.length > 0);
+  // Generar HTML completo de la sección de servicios adicionales si hay servicios (nuevo diseño)
+  const tieneServiciosAdicionales = Object.values(serviciosAdicionalesProcesados).some(arr => arr.length > 0);
   const htmlSeccionAdicionales = tieneServiciosAdicionales
     ? `
-        <div class="additional-services-section">
-            <div class="section-title-corporate">Servicios Adicionales</div>
-            <div class="additional-services-grid">
-                ${htmlServiciosAdicionales}
+      <div class="page page-2b">
+        <div class="page-content" style="padding: 0; height: 100%;">
+          <div class="package-card">
+            <div style="padding: 15px 50px 10px 50px; text-align: left; flex-shrink: 0;">
+              <h2 style="font-size: 2.2rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
             </div>
-        </div>`
+            <div class="package-content" style="flex: 1; padding-top: 0; overflow: hidden;">
+              ${htmlServiciosAdicionales}
+            </div>
+          </div>
+        </div>
+      </div>
+    `
     : '';
 
   // Generar fila de homenajeado si existe
@@ -160,6 +309,78 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
         <td class="info-table-value">${homenajeado}</td>
       </tr>`
     : '';
+
+  // Convertir logo a base64 si existe y generar HTML del logo (solo Revolution)
+  let logoPath = '';
+  if (esRevolution) {
+    logoPath = path.join(__dirname, '../templates/assets/Logorevolution.png');
+  }
+  
+  let logoHTML = `<div style="font-size: 18px; font-weight: 100; color: #FFFFFF; letter-spacing: 2px;">${nombreCompania}</div>`;
+  if (logoPath && fs.existsSync(logoPath)) {
+    try {
+      const logoBuffer = fs.readFileSync(logoPath);
+      const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+      logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 400px; height: auto; opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));">`;
+      console.log('Logo cargado correctamente para ofertas:', logoPath);
+    } catch (error) {
+      console.error('Error al cargar logo:', error);
+    }
+  } else {
+    console.log('Logo no encontrado en:', logoPath);
+  }
+
+  // Cargar fondo para Revolution (Doral/Kendall) - Portada
+  const fondoPath = path.join(__dirname, '../templates/assets/img12.jpg');
+  const hasBackground = esRevolution && fs.existsSync(fondoPath);
+  
+  let fondoStyle = `background-image: 
+                radial-gradient(circle, rgba(212,175,55,0.2) 2px, transparent 2.5px),
+                radial-gradient(circle, rgba(212,175,55,0.2) 2px, transparent 2.5px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            display: block;`;
+  
+  if (hasBackground) {
+    try {
+      const fondoBuffer = fs.readFileSync(fondoPath);
+      const fondoBase64 = `data:image/jpeg;base64,${fondoBuffer.toString('base64')}`;
+      fondoStyle = `background-image: url("${fondoBase64}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 1;
+            display: block;`;
+      console.log('Fondo cargado correctamente para ofertas. Tamaño base64:', fondoBase64.length, 'caracteres');
+    } catch (error) {
+      console.error('Error al cargar fondo:', error);
+    }
+  } else {
+    console.log('Fondo no encontrado o no es Revolution. Path:', fondoPath, 'esRevolution:', esRevolution);
+  }
+
+  // Cargar fondo general para package-card (solo Revolution)
+  const fondoGeneralPath = path.join(__dirname, '../templates/assets/fondoRevolutionGeneral.png');
+  let packageCardBackground = '';
+  
+  if (esRevolution && fs.existsSync(fondoGeneralPath)) {
+    try {
+      const fondoGeneralBuffer = fs.readFileSync(fondoGeneralPath);
+      const fondoGeneralBase64 = `data:image/png;base64,${fondoGeneralBuffer.toString('base64')}`;
+      packageCardBackground = `background-image: url("${fondoGeneralBase64}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 1;`;
+      console.log('Fondo general cargado correctamente para ofertas (Revolution)');
+    } catch (error) {
+      console.error('Error al cargar fondo general:', error);
+      packageCardBackground = '';
+    }
+  } else {
+    console.log('Fondo general no aplicado (no es Revolution o no existe)');
+    packageCardBackground = '';
+  }
 
   // Reemplazar placeholders en el HTML
   const replacements = {
@@ -185,7 +406,12 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     '{{TOTAL_TO_PAY}}': formatearMoneda(total),
     '{{FIRST_PAYMENT_DATE}}': fechaPrimerPago,
     '{{FIRST_PAYMENT_AMOUNT}}': formatearMoneda(primerPago),
-    '{{TOTAL_REMAINING}}': formatearMoneda(totalRestante)
+    '{{TOTAL_REMAINING}}': formatearMoneda(totalRestante),
+    '{{PACKAGE_CARD_BACKGROUND}}': packageCardBackground,
+    '{{NOMBRE_COMPANIA}}': nombreCompania,
+    '{{LOGO_HTML}}': logoHTML,
+    '{{FONDO_STYLE}}': fondoStyle,
+    '{{HAS_BACKGROUND_CLASS}}': hasBackground ? 'has-background' : ''
   };
 
   Object.keys(replacements).forEach(key => {
@@ -200,11 +426,51 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
 
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
     
-    const pdf = await page.pdf({
-      format: 'Letter',
+    // Configurar viewport para mejor renderizado (508.3 x 285.7 mm)
+    // 508.3 mm = 1442 puntos, 285.7 mm = 810 puntos (1 mm = 2.83465 puntos)
+    await page.setViewport({
+      width: 1442, // 508.3 mm en puntos
+      height: 810, // 285.7 mm en puntos
+      deviceScaleFactor: 2 // Mejor calidad de imagen
+    });
+    
+    // Obtener la ruta base del template para usar rutas relativas
+    const templatePath = path.join(__dirname, '../templates/pdf-factura.html');
+    const templateDir = path.dirname(templatePath);
+    
+    // Establecer el contenido HTML con la ruta base para recursos
+    await page.setContent(html, { 
+      waitUntil: ['networkidle0', 'domcontentloaded'],
+      timeout: 30000
+    });
+    
+    // Esperar a que las imágenes se carguen completamente
+    try {
+      await page.evaluate(() => {
+        return Promise.all(
+          Array.from(document.images).map(img => {
+            if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve(); // Continuar aunque falle
+              setTimeout(() => resolve(), 5000); // Timeout de 5 segundos
+            });
+          })
+        );
+      });
+    } catch (error) {
+      console.log('Error esperando imágenes:', error);
+    }
+    
+    // Esperar un poco más para asegurar que todo se renderice
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const pdfBuffer = await page.pdf({
+      width: '508.3mm', // Ancho: 508.3 mm
+      height: '285.7mm', // Alto: 285.7 mm
       printBackground: true,
+      preferCSSPageSize: false,
       margin: {
         top: '0',
         right: '0',
@@ -213,7 +479,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       }
     });
 
-    return pdf;
+    return pdfBuffer;
   } finally {
     await browser.close();
   }
@@ -257,19 +523,22 @@ function organizarServiciosPorCategoria(datos) {
   todosServicios.forEach(servicio => {
     const categoria = servicio.categoria?.toLowerCase() || '';
     const nombre = servicio.nombre?.toLowerCase() || '';
+    const descripcion = servicio.descripcion?.toLowerCase() || '';
 
     if (nombre.includes('cake') || nombre.includes('torta')) {
       organizados.cake.push(servicio);
-    } else if (categoria.includes('decoración') || categoria.includes('decoration')) {
+    } else if (categoria.includes('decoración') || categoria.includes('decoration') || nombre.includes('decoración') || nombre.includes('decoration')) {
       organizados.decoration.push(servicio);
-    } else if (categoria.includes('bebida') || categoria.includes('bar') || categoria.includes('licor')) {
+    } else if (categoria.includes('bebida') || categoria.includes('bar') || categoria.includes('licor') || nombre.includes('bar') || nombre.includes('bebida') || nombre.includes('champaña') || nombre.includes('sidra')) {
       organizados.barService.push(servicio);
-    } else if (categoria.includes('comida') || categoria.includes('catering') || categoria.includes('food')) {
+    } else if (categoria.includes('comida') || categoria.includes('catering') || categoria.includes('food') || nombre.includes('comida') || nombre.includes('catering') || nombre.includes('pasapalo') || nombre.includes('dulce')) {
       organizados.catering.push(servicio);
-    } else if (categoria.includes('fotografía') || categoria.includes('video') || categoria.includes('equipo') || categoria.includes('photobooth') || categoria.includes('hora loca')) {
+    } else if (categoria.includes('fotografía') || categoria.includes('video') || categoria.includes('equipo') || categoria.includes('photobooth') || categoria.includes('hora loca') || nombre.includes('photobooth') || nombre.includes('foto') || nombre.includes('video') || nombre.includes('hora loca') || nombre.includes('hora adicional')) {
       organizados.specials.push(servicio);
-    } else if (categoria.includes('coordinación') || categoria.includes('coordinador') || categoria.includes('mesero') || categoria.includes('bartender')) {
+    } else if (categoria.includes('coordinación') || categoria.includes('coordinador') || categoria.includes('mesero') || categoria.includes('bartender') || categoria.includes('service') || nombre.includes('coordinador') || nombre.includes('mesero') || nombre.includes('bartender') || nombre.includes('personal de servicio') || nombre.includes('waiters') || descripcion.includes('coordinator') || descripcion.includes('waiters') || descripcion.includes('bartender')) {
       organizados.serviceCoord.push(servicio);
+    } else if (categoria.includes('venue') || nombre.includes('venue') || nombre.includes('salón')) {
+      organizados.venue.push(servicio);
     } else {
       organizados.specials.push(servicio);
     }
