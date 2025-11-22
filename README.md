@@ -134,6 +134,16 @@ DiamondSistem/
 
 **La instalación local es el método probado y funcional.** Sigue las instrucciones para Windows o Mac más abajo.
 
+### 🗄️ Base de Datos en la Nube (Supabase) - Opcional
+
+Si quieres trabajar desde varios ordenadores o desde cualquier lugar, puedes usar **Supabase** (PostgreSQL en la nube):
+- ✅ Misma base de datos en todos tus ordenadores
+- ✅ Accesible desde cualquier lugar con internet
+- ✅ Backups automáticos
+- ✅ Gratis hasta cierto límite
+
+**Ver:** `GUIA_SUPABASE.md` para instrucciones completas.
+
 ### 🐳 Docker (Experimental - No Recomendado)
 
 Docker está disponible pero **tiene problemas conocidos**:
