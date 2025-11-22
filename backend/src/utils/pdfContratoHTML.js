@@ -8,8 +8,22 @@ const path = require('path');
  * @returns {Buffer} - PDF como buffer
  */
 async function generarContratoHTML(contrato) {
-  // Leer el template HTML
-  const templatePath = path.join(__dirname, '../templates/pdf-contrato.html');
+  // Detectar compañía primero para saber qué template usar
+  const salon = contrato.salones || null;
+  const lugarSalon = contrato.lugar_salon || '';
+  const nombreSalon = (salon?.nombre || lugarSalon || '').toLowerCase();
+  let esRevolution = false;
+  
+  if (nombreSalon) {
+    if ((nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) || nombreSalon.includes('kendall')) {
+      esRevolution = true;
+    }
+  }
+
+  // Leer el template HTML según la compañía
+  const templatePath = esRevolution 
+    ? path.join(__dirname, '../templates/pdf-contrato.html')
+    : path.join(__dirname, '../templates/pdf-contrato-diamond.html');
   let html = fs.readFileSync(templatePath, 'utf8');
 
   // Organizar servicios por categoría (usar la misma función de ofertas)
@@ -482,6 +496,7 @@ async function generarContratoHTML(contrato) {
 
   // Preparar datos para reemplazar en el template
   const nombreCliente = contrato.clientes?.nombre_completo || 'N/A';
+  const nombreClientePrimero = nombreCliente.split(' ')[0] || nombreCliente;
   const nombreVendedor = contrato.vendedores?.nombre_completo || 'N/A';
   const telefonoVendedor = '+1 (786) 332-7065';
   const emailVendedor = 'diamondvenueatdoral@gmail.com';
@@ -494,16 +509,11 @@ async function generarContratoHTML(contrato) {
   const emailCliente = contrato.clientes?.email || '';
   const telefonoCliente = contrato.clientes?.telefono || '';
 
-  // Obtener información del salón y detectar compañía
-  const salon = contrato.salones || null;
-  const lugarSalon = contrato.lugar_salon || '';
+  // Obtener información del salón y detectar compañía (usar variables ya declaradas)
   let direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
-  let esRevolution = false; // Doral/Kendall = Revolution, Diamond = otra compañía
   let logoPath = '';
   let nombreCompania = 'Diamond Venue';
   
-  // Usar nombre del salón o lugar_salon para detectar
-  const nombreSalon = (salon?.nombre || lugarSalon || '').toLowerCase();
   console.log('DEBUG - Detección de salón:', { 
     salonNombre: salon?.nombre, 
     lugarSalon: lugarSalon,
@@ -790,26 +800,46 @@ async function generarContratoHTML(contrato) {
   }
 
   // Cargar fondo general para package-card (servicios, términos, etc.)
-  const fondoGeneralPath = path.join(__dirname, '../templates/assets/fondoRevolutionGeneral.png');
   let packageCardBackground = '';
   
-  if (fs.existsSync(fondoGeneralPath)) {
-    try {
-      const fondoGeneralBuffer = fs.readFileSync(fondoGeneralPath);
-      const fondoGeneralBase64 = `data:image/png;base64,${fondoGeneralBuffer.toString('base64')}`;
-      packageCardBackground = `background-image: url("${fondoGeneralBase64}");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            opacity: 1;`;
-      console.log('Fondo general cargado correctamente para package-card');
-    } catch (error) {
-      console.error('Error al cargar fondo general:', error);
-      packageCardBackground = '';
+  if (esRevolution) {
+    // Fondo para Revolution
+    const fondoGeneralPath = path.join(__dirname, '../templates/assets/fondoRevolutionGeneral.png');
+    if (fs.existsSync(fondoGeneralPath)) {
+      try {
+        const fondoGeneralBuffer = fs.readFileSync(fondoGeneralPath);
+        const fondoGeneralBase64 = `data:image/png;base64,${fondoGeneralBuffer.toString('base64')}`;
+        packageCardBackground = `background-image: url("${fondoGeneralBase64}");
+              background-size: cover;
+              background-position: center;
+              background-repeat: no-repeat;
+              opacity: 1;`;
+        console.log('Fondo general cargado correctamente para package-card (Revolution)');
+      } catch (error) {
+        console.error('Error al cargar fondo general:', error);
+        packageCardBackground = '';
+      }
     }
   } else {
-    console.log('Fondo general no encontrado en:', fondoGeneralPath);
-    packageCardBackground = '';
+    // Fondo para Diamond
+    const fondoDiamondPath = path.join(__dirname, '../../../fondoDiamond.png');
+    if (fs.existsSync(fondoDiamondPath)) {
+      try {
+        const fondoDiamondBuffer = fs.readFileSync(fondoDiamondPath);
+        const fondoDiamondBase64 = `data:image/png;base64,${fondoDiamondBuffer.toString('base64')}`;
+        packageCardBackground = `background-image: url("${fondoDiamondBase64}");
+              background-size: cover;
+              background-position: center;
+              background-repeat: no-repeat;
+              opacity: 1;`;
+        console.log('Fondo Diamond cargado correctamente para contratos');
+      } catch (error) {
+        console.error('Error al cargar fondo Diamond:', error);
+        packageCardBackground = '';
+      }
+    } else {
+      console.log('Fondo Diamond no encontrado en:', fondoDiamondPath);
+    }
   }
 
   // Generar HTML para homenajeado en la portada
@@ -844,7 +874,7 @@ async function generarContratoHTML(contrato) {
         <div class="page-content" style="padding: 0; height: 100%;">
           <div class="package-card" style="display: block;">
             <div style="padding: 30px 50px 25px 50px; text-align: left;">
-              <h2 style="font-size: 3rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
+              <h2 style="font-size: 3rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: #ffffff; font-family: 'Poppins', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
             </div>
             <div class="package-content" style="width: 100%; padding: 0 50px 50px 50px; grid-template-columns: 1fr 1fr 1fr; gap: 45px;">
               ${htmlServiciosAdicionales}
@@ -866,6 +896,7 @@ async function generarContratoHTML(contrato) {
     '{{TERMS_AND_CONDITIONS}}': termsAndConditions,
     '{{VENDOR_FULL_NAME}}': nombreVendedor,
     '{{CLIENT_FULL_NAME}}': nombreCliente,
+    '{{CLIENT_NAME_FIRST}}': nombreClientePrimero,
     '{{CURRENT_DATE}}': new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
   };
 
