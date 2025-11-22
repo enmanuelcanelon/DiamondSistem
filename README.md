@@ -130,6 +130,21 @@ DiamondSistem/
 
 ## 🚀 Instalación y Configuración
 
+### ⚠️ Método Recomendado: Instalación Local
+
+**La instalación local es el método probado y funcional.** Sigue las instrucciones para Windows o Mac más abajo.
+
+### 🐳 Docker (Experimental - No Recomendado)
+
+Docker está disponible pero **tiene problemas conocidos**:
+- ❌ Los frontends (excepto vendedor) no cargan correctamente
+- ❌ Errores de autenticación y conexión
+- ❌ Problemas con módulos compartidos
+
+Si quieres intentar Docker, ver `GUIA_DOCKER.md`, pero **NO se recomienda para desarrollo o producción**.
+
+---
+
 ### 📋 Requisitos Previos
 
 #### Windows
