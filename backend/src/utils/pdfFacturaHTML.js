@@ -9,9 +9,7 @@ const path = require('path');
  * @returns {Buffer} - PDF como buffer
  */
 async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
-  // Leer el template HTML
-  const templatePath = path.join(__dirname, '../templates/pdf-factura.html');
-  let html = fs.readFileSync(templatePath, 'utf8');
+  // Leer el template HTML (se determinará cuál usar después de detectar la compañía)
 
   // Organizar servicios por categoría
   const serviciosOrganizados = organizarServiciosPorCategoria(datos);
@@ -26,8 +24,12 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
   // Preparar datos para reemplazar en el template
   const nombrePaquete = datos.paquetes?.nombre || 'Deluxe Package';
   const nombrePaqueteLimpio = nombrePaquete.includes('Diamond') 
-    ? 'Diamond' 
-    : nombrePaquete.split(' ')[0] || 'Diamond';
+    ? nombrePaquete.replace('Diamond', '').trim() || 'Diamond Deluxe'
+    : nombrePaquete.split(' ')[0] || 'Diamond Deluxe';
+  
+  // Obtener primer nombre del cliente para Diamond
+  const nombreClienteCompleto = datos.clientes?.nombre_completo || 'N/A';
+  const nombreClientePrimero = nombreClienteCompleto.split(' ')[0] || nombreClienteCompleto;
 
   const nombreCliente = datos.clientes?.nombre_completo || 'N/A';
   const nombreVendedor = datos.vendedores?.nombre_completo || datos.vendedor?.nombre_completo || 'N/A';
@@ -68,6 +70,12 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       nombreCompania = 'Diamond Venue';
     }
   }
+
+  // Leer el template HTML según la compañía
+  const templatePath = esRevolution 
+    ? path.join(__dirname, '../templates/pdf-factura.html')
+    : path.join(__dirname, '../templates/pdf-factura-diamond.html');
+  let html = fs.readFileSync(templatePath, 'utf8');
 
   // Calcular precios
   const precioPaquete = parseFloat(datos.subtotal || datos.precio_base || datos.precio_paquete_base || 0);
@@ -291,7 +299,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
         <div class="page-content" style="padding: 0; height: 100%;">
           <div class="package-card">
             <div style="padding: 15px 50px 10px 50px; text-align: left; flex-shrink: 0;">
-              <h2 style="font-size: 2.2rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
+              <h2 style="font-size: 2.2rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: #ffffff; font-family: 'Poppins', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
             </div>
             <div class="package-content" style="flex: 1; padding-top: 0; overflow: hidden;">
               ${htmlServiciosAdicionales}
@@ -359,27 +367,47 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     console.log('Fondo no encontrado o no es Revolution. Path:', fondoPath, 'esRevolution:', esRevolution);
   }
 
-  // Cargar fondo general para package-card (solo Revolution)
-  const fondoGeneralPath = path.join(__dirname, '../templates/assets/fondoRevolutionGeneral.png');
+  // Cargar fondo general para package-card
   let packageCardBackground = '';
   
-  if (esRevolution && fs.existsSync(fondoGeneralPath)) {
-    try {
-      const fondoGeneralBuffer = fs.readFileSync(fondoGeneralPath);
-      const fondoGeneralBase64 = `data:image/png;base64,${fondoGeneralBuffer.toString('base64')}`;
-      packageCardBackground = `background-image: url("${fondoGeneralBase64}");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            opacity: 1;`;
-      console.log('Fondo general cargado correctamente para ofertas (Revolution)');
-    } catch (error) {
-      console.error('Error al cargar fondo general:', error);
-      packageCardBackground = '';
+  if (esRevolution) {
+    // Fondo para Revolution
+    const fondoGeneralPath = path.join(__dirname, '../templates/assets/fondoRevolutionGeneral.png');
+    if (fs.existsSync(fondoGeneralPath)) {
+      try {
+        const fondoGeneralBuffer = fs.readFileSync(fondoGeneralPath);
+        const fondoGeneralBase64 = `data:image/png;base64,${fondoGeneralBuffer.toString('base64')}`;
+        packageCardBackground = `background-image: url("${fondoGeneralBase64}");
+              background-size: cover;
+              background-position: center;
+              background-repeat: no-repeat;
+              opacity: 1;`;
+        console.log('Fondo general cargado correctamente para ofertas (Revolution)');
+      } catch (error) {
+        console.error('Error al cargar fondo general:', error);
+        packageCardBackground = '';
+      }
     }
   } else {
-    console.log('Fondo general no aplicado (no es Revolution o no existe)');
-    packageCardBackground = '';
+    // Fondo para Diamond
+    const fondoDiamondPath = path.join(__dirname, '../../../fondoDiamond.png');
+    if (fs.existsSync(fondoDiamondPath)) {
+      try {
+        const fondoDiamondBuffer = fs.readFileSync(fondoDiamondPath);
+        const fondoDiamondBase64 = `data:image/png;base64,${fondoDiamondBuffer.toString('base64')}`;
+        packageCardBackground = `background-image: url("${fondoDiamondBase64}");
+              background-size: cover;
+              background-position: center;
+              background-repeat: no-repeat;
+              opacity: 1;`;
+        console.log('Fondo Diamond cargado correctamente para ofertas');
+      } catch (error) {
+        console.error('Error al cargar fondo Diamond:', error);
+        packageCardBackground = '';
+      }
+    } else {
+      console.log('Fondo Diamond no encontrado en:', fondoDiamondPath);
+    }
   }
 
   // Reemplazar placeholders en el HTML
@@ -388,6 +416,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     '{{SERVICIOS_PAQUETE}}': htmlServiciosPaquete,
     '{{SERVICIOS_ADICIONALES}}': htmlSeccionAdicionales,
     '{{CLIENT_NAME}}': nombreCliente,
+    '{{CLIENT_NAME_FIRST}}': nombreClientePrimero,
     '{{VENDEDOR_NAME}}': nombreVendedor,
     '{{VENDEDOR_PHONE}}': telefonoVendedor,
     '{{VENDEDOR_EMAIL}}': emailVendedor,

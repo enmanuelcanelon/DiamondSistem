@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diamond Venue - Propuesta de Oferta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Great+Vibes&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0a0510;
+            color: #ffffff;
+            width: 508.3mm;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        .page {
+            width: 508.3mm;
+            min-height: 285.7mm;
+            max-height: 285.7mm;
+            position: relative;
+            page-break-after: always;
+            background-color: #0a0510;
+            padding: 0;
+            overflow: hidden;
+            display: block;
+            z-index: 1;
+        }
+
+        .page:not(.page-1) {
+            background-color: #dfd9be;
+        }
+
+        /* PORTADA DIAMOND - PÁGINA 1 */
+        .page-1 {
+            background: radial-gradient(circle at 50% 0%, #5e3685 0%, #2d1645 50%, #12061f 100%);
+            position: relative;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .diamond-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            min-height: 285.7mm;
+            max-height: 285.7mm;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #7c5ac2;
+            box-shadow: 0 0 50px rgba(124, 90, 194, 0.2);
+        }
+
+        .diamond-card::before {
+            content: "";
+            position: absolute;
+            top: 15px; left: 15px; right: 15px; bottom: 15px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .diamond-header {
+            text-align: center;
+            padding-top: 40px;
+            z-index: 2;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .logo-container {
+            margin-bottom: 12px;
+        }
+
+        .logo-icon {
+            font-size: 4.5rem;
+            background: linear-gradient(to bottom, #fff8db 0%, #d4af37 50%, #996515 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.5));
+        }
+
+        .venue-title {
+            font-family: 'Cinzel', serif;
+            color: #d4af37;
+            font-size: 1.3rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-top: 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .main-title {
+            font-family: 'Great Vibes', cursive;
+            font-size: 6rem;
+            margin: 12px 0 5px 0;
+            line-height: 1.1;
+            background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 2px 0px rgba(0,0,0,0.5));
+            transform: rotate(-2deg);
+        }
+
+        .package-bar {
+            background: linear-gradient(90deg, 
+                rgba(45,22,69,0) 0%, 
+                rgba(94,54,133,0.8) 20%, 
+                rgba(94,54,133,0.8) 80%, 
+                rgba(45,22,69,0) 100%);
+            width: 100%;
+            padding: 12px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-top: 1px solid #8a6cb8;
+            border-bottom: 1px solid #8a6cb8;
+        }
+
+        .package-bar span {
+            font-family: 'Cinzel', serif;
+            font-size: 1.8rem;
+            color: #e6cfa5;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .diamond-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding: 0 60px 35px 60px;
+            gap: 50px;
+            z-index: 2;
+            flex: 1;
+            align-content: start;
+        }
+
+        .details-box {
+            text-align: left;
+        }
+
+        .details-box h2 {
+            font-family: 'Cinzel', serif;
+            color: white;
+            font-size: 1.6rem;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #d4af37;
+            display: inline-block;
+            padding-bottom: 6px;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 14px;
+            font-size: 1.15rem;
+            align-items: baseline;
+        }
+
+        .info-row strong {
+            color: #d4af37;
+            min-width: 100px;
+            font-weight: 600;
+        }
+
+        .info-row span {
+            color: #f0f0f0;
+            font-weight: 300;
+        }
+
+        .signature-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .proposal-label {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+            color: #ddd;
+        }
+
+        .signature-name {
+            font-family: 'Great Vibes', cursive;
+            font-size: 5rem;
+            color: white;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+            margin: 15px 0 25px 0;
+        }
+
+        .contract-date {
+            border-top: 1px solid rgba(255,255,255,0.3);
+            padding-top: 10px;
+            font-size: 1rem;
+            color: #bbb;
+            width: 85%;
+        }
+
+        .diamond-footer {
+            background: rgba(0,0,0,0.4);
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.95rem;
+            z-index: 2;
+            flex-shrink: 0;
+        }
+
+        .footer-left, .footer-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .icon-gold { 
+            color: #d4af37; 
+            margin-right: 5px; 
+        }
+
+        .icon-whatsapp { 
+            color: #25D366; 
+            margin-right: 5px; 
+            font-size: 1rem;
+        }
+
+        /* PÁGINAS INTERNAS - SERVICIOS E INVERSIÓN */
+        .package-card {
+            background-color: #dfd9be;
+            {{PACKAGE_CARD_BACKGROUND}}
+            width: 100%;
+            height: 100%;
+            min-height: 285.7mm;
+            display: flex;
+            flex-direction: column;
+            box-shadow: none;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            page-break-inside: avoid;
+        }
+
+        .package-content {
+            flex: 1;
+            padding: 20px 50px 30px 50px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 25px;
+            row-gap: 20px;
+            width: 100%;
+            color: #ffffff;
+            height: 100%;
+            align-content: start;
+            overflow: hidden;
+        }
+
+        .package-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .package-info-block {
+            margin-bottom: 30px;
+        }
+
+        .package-info-block h3 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            color: #ffffff;
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.2;
+        }
+
+        .package-info-block ul {
+            list-style: none;
+            margin-bottom: 0;
+            padding: 0;
+        }
+
+        .package-info-block p,
+        .package-info-block li {
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: #ffffff;
+            font-weight: 400;
+            margin-bottom: 4px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* ESTILOS PARA TABLA DE INVERSIÓN */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .info-table-row {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .info-table-label {
+            text-align: left;
+            color: #ffffff;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 12px 15px;
+        }
+
+        .info-table-value {
+            text-align: right;
+            color: #ffffff;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 12px 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- PÁGINA 1: PORTADA DIAMOND -->
+    <div class="page page-1">
+        <div class="diamond-card">
+            <div class="diamond-header">
+                <div class="logo-container">
+                    <i class="fa-regular fa-gem logo-icon"></i>
+                    <div class="venue-title">{{NOMBRE_COMPANIA}}</div>
+                </div>
+                <div class="main-title">{{PACKAGE_NAME}}</div>
+                <div class="package-bar">
+                    <span>Package</span>
+                </div>
+            </div>
+            <div class="diamond-content">
+                <div class="details-box">
+                    <h2>Event Details</h2>
+                    <div class="info-row">
+                        <strong>Name:</strong> <span>{{CLIENT_NAME}}</span>
+                    </div>
+                    <div class="info-row">
+                        <strong>Event:</strong> <span>{{EVENT_TYPE}}</span>
+                    </div>
+                    <div class="info-row">
+                        <strong>Location:</strong> <span>{{SALON_DIRECCION}}</span>
+                    </div>
+                    <div class="info-row">
+                        <strong>Date:</strong> <span>{{EVENT_DATE}}</span>
+                    </div>
+                    <div class="info-row">
+                        <strong>Time:</strong> <span>{{EVENT_TIME}}</span>
+                    </div>
+                    <div class="info-row">
+                        <strong>Guests:</strong> <span>{{GUEST_COUNT}}</span>
+                    </div>
+                    <br>
+                    <div class="info-row">
+                        <strong>Phone:</strong> <span>{{CLIENT_PHONE}}</span>
+                    </div>
+                </div>
+                <div class="signature-box">
+                    <p class="proposal-label">EVENT PROPOSAL FOR:</p>
+                    <div class="signature-name">{{CLIENT_NAME_FIRST}}</div>
+                    <div class="contract-date">
+                        Offer Creation Date: <strong>{{OFFER_CREATION_DATE}}</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="diamond-footer">
+                <div class="footer-left">
+                    <span><i class="fa-brands fa-whatsapp icon-whatsapp"></i> {{VENDEDOR_PHONE}}</span>
+                </div>
+                <div class="footer-right">
+                    <span><i class="fa-brands fa-instagram icon-gold"></i> diamondvenuedoral</span>
+                    <a href="https://www.diamondvenuedoral.com" target="_blank">www.diamondvenuedoral.com</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: SERVICIOS -->
+    <div class="page page-2">
+        <div class="page-content" style="padding: 0; height: 100%;">
+            <div class="package-card">
+                <div style="padding: 15px 50px 10px 50px; text-align: left; flex-shrink: 0;">
+                    <h2 style="font-size: 2.2rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: #ffffff; font-family: 'Poppins', sans-serif; margin: 0; line-height: 1.2;">PAQUETE {{PACKAGE_NAME}}</h2>
+                </div>
+                <div class="package-content" style="flex: 1; padding-top: 0; overflow: hidden;">
+                    {{SERVICIOS_PAQUETE}}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PÁGINA 2B: SERVICIOS ADICIONALES (si hay) -->
+    {{SERVICIOS_ADICIONALES}}
+
+    <!-- PÁGINA 3: INVERSIÓN -->
+    <div class="page page-3">
+        <div class="page-content" style="padding: 0; height: 100%;">
+            <div class="package-card" style="display: flex; flex-direction: column; height: 100%;">
+                <div style="padding: 30px 50px 20px 50px; text-align: left; flex-shrink: 0;">
+                    <h2 style="font-size: 2.4rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: #ffffff; font-family: 'Poppins', sans-serif; margin: 0; line-height: 1.2;">Inversión</h2>
+                </div>
+                <div style="padding: 0 50px 45px 50px; flex: 1; display: flex; flex-direction: column; align-content: start;">
+                    <!-- Desglose de Inversión -->
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="font-size: 1.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: #ffffff; font-family: 'Poppins', sans-serif; margin-bottom: 20px;">Desglose de Inversión</h3>
+                        <table class="info-table">
+                            <tr class="info-table-row">
+                                <td class="info-table-label">Precio del Paquete</td>
+                                <td class="info-table-value">{{PACKAGE_PRICE}}</td>
+                            </tr>
+                            <tr class="info-table-row">
+                                <td class="info-table-label">Impuesto (7%)</td>
+                                <td class="info-table-value">{{TAX_AMOUNT}}</td>
+                            </tr>
+                            <tr class="info-table-row">
+                                <td class="info-table-label">Tarifa de Servicio (18%)</td>
+                                <td class="info-table-value">{{SERVICE_FEE}}</td>
+                            </tr>
+                            <tr class="info-table-row" style="border-top: 2px solid #ffffff;">
+                                <td class="info-table-label" style="font-weight: 700; padding-top: 15px; font-size: 1.2rem; color: #ffffff;">TOTAL A PAGAR</td>
+                                <td class="info-table-value" style="font-weight: 700; padding-top: 15px; font-size: 1.2rem; color: #ffffff;">{{TOTAL_TO_PAY}}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Nota Importante -->
+                    <div style="margin-top: auto;">
+                        <div style="font-size: 11px; line-height: 1.6; color: #ffffff; padding: 15px; background-color: rgba(0, 0, 0, 0.3); border-left: 3px solid #ffffff;">
+                            <strong style="color: #ffffff; font-family: 'Poppins', sans-serif;">NOTA IMPORTANTE:</strong><br>
+                            ESTA OFERTA ES VALIDA POR 24 HORAS DESPUES DE SER RECIBIDA
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
