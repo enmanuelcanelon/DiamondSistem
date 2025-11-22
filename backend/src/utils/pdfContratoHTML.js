@@ -184,7 +184,9 @@ async function generarContratoHTML(contrato) {
 
   const serviciosAdicionales = serviciosAdicionalesOrganizados;
 
-  // Función para generar HTML de servicios por categoría (formato como ofertas)
+  // Función para generar HTML de servicios por categoría
+  // Si esPaquete es true, usa el formato elegante de 3 columnas con barra lateral
+  // Si esPaquete es false, usa el formato de tarjetas para servicios adicionales
   const generarHTMLServicios = (serviciosPorCategoria, esPaquete) => {
     const categorias = [
       { key: 'venue', titulo: 'VENUE', default: 'Elegant table setting with beautiful centerpieces, runners, charger plates napkins and rings.' },
@@ -196,105 +198,276 @@ async function generarContratoHTML(contrato) {
       { key: 'serviceCoord', titulo: 'SERVICE COORD & DESIGN', default: 'Full set up & break down. Event Coordinator. Waiters & Bartender. Event planning & coordination are included.' }
     ];
 
-    let html = '';
-    categorias.forEach(cat => {
-      const servicios = serviciosPorCategoria[cat.key] || [];
-      if (servicios.length > 0 || (esPaquete && cat.default)) {
-        const textos = servicios.length > 0
-          ? servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t).join('. ')
-          : cat.default;
-        
-        if (textos) {
-          html += `
-            <div class="service-card-clean">
-              <div class="service-card-title-clean">${cat.titulo}</div>
-              <div class="service-content-clean">${textos}</div>
-            </div>`;
-        }
-      }
-    });
+    // Si es paquete, usar formato de 3 columnas
+    if (esPaquete) {
+      // Organizar categorías en 3 columnas
+      const col1 = ['venue', 'barService', 'cake'];
+      const col2 = ['catering', 'serviceCoord'];
+      const col3 = ['decoration', 'specials'];
+      
+      let htmlCol1 = '<div class="package-col">';
+      let htmlCol2 = '<div class="package-col">';
+      let htmlCol3 = '<div class="package-col">';
 
-    return html;
+      // Función auxiliar para generar HTML de una categoría
+      const generarCategoriaHTML = (cat, servicios) => {
+        if (servicios.length > 0 || cat.default) {
+          const items = servicios.length > 0
+            ? servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t)
+            : (cat.default ? [cat.default] : []);
+          
+          if (items.length > 0) {
+            let html = `
+              <div class="package-info-block">
+                <h3>${cat.titulo}</h3>`;
+            
+            // Si solo hay un item y es un default simple, usar <p>, sino usar lista
+            if (items.length === 1 && items[0].indexOf('.') === -1 && items[0].length < 100) {
+              html += `<p>${items[0]}</p>`;
+            } else {
+              html += `<ul>`;
+              items.forEach(item => {
+                // Si el item contiene puntos, dividirlo en múltiples items
+                if (item.includes('. ')) {
+                  const subItems = item.split('. ').filter(s => s.trim());
+                  subItems.forEach(subItem => {
+                    html += `<li>${subItem.trim()}</li>`;
+                  });
+                } else {
+                  html += `<li>${item}</li>`;
+                }
+              });
+              html += `</ul>`;
+            }
+            
+            html += `</div>`;
+            return html;
+          }
+        }
+        return '';
+      };
+
+      // Columna 1
+      col1.forEach(key => {
+        const cat = categorias.find(c => c.key === key);
+        if (cat) {
+          const servicios = serviciosPorCategoria[cat.key] || [];
+          htmlCol1 += generarCategoriaHTML(cat, servicios);
+        }
+      });
+      htmlCol1 += '</div>';
+
+      // Columna 2
+      col2.forEach(key => {
+        const cat = categorias.find(c => c.key === key);
+        if (cat) {
+          const servicios = serviciosPorCategoria[cat.key] || [];
+          htmlCol2 += generarCategoriaHTML(cat, servicios);
+        }
+      });
+      htmlCol2 += '</div>';
+
+      // Columna 3
+      col3.forEach(key => {
+        const cat = categorias.find(c => c.key === key);
+        if (cat) {
+          const servicios = serviciosPorCategoria[cat.key] || [];
+          htmlCol3 += generarCategoriaHTML(cat, servicios);
+        }
+      });
+      htmlCol3 += '</div>';
+
+      return htmlCol1 + htmlCol2 + htmlCol3;
+    } else {
+      // Formato antiguo para servicios adicionales
+      let html = '';
+      categorias.forEach(cat => {
+        const servicios = serviciosPorCategoria[cat.key] || [];
+        if (servicios.length > 0 || (esPaquete && cat.default)) {
+          const textos = servicios.length > 0
+            ? servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t).join('. ')
+            : cat.default;
+          
+          if (textos) {
+            html += `
+              <div class="service-card-clean">
+                <div class="service-card-title-clean">${cat.titulo}</div>
+                <div class="service-content-clean">${textos}</div>
+              </div>`;
+          }
+        }
+      });
+
+      return html;
+    }
   };
 
-  // Generar HTML de servicios adicionales en formato de tabla profesional
-  // Usar directamente serviciosAdicionalesFiltrados para asegurar que TODOS se muestren
+  // Generar HTML de servicios adicionales en formato elegante (mismo estilo que paquete)
+  // IMPORTANTE: Solo mostrar servicios que realmente son adicionales/extras, NO usar defaults del paquete
   const generarHTMLServiciosAdicionales = () => {
     if (!serviciosAdicionalesFiltrados || serviciosAdicionalesFiltrados.length === 0) {
       return '';
     }
 
-    let html = '';
-    let totalAdicionales = 0;
+    // Organizar servicios adicionales por categoría
+    const serviciosAdicionalesPorCategoria = {
+      venue: [],
+      cake: [],
+      decoration: [],
+      specials: [],
+      barService: [],
+      catering: [],
+      serviceCoord: []
+    };
 
-    console.log(`=== DEBUG: Total servicios adicionales filtrados: ${serviciosAdicionalesFiltrados.length} ===`);
-    
-    // Ordenar servicios para mostrar primero los más importantes
-    const serviciosOrdenados = [...serviciosAdicionalesFiltrados].sort((a, b) => {
-      const nombreA = (a.servicios?.nombre || '').toLowerCase();
-      const nombreB = (b.servicios?.nombre || '').toLowerCase();
-      
-      // Priorizar servicios importantes
-      if (nombreA.includes('hora extra') || nombreA.includes('horaextra')) return -1;
-      if (nombreB.includes('hora extra') || nombreB.includes('horaextra')) return 1;
-      if (nombreA.includes('photobooth') || nombreA.includes('print')) return -1;
-      if (nombreB.includes('photobooth') || nombreB.includes('print')) return 1;
-      
-      return nombreA.localeCompare(nombreB);
-    });
-    
-    serviciosOrdenados.forEach(cs => {
+    serviciosAdicionalesFiltrados.forEach(cs => {
       const servicio = cs.servicios || {};
-      const nombre = servicio.nombre || 'Servicio';
-      const descripcion = servicio.descripcion || '';
+      const categoria = servicio.categoria?.toLowerCase() || '';
+      const nombre = servicio.nombre?.toLowerCase() || '';
       const cantidad = cs.cantidad || 1;
-      const precioUnitario = parseFloat(cs.precio_unitario || 0);
-      const subtotal = parseFloat(cs.subtotal || precioUnitario * cantidad);
-      totalAdicionales += subtotal;
       
-      console.log(`✓ Agregando: ${nombre} | Cantidad: ${cantidad} | Precio: $${precioUnitario} | Subtotal: $${subtotal}`);
-      
-      // Formato: Nombre - Descripción (si existe y es diferente)
-      let descripcionCompleta = nombre;
-      if (descripcion && descripcion.trim() && descripcion !== nombre) {
-        descripcionCompleta += `: ${descripcion}`;
-      }
-      
-      // Agregar cantidad si es mayor a 1
+      // Formatear descripción con cantidad si es mayor a 1
+      let descripcion = servicio.descripcion || servicio.nombre || '';
       if (cantidad > 1) {
-        descripcionCompleta += ` (x${cantidad})`;
+        descripcion = `${servicio.nombre || descripcion} (x${cantidad})`;
       }
       
-      html += `
-        <tr style="border-bottom: 1px solid #E0E0E0;">
-          <td style="padding: 12px 15px; font-size: 13px; color: #2C2C2C; font-weight: 400; width: 50%;">${descripcionCompleta}</td>
-          <td style="padding: 12px 15px; font-size: 13px; color: #2C2C2C; font-weight: 400; text-align: right; width: 25%;">$${precioUnitario.toFixed(2)} c/u</td>
-          <td style="padding: 12px 15px; font-size: 13px; color: #2C2C2C; font-weight: 600; text-align: right; width: 25%;">$${subtotal.toFixed(2)}</td>
-        </tr>`;
-    });
-    
-    console.log(`=== TOTAL CALCULADO: $${totalAdicionales.toFixed(2)} ===`);
+      const servicioFormateado = {
+        ...servicio,
+        descripcion: descripcion,
+        nombre: servicio.nombre || '',
+        cantidad: cantidad,
+        precio_unitario: parseFloat(cs.precio_unitario || 0),
+        subtotal: parseFloat(cs.subtotal || cs.precio_unitario * cantidad)
+      };
 
-    return `
-      <table class="info-table" style="margin-top: 20px; width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr style="border-bottom: 2px solid #000000; background-color: #F8F9FA;">
-            <td style="padding: 12px 15px; font-size: 12px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.8px; width: 50%;">Descripción</td>
-            <td style="padding: 12px 15px; font-size: 12px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.8px; text-align: right; width: 25%;">Precio Unitario</td>
-            <td style="padding: 12px 15px; font-size: 12px; font-weight: 700; color: #000000; text-transform: uppercase; letter-spacing: 0.8px; text-align: right; width: 25%;">Subtotal</td>
-          </tr>
-        </thead>
-        <tbody>
-          ${html}
-          <tr style="border-top: 2px solid #000000;">
-            <td style="padding: 12px 15px; font-size: 13px; font-weight: 700; color: #000000; padding-top: 15px;">TOTAL SERVICIOS ADICIONALES</td>
-            <td colspan="2" style="padding: 12px 15px; font-size: 13px; font-weight: 700; color: #000000; text-align: right; padding-top: 15px;">$${totalAdicionales.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
-          </tr>
-        </tbody>
-      </table>`;
+      // Categorizar igual que en organizarServiciosPorCategoria
+      if (nombre.includes('cake') || nombre.includes('torta')) {
+        serviciosAdicionalesPorCategoria.cake.push(servicioFormateado);
+      } else if (categoria.includes('decoración') || categoria.includes('decoration') || nombre.includes('decoración') || nombre.includes('decoration')) {
+        serviciosAdicionalesPorCategoria.decoration.push(servicioFormateado);
+      } else if (categoria.includes('bar') || nombre.includes('bar') || nombre.includes('bebida') || nombre.includes('cocktail') || nombre.includes('sidra') || nombre.includes('champaña') || nombre.includes('champagne')) {
+        serviciosAdicionalesPorCategoria.barService.push(servicioFormateado);
+      } else if (categoria.includes('catering') || nombre.includes('catering') || nombre.includes('comida') || nombre.includes('dinner') || nombre.includes('cheese') || nombre.includes('pasapalo') || nombre.includes('pasapalos')) {
+        serviciosAdicionalesPorCategoria.catering.push(servicioFormateado);
+      } else if (categoria.includes('servicio') || categoria.includes('coordin') || nombre.includes('mesero') || nombre.includes('waiter') || nombre.includes('coordinator') || nombre.includes('animador') || nombre.includes('profesional')) {
+        serviciosAdicionalesPorCategoria.serviceCoord.push(servicioFormateado);
+      } else if (nombre.includes('venue') || nombre.includes('salón') || nombre.includes('lounge') || nombre.includes('furniture')) {
+        serviciosAdicionalesPorCategoria.venue.push(servicioFormateado);
+      } else {
+        // SPECIALS: incluye photobooth, hora extra, fotografía, dulces, etc.
+        serviciosAdicionalesPorCategoria.specials.push(servicioFormateado);
+      }
+    });
+
+    // Generar HTML usando el formato de 3 columnas pero SIN defaults (solo servicios reales)
+    const categorias = [
+      { key: 'venue', titulo: 'VENUE' },
+      { key: 'cake', titulo: 'CAKE' },
+      { key: 'specials', titulo: 'SPECIALS' },
+      { key: 'decoration', titulo: 'DECORATION' },
+      { key: 'barService', titulo: 'BAR SERVICE' },
+      { key: 'catering', titulo: 'CATERING' },
+      { key: 'serviceCoord', titulo: 'SERVICE COORD & DESIGN' }
+    ];
+
+    // Organizar categorías en 3 columnas
+    const col1 = ['venue', 'barService', 'cake'];
+    const col2 = ['catering', 'serviceCoord'];
+    const col3 = ['decoration', 'specials'];
+    
+    let htmlCol1 = '<div class="package-col">';
+    let htmlCol2 = '<div class="package-col">';
+    let htmlCol3 = '<div class="package-col">';
+
+    // Función auxiliar para generar HTML de una categoría (SIN defaults)
+    const generarCategoriaHTML = (cat, servicios) => {
+      // Solo mostrar si hay servicios reales, NO usar defaults
+      if (servicios.length > 0) {
+        const items = servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t);
+        
+        if (items.length > 0) {
+          let html = `
+            <div class="package-info-block">
+              <h3>${cat.titulo}</h3>`;
+          
+          // Si solo hay un item simple, usar <p>, sino usar lista
+          if (items.length === 1 && items[0].indexOf('.') === -1 && items[0].length < 100) {
+            html += `<p>${items[0]}</p>`;
+          } else {
+            html += `<ul>`;
+            items.forEach(item => {
+              // Si el item contiene puntos, dividirlo en múltiples items
+              if (item.includes('. ')) {
+                const subItems = item.split('. ').filter(s => s.trim());
+                subItems.forEach(subItem => {
+                  html += `<li>${subItem.trim()}</li>`;
+                });
+              } else {
+                html += `<li>${item}</li>`;
+              }
+            });
+            html += `</ul>`;
+          }
+          
+          html += `</div>`;
+          return html;
+        }
+      }
+      return '';
+    };
+
+    // Columna 1
+    col1.forEach(key => {
+      const cat = categorias.find(c => c.key === key);
+      if (cat) {
+        const servicios = serviciosAdicionalesPorCategoria[cat.key] || [];
+        htmlCol1 += generarCategoriaHTML(cat, servicios);
+      }
+    });
+    htmlCol1 += '</div>';
+
+    // Columna 2
+    col2.forEach(key => {
+      const cat = categorias.find(c => c.key === key);
+      if (cat) {
+        const servicios = serviciosAdicionalesPorCategoria[cat.key] || [];
+        htmlCol2 += generarCategoriaHTML(cat, servicios);
+      }
+    });
+    htmlCol2 += '</div>';
+
+    // Columna 3
+    col3.forEach(key => {
+      const cat = categorias.find(c => c.key === key);
+      if (cat) {
+        const servicios = serviciosAdicionalesPorCategoria[cat.key] || [];
+        htmlCol3 += generarCategoriaHTML(cat, servicios);
+      }
+    });
+    htmlCol3 += '</div>';
+
+    return htmlCol1 + htmlCol2 + htmlCol3;
   };
 
-  // Calcular el total de servicios adicionales desde los servicios filtrados (igual que en la tabla)
+  // Función auxiliar para calcular total de servicios adicionales (mantener para desglose)
+  const calcularTotalServiciosAdicionales = () => {
+    if (!serviciosAdicionalesFiltrados || serviciosAdicionalesFiltrados.length === 0) {
+      return 0;
+    }
+    
+    let total = 0;
+    serviciosAdicionalesFiltrados.forEach(cs => {
+      const precioUnitario = parseFloat(cs.precio_unitario || 0);
+      const cantidad = cs.cantidad || 1;
+      const subtotal = parseFloat(cs.subtotal || precioUnitario * cantidad);
+      total += subtotal;
+    });
+    
+    return total;
+  };
+
+  // Calcular el total de servicios adicionales desde los servicios filtrados
   const totalServiciosAdicionalesCalculado = serviciosAdicionalesFiltrados.reduce((total, cs) => {
     const precioUnitario = parseFloat(cs.precio_unitario || 0);
     const cantidad = cs.cantidad || 1;
@@ -321,19 +494,43 @@ async function generarContratoHTML(contrato) {
   const emailCliente = contrato.clientes?.email || '';
   const telefonoCliente = contrato.clientes?.telefono || '';
 
-  // Obtener información del salón
+  // Obtener información del salón y detectar compañía
   const salon = contrato.salones || null;
+  const lugarSalon = contrato.lugar_salon || '';
   let direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
+  let esRevolution = false; // Doral/Kendall = Revolution, Diamond = otra compañía
+  let logoPath = '';
+  let nombreCompania = 'Diamond Venue';
   
-  if (salon) {
-    const nombreSalon = salon.nombre || '';
-    if (nombreSalon.toLowerCase().includes('doral')) {
+  // Usar nombre del salón o lugar_salon para detectar
+  const nombreSalon = (salon?.nombre || lugarSalon || '').toLowerCase();
+  console.log('DEBUG - Detección de salón:', { 
+    salonNombre: salon?.nombre, 
+    lugarSalon: lugarSalon,
+    nombreSalon: nombreSalon 
+  });
+  
+  if (nombreSalon) {
+    if (nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Doral<br>8726 NW 26th St<br>Doral, FL 33172';
-    } else if (nombreSalon.toLowerCase().includes('kendall')) {
+      esRevolution = true;
+      nombreCompania = 'Revolution Party Venues';
+      logoPath = path.join(__dirname, '../templates/assets/Logorevolution.png');
+      console.log('✓ Detectado como Revolution (Doral)');
+    } else if (nombreSalon.includes('kendall')) {
       direccionSalon = 'Salón Kendall<br>14271 Southwest 120th Street<br>Kendall, Miami, FL 33186';
-    } else if (nombreSalon.toLowerCase().includes('diamond')) {
+      esRevolution = true;
+      nombreCompania = 'Revolution Party Venues';
+      logoPath = path.join(__dirname, '../templates/assets/Logorevolution.png');
+      console.log('✓ Detectado como Revolution (Kendall)');
+    } else if (nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
+      esRevolution = false;
+      nombreCompania = 'Diamond Venue';
+      console.log('✓ Detectado como Diamond');
     }
+  } else {
+    console.log('⚠ No se pudo detectar el salón - usando Diamond por defecto');
   }
 
   // Obtener datos del desglose desde la oferta relacionada
@@ -540,13 +737,83 @@ async function generarContratoHTML(contrato) {
     </div>
   `;
 
-  // Determinar número de páginas
+  // Determinar número de páginas (ahora Términos y Firmas están en la misma página)
   const tieneServiciosAdicionales = serviciosAdicionalesFiltrados && serviciosAdicionalesFiltrados.length > 0;
-  const totalPages = tieneServiciosAdicionales ? 6 : 5;
+  const totalPages = tieneServiciosAdicionales ? 5 : 4;
   const page3Number = tieneServiciosAdicionales ? 3 : 4;
   const page4Number = tieneServiciosAdicionales ? 4 : 3;
   const page5Number = tieneServiciosAdicionales ? 5 : 4;
-  const page6Number = tieneServiciosAdicionales ? 6 : 5;
+
+  // Convertir logo a base64 si existe y generar HTML del logo
+  let logoHTML = `<div style="font-size: 18px; font-weight: 100; color: #FFFFFF; letter-spacing: 2px;">${nombreCompania}</div>`;
+  if (logoPath && fs.existsSync(logoPath)) {
+    try {
+      const logoBuffer = fs.readFileSync(logoPath);
+      const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+      logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 180px; height: auto; opacity: 0.9; mix-blend-mode: screen;">`;
+      console.log('Logo cargado correctamente:', logoPath);
+    } catch (error) {
+      console.error('Error al cargar logo:', error);
+    }
+  } else {
+    console.log('Logo no encontrado en:', logoPath);
+  }
+
+  // Cargar fondo para Revolution (Doral/Kendall) - Portada
+  const fondoPath = path.join(__dirname, '../templates/assets/img12.jpg');
+  const hasBackground = esRevolution && fs.existsSync(fondoPath);
+  
+  let fondoStyle = `background-image: 
+                radial-gradient(circle, rgba(212,175,55,0.2) 2px, transparent 2.5px),
+                radial-gradient(circle, rgba(212,175,55,0.2) 2px, transparent 2.5px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            display: block;`;
+  
+  if (hasBackground) {
+    try {
+      const fondoBuffer = fs.readFileSync(fondoPath);
+      const fondoBase64 = `data:image/jpeg;base64,${fondoBuffer.toString('base64')}`;
+      // Usar formato más compatible para Puppeteer - reemplazar completamente el patrón
+      fondoStyle = `background-image: url("${fondoBase64}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 1;
+            display: block;`;
+      console.log('Fondo cargado correctamente. Tamaño base64:', fondoBase64.length, 'caracteres');
+    } catch (error) {
+      console.error('Error al cargar fondo:', error);
+    }
+  } else {
+    console.log('Fondo no encontrado o no es Revolution. Path:', fondoPath, 'esRevolution:', esRevolution);
+  }
+
+  // Cargar fondo general para package-card (servicios, términos, etc.)
+  const fondoGeneralPath = path.join(__dirname, '../templates/assets/fondoRevolutionGeneral.png');
+  let packageCardBackground = '';
+  
+  if (fs.existsSync(fondoGeneralPath)) {
+    try {
+      const fondoGeneralBuffer = fs.readFileSync(fondoGeneralPath);
+      const fondoGeneralBase64 = `data:image/png;base64,${fondoGeneralBuffer.toString('base64')}`;
+      packageCardBackground = `background-image: url("${fondoGeneralBase64}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 1;`;
+      console.log('Fondo general cargado correctamente para package-card');
+    } catch (error) {
+      console.error('Error al cargar fondo general:', error);
+      packageCardBackground = '';
+    }
+  } else {
+    console.log('Fondo general no encontrado en:', fondoGeneralPath);
+    packageCardBackground = '';
+  }
+
+  // Generar HTML para homenajeado en la portada
+  const homenajeadoCover = homenajeado ? `<strong>Homenajeado/a:</strong> ${homenajeado}<br>` : '';
 
   // Reemplazos en el template
   const replacements = {
@@ -556,6 +823,7 @@ async function generarContratoHTML(contrato) {
     '{{VENDEDOR_PHONE}}': telefonoVendedor,
     '{{VENDEDOR_EMAIL}}': emailVendedor,
     '{{HOMENAJEADO_ROW}}': homenajeado ? `<tr class="info-table-row"><td class="info-table-label">Homenajeado/a</td><td class="info-table-value">${homenajeado}</td></tr>` : '',
+    '{{HOMENAJEADO_COVER}}': homenajeadoCover,
     '{{EVENT_TYPE}}': tipoEvento,
     '{{EVENT_DATE}}': fechaEvento.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
     '{{EVENT_TIME}}': `${horaInicio} - ${horaFin}`,
@@ -564,26 +832,30 @@ async function generarContratoHTML(contrato) {
     '{{CLIENT_PHONE}}': telefonoCliente,
     '{{SALON_DIRECCION}}': direccionSalon,
     '{{PACKAGE_NAME}}': contrato.paquetes?.nombre || 'No especificado',
+    '{{LOGO_HTML}}': logoHTML,
+    '{{FONDO_STYLE}}': fondoStyle,
+    '{{HAS_BACKGROUND_CLASS}}': hasBackground ? 'has-background' : '',
+    '{{NOMBRE_COMPANIA}}': nombreCompania,
+    '{{ES_REVOLUTION}}': esRevolution ? 'true' : 'false',
+    '{{PACKAGE_CARD_BACKGROUND}}': packageCardBackground,
     '{{SERVICIOS_PAQUETE}}': htmlServiciosPaquete,
     '{{PAGE_3_SERVICIOS_ADICIONALES}}': tieneServiciosAdicionales ? `
       <div class="page page-3">
-        <div class="corporate-header">
-          <div class="corporate-header-top">
-            <div class="document-title">Servicios Adicionales</div>
-            <div class="document-number">Página 3 de ${totalPages}</div>
+        <div class="page-content" style="padding: 0; height: 100%;">
+          <div class="package-card" style="display: block;">
+            <div style="padding: 30px 50px 25px 50px; text-align: left;">
+              <h2 style="font-size: 3rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
+            </div>
+            <div class="package-content" style="width: 100%; padding: 0 50px 50px 50px; grid-template-columns: 1fr 1fr 1fr; gap: 45px;">
+              ${htmlServiciosAdicionales}
+            </div>
           </div>
-          <div class="header-divider"></div>
-        </div>
-        <div class="page-content">
-          <div class="section-title-corporate">Servicios Adicionales Extras</div>
-          ${htmlServiciosAdicionales}
         </div>
       </div>
     ` : '',
     '{{TOTAL_PAGES}}': totalPages,
     '{{PAGE_4_NUMBER}}': page4Number,
     '{{PAGE_5_NUMBER}}': page5Number,
-    '{{PAGE_6_NUMBER}}': page6Number,
     '{{INVESTMENT_BREAKDOWN}}': investmentBreakdown,
     '{{TOTAL_TO_PAY}}': `$${totalFinal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`,
     '{{TOTAL_CONTRACT}}': `$${totalContrato.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`,
@@ -605,16 +877,55 @@ async function generarContratoHTML(contrato) {
   // Generar PDF con Puppeteer
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security']
   });
 
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    
+    // Configurar viewport para mejor renderizado (508.0 x 285.7 mm)
+    // 508.0 mm = 1440 puntos, 285.7 mm = 810 puntos (1 mm = 2.83465 puntos)
+    await page.setViewport({
+      width: 1440, // 508.0 mm en puntos
+      height: 810, // 285.7 mm en puntos
+      deviceScaleFactor: 2 // Mejor calidad de imagen
+    });
+    
+    // Obtener la ruta base del template para usar rutas relativas
+    const templateDir = path.dirname(templatePath);
+    
+    // Establecer el contenido HTML con la ruta base para recursos
+    await page.setContent(html, { 
+      waitUntil: ['networkidle0', 'domcontentloaded'],
+      timeout: 30000
+    });
+    
+    // Esperar a que las imágenes se carguen completamente
+    try {
+      await page.evaluate(() => {
+        return Promise.all(
+          Array.from(document.images).map(img => {
+            if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve(); // Continuar aunque falle
+              setTimeout(() => resolve(), 5000); // Timeout de 5 segundos
+            });
+          })
+        );
+      });
+    } catch (error) {
+      console.log('Error esperando imágenes:', error);
+    }
+    
+    // Esperar un poco más para asegurar que todo se renderice
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     const pdfBuffer = await page.pdf({
-      format: 'Letter',
+      width: '508mm', // 508.0 mm
+      height: '285.7mm', // 285.7 mm
       printBackground: true,
+      preferCSSPageSize: false,
       margin: {
         top: '0',
         right: '0',
