@@ -283,16 +283,7 @@ node scripts/crear_usuario_prueba.js
 
 ### Paso 6: Configurar Sistema de Inventario (Opcional)
 
-```powershell
-# Poblar items de inventario
-psql -U postgres -d diamondsistem -f ..\database\seeds_inventario.sql
-
-# Inicializar inventario central
-psql -U postgres -d diamondsistem -f ..\database\init_inventario_central.sql
-
-# Crear usuario de inventario
-psql -U postgres -d diamondsistem -f ..\database\create_usuario_inventario.sql
-```
+**Nota:** Estos scripts SQL deben ejecutarse manualmente si los necesitas. El script `ejecutar_seeds.js` solo carga los datos básicos del sistema (paquetes, servicios, temporadas).
 
 ### Paso 7: Instalar Frontends
 
@@ -468,16 +459,7 @@ node scripts/crear_usuario_prueba.js
 
 ### Paso 7: Configurar Sistema de Inventario (Opcional)
 
-```bash
-# Poblar items de inventario
-psql -U postgres -d diamondsistem -f ../database/seeds_inventario.sql
-
-# Inicializar inventario central
-psql -U postgres -d diamondsistem -f ../database/init_inventario_central.sql
-
-# Crear usuario de inventario
-psql -U postgres -d diamondsistem -f ../database/create_usuario_inventario.sql
-```
+**Nota:** Estos scripts SQL deben ejecutarse manualmente si los necesitas. El script `ejecutar_seeds.js` solo carga los datos básicos del sistema (paquetes, servicios, temporadas).
 
 ### Paso 8: Instalar Frontends
 
