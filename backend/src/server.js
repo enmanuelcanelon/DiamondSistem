@@ -90,7 +90,7 @@ const corsOptions = {
     // En desarrollo, permitir localhost y IPs locales para pruebas multi-dispositivo
     if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
       const allowedOrigins = process.env.CORS_ORIGINS 
-        ? process.env.CORS_ORIGINS.split(',')
+        ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
         : [
             // Frontends separados - cada uno en su puerto
             'http://localhost:5173', // frontend-vendedor
