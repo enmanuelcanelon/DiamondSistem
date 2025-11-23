@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { LogIn, Loader2, Eye, EyeOff, Building2 } from 'lucide-react';
 import useAuthStore from '@shared/store/useAuthStore';
 import toast from 'react-hot-toast';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 function LoginGerente() {
   const navigate = useNavigate();
@@ -34,95 +38,92 @@ function LoginGerente() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-8">
         {/* Logo y Título */}
-        <div className="text-center mb-8">
+        <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-purple-600 p-4 rounded-2xl shadow-lg">
-              <Building2 className="w-12 h-12 text-white" />
+            <div className="bg-muted p-4 rounded-full">
+              <Building2 className="w-12 h-12 text-foreground" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">DiamondSistem</h1>
-          <p className="text-gray-600">Gerente - Gestión Completa</p>
+          <h1 className="text-3xl font-bold mb-2">DiamondSistem</h1>
+          <p className="text-muted-foreground">Gerente - Gestión Completa</p>
         </div>
 
         {/* Formulario */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Iniciar Sesión</h2>
-            <p className="text-gray-600 text-sm">Ingresa tus credenciales de gerente</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="codigo_gerente" className="block text-sm font-medium text-gray-700 mb-2">
-                Código de Gerente
-              </label>
-              <input
-                type="text"
-                id="codigo_gerente"
-                name="codigo_gerente"
-                value={formData.codigo_gerente}
-                onChange={handleChange}
-                placeholder="GER001"
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={mostrarPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={formData.password}
+        <Card>
+          <CardHeader>
+            <CardTitle>Iniciar Sesión</CardTitle>
+            <CardDescription>Ingresa tus credenciales de gerente</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="codigo_gerente">Código de Gerente</Label>
+                <Input
+                  type="text"
+                  id="codigo_gerente"
+                  name="codigo_gerente"
+                  value={formData.codigo_gerente}
                   onChange={handleChange}
-                  placeholder="••••••••"
+                  placeholder="GER001"
                   required
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
                 />
-                <button
-                  type="button"
-                  onClick={() => setMostrarPassword(!mostrarPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
-                  title={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                >
-                  {mostrarPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Iniciando sesión...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5 mr-2" />
-                  Iniciar Sesión
-                </>
-              )}
-            </button>
-          </form>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    type={mostrarPassword ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    required
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarPassword(!mostrarPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                    title={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  >
+                    {mostrarPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full"
+                size="lg"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Iniciando sesión...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5" />
+                    Iniciar Sesión
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
         {/* Footer */}
-        <p className="text-center text-sm text-gray-600 mt-8">
+        <p className="text-center text-sm text-muted-foreground">
           © 2025 DiamondSistem. Todos los derechos reservados.
         </p>
       </div>

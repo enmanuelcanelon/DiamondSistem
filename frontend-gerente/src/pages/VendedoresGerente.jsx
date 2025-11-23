@@ -169,7 +169,7 @@ function VendedoresGerente() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         <p className="ml-3 text-gray-600">Cargando vendedores...</p>
       </div>
     );
@@ -185,7 +185,7 @@ function VendedoresGerente() {
         </div>
         <button
           onClick={handleCrear}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+          className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition"
         >
           <Plus className="w-5 h-5" />
           Nuevo Vendedor
@@ -249,12 +249,12 @@ function VendedoresGerente() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {vendedor.activo ? (
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 flex items-center gap-1 w-fit">
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-muted text-foreground flex items-center gap-1 w-fit">
                           <UserCheck className="w-3 h-3" />
                           Activo
                         </span>
                       ) : (
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 flex items-center gap-1 w-fit">
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-muted/50 text-muted-foreground flex items-center gap-1 w-fit">
                           <UserX className="w-3 h-3" />
                           Inactivo
                         </span>
@@ -266,7 +266,7 @@ function VendedoresGerente() {
                             ...prev,
                             [vendedor.id]: !prev[vendedor.id]
                           }))}
-                          className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700"
+                          className="flex items-center gap-2 text-sm text-foreground hover:text-muted-foreground"
                         >
                           <DollarSign className="w-4 h-4" />
                           {vendedoresExpandidos[vendedor.id] ? (
@@ -285,28 +285,28 @@ function VendedoresGerente() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <button
                         onClick={() => handleEditar(vendedor)}
-                        className="text-indigo-600 hover:text-indigo-900"
+                        className="text-foreground hover:text-muted-foreground"
                         title="Editar"
                       >
                         <Edit className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => handleCambiarPassword(vendedor)}
-                        className="text-yellow-600 hover:text-yellow-900"
+                        className="text-foreground hover:text-muted-foreground"
                         title="Cambiar contraseña"
                       >
                         <Key className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => toggleActivo(vendedor)}
-                        className={vendedor.activo ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
+                        className="text-foreground hover:text-muted-foreground"
                         title={vendedor.activo ? "Desactivar" : "Activar"}
                       >
                         {vendedor.activo ? <UserX className="w-5 h-5" /> : <UserCheck className="w-5 h-5" />}
                       </button>
                         <button
                           onClick={() => setVendedorAEliminar(vendedor)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-foreground hover:text-muted-foreground"
                           title="Eliminar vendedor"
                         >
                           <Trash2 className="w-5 h-5" />
@@ -325,16 +325,16 @@ function VendedoresGerente() {
                                 </p>
                                 <p className="text-xs text-gray-500 mt-1">3% del total de contratos</p>
                               </div>
-                              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                                <p className="text-xs text-gray-500 mb-1">Desbloqueadas</p>
-                                <p className="text-lg font-bold text-green-600">
+                              <div className="bg-muted/50 rounded-lg p-4 border">
+                                <p className="text-xs text-muted-foreground mb-1">Desbloqueadas</p>
+                                <p className="text-lg font-bold">
                                   ${parseFloat(vendedor.comisiones.desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-1">Listas para pagar</p>
                               </div>
-                              <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                                <p className="text-xs text-gray-500 mb-1">Pendientes</p>
-                                <p className="text-lg font-bold text-yellow-600">
+                              <div className="bg-muted/50 rounded-lg p-4 border">
+                                <p className="text-xs text-muted-foreground mb-1">Pendientes</p>
+                                <p className="text-lg font-bold">
                                   ${parseFloat(vendedor.comisiones.pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-1">Aún no desbloqueadas</p>
@@ -353,7 +353,7 @@ function VendedoresGerente() {
                                     return (
                                       <div key={idx} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
                                         <span className="text-sm text-gray-700">{nombreMes} {anio}</span>
-                                        <span className="text-sm font-semibold text-green-600">
+                                        <span className="text-sm font-semibold">
                                           ${item.total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </span>
                                       </div>
@@ -402,7 +402,7 @@ function VendedoresGerente() {
                   value={formData.nombre_completo}
                   onChange={(e) => setFormData({ ...formData, nombre_completo: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
               </div>
               <div>
@@ -414,7 +414,7 @@ function VendedoresGerente() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
               </div>
               <div>
@@ -425,7 +425,7 @@ function VendedoresGerente() {
                   type="tel"
                   value={formData.telefono}
                   onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
               </div>
               {!vendedorEditando && (
@@ -438,7 +438,7 @@ function VendedoresGerente() {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required={!vendedorEditando}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                   />
                 </div>
               )}
@@ -453,7 +453,7 @@ function VendedoresGerente() {
                   max="100"
                   value={formData.comision_porcentaje}
                   onChange={(e) => setFormData({ ...formData, comision_porcentaje: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
               </div>
               <div className="flex gap-3 pt-4">
@@ -518,7 +518,7 @@ function VendedoresGerente() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Mínimo 8 caracteres, incluir mayúsculas, minúsculas y números
@@ -575,8 +575,8 @@ function VendedoresGerente() {
             </div>
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6 text-red-600" />
+                <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-foreground" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">
@@ -587,8 +587,8 @@ function VendedoresGerente() {
                   </p>
                 </div>
               </div>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-xs text-yellow-800">
+              <div className="bg-muted/50 border rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">
                   <strong>Nota:</strong> Solo se pueden eliminar vendedores que no tengan contratos, ofertas o clientes asociados. Si el vendedor tiene datos asociados, deberás desactivarlo en su lugar.
                 </p>
               </div>
@@ -607,7 +607,7 @@ function VendedoresGerente() {
                   eliminarVendedorMutation.mutate(vendedorAEliminar.id);
                 }}
                 disabled={eliminarVendedorMutation.isPending}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {eliminarVendedorMutation.isPending ? (
                   <>

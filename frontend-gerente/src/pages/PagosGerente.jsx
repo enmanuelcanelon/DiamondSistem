@@ -57,7 +57,7 @@ function PagosGerente() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         <p className="ml-3 text-gray-600">Cargando pagos...</p>
       </div>
     );
@@ -74,7 +74,7 @@ function PagosGerente() {
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-600">Total Pagos</p>
-            <p className="text-2xl font-bold text-purple-600">
+            <p className="text-2xl font-bold">
               ${parseFloat(totalPagos).toLocaleString()}
             </p>
           </div>
@@ -87,17 +87,17 @@ function PagosGerente() {
           <Calendar className="w-5 h-5 text-gray-500" />
           <h2 className="text-lg font-semibold text-gray-900">Seleccionar Mes y Año</h2>
         </div>
-        <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-purple-200 p-2 w-fit">
-          <button
-            onClick={() => cambiarMes('anterior')}
-            className="p-1 hover:bg-purple-50 rounded transition"
-            title="Mes anterior"
-          >
-            <ChevronLeft className="w-5 h-5 text-purple-600" />
+          <div className="flex items-center gap-2 bg-white rounded-lg border-2 border p-2 w-fit">
+            <button
+              onClick={() => cambiarMes('anterior')}
+              className="p-1 hover:bg-muted rounded transition"
+              title="Mes anterior"
+            >
+              <ChevronLeft className="w-5 h-5 text-muted-foreground" />
           </button>
           
           <div className="flex items-center gap-2 px-3">
-            <Calendar className="w-4 h-4 text-purple-600" />
+            <Calendar className="w-4 h-4 text-muted-foreground" />
             <select
               value={mesSeleccionado}
               onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
@@ -123,13 +123,13 @@ function PagosGerente() {
             className="p-1 hover:bg-purple-50 rounded transition"
             title="Mes siguiente"
           >
-            <ChevronRight className="w-5 h-5 text-purple-600" />
-          </button>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
 
-          {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
-            <button
-              onClick={resetearMes}
-              className="ml-2 px-3 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded transition"
+            {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
+              <button
+                onClick={resetearMes}
+                className="ml-2 px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted rounded transition"
               title="Volver al mes actual"
             >
               Hoy
@@ -140,16 +140,16 @@ function PagosGerente() {
 
       {/* Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-l">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Pagos</p>
               <p className="text-2xl font-bold text-gray-900">{pagos.length}</p>
             </div>
-            <FileText className="w-8 h-8 text-blue-500" />
+            <FileText className="w-8 h-8 text-muted-foreground" />
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-l">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Monto Total</p>
@@ -157,10 +157,10 @@ function PagosGerente() {
                 ${parseFloat(totalPagos).toLocaleString()}
               </p>
             </div>
-            <DollarSign className="w-8 h-8 text-green-500" />
+            <DollarSign className="w-8 h-8 text-muted-foreground" />
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-l">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Promedio por Pago</p>
@@ -168,7 +168,7 @@ function PagosGerente() {
                 ${pagos.length > 0 ? parseFloat(totalPagos / pagos.length).toLocaleString('es-ES', { maximumFractionDigits: 2 }) : '0'}
               </p>
             </div>
-            <Calendar className="w-8 h-8 text-purple-500" />
+            <Calendar className="w-8 h-8 text-muted-foreground" />
           </div>
         </div>
       </div>
@@ -228,7 +228,7 @@ function PagosGerente() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {pago.contratos?.vendedores?.nombre_completo || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
                       ${parseFloat(pago.monto || 0).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

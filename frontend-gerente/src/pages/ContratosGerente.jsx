@@ -83,7 +83,7 @@ function ContratosGerente() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         <p className="ml-3 text-gray-600">Cargando contratos...</p>
       </div>
     );
@@ -92,8 +92,8 @@ function ContratosGerente() {
   if (isError) {
     return (
       <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <p className="text-red-600">Error al cargar los contratos</p>
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">Error al cargar los contratos</p>
       </div>
     );
   }
@@ -162,7 +162,7 @@ function ContratosGerente() {
               <select
                 value={mesSeleccionado}
                 onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
               >
                 {meses.map((mes) => (
                   <option key={mes.valor} value={mes.valor}>
@@ -176,7 +176,7 @@ function ContratosGerente() {
               <select
                 value={anioSeleccionado}
                 onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
               >
                 {aniosDisponibles.map((anio) => (
                   <option key={anio} value={anio}>
@@ -224,7 +224,7 @@ function ContratosGerente() {
             <select
               value={mesSeleccionado}
               onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               {meses.map((mes) => (
                 <option key={mes.valor} value={mes.valor}>
@@ -238,7 +238,7 @@ function ContratosGerente() {
             <select
               value={anioSeleccionado}
               onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               {aniosDisponibles.map((anio) => (
                 <option key={anio} value={anio}>
@@ -252,7 +252,7 @@ function ContratosGerente() {
             <select
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">Todos</option>
               <option value="activo">Activo</option>
@@ -265,7 +265,7 @@ function ContratosGerente() {
             <select
               value={filtroEstadoPago}
               onChange={(e) => setFiltroEstadoPago(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">Todos</option>
               <option value="pendiente">Pendiente</option>
@@ -310,28 +310,28 @@ function ContratosGerente() {
           return (
             <div key={contrato.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               {/* Header del Contrato */}
-              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+              <div className="bg-muted/30 px-6 py-4 border-b border-gray-200">
                 <button
                   onClick={() => toggleContratoExpandido(contrato.id)}
                   className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-left hover:opacity-80 transition"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <FileText className="w-5 h-5 text-purple-600" />
+                      <FileText className="w-5 h-5 text-muted-foreground" />
                       <h3 className="text-lg font-semibold text-gray-900">
                         {contrato.codigo_contrato}
                       </h3>
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        contrato.estado === 'activo' ? 'bg-green-100 text-green-800 border border-green-300' :
-                        contrato.estado === 'cancelado' ? 'bg-red-100 text-red-800 border border-red-300' :
-                        'bg-gray-100 text-gray-800 border border-gray-300'
+                        contrato.estado === 'activo' ? 'bg-muted text-foreground border' :
+                        contrato.estado === 'cancelado' ? 'bg-muted/50 text-muted-foreground border' :
+                        'bg-muted/30 text-muted-foreground border'
                       }`}>
                         {contrato.estado}
                       </span>
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        estadoPago === 'completado' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
-                        estadoPago === 'parcial' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
-                        'bg-orange-100 text-orange-800 border border-orange-300'
+                        estadoPago === 'completado' ? 'bg-muted text-foreground border' :
+                        estadoPago === 'parcial' ? 'bg-muted/50 text-muted-foreground border' :
+                        'bg-muted/30 text-muted-foreground border'
                       }`}>
                         {estadoPago}
                       </span>
@@ -384,7 +384,7 @@ function ContratosGerente() {
                       <div className="space-y-3">
                         {contrato.clientes && (
                           <div className="flex items-start gap-3">
-                            <User className="w-5 h-5 text-purple-600 mt-0.5" />
+                            <User className="w-5 h-5 text-muted-foreground mt-0.5" />
                             <div>
                               <p className="text-xs text-gray-500">Cliente</p>
                               <p className="font-semibold text-gray-900">{contrato.clientes.nombre_completo}</p>
@@ -399,7 +399,7 @@ function ContratosGerente() {
                         )}
                         {fechaEvento && (
                           <div className="flex items-start gap-3">
-                            <Calendar className="w-5 h-5 text-purple-600 mt-0.5" />
+                            <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
                             <div>
                               <p className="text-xs text-gray-500">Fecha del Evento</p>
                               <p className="font-semibold text-gray-900">
@@ -410,7 +410,7 @@ function ContratosGerente() {
                         )}
                         {horaInicio && horaFin && (
                           <div className="flex items-start gap-3">
-                            <Clock className="w-5 h-5 text-purple-600 mt-0.5" />
+                            <Clock className="w-5 h-5 text-muted-foreground mt-0.5" />
                             <div>
                               <p className="text-xs text-gray-500">Horario</p>
                               <p className="font-semibold text-gray-900">
@@ -433,7 +433,7 @@ function ContratosGerente() {
                         )}
                         {invitados && (
                           <div className="flex items-start gap-3">
-                            <Users className="w-5 h-5 text-purple-600 mt-0.5" />
+                            <Users className="w-5 h-5 text-muted-foreground mt-0.5" />
                             <div>
                               <p className="text-xs text-gray-500">Invitados Confirmados</p>
                               <p className="font-semibold text-gray-900">{invitados} personas</p>
@@ -442,7 +442,7 @@ function ContratosGerente() {
                         )}
                         {contrato.paquetes && (
                           <div className="flex items-start gap-3">
-                            <Package className="w-5 h-5 text-purple-600 mt-0.5" />
+                            <Package className="w-5 h-5 text-muted-foreground mt-0.5" />
                             <div>
                               <p className="text-xs text-gray-500">Paquete</p>
                               <p className="font-semibold text-gray-900">{contrato.paquetes.nombre}</p>
@@ -456,7 +456,7 @@ function ContratosGerente() {
                         )}
                     {contrato.vendedores && (
                           <div className="flex items-start gap-3">
-                            <User className="w-5 h-5 text-purple-600 mt-0.5" />
+                            <User className="w-5 h-5 text-muted-foreground mt-0.5" />
                             <div>
                               <p className="text-xs text-gray-500">Vendedor</p>
                               <p className="font-semibold text-gray-900">{contrato.vendedores.nombre_completo}</p>
@@ -482,13 +482,13 @@ function ContratosGerente() {
                           </div>
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-sm text-gray-600">Total Pagado</span>
-                            <span className="text-lg font-bold text-green-600">
+                            <span className="text-lg font-bold">
                               ${totalPagado.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">Saldo Pendiente</span>
-                            <span className="text-lg font-bold text-red-600">
+                            <span className="text-lg font-bold">
                               ${saldoPendiente.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
@@ -499,7 +499,7 @@ function ContratosGerente() {
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div 
-                                className="bg-purple-600 h-2 rounded-full transition-all"
+                                className="bg-foreground h-2 rounded-full transition-all"
                                 style={{ width: `${Math.min(porcentajePagado, 100)}%` }}
                               />
                             </div>
@@ -515,7 +515,7 @@ function ContratosGerente() {
                       <h4 className="font-semibold text-gray-900 text-lg mb-3 border-b border-gray-200 pb-2">Servicios Incluidos</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {contrato.contratos_servicios.map((cs) => (
-                          <div key={cs.id} className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                          <div key={cs.id} className="bg-muted/50 rounded-lg p-3 border">
                             <p className="font-medium text-gray-900">{cs.servicios.nombre}</p>
                           </div>
                         ))}
@@ -532,11 +532,11 @@ function ContratosGerente() {
                           <div key={pago.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                             <div className="flex items-center gap-3">
                               {pago.metodo_pago === 'Tarjeta' ? (
-                                <CreditCard className="w-5 h-5 text-blue-600" />
+                                <CreditCard className="w-5 h-5 text-muted-foreground" />
                               ) : pago.metodo_pago === 'Transferencia' ? (
-                                <Wallet className="w-5 h-5 text-green-600" />
+                                <Wallet className="w-5 h-5 text-muted-foreground" />
                               ) : (
-                                <DollarSign className="w-5 h-5 text-green-600" />
+                                <DollarSign className="w-5 h-5 text-muted-foreground" />
                               )}
                               <div>
                                 <p className="text-sm font-medium text-gray-900">
@@ -548,7 +548,7 @@ function ContratosGerente() {
                               </div>
                             </div>
                             {pago.estado === 'completado' && (
-                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
                             )}
                           </div>
                         ))}
@@ -578,7 +578,7 @@ function ContratosGerente() {
                           console.error(error);
                         }
                       }}
-                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                      className="w-full px-4 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition flex items-center justify-center gap-2"
                     >
                       <Download className="w-4 h-4" />
                       Descargar Contrato PDF

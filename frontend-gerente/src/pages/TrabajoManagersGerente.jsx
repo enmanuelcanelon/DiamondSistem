@@ -98,7 +98,7 @@ function TrabajoManagersGerente() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         <p className="ml-3 text-gray-600">Cargando trabajo de managers...</p>
       </div>
     );
@@ -108,8 +108,8 @@ function TrabajoManagersGerente() {
     toast.error('Error al cargar el trabajo de managers');
     return (
       <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <p className="text-red-600">Error al cargar el trabajo de managers</p>
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">Error al cargar el trabajo de managers</p>
       </div>
     );
   }
@@ -164,33 +164,33 @@ function TrabajoManagersGerente() {
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-l">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Servicios</p>
               <p className="text-2xl font-bold text-gray-900">{estadisticas.total || 0}</p>
             </div>
-            <Calendar className="w-8 h-8 text-blue-500" />
+            <Calendar className="w-8 h-8 text-muted-foreground" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-yellow-500">
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-l">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Pendientes</p>
               <p className="text-2xl font-bold text-gray-900">{estadisticas.pendientes || 0}</p>
             </div>
-            <Clock className="w-8 h-8 text-yellow-500" />
+            <Clock className="w-8 h-8 text-muted-foreground" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-l">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Completados</p>
               <p className="text-2xl font-bold text-gray-900">{estadisticas.completados || 0}</p>
             </div>
-            <CheckCircle2 className="w-8 h-8 text-green-500" />
+            <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
           </div>
         </div>
       </div>
@@ -202,7 +202,7 @@ function TrabajoManagersGerente() {
             <select
               value={mesSeleccionado}
               onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               {meses.map((mes) => (
                 <option key={mes.valor} value={mes.valor}>
@@ -216,7 +216,7 @@ function TrabajoManagersGerente() {
             <select
               value={anioSeleccionado}
               onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               {aniosDisponibles.map((anio) => (
                 <option key={anio} value={anio}>
@@ -230,7 +230,7 @@ function TrabajoManagersGerente() {
             <select
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">Todos</option>
               <option value="pendiente">Pendientes</option>
@@ -263,13 +263,7 @@ function TrabajoManagersGerente() {
             return (
               <div key={evento.contrato.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                 {/* Header del Evento */}
-                <div className={`px-6 py-4 border-b border-gray-200 ${
-                  todosCompletados 
-                    ? 'bg-gradient-to-r from-green-50 to-emerald-50' 
-                    : tienePendientes
-                    ? 'bg-gradient-to-r from-yellow-50 to-amber-50'
-                    : 'bg-gradient-to-r from-purple-50 to-indigo-50'
-                }`}>
+                <div className="px-6 py-4 border-b border-gray-200 bg-muted/30">
                   <button
                     onClick={() => toggleEventoExpandido(evento.contrato.id)}
                     className="w-full flex items-center justify-between text-left hover:opacity-80 transition"
@@ -280,13 +274,13 @@ function TrabajoManagersGerente() {
                           {evento.contrato.codigo_contrato}
                         </h3>
                         {todosCompletados && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border">
                             <CheckCircle2 className="w-3 h-3" />
                             OK
                           </span>
                         )}
                         {tienePendientes && !todosCompletados && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border">
                             <Clock className="w-3 h-3" />
                             Pendiente
                           </span>
@@ -327,12 +321,12 @@ function TrabajoManagersGerente() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500">Servicios</p>
-                      <p className="text-lg font-bold text-purple-600">{evento.servicios.length}</p>
+                      <p className="text-lg font-bold">{evento.servicios.length}</p>
                       <div className="flex gap-2 mt-1 justify-end">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground">
                           {evento.servicios.filter(s => s.estado === 'pendiente').length} Pendientes
                         </span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-foreground">
                           {evento.servicios.filter(s => s.estado === 'completado').length} Completados
                         </span>
                       </div>
@@ -350,11 +344,7 @@ function TrabajoManagersGerente() {
                       return (
                         <div
                           key={servicio.id}
-                          className={`border-2 rounded-lg p-4 ${
-                            servicio.estado === 'completado'
-                              ? 'bg-green-50 border-green-200'
-                              : 'bg-yellow-50 border-yellow-200'
-                          }`}
+                          className="border-2 rounded-lg p-4 bg-muted/30 border"
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
@@ -378,7 +368,7 @@ function TrabajoManagersGerente() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                             <div>
                               <span className="font-medium text-gray-700">Contacto realizado:</span>
-                              <span className={`ml-2 ${servicio.contacto_realizado ? 'text-green-600' : 'text-gray-400'}`}>
+                              <span className={`ml-2 ${servicio.contacto_realizado ? 'text-foreground' : 'text-muted-foreground'}`}>
                                 {servicio.contacto_realizado ? 'Sí' : 'No'}
                               </span>
                             </div>

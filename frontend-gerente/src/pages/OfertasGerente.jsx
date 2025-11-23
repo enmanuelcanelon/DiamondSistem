@@ -80,11 +80,11 @@ function OfertasGerente() {
   const getEstadoIcon = (estado) => {
     switch (estado) {
       case 'aceptada':
-        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
+        return <CheckCircle2 className="w-4 h-4 text-muted-foreground" />;
       case 'rechazada':
-        return <XCircle className="w-4 h-4 text-red-600" />;
+        return <XCircle className="w-4 h-4 text-muted-foreground" />;
       case 'pendiente':
-        return <AlertCircle className="w-4 h-4 text-yellow-600" />;
+        return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
       default:
         return <FileText className="w-4 h-4 text-gray-600" />;
     }
@@ -93,11 +93,11 @@ function OfertasGerente() {
   const getEstadoColor = (estado) => {
     switch (estado) {
       case 'aceptada':
-        return 'bg-green-100 text-green-800';
+        return 'bg-muted text-foreground';
       case 'rechazada':
-        return 'bg-red-100 text-red-800';
+        return 'bg-muted/50 text-muted-foreground';
       case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-muted/30 text-muted-foreground';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -106,7 +106,7 @@ function OfertasGerente() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         <p className="ml-3 text-gray-600">Cargando ofertas...</p>
       </div>
     );
@@ -136,7 +136,7 @@ function OfertasGerente() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por código, cliente..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
           </div>
@@ -145,7 +145,7 @@ function OfertasGerente() {
             <select
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">Todos</option>
               <option value="pendiente">Pendiente</option>
@@ -158,7 +158,7 @@ function OfertasGerente() {
             <select
               value={filtroVendedor}
               onChange={(e) => setFiltroVendedor(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">Todos</option>
               {vendedores.map((v) => (
@@ -172,17 +172,17 @@ function OfertasGerente() {
 
         {/* Selector de Mes y Año */}
         <div className="border-t border-gray-200 pt-4">
-          <div className="flex items-center gap-2 bg-white rounded-lg border-2 border-purple-200 p-2 w-fit">
+          <div className="flex items-center gap-2 bg-white rounded-lg border-2 border p-2 w-fit">
             <button
               onClick={() => cambiarMes('anterior')}
-              className="p-1 hover:bg-purple-50 rounded transition"
+              className="p-1 hover:bg-muted rounded transition"
               title="Mes anterior"
             >
-              <ChevronLeft className="w-5 h-5 text-purple-600" />
+              <ChevronLeft className="w-5 h-5 text-muted-foreground" />
             </button>
             
             <div className="flex items-center gap-2 px-3">
-              <Calendar className="w-4 h-4 text-purple-600" />
+              <Calendar className="w-4 h-4 text-muted-foreground" />
               <select
                 value={mesSeleccionado}
                 onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
@@ -208,13 +208,13 @@ function OfertasGerente() {
               className="p-1 hover:bg-purple-50 rounded transition"
               title="Mes siguiente"
             >
-              <ChevronRight className="w-5 h-5 text-purple-600" />
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
 
             {(mesSeleccionado !== fechaActual.getMonth() + 1 || añoSeleccionado !== fechaActual.getFullYear()) && (
               <button
                 onClick={resetearMes}
-                className="ml-2 px-3 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded transition"
+                className="ml-2 px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted rounded transition"
                 title="Volver al mes actual"
               >
                 Hoy
@@ -279,7 +279,7 @@ function OfertasGerente() {
                   <div className="ml-4">
                     <Link
                       to={`/ofertas/${oferta.id}`}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                      className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition"
                     >
                       <Eye className="w-4 h-4" />
                       Ver Detalles
