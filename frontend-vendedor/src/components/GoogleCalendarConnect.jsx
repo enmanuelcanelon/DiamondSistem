@@ -18,7 +18,9 @@ function GoogleCalendarConnect() {
       const response = await api.get('/google-calendar/status');
       return response.data;
     },
-    refetchInterval: 30000, // Refrescar cada 30 segundos
+    staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
+    refetchInterval: 3 * 60 * 1000, // Refrescar cada 3 minutos
+    refetchOnWindowFocus: false, // No refetch al enfocar la ventana
   });
 
   // Obtener URL de autorización

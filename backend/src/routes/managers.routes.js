@@ -80,12 +80,21 @@ router.get('/contratos', authenticate, requireManager, async (req, res, next) =>
           }
         },
         checklist_servicios_externos: {
-          include: {
-            managers: {
+          select: {
+            id: true,
+            servicio_tipo: true,
+            contacto_realizado: true,
+            fecha_contacto: true,
+            fecha_pago: true,
+            hora_recogida: true,
+            notas: true,
+            estado: true,
+            usuario_id: true,
+            usuarios: {
               select: {
                 id: true,
                 nombre_completo: true,
-                codigo_manager: true
+                codigo_usuario: true
               }
             }
           }
@@ -243,12 +252,21 @@ router.get('/contratos/:id', authenticate, requireManager, async (req, res, next
           }
         },
         checklist_servicios_externos: {
-          include: {
-            managers: {
+          select: {
+            id: true,
+            servicio_tipo: true,
+            contacto_realizado: true,
+            fecha_contacto: true,
+            fecha_pago: true,
+            hora_recogida: true,
+            notas: true,
+            estado: true,
+            usuario_id: true,
+            usuarios: {
               select: {
                 id: true,
                 nombre_completo: true,
-                codigo_manager: true
+                codigo_usuario: true
               }
             }
           },
@@ -400,54 +418,45 @@ router.post('/checklist', authenticate, requireManager, async (req, res, next) =
           id: checklistExistente.id
         },
         data: {
-          contacto_realizado: contacto_realizado !== undefined ? contacto_realizado : checklistExistente.contacto_realizado,
           fecha_contacto: fecha_contacto ? new Date(fecha_contacto) : checklistExistente.fecha_contacto,
           fecha_pago: fecha_pago ? new Date(fecha_pago) : checklistExistente.fecha_pago,
           hora_recogida: hora_recogida ? new Date(hora_recogida) : checklistExistente.hora_recogida,
           notas: notas !== undefined ? notas : checklistExistente.notas,
           estado: estadoFinal,
-          manager_id: managerId,
+          usuario_id: managerId,
           fecha_actualizacion: new Date()
         },
         include: {
-          managers: {
+          usuarios: {
             select: {
               id: true,
               nombre_completo: true,
-              codigo_manager: true
+              codigo_usuario: true
             }
           }
         }
       });
     } else {
-      // Crear nuevo checklist - usar campos directos en lugar de relaciones
+      // Crear nuevo checklist
       const createData = {
-          contrato_id: parseInt(contrato_id),
-          servicio_tipo,
-          fecha_contacto: fecha_contacto ? new Date(fecha_contacto) : null,
+        contrato_id: parseInt(contrato_id),
+        servicio_tipo,
+        fecha_contacto: fecha_contacto ? new Date(fecha_contacto) : null,
+        fecha_pago: fecha_pago ? new Date(fecha_pago) : null,
         hora_recogida: hora_recogida ? new Date(hora_recogida) : null,
-          notas: notas || null,
-          estado: estadoFinal,
-        manager_id: managerId || null
+        notas: notas || null,
+        estado: estadoFinal,
+        usuario_id: managerId || null
       };
-
-      // Agregar fecha_pago si está disponible (puede no estar en el cliente de Prisma si no se regeneró)
-      try {
-        if (fecha_pago) {
-          createData.fecha_pago = new Date(fecha_pago);
-        }
-      } catch (e) {
-        // Ignorar si el campo no existe
-      }
 
       resultado = await prisma.checklist_servicios_externos.create({
         data: createData,
         include: {
-          managers: {
+          usuarios: {
             select: {
               id: true,
               nombre_completo: true,
-              codigo_manager: true
+              codigo_usuario: true
             }
           }
         }

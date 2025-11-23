@@ -24,9 +24,9 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
       console.log('👤 Usuario actual:', user?.tipo, user?.id);
       return response.data;
     },
-    refetchInterval: 10000, // Refetch cada 10 segundos (optimizado de 5 segundos)
+    refetchInterval: 15 * 1000, // Refetch cada 15 segundos (balance entre actualización y rendimiento)
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
-    staleTime: 5000, // Considerar datos frescos por 5 segundos
+    staleTime: 10 * 1000, // Considerar datos frescos por 10 segundos
     enabled: !!contratoId,
   });
 

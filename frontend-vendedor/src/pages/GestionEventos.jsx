@@ -19,11 +19,10 @@ import {
 import useAuthStore from '../store/useAuthStore';
 import api from '../config/api';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
-import { Separator } from '../components/ui/separator';
 
 function GestionEventos() {
   const { user } = useAuthStore();
@@ -69,6 +68,52 @@ function GestionEventos() {
   const solicitudes = solicitudesData?.solicitudes || [];
   const contratos = contratosData?.data || [];
 
+  // Obtener conteo de mensajes no leídos para cada contrato
+  const contratosIdsString = contratos?.map(c => c.id).filter(Boolean).join(',') || '';
+  const { data: mensajesNoLeidosData, isLoading: loadingMensajes } = useQuery({
+    queryKey: ['mensajes-no-leidos-vendedor-batch', user?.id],
+    queryFn: async () => {
+      if (!contratos || contratos.length === 0) {
+        console.log('📭 No hay contratos para obtener mensajes');
+        return {};
+      }
+      
+      // Usar endpoint batch optimizado en lugar de múltiples queries
+      const response = await api.get('/mensajes/vendedor/no-leidos/batch');
+      return response.data.mensajes_no_leidos || {};
+    },
+    enabled: !!user?.id && user?.tipo === 'vendedor' && contratos && contratos.length > 0,
+    staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
+    refetchInterval: 3 * 60 * 1000, // Refrescar cada 3 minutos
+    refetchOnWindowFocus: false, // No refetch al enfocar la ventana (reduce carga)
+  });
+
+  const mensajesNoLeidos = mensajesNoLeidosData || {};
+
+  // Obtener buzón de mensajes (todos los contratos con mensajes)
+  const { data: buzonData, isLoading: loadingBuzon } = useQuery({
+    queryKey: ['buzon-mensajes-vendedor', user?.id],
+    queryFn: async () => {
+      const response = await api.get('/mensajes/vendedor/buzon');
+      return response.data;
+    },
+    enabled: !!user?.id && user?.tipo === 'vendedor',
+    staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
+    refetchInterval: 3 * 60 * 1000, // Refrescar cada 3 minutos
+    refetchOnWindowFocus: false, // No refetch al enfocar la ventana (reduce carga)
+  });
+
+  const buzonMensajes = buzonData?.buzón || [];
+  
+  // Debug: mostrar información en consola
+  console.log('🔍 Estado actual:', {
+    contratos: contratos?.length || 0,
+    mensajesNoLeidos: Object.keys(mensajesNoLeidos).length,
+    loadingMensajes,
+    buzonMensajes: buzonMensajes.length,
+    user: user?.id
+  });
+
   // Filtrar solicitudes por búsqueda
   const solicitudesFiltradas = solicitudes.filter((sol) => {
     const cliente = sol.contratos?.clientes?.nombre_completo || '';
@@ -102,6 +147,14 @@ function GestionEventos() {
     return dias >= 0 && dias <= 30;
   });
 
+  // Debug: mostrar información de eventos
+  console.log('📅 Eventos:', {
+    totalContratos: contratos.length,
+    eventosActivos: eventosActivos.length,
+    eventosProximos: eventosProximos.length,
+    contratosIds: contratos.map(c => c.id)
+  });
+
   if (loadingContratos) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -113,82 +166,79 @@ function GestionEventos() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Gestión de Eventos</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Administra tus eventos activos y solicitudes de clientes
-        </p>
+      <div className="flex items-center justify-between space-y-2">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Gestión de Eventos</h2>
+          <p className="text-muted-foreground">
+            Administra tus eventos activos y solicitudes de clientes
+          </p>
+        </div>
       </div>
 
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Estadísticas - Estilo Dashboard */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Eventos Activos</p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {eventosActivos.length}
-                </p>
-              </div>
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Eventos Activos
+            </CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{eventosActivos.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Eventos con estado activo
+            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Solicitudes Pendientes</p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {estadisticas?.pendientes || 0}
-                </p>
-              </div>
-              <div className="p-2 bg-orange-500/10 rounded-lg">
-                <Bell className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Solicitudes Pendientes
+            </CardTitle>
+            <Bell className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{estadisticas?.pendientes || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Requieren atención
+            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Eventos Próximos</p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {eventosProximos.length}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Próximos 30 días</p>
-              </div>
-              <div className="p-2 bg-purple-500/10 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Eventos Próximos
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{eventosProximos.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Próximos 30 días
+            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Solicitudes Aprobadas</p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {estadisticas?.aprobadas || 0}
-                </p>
-              </div>
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Solicitudes Aprobadas
+            </CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{estadisticas?.aprobadas || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Aprobadas este mes
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs de Filtro */}
+      {/* Filtros y Búsqueda - Estilo Dashboard */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -197,7 +247,6 @@ function GestionEventos() {
                 variant={filtroEstado === 'pendiente' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFiltroEstado('pendiente')}
-                className={filtroEstado === 'pendiente' ? 'bg-orange-500 hover:bg-orange-600' : ''}
               >
                 <Clock className="w-4 h-4 mr-2" />
                 Pendientes ({estadisticas?.pendientes || 0})
@@ -206,7 +255,6 @@ function GestionEventos() {
                 variant={filtroEstado === 'aprobada' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFiltroEstado('aprobada')}
-                className={filtroEstado === 'aprobada' ? 'bg-green-500 hover:bg-green-600' : ''}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Aprobadas ({estadisticas?.aprobadas || 0})
@@ -215,14 +263,12 @@ function GestionEventos() {
                 variant={filtroEstado === 'rechazada' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFiltroEstado('rechazada')}
-                className={filtroEstado === 'rechazada' ? 'bg-red-500 hover:bg-red-600' : ''}
               >
                 <XCircle className="w-4 h-4 mr-2" />
                 Rechazadas ({estadisticas?.rechazadas || 0})
               </Button>
             </div>
 
-            {/* Búsqueda */}
             <div className="relative w-full md:w-auto md:min-w-[300px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
@@ -237,15 +283,17 @@ function GestionEventos() {
         </CardContent>
       </Card>
 
-      {/* Lista de Solicitudes */}
+      {/* Lista de Solicitudes - Estilo Dashboard */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            Solicitudes {filtroEstado === 'pendiente' ? 'Pendientes' : filtroEstado === 'aprobada' ? 'Aprobadas' : 'Rechazadas'}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            {solicitudesFiltradas.length} solicitud(es) encontrada(s)
-          </p>
+          <div>
+            <CardTitle>
+              Solicitudes {filtroEstado === 'pendiente' ? 'Pendientes' : filtroEstado === 'aprobada' ? 'Aprobadas' : 'Rechazadas'}
+            </CardTitle>
+            <CardDescription>
+              {solicitudesFiltradas.length} solicitud(es) encontrada(s)
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           {loadingSolicitudes ? (
@@ -260,21 +308,113 @@ function GestionEventos() {
           ) : (
             <div className="space-y-4">
               {solicitudesFiltradas.map((solicitud) => (
-                <SolicitudCard key={solicitud.id} solicitud={solicitud} />
+                <SolicitudCard 
+                  key={solicitud.id} 
+                  solicitud={solicitud} 
+                  mensajesNoLeidos={mensajesNoLeidos}
+                />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Lista de Eventos Próximos */}
+      {/* Buzón de Mensajes - Estilo Dashboard */}
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              Buzón de Mensajes
+            </CardTitle>
+            <CardDescription>
+              Todos los contratos con mensajes de clientes
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingBuzon ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : buzonMensajes.length === 0 ? (
+            <div className="text-center py-12">
+              <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No hay mensajes en tu buzón</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {buzonMensajes.map((item) => (
+                <Card
+                  key={item.contrato_id}
+                  className="hover:border-primary/50 transition-colors cursor-pointer"
+                  onClick={() => window.location.href = `/chat/${item.contrato_id}`}
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-foreground truncate">
+                            {item.cliente?.nombre_completo || 'Sin nombre'}
+                          </h3>
+                          {item.mensajes_no_leidos > 0 && (
+                            <Badge variant="destructive" className="animate-pulse">
+                              {item.mensajes_no_leidos > 9 ? '9+' : item.mensajes_no_leidos}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground font-mono mb-2">
+                          {item.codigo_contrato}
+                        </p>
+                        {item.ultimo_mensaje && (
+                          <div className="space-y-1">
+                            <p className="text-sm text-foreground line-clamp-2">
+                              <span className={`font-medium ${
+                                item.ultimo_mensaje.remitente_tipo === 'cliente'
+                                  ? 'text-blue-600 dark:text-blue-400'
+                                  : 'text-muted-foreground'
+                              }`}>
+                                {item.ultimo_mensaje.remitente_tipo === 'cliente' ? 'Cliente:' : 'Tú:'}
+                              </span>{' '}
+                              {item.ultimo_mensaje.mensaje}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(item.ultimo_mensaje.fecha).toLocaleString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <Button variant="outline" size="sm" asChild onClick={(e) => e.stopPropagation()}>
+                        <Link to={`/chat/${item.contrato_id}`}>
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Abrir Chat
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Lista de Eventos Próximos - Estilo Dashboard */}
       {eventosProximos.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Eventos Próximos</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Eventos en los próximos 30 días
-            </p>
+            <div>
+              <CardTitle>Eventos Próximos</CardTitle>
+              <CardDescription>
+                Eventos en los próximos 30 días
+              </CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -320,10 +460,18 @@ function GestionEventos() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm" asChild>
+                          <Button variant="outline" size="sm" asChild className="relative">
                             <Link to={`/chat/${contrato.id}`}>
                               <MessageCircle className="w-4 h-4 mr-2" />
                               Chat
+                              {mensajesNoLeidos[contrato.id] && mensajesNoLeidos[contrato.id] > 0 && (
+                                <Badge
+                                  variant="destructive"
+                                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse"
+                                >
+                                  {mensajesNoLeidos[contrato.id] > 9 ? '9+' : mensajesNoLeidos[contrato.id]}
+                                </Badge>
+                              )}
                             </Link>
                           </Button>
                           <Button variant="default" size="sm" asChild>
@@ -346,8 +494,8 @@ function GestionEventos() {
   );
 }
 
-// Componente para cada solicitud
-function SolicitudCard({ solicitud }) {
+// Componente para cada solicitud - Estilo Dashboard
+function SolicitudCard({ solicitud, mensajesNoLeidos = {} }) {
   return (
     <Card className="hover:border-primary/50 transition-colors">
       <CardContent className="pt-6">

@@ -3,6 +3,7 @@ const router = express.Router();
 const { getPrismaClient } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { generarPDFContrato } = require('../utils/pdfContrato');
+const cache = require('../middleware/cache');
 
 const prisma = getPrismaClient();
 
@@ -583,6 +584,9 @@ router.put('/:id/aprobar', authenticate, async (req, res) => {
       return solicitudActualizada;
     });
 
+    // Invalidar caché de estadísticas
+    cache.invalidatePattern('vendedor/estadisticas');
+
     res.json({
       message: 'Solicitud aprobada exitosamente',
       solicitud: resultado,
@@ -666,6 +670,9 @@ router.put('/:id/rechazar', authenticate, async (req, res) => {
       return solicitudActualizada;
     });
 
+    // Invalidar caché de estadísticas
+    cache.invalidatePattern('vendedor/estadisticas');
+
     res.json({
       message: 'Solicitud rechazada',
       solicitud: resultado,
@@ -689,7 +696,7 @@ router.put('/:id/rechazar', authenticate, async (req, res) => {
  * GET /solicitudes/vendedor/estadisticas
  * Obtener estadísticas de solicitudes del vendedor
  */
-router.get('/vendedor/estadisticas', authenticate, async (req, res) => {
+router.get('/vendedor/estadisticas', authenticate, cache.cacheMiddleware(120), async (req, res) => {
   try {
     if (req.user.tipo !== 'vendedor') {
       return res.status(403).json({ message: 'Acceso denegado' });

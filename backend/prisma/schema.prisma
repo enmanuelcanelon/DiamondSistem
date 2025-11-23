@@ -37,15 +37,15 @@ model usuarios {
 
   // Relaciones
   clientes                clientes[]                @relation("clientes_vendedor")
-  ofertas                 ofertas[]
-  contratos               contratos[]
+  ofertas                 ofertas[]                 @relation("ofertas_vendedor")
+  contratos               contratos[]               @relation("contratos_vendedor")
   versiones_contratos_pdf versiones_contratos_pdf[]
-  solicitudes_cliente     solicitudes_cliente[]     @relation("respondido_por")
-  leaks                   leaks[]
+  solicitudes_cliente     solicitudes_cliente[]      @relation("respondido_por")
+  leaks                   leaks[]                    @relation("leaks_vendedor")
   checklist_servicios_externos checklist_servicios_externos[]
-  movimientos_inventario  movimientos_inventario[]
+  movimientos_inventario  movimientos_inventario[]   @relation("movimientos_usuario")
   historial_cambios_precios historial_cambios_precios[]
-  pagos                   pagos[]                   @relation("pagos_registrado_por")
+  pagos                   pagos[]                    @relation("pagos_registrado_por")
 
   @@index([rol], map: "idx_usuarios_rol")
   @@index([codigo_usuario], map: "idx_usuarios_codigo")
@@ -474,7 +474,8 @@ model solicitudes_cliente {
   motivo_rechazo        String?
   fecha_solicitud       DateTime? @default(now()) @db.Timestamp(6)
   fecha_respuesta       DateTime? @db.Timestamp(6)
-  respondido_por        Int?
+  respondido_por        Int?      // Deprecated: usar usuario_id
+  usuario_id            Int?      // Nueva relación con usuarios (cualquier rol)
 
   // Relaciones
   contratos  contratos?  @relation(fields: [contrato_id], references: [id])
@@ -499,6 +500,11 @@ model mensajes {
 
   // Relaciones
   contratos contratos? @relation(fields: [contrato_id], references: [id])
+
+  // Índices compuestos para optimizar queries comunes
+  @@index([contrato_id, destinatario_tipo, destinatario_id, leido], map: "idx_mensajes_contrato_destinatario_leido")
+  @@index([contrato_id, fecha_envio], map: "idx_mensajes_contrato_fecha")
+  @@index([contrato_id], map: "idx_mensajes_contrato")
 }
 
 model configuracion_sistema {
@@ -763,8 +769,7 @@ model usuarios_inventario {
   fecha_registro      DateTime? @default(now()) @db.Timestamp(6)
   fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
 
-  // Relaciones
-  movimientos_inventario movimientos_inventario[]
+  // Relaciones (deprecated - usar tabla usuarios)
 }
 
 model inventario_items {
@@ -854,13 +859,13 @@ model movimientos_inventario {
   contrato_id         Int?
   asignacion_id       Int?
   usuario_id          Int?      // Ya apunta a usuarios (rol='inventario')
+  fecha_movimiento    DateTime? @default(now()) @db.Timestamp(6)
 
   // Relaciones
   inventario_items      inventario_items?      @relation(fields: [item_id], references: [id])
   contratos             contratos?             @relation(fields: [contrato_id], references: [id])
   asignaciones_inventario asignaciones_inventario? @relation(fields: [asignacion_id], references: [id])
-  usuarios_inventario   usuarios_inventario?   @relation(fields: [usuario_id], references: [id])  // Deprecated
-  usuarios              usuarios?              @relation(fields: [usuario_id], references: [id])  // Nueva
+  usuarios              usuarios?              @relation("movimientos_usuario", fields: [usuario_id], references: [id])  // Nueva
 
   @@index([item_id], map: "idx_movimientos_item")
   @@index([tipo_movimiento], map: "idx_movimientos_tipo")

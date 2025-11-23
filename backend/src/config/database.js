@@ -18,6 +18,18 @@ let prismaInstance = null;
  */
 const getPrismaClient = () => {
   if (!prismaInstance) {
+    // Verificar configuración de connection pooling en DATABASE_URL
+    const databaseUrl = process.env.DATABASE_URL || '';
+    const isSupabase = databaseUrl.includes('supabase.co');
+    
+    // Para Supabase: usar connection_limit apropiado
+    // Free tier: máximo 4 conexiones directas, pero se recomienda usar pooling
+    // Si no tiene connection_limit en la URL, Prisma usará el default (10)
+    // Para Supabase, es mejor usar connection_limit más bajo (4-6) para evitar errores
+    if (isSupabase && !databaseUrl.includes('connection_limit')) {
+      logger.warn('⚠️  DATABASE_URL de Supabase sin connection_limit. Considera agregar ?connection_limit=4&pool_timeout=20');
+    }
+
     prismaInstance = new PrismaClient({
       log: process.env.NODE_ENV === 'development' 
         ? ['query', 'error', 'warn'] 
@@ -39,13 +51,15 @@ const getPrismaClient = () => {
     // Log de queries en desarrollo
     if (process.env.NODE_ENV === 'development') {
       prismaInstance.$on('query', (e) => {
-        if (e.duration > 1000) { // Log queries lentas (>1s)
-          logger.warn(`Slow query detected: ${e.duration}ms - ${e.query}`);
+        // Para Supabase, ajustar umbral de queries lentas (más latencia de red)
+        const slowQueryThreshold = isSupabase ? 2000 : 1000; // 2s para Supabase, 1s para local
+        if (e.duration > slowQueryThreshold) {
+          logger.warn(`Slow query detected: ${e.duration}ms - ${e.query.substring(0, 200)}...`);
         }
       });
     }
 
-    logger.info('✅ Prisma Client singleton inicializado');
+    logger.info(`✅ Prisma Client singleton inicializado${isSupabase ? ' (Supabase)' : ' (Local)'}`);
   }
 
   return prismaInstance;
