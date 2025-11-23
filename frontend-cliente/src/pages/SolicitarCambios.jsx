@@ -70,15 +70,15 @@ function SolicitarCambios() {
   const serviciosExcluyentes = {
     'Foto y Video 3 Horas': ['Foto y Video 5 Horas'],
     'Foto y Video 5 Horas': ['Foto y Video 3 Horas'],
-    'Licor B�sico': ['Licor Premium'],
-    'Licor Premium': ['Licor B�sico'],
-    'Decoraci�n B�sica': ['Decoraci�n Plus'],
-    'Decoraci�n Plus': ['Decoraci�n B�sica'],
+    'Licor Básico': ['Licor Premium'],
+    'Licor Premium': ['Licor Básico'],
+    'Decoración Básica': ['Decoración Plus'],
+    'Decoración Plus': ['Decoración Básica'],
     'Photobooth 360': ['Photobooth Print'],
     'Photobooth Print': ['Photobooth 360']
   };
 
-  // IDs de servicios que ya est�n en el paquete
+  // IDs de servicios que ya están en el paquete
   const idsServiciosEnPaquete = useMemo(() => {
     return new Set(serviciosDelPaquete.map(s => s.id || s.servicio_id));
   }, [serviciosDelPaquete]);
@@ -88,15 +88,15 @@ function SolicitarCambios() {
     return serviciosDelPaquete.map(s => s.nombre || s.servicios?.nombre);
   }, [serviciosDelPaquete]);
 
-  // Filtrar servicios que NO est�n en el paquete Y no sean mutuamente excluyentes
+  // Filtrar servicios que NO están en el paquete Y no sean mutuamente excluyentes
   const serviciosDisponibles = useMemo(() => {
     return todosLosServicios.filter(servicio => {
-      // EXCEPCI�N: "Hora Extra" siempre debe estar disponible (se puede contratar m�ltiples veces)
+      // EXCEPCIÓN: "Hora Extra" siempre debe estar disponible (se puede contratar múltiples veces)
       if (servicio.nombre === 'Hora Extra') {
         return true;
       }
       
-      // 1. Excluir servicios que ya est�n en el paquete
+      // 1. Excluir servicios que ya están en el paquete
       if (idsServiciosEnPaquete.has(servicio.id)) {
         return false;
       }
@@ -113,11 +113,11 @@ function SolicitarCambios() {
     });
   }, [todosLosServicios, idsServiciosEnPaquete, nombresServiciosEnPaquete]);
 
-  // Aplicar b�squeda y filtros
+  // Aplicar búsqueda y filtros
   const serviciosFiltrados = useMemo(() => {
     let resultado = serviciosDisponibles;
 
-    // Filtrar por b�squeda
+    // Filtrar por búsqueda
     if (busqueda) {
       resultado = resultado.filter(s =>
         s.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -125,7 +125,7 @@ function SolicitarCambios() {
       );
     }
 
-    // Filtrar por categor�a
+    // Filtrar por categoría
     if (categoriaFiltro) {
       resultado = resultado.filter(s => s.categoria === categoriaFiltro);
     }
@@ -133,7 +133,7 @@ function SolicitarCambios() {
     return resultado;
   }, [serviciosDisponibles, busqueda, categoriaFiltro]);
 
-  // Obtener categor�as �nicas
+  // Obtener categorías únicas
   const categorias = useMemo(() => {
     return [...new Set(serviciosDisponibles.map(s => s.categoria))];
   }, [serviciosDisponibles]);
@@ -151,7 +151,7 @@ function SolicitarCambios() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['solicitudes']);
-      toast.success('? Solicitud enviada exitosamente', {
+      toast.success('✅ Solicitud enviada exitosamente', {
         duration: 3000,
       });
       setTimeout(() => navigate('/solicitudes'), 1500);
@@ -167,16 +167,16 @@ function SolicitarCambios() {
     const cantidad = parseInt(cantidadInvitados) || 0;
     
     if (cantidad < 1) {
-      toast.error('?? Debes agregar al menos 1 invitado adicional');
+      toast.error('⚠️ Debes agregar al menos 1 invitado adicional');
       return;
     }
 
     if (cantidad > 500) {
-      toast.error('?? La cantidad de invitados no puede exceder 500');
+      toast.error('⚠️ La cantidad de invitados no puede exceder 500');
       return;
     }
 
-    // Validar capacidad m�xima del sal�n
+    // Validar capacidad máxima del salón
     if (contrato?.salones?.capacidad_maxima) {
       const capacidadMaxima = contrato.salones.capacidad_maxima;
       const cantidadActual = contrato.cantidad_invitados || 0;
@@ -184,7 +184,7 @@ function SolicitarCambios() {
       
       if (cantidadTotal > capacidadMaxima) {
         toast.error(
-          `?? La capacidad m�xima del sal�n es ${capacidadMaxima} invitados\n\n` +
+          `⚠️ La capacidad máxima del salón es ${capacidadMaxima} invitados\n\n` +
           `Invitados actuales: ${cantidadActual}\n` +
           `Invitados solicitados: ${cantidad}\n` +
           `Total: ${cantidadTotal}\n\n` +
@@ -206,21 +206,21 @@ function SolicitarCambios() {
 
   const handleSubmitServicio = () => {
     if (!servicioSeleccionado) {
-      toast.error('?? Selecciona un servicio');
+      toast.error('⚠️ Selecciona un servicio');
       return;
     }
 
     const cantidad = parseInt(cantidadServicio) || 0;
     
     if (cantidad < 1) {
-      toast.error('?? La cantidad del servicio debe ser al menos 1');
+      toast.error('⚠️ La cantidad del servicio debe ser al menos 1');
       return;
     }
 
-    // ?? VALIDACI�N ESPECIAL PARA HORA EXTRA
+    // ⚠️ VALIDACIÓN ESPECIAL PARA HORA EXTRA
     if (servicioSeleccionado.nombre === 'Hora Extra') {
       if (contrato.hora_inicio && contrato.hora_fin && contrato.paquetes) {
-        // Calcular duraci�n del evento
+        // Calcular duración del evento
         const [horaInicioH, horaInicioM] = contrato.hora_inicio.split(':').map(Number);
         const [horaFinH, horaFinM] = contrato.hora_fin.split(':').map(Number);
         
@@ -229,15 +229,15 @@ function SolicitarCambios() {
           duracionEvento += 24;
         }
 
-        // Obtener duraci�n base del paquete
+        // Obtener duración base del paquete
         const duracionBasePaquete = contrato.paquetes.duracion_horas || 0;
 
-        // Contar cu�ntas horas extras ya tiene el contrato
+        // Contar cuántas horas extras ya tiene el contrato
         const horasExtrasContrato = contrato.contratos_servicios?.filter(
           cs => cs.servicios?.nombre === 'Hora Extra'
         ).reduce((sum, cs) => sum + (cs.cantidad || 0), 0) || 0;
 
-        // Total de horas extras que tendr�a despu�s de esta solicitud
+        // Total de horas extras que tendría después de esta solicitud
         const totalHorasExtrasConSolicitud = horasExtrasContrato + cantidad;
 
         // Calcular hora de fin con las horas extras solicitadas
@@ -250,27 +250,27 @@ function SolicitarCambios() {
           horaFinResultante += 1;
         }
 
-        // Si excede las 2:00 AM (26:00 en formato 24h del d�a siguiente)
+        // Si excede las 2:00 AM (26:00 en formato 24h del día siguiente)
         if (horaFinResultante > 26 || (horaFinResultante === 26 && minFinResultante > 0)) {
           toast.error(
-            `?? NO PUEDES SOLICITAR M�S HORAS EXTRAS\n\n` +
+            `⚠️ NO PUEDES SOLICITAR MÁS HORAS EXTRAS\n\n` +
             `Tu evento dura ${duracionEvento.toFixed(1)} horas.\n` +
             `El paquete incluye ${duracionBasePaquete} horas.\n` +
             `Ya tienes ${horasExtrasContrato} hora(s) extra en el contrato.\n\n` +
-            `?? Si solicitas ${cantidad} hora(s) extra adicional(es), tu evento terminar�a despu�s de las 2:00 AM, lo cual NO est� permitido por restricciones legales.\n\n` +
-            `M�ximo de horas extras permitidas: ${horasExtrasContrato}`,
+            `⚠️ Si solicitas ${cantidad} hora(s) extra adicional(es), tu evento terminaría después de las 2:00 AM, lo cual NO está permitido por restricciones legales.\n\n` +
+            `Máximo de horas extras permitidas: ${horasExtrasContrato}`,
             { duration: 8000 }
           );
           return;
         }
 
-        // Calcular cu�ntas horas extras son necesarias
+        // Calcular cuántas horas extras son necesarias
         const horasExtrasNecesarias = Math.max(0, Math.ceil(duracionEvento - duracionBasePaquete));
         
-        // No permitir m�s horas extras de las necesarias
+        // No permitir más horas extras de las necesarias
         if (totalHorasExtrasConSolicitud > horasExtrasNecesarias) {
           toast.error(
-            `?? NO NECESITAS ${cantidad} HORA(S) EXTRA\n\n` +
+            `⚠️ NO NECESITAS ${cantidad} HORA(S) EXTRA\n\n` +
             `Tu evento requiere exactamente ${horasExtrasNecesarias} hora(s) extra.\n` +
             `Ya tienes ${horasExtrasContrato} hora(s) en el contrato.\n\n` +
             `Solo puedes solicitar ${Math.max(0, horasExtrasNecesarias - horasExtrasContrato)} hora(s) extra adicional(es).`,
@@ -286,7 +286,7 @@ function SolicitarCambios() {
       : parseFloat(servicioSeleccionado.precio_base) * cantidad;
 
     if (costoTotal <= 0) {
-      toast.error('?? El costo calculado debe ser mayor a $0');
+      toast.error('⚠️ El costo calculado debe ser mayor a $0');
       return;
     }
 
@@ -326,7 +326,7 @@ function SolicitarCambios() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Solicitar Cambios</h1>
           <p className="text-gray-600 mt-1">
-            Solicita m�s invitados o servicios adicionales para tu evento
+            Solicita más invitados o servicios adicionales para tu evento
           </p>
         </div>
       </div>
@@ -337,11 +337,11 @@ function SolicitarCambios() {
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-gray-700 mt-0.5" />
             <div className="flex-1">
-              <p className="font-medium text-gray-900">Informaci�n de tu Contrato</p>
+              <p className="font-medium text-gray-900">Información de tu Contrato</p>
               <div className="text-sm text-gray-700 mt-2 space-y-1">
-                <p>� <strong>Paquete:</strong> {contrato.paquetes?.nombre}</p>
-                <p>� <strong>Invitados actuales:</strong> {contrato.cantidad_invitados}</p>
-                <p>� <strong>Total del contrato:</strong> ${parseFloat(contrato.total_contrato).toFixed(2)}</p>
+                <p>📦 <strong>Paquete:</strong> {contrato.paquetes?.nombre}</p>
+                <p>👥 <strong>Invitados actuales:</strong> {contrato.cantidad_invitados}</p>
+                <p>💰 <strong>Total del contrato:</strong> ${parseFloat(contrato.total_contrato).toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -368,9 +368,9 @@ function SolicitarCambios() {
               tipoSolicitud === 'invitados' ? 'text-gray-900' : 'text-gray-700'
             }`}
           >
-            M�s Invitados
+            Más Invitados
           </p>
-          <p className="text-sm text-gray-600 mt-1">Agrega m�s personas a tu evento</p>
+          <p className="text-sm text-gray-600 mt-1">Agrega más personas a tu evento</p>
         </button>
 
         <button
@@ -402,7 +402,7 @@ function SolicitarCambios() {
         <div className="bg-white rounded-xl shadow-sm border p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              �Cu�ntos invitados adicionales? *
+              ¿Cuántos invitados adicionales? *
             </label>
             <input
               type="number"
@@ -430,7 +430,7 @@ function SolicitarCambios() {
               value={detalles}
               onChange={(e) => setDetalles(e.target.value)}
               rows={4}
-              placeholder="�Algo que quieras comentar?"
+              placeholder="¿Algo que quieras comentar?"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
             />
           </div>
@@ -467,7 +467,7 @@ function SolicitarCambios() {
       {/* Formulario de Servicios */}
       {tipoSolicitud === 'servicio' && (
         <div className="space-y-6">
-          {/* Barra de B�squeda y Filtros */}
+          {/* Barra de Búsqueda y Filtros */}
           <div className="bg-white rounded-xl shadow-sm border p-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
@@ -485,7 +485,7 @@ function SolicitarCambios() {
                 onChange={(e) => setCategoriaFiltro(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
               >
-                <option value="">Todas las categor�as</option>
+                <option value="">Todas las categorías</option>
                 {categorias.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
@@ -531,10 +531,10 @@ function SolicitarCambios() {
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
                         {servicioSeleccionado.tipo_cobro === 'por_persona' && 
-                          `$${servicioSeleccionado.precio_base} � ${contrato.cantidad_invitados} personas � ${cantidadServicio}`
+                          `$${servicioSeleccionado.precio_base} × ${contrato.cantidad_invitados} personas × ${cantidadServicio}`
                         }
                         {servicioSeleccionado.tipo_cobro === 'fijo' && 
-                          `$${servicioSeleccionado.precio_base} � ${cantidadServicio}`
+                          `$${servicioSeleccionado.precio_base} × ${cantidadServicio}`
                         }
                       </p>
                     </div>
@@ -557,7 +557,7 @@ function SolicitarCambios() {
                   value={detalles}
                   onChange={(e) => setDetalles(e.target.value)}
                   rows={3}
-                  placeholder="�Algo que quieras comentar sobre este servicio?"
+                  placeholder="¿Algo que quieras comentar sobre este servicio?"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
                 />
               </div>
@@ -600,7 +600,7 @@ function SolicitarCambios() {
                   <p className="text-gray-600">
                     {busqueda || categoriaFiltro
                       ? 'No se encontraron servicios con esos filtros'
-                      : 'Todos los servicios de tu paquete ya est�n incluidos'}
+                      : 'Todos los servicios de tu paquete ya están incluidos'}
                   </p>
                 </div>
               )}

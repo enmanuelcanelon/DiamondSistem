@@ -1,8 +1,12 @@
 ﻿import { useQuery } from '@tanstack/react-query';
-import { FileText, Download, Calendar, DollarSign, Users, Clock } from 'lucide-react';
+import { FileText, Download, Calendar, DollarSign, Users, Clock, Loader2 } from 'lucide-react';
 import useAuthStore from '@shared/store/useAuthStore';
 import { generarNombreEventoCorto, getEventoEmoji } from '@utils/eventNames';
 import api from '@shared/config/api';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 function MisContratos() {
   const { user } = useAuthStore();
@@ -79,8 +83,8 @@ function MisContratos() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-          <p className="mt-4 text-gray-600">Cargando contratos...</p>
+          <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Cargando contratos...</p>
         </div>
       </div>
     );
@@ -89,128 +93,171 @@ function MisContratos() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center">
-            <FileText className="w-6 h-6 text-white" />
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+              <FileText className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <div>
+              <CardTitle>Mis Contratos</CardTitle>
+              <CardDescription>Descarga y revisa tus documentos</CardDescription>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Mis Contratos</h1>
-            <p className="text-sm text-gray-600">Descarga y revisa tus documentos</p>
-          </div>
-        </div>
-      </div>
+        </CardHeader>
+      </Card>
 
       {/* Contrato Principal */}
       {contrato && (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="bg-gray-900 p-6 text-white">
+        <Card>
+          <CardHeader className="bg-primary text-primary-foreground rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-4xl">{getEventoEmoji(contrato)}</span>
                 <div>
-                  <h2 className="text-xl font-bold">{generarNombreEventoCorto(contrato)}</h2>
-                  <p className="text-sm text-gray-300">Contrato Actual</p>
+                  <CardTitle className="text-primary-foreground">{generarNombreEventoCorto(contrato)}</CardTitle>
+                  <CardDescription className="text-primary-foreground/80">Contrato Actual</CardDescription>
                 </div>
               </div>
-              <button
+              <Button
                 onClick={handleDescargarContrato}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-50 transition font-medium"
+                variant="secondary"
+                size="lg"
               >
                 <Download className="w-4 h-4" />
                 Descargar PDF
-              </button>
+              </Button>
             </div>
-          </div>
-
-          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-              <Calendar className="w-8 h-8 text-blue-600" />
-              <div>
-                <p className="text-xs text-gray-600">Fecha del Evento</p>
-                <p className="font-semibold text-gray-900">
-                  {new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
-              <Users className="w-8 h-8 text-green-600" />
-              <div>
-                <p className="text-xs text-gray-600">Invitados</p>
-                <p className="font-semibold text-gray-900">{contrato.cantidad_invitados} personas</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <DollarSign className="w-8 h-8 text-gray-700" />
-              <div>
-                <p className="text-xs text-gray-600">Total</p>
-                <p className="font-semibold text-gray-900">
-                  ${parseFloat(contrato.total_contrato).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Versiones del Contrato */}
-      {versiones && versiones.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">📜 Historial de Versiones</h3>
-          <div className="space-y-3">
-            {versiones.map((version, index) => (
-              <div
-                key={version.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                    <span className="text-gray-900 font-bold">V{version.version_numero}</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      Versión {version.version_numero}
-                      {index === 0 && <span className="ml-2 text-xs text-green-600 font-semibold">(Actual)</span>}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {new Date(version.fecha_generacion).toLocaleDateString('es-ES')}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {version.cantidad_invitados} inv.
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />
-                        ${parseFloat(version.total_contrato).toLocaleString()}
-                      </span>
-                    </div>
-                    {version.motivo_cambio && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        💬 {version.motivo_cambio}
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-blue-50/50 border-blue-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-8 h-8 text-blue-600" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Fecha del Evento</p>
+                      <p className="font-semibold text-foreground">
+                        {new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
                       </p>
-                    )}
+                    </div>
                   </div>
-                </div>
-                <button
-                  onClick={() => handleDescargarVersion(version.id, version.version_numero)}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-900 hover:bg-gray-50 rounded-lg transition font-medium"
-                >
-                  <Download className="w-4 h-4" />
-                  Descargar
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-green-50/50 border-green-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-8 h-8 text-green-600" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Invitados</p>
+                      <p className="font-semibold text-foreground">{contrato.cantidad_invitados} personas</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-muted/50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <DollarSign className="w-8 h-8 text-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total</p>
+                      <p className="font-semibold text-foreground">
+                        ${parseFloat(contrato.total_contrato).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
       )}
+
+      {/* Historial de Versiones del Contrato */}
+      {versiones && versiones.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Historial de Versiones del Contrato
+            </CardTitle>
+            <CardDescription>
+              Todas las versiones generadas de tu contrato, ordenadas de más reciente a más antigua
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {versiones.map((version, index) => (
+                <Card
+                  key={version.id}
+                  className={cn(
+                    "transition-all hover:shadow-md",
+                    index === 0 && "border-primary border-2"
+                  )}
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className={cn(
+                          "w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm",
+                          index === 0 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          V{version.version_numero}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-lg">
+                              Versión {version.version_numero}
+                            </h4>
+                            {index === 0 && (
+                              <Badge variant="success">Actual</Badge>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {new Date(version.fecha_generacion).toLocaleDateString('es-ES', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric'
+                              })}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="w-4 h-4" />
+                              {version.cantidad_invitados} invitados
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="w-4 h-4" />
+                              ${parseFloat(version.total_contrato).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleDescargarVersion(version.id, version.version_numero)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        Descargar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }

@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Lock, Calendar } from 'lucide-react';
 import useAuthStore from '@shared/store/useAuthStore';
 import api from '@shared/config/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 function LoginCliente() {
   const navigate = useNavigate();
@@ -45,84 +49,92 @@ function LoginCliente() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8">
         {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full mb-4 shadow-lg">
-            <Calendar className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Portal del Cliente
-          </h1>
-          <p className="text-gray-600">
-            Accede a los detalles de tu evento especial
-          </p>
-        </div>
-
-        {/* Login Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label
-                htmlFor="codigo_acceso"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Código de Acceso
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="codigo_acceso"
-                  type="text"
-                  value={codigoAcceso}
-                  onChange={(e) => setCodigoAcceso(e.target.value)}
-                  placeholder="Ingresa tu código único"
-                  required
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
-                  disabled={loading}
-                />
-              </div>
-              <p className="mt-2 text-xs text-gray-500">
-                Este código fue enviado por tu asesor de eventos
-              </p>
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="bg-primary p-5 rounded-2xl shadow-md">
+              <Calendar className="w-12 h-12 text-primary-foreground" />
             </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-4 rounded-lg hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Verificando...
-                </>
-              ) : (
-                'Acceder a mi Evento'
-              )}
-            </button>
-          </form>
-
-          {/* Help Text */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600 text-center">
-              ¿No tienes tu código de acceso?
-              <br />
-              <span className="text-purple-600 font-medium">
-                Contacta a tu asesor de eventos
-              </span>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight">
+              Portal del Cliente
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Accede a los detalles de tu evento especial
             </p>
           </div>
         </div>
+
+        {/* Login Form */}
+        <Card className="shadow-lg">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
+            <CardDescription>
+              Ingresa tu código de acceso para continuar
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="codigo_acceso">Código de Acceso</Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <Input
+                    id="codigo_acceso"
+                    type="text"
+                    value={codigoAcceso}
+                    onChange={(e) => setCodigoAcceso(e.target.value)}
+                    placeholder="Ingresa tu código único"
+                    required
+                    className="pl-10 h-11"
+                    disabled={loading}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Este código fue enviado por tu asesor de eventos
+                </p>
+              </div>
+
+              {error && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 text-base"
+                size="lg"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Verificando...
+                  </>
+                ) : (
+                  'Acceder a mi Evento'
+                )}
+              </Button>
+            </form>
+
+            {/* Help Text */}
+            <div className="mt-6 pt-6 border-t">
+              <p className="text-sm text-muted-foreground text-center">
+                ¿No tienes tu código de acceso?
+                <br />
+                <span className="text-primary font-medium">
+                  Contacta a tu asesor de eventos
+                </span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
