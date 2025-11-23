@@ -116,7 +116,7 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
       throw new NotFoundError('Vendedor no encontrado');
     }
 
-    // Obtener estadísticas
+    // Obtener estadísticas - Optimizado: usar agregaciones SQL en lugar de traer todos los registros
     const [
       totalClientes,
       totalOfertas,
@@ -126,7 +126,7 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
       totalContratos,
       contratosActivos,
       contratosPagados,
-      contratosVendedor
+      totalVentasResult
     ] = await Promise.all([
       prisma.clientes.count({ where: { vendedor_id: parseInt(id) } }),
       prisma.ofertas.count({ where: { vendedor_id: parseInt(id) } }),
@@ -136,18 +136,17 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
       prisma.contratos.count({ where: { vendedor_id: parseInt(id) } }),
       prisma.contratos.count({ where: { vendedor_id: parseInt(id), estado: 'activo' } }),
       prisma.contratos.count({ where: { vendedor_id: parseInt(id), estado_pago: 'completado' } }),
-      prisma.contratos.findMany({
+      // Usar agregación SQL en lugar de traer todos los registros
+      prisma.contratos.aggregate({
         where: { vendedor_id: parseInt(id) },
-        select: {
+        _sum: {
           total_contrato: true
         }
       })
     ]);
 
-    // Calcular total de ventas sumando todos los contratos
-    const totalVentas = contratosVendedor.reduce((sum, contrato) => {
-      return sum + parseFloat(contrato.total_contrato || 0);
-    }, 0);
+    // Calcular total de ventas usando la agregación
+    const totalVentas = parseFloat(totalVentasResult._sum.total_contrato || 0);
 
     // Calcular total de comisiones (3% fijo del total de ventas)
     // NOTA: El porcentaje de comisión es siempre 3% según la nueva lógica implementada
@@ -448,8 +447,8 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
           }
         }
       }),
-      // Contratos con eventos en el mes (para calcular ventas)
-      prisma.contratos.findMany({
+      // Contratos con eventos en el mes (para calcular ventas) - Optimizado: usar agregación SQL
+      prisma.contratos.aggregate({
         where: {
           vendedor_id: parseInt(id),
           fecha_evento: {
@@ -457,16 +456,14 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
             lte: fechaFin
           }
         },
-        select: {
+        _sum: {
           total_contrato: true
         }
       })
     ]);
 
-    // Calcular ventas del mes (contratos con eventos en el mes)
-    const totalVentasMes = contratosVendedorMes.reduce((sum, contrato) => {
-      return sum + parseFloat(contrato.total_contrato || 0);
-    }, 0);
+    // Calcular ventas del mes usando agregación SQL
+    const totalVentasMes = parseFloat(contratosVendedorMes._sum.total_contrato || 0);
 
     // Calcular comisiones del mes (3% fijo)
     // NOTA: El porcentaje de comisión es siempre 3% según la nueva lógica implementada

@@ -566,23 +566,22 @@ router.get('/:id/pagos', authenticate, async (req, res, next) => {
       orderBy: { fecha_pago: 'desc' }
     });
 
-    // Obtener información de vendedores si hay registrado_por
-    const pagosConVendedor = await Promise.all(
-      pagos.map(async (pago) => {
-        if (pago.registrado_por) {
-          const vendedor = await prisma.vendedores.findUnique({
-            where: { id: pago.registrado_por },
-            select: {
-              id: true,
-              nombre_completo: true,
-              codigo_vendedor: true
-            }
-          });
-          return { ...pago, vendedor };
-        }
-        return { ...pago, vendedor: null };
-      })
-    );
+    // Obtener información de vendedores si hay registrado_por - Optimizado: evitar N+1 queries
+    const vendedoresIds = [...new Set(pagos.filter(p => p.registrado_por).map(p => p.registrado_por))];
+    const vendedores = await prisma.vendedores.findMany({
+      where: { id: { in: vendedoresIds } },
+      select: {
+        id: true,
+        nombre_completo: true,
+        codigo_vendedor: true
+      }
+    });
+    const vendedoresMap = new Map(vendedores.map(v => [v.id, v]));
+    
+    const pagosConVendedor = pagos.map(pago => ({
+      ...pago,
+      vendedor: pago.registrado_por ? vendedoresMap.get(pago.registrado_por) || null : null
+    }));
 
     res.json({
       success: true,
@@ -868,22 +867,22 @@ router.get('/:id/historial', authenticate, async (req, res, next) => {
       },
     });
 
-    // Obtener información de vendedores si hay modificado_por
-    const historialConVendedor = await Promise.all(
-      historial.map(async (item) => {
-        if (item.modificado_por) {
-          const vendedor = await prisma.vendedores.findUnique({
-            where: { id: item.modificado_por },
-            select: {
-              nombre_completo: true,
-              codigo_vendedor: true,
-            }
-          });
-          return { ...item, vendedor };
-        }
-        return { ...item, vendedor: null };
-      })
-    );
+    // Obtener información de vendedores si hay modificado_por - Optimizado: evitar N+1 queries
+    const vendedoresIds = [...new Set(historial.filter(h => h.modificado_por).map(h => h.modificado_por))];
+    const vendedores = await prisma.vendedores.findMany({
+      where: { id: { in: vendedoresIds } },
+      select: {
+        id: true,
+        nombre_completo: true,
+        codigo_vendedor: true,
+      }
+    });
+    const vendedoresMap = new Map(vendedores.map(v => [v.id, v]));
+    
+    const historialConVendedor = historial.map(item => ({
+      ...item,
+      vendedor: item.modificado_por ? vendedoresMap.get(item.modificado_por) || null : null
+    }));
 
     res.json({
       historial: historialConVendedor,

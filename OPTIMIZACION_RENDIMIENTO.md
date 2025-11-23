@@ -56,6 +56,19 @@ refetchOnWindowFocus: false
 - Limitar campos devueltos
 - Agregar índices en campos frecuentemente consultados
 
+## Optimizaciones Aplicadas al Backend
+
+### 1. Estadísticas del Vendedor
+- **Antes**: Traía TODOS los contratos solo para sumar `total_contrato`
+- **Ahora**: Usa `aggregate` con `_sum` para calcular directamente en SQL
+- **Resultado**: Mucho más rápido, especialmente con muchos contratos
+
+### 2. Queries N+1 Eliminadas
+- **Pagos**: Antes hacía una query por cada pago para obtener el vendedor
+- **Historial**: Antes hacía una query por cada cambio para obtener el vendedor
+- **Ahora**: Una sola query para obtener todos los vendedores necesarios
+- **Resultado**: Reducción drástica de queries a la base de datos
+
 ## Verificación
 
 Para verificar si hay queries lentas, revisa los logs del backend:
@@ -64,4 +77,11 @@ Slow query detected: XXXXms - SELECT ...
 ```
 
 Si ves queries > 1000ms, necesitan optimización.
+
+## Notas sobre Supabase
+
+- Supabase puede tener latencia de red mayor que una BD local
+- Las optimizaciones ayudan pero la latencia de red siempre existirá
+- Considera usar índices en campos frecuentemente consultados
+- Connection pooling puede ayudar (Supabase lo maneja automáticamente)
 
