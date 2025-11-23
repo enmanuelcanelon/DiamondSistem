@@ -415,18 +415,7 @@ function organizarServiciosAdicionalesPorCategoria(contrato) {
     serviceCoord: []
   };
 
-  // Debug: Log todos los servicios que estamos procesando
-  console.log('=== DEBUG: Servicios adicionales encontrados ===');
-  console.log('Total servicios adicionales:', todosServicios.length);
-  todosServicios.forEach((s, idx) => {
-    console.log(`Servicio ${idx + 1}:`, {
-      id: s.id,
-      nombre: s.nombre,
-      categoria: s.categoria,
-      cantidad: s.cantidad,
-      precio: s.precio_unitario
-    });
-  });
+  // Procesar servicios adicionales
 
   todosServicios.forEach(servicio => {
     const categoria = (servicio.categoria || '').toLowerCase();

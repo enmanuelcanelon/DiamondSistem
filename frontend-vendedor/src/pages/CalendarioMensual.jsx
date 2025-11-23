@@ -48,7 +48,7 @@ function CalendarioMensual() {
     diamond: true,
     otros: true
   });
-  const [tipoCalendario, setTipoCalendario] = useState('vendedor'); // 'general', 'vendedor', 'leads'
+  const [tipoCalendario, setTipoCalendario] = useState('vendedor'); // 'general', 'vendedor', 'leads' - 'general' oculto para vendedores
   const [refrescar, setRefrescar] = useState(false);
 
   // Obtener eventos del vendedor (solo contratos del vendedor)
@@ -63,14 +63,15 @@ function CalendarioMensual() {
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
   });
 
-  // Obtener todos los eventos (calendario general)
+  // Obtener todos los eventos (calendario general) - COMENTADO: Movido a frontend-gerente
+  // Esta funcionalidad ahora está disponible solo para gerentes
   const { data: calendarioTodos, isLoading: cargandoTodos, refetch: refetchTodos } = useQuery({
     queryKey: ['calendario-todos', mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
       const response = await api.get(`/google-calendar/eventos/todos-vendedores/${mesSeleccionado}/${añoSeleccionado}`);
       return response.data;
     },
-    enabled: !!user?.id && tipoCalendario === 'general',
+    enabled: false, // Deshabilitado para vendedores - solo disponible para gerentes
     staleTime: 5 * 60 * 1000, // 5 minutos - los eventos pueden cambiar pero no tan frecuentemente
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
     refetchInterval: false, // Sin refresco automático - solo manual con botón
@@ -492,7 +493,8 @@ function CalendarioMensual() {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="general">📅 Calendario General</SelectItem>
+                {/* Calendario General oculto para vendedores - disponible solo para gerentes */}
+                {/* <SelectItem value="general">📅 Calendario General</SelectItem> */}
                 <SelectItem value="vendedor">👤 Calendario Vendedor</SelectItem>
                 <SelectItem value="leads">📋 Calendario Leads (CITAS)</SelectItem>
               </SelectContent>
@@ -1424,7 +1426,13 @@ function CalendarioMensual() {
                     Abrir en Google Calendar
                   </Button>
                 )}
-                {!eventoSeleccionado.es_google_calendar && (
+                {/* Solo mostrar botón "Ver Contrato Completo" si es un contrato real, no un lead/cita */}
+                {!eventoSeleccionado.es_google_calendar && 
+                 eventoSeleccionado.calendario !== 'citas' && 
+                 !eventoSeleccionado.es_citas &&
+                 eventoSeleccionado.id &&
+                 !String(eventoSeleccionado.id).startsWith('leak_') &&
+                 !String(eventoSeleccionado.id).startsWith('google_') && (
                   <Button
                     onClick={() => {
                       navigate(`/contratos/${eventoSeleccionado.id}`);

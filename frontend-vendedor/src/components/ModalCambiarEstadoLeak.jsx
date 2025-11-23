@@ -20,9 +20,10 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
   const [motivoNoInteresado, setMotivoNoInteresado] = useState('');
   const [fechaLlamarLuego, setFechaLlamarLuego] = useState('');
   const [horaLlamarLuego, setHoraLlamarLuego] = useState('');
+  const [detallesContactadoLlamarLuego, setDetallesContactadoLlamarLuego] = useState('');
   const [fechaNoContactado, setFechaNoContactado] = useState('');
   const [horaNoContactado, setHoraNoContactado] = useState('');
-  const [notasVendedor, setNotasVendedor] = useState('');
+  const [detallesNoContestaLlamarLuego, setDetallesNoContestaLlamarLuego] = useState('');
 
   const mutation = useMutation({
     mutationFn: async (data) => {
@@ -70,7 +71,6 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
     // Preparar datos
     const data = {
       estado,
-      notas_vendedor: notasVendedor || null,
     };
 
     // Campos específicos según el estado
@@ -91,6 +91,9 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
         ? `${fechaLlamarLuego}T${horaLlamarLuego}:00`
         : `${fechaLlamarLuego}T09:00:00`;
       data.fecha_proximo_contacto = fechaHora;
+      if (detallesContactadoLlamarLuego) {
+        data.notas_vendedor = detallesContactadoLlamarLuego;
+      }
     }
 
     if (estado === 'no_contesta_llamar_luego' && fechaNoContactado) {
@@ -98,6 +101,9 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
         ? `${fechaNoContactado}T${horaNoContactado}:00`
         : `${fechaNoContactado}T09:00:00`;
       data.fecha_proximo_contacto = fechaHora;
+      if (detallesNoContestaLlamarLuego) {
+        data.notas_vendedor = detallesNoContestaLlamarLuego;
+      }
     }
 
     mutation.mutate(data);
@@ -198,32 +204,45 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
 
           {/* Fecha para contactar nuevamente (solo para Contactado Llamar Luego) */}
           {estado === 'contactado_llamar_luego' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="fecha_llamar_luego">
-                  Fecha para Contactar Nuevamente <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="date"
-                  id="fecha_llamar_luego"
-                  value={fechaLlamarLuego}
-                  onChange={(e) => setFechaLlamarLuego(e.target.value)}
-                  required
-                  className="mt-2"
-                  min={format(new Date(), 'yyyy-MM-dd')}
-                />
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="fecha_llamar_luego">
+                    Fecha para Contactar Nuevamente <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    id="fecha_llamar_luego"
+                    value={fechaLlamarLuego}
+                    onChange={(e) => setFechaLlamarLuego(e.target.value)}
+                    required
+                    className="mt-2"
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="hora_llamar_luego">Hora (opcional)</Label>
+                  <Input
+                    type="time"
+                    id="hora_llamar_luego"
+                    value={horaLlamarLuego}
+                    onChange={(e) => setHoraLlamarLuego(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
               </div>
               <div>
-                <Label htmlFor="hora_llamar_luego">Hora (opcional)</Label>
-                <Input
-                  type="time"
-                  id="hora_llamar_luego"
-                  value={horaLlamarLuego}
-                  onChange={(e) => setHoraLlamarLuego(e.target.value)}
+                <Label htmlFor="detalles_contactado_llamar_luego">Detalles (opcional)</Label>
+                <Textarea
+                  id="detalles_contactado_llamar_luego"
+                  value={detallesContactadoLlamarLuego}
+                  onChange={(e) => setDetallesContactadoLlamarLuego(e.target.value)}
+                  placeholder="Detalles sobre el contacto y lo acordado..."
                   className="mt-2"
+                  rows={3}
                 />
               </div>
-            </div>
+            </>
           )}
 
           {/* Fecha y hora para llamar (solo para No Contesta Llamar Luego) */}
@@ -258,6 +277,17 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
                   />
                 </div>
               </div>
+              <div>
+                <Label htmlFor="detalles_no_contesta_llamar_luego">Detalles (opcional)</Label>
+                <Textarea
+                  id="detalles_no_contesta_llamar_luego"
+                  value={detallesNoContestaLlamarLuego}
+                  onChange={(e) => setDetallesNoContestaLlamarLuego(e.target.value)}
+                  placeholder="Detalles sobre los intentos de contacto..."
+                  className="mt-2"
+                  rows={3}
+                />
+              </div>
               <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
@@ -270,19 +300,6 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
               </div>
             </>
           )}
-
-          {/* Notas del vendedor (opcional para todos) */}
-          <div>
-            <Label htmlFor="notas_vendedor">Notas del Vendedor (opcional)</Label>
-            <Textarea
-              id="notas_vendedor"
-              value={notasVendedor}
-              onChange={(e) => setNotasVendedor(e.target.value)}
-              placeholder="Agregar notas adicionales sobre el contacto..."
-              className="mt-2"
-              rows={3}
-            />
-          </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

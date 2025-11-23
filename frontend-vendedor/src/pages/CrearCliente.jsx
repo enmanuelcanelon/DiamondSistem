@@ -6,7 +6,6 @@ import api from '../config/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Label } from '../components/ui/label';
 import toast from 'react-hot-toast';
@@ -18,7 +17,6 @@ function CrearCliente() {
     nombre_completo: '',
     email: '',
     telefono: '',
-    direccion: '',
     como_nos_conocio: '',
   });
   const [comoNosConocioOtro, setComoNosConocioOtro] = useState('');
@@ -132,20 +130,6 @@ function CrearCliente() {
                   value={formData.telefono}
                   onChange={handleChange}
                   required
-                  className="mt-2"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="direccion">
-                  Dirección
-                </Label>
-                <Textarea
-                  id="direccion"
-                  name="direccion"
-                  value={formData.direccion}
-                  onChange={handleChange}
-                  rows="2"
                   className="mt-2"
                 />
               </div>

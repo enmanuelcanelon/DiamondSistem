@@ -265,24 +265,40 @@ async function sincronizarLeaksAutomaticamente() {
     const leaksDuplicados = [];
     const errores = [];
 
+    // OPTIMIZACIÓN: Obtener todos los leaks existentes de una vez para evitar múltiples queries
+    const emailsYTelefonos = leaksParaImportar.map(l => ({ email: l.email, telefono: l.telefono }));
+    const emails = [...new Set(emailsYTelefonos.map(e => e.email).filter(Boolean))];
+    const telefonos = [...new Set(emailsYTelefonos.map(e => e.telefono).filter(Boolean))];
+    
+    // Buscar todos los leaks existentes en una sola query
+    const leaksExistentes = await prisma.leaks.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { email: { in: emails } },
+              { telefono: { in: telefonos } }
+            ]
+          },
+          { estado: { not: 'convertido' } }
+        ]
+      }
+    });
+
+    // Crear un mapa para búsqueda rápida: email/teléfono -> leak existente
+    const leaksMap = new Map();
+    leaksExistentes.forEach(leak => {
+      if (leak.email) leaksMap.set(`email:${leak.email.toLowerCase()}`, leak);
+      if (leak.telefono) leaksMap.set(`telefono:${leak.telefono}`, leak);
+    });
+
     // Crear o actualizar leaks - evitar duplicados
     // IMPORTANTE: Si un leak ya está asignado a un vendedor, NO crear duplicado ni actualizarlo
     for (const leakData of leaksParaImportar) {
       try {
-        // Primero verificar si existe CUALQUIER leak con este email o teléfono (asignado o no)
-        const leakExistenteCualquiera = await prisma.leaks.findFirst({
-          where: {
-            AND: [
-              {
-                OR: [
-                  { email: leakData.email },
-                  { telefono: leakData.telefono }
-                ]
-              },
-              { estado: { not: 'convertido' } }
-            ]
-          }
-        });
+        // Buscar leak existente usando el mapa (más eficiente)
+        const leakExistenteCualquiera = leaksMap.get(`email:${leakData.email.toLowerCase()}`) || 
+                                        leaksMap.get(`telefono:${leakData.telefono}`);
 
         // Si existe un leak y ya está asignado a un vendedor, saltarlo (no crear duplicado)
         if (leakExistenteCualquiera && leakExistenteCualquiera.vendedor_id !== null) {
@@ -298,38 +314,64 @@ async function sincronizarLeaksAutomaticamente() {
           continue; // Saltar este leak, no crear duplicado
         }
 
-        // Si existe un leak DISPONIBLE (sin asignar), actualizarlo
+        // Si existe un leak DISPONIBLE (sin asignar), verificar si necesita actualización
         if (leakExistenteCualquiera && leakExistenteCualquiera.vendedor_id === null) {
-          const leakActualizado = await prisma.leaks.update({
-            where: { id: leakExistenteCualquiera.id },
-            data: {
-              fecha_recepcion: leakData.fecha_recepcion,
-              nombre_completo: leakData.nombre_completo,
-              telefono: leakData.telefono,
-              email: leakData.email,
-              tipo_evento: leakData.tipo_evento || leakExistenteCualquiera.tipo_evento,
-              cantidad_invitados: leakData.cantidad_invitados || leakExistenteCualquiera.cantidad_invitados,
-              // Si el nuevo salón es "?", siempre usar "?" (incluso si el existente tiene otro valor)
-              salon_preferido: leakData.salon_preferido === '?' ? '?' : (leakData.salon_preferido || leakExistenteCualquiera.salon_preferido),
-              fecha_evento: leakData.fecha_evento || leakExistenteCualquiera.fecha_evento,
-              fuente: leakData.fuente || leakExistenteCualquiera.fuente,
-              horario_contactar: leakData.horario_contactar || leakExistenteCualquiera.horario_contactar,
-              observaciones: leakData.observaciones || leakExistenteCualquiera.observaciones,
-              // Mantener el estado actual si ya tiene uno diferente de 'nuevo'
-              estado: leakExistenteCualquiera.estado === 'nuevo' ? 'nuevo' : leakExistenteCualquiera.estado
-            }
-          });
+          // Solo actualizar si hay cambios reales en los datos
+          const necesitaActualizacion = 
+            leakExistenteCualquiera.fecha_recepcion?.getTime() !== leakData.fecha_recepcion?.getTime() ||
+            leakExistenteCualquiera.nombre_completo !== leakData.nombre_completo ||
+            leakExistenteCualquiera.telefono !== leakData.telefono ||
+            leakExistenteCualquiera.email !== leakData.email ||
+            (leakData.tipo_evento && leakExistenteCualquiera.tipo_evento !== leakData.tipo_evento) ||
+            (leakData.cantidad_invitados && leakExistenteCualquiera.cantidad_invitados !== leakData.cantidad_invitados) ||
+            (leakData.salon_preferido && leakExistenteCualquiera.salon_preferido !== leakData.salon_preferido) ||
+            (leakData.fecha_evento && leakExistenteCualquiera.fecha_evento?.getTime() !== leakData.fecha_evento?.getTime()) ||
+            (leakData.fuente && leakExistenteCualquiera.fuente !== leakData.fuente) ||
+            (leakData.horario_contactar && leakExistenteCualquiera.horario_contactar !== leakData.horario_contactar) ||
+            (leakData.observaciones && leakExistenteCualquiera.observaciones !== leakData.observaciones);
 
-          leaksActualizados.push(leakActualizado);
-          leaksDuplicados.push({
-            id_existente: leakExistenteCualquiera.id,
-            nombre: leakData.nombre_completo,
-            email: leakData.email,
-            telefono: leakData.telefono,
-            accion: 'actualizado',
-            fecha_recepcion_anterior: leakExistenteCualquiera.fecha_recepcion,
-            fecha_recepcion_nueva: leakData.fecha_recepcion
-          });
+          if (necesitaActualizacion) {
+            const leakActualizado = await prisma.leaks.update({
+              where: { id: leakExistenteCualquiera.id },
+              data: {
+                fecha_recepcion: leakData.fecha_recepcion,
+                nombre_completo: leakData.nombre_completo,
+                telefono: leakData.telefono,
+                email: leakData.email,
+                tipo_evento: leakData.tipo_evento || leakExistenteCualquiera.tipo_evento,
+                cantidad_invitados: leakData.cantidad_invitados || leakExistenteCualquiera.cantidad_invitados,
+                // Si el nuevo salón es "?", siempre usar "?" (incluso si el existente tiene otro valor)
+                salon_preferido: leakData.salon_preferido === '?' ? '?' : (leakData.salon_preferido || leakExistenteCualquiera.salon_preferido),
+                fecha_evento: leakData.fecha_evento || leakExistenteCualquiera.fecha_evento,
+                fuente: leakData.fuente || leakExistenteCualquiera.fuente,
+                horario_contactar: leakData.horario_contactar || leakExistenteCualquiera.horario_contactar,
+                observaciones: leakData.observaciones || leakExistenteCualquiera.observaciones,
+                // Mantener el estado actual si ya tiene uno diferente de 'nuevo'
+                estado: leakExistenteCualquiera.estado === 'nuevo' ? 'nuevo' : leakExistenteCualquiera.estado
+              }
+            });
+
+            leaksActualizados.push(leakActualizado);
+            leaksDuplicados.push({
+              id_existente: leakExistenteCualquiera.id,
+              nombre: leakData.nombre_completo,
+              email: leakData.email,
+              telefono: leakData.telefono,
+              accion: 'actualizado',
+              fecha_recepcion_anterior: leakExistenteCualquiera.fecha_recepcion,
+              fecha_recepcion_nueva: leakData.fecha_recepcion
+            });
+          } else {
+            // No hay cambios, solo registrar como duplicado sin actualizar
+            leaksDuplicados.push({
+              id_existente: leakExistenteCualquiera.id,
+              nombre: leakData.nombre_completo,
+              email: leakData.email,
+              telefono: leakData.telefono,
+              accion: 'sin_cambios',
+              razon: 'Datos sin cambios, no se actualizó'
+            });
+          }
           continue;
         }
 
@@ -352,6 +394,9 @@ async function sincronizarLeaksAutomaticamente() {
         });
 
         leaksCreados.push(leak);
+        // Agregar al mapa para evitar duplicados en la misma ejecución
+        if (leak.email) leaksMap.set(`email:${leak.email.toLowerCase()}`, leak);
+        if (leak.telefono) leaksMap.set(`telefono:${leak.telefono}`, leak);
       } catch (error) {
         errores.push({
           email: leakData.email,

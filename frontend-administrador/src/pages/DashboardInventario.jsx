@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, AlertTriangle, Warehouse, Building2, Search, Edit2, Save, X, Filter, RefreshCw, ArrowRightLeft, Truck, CheckSquare, FileText, ShoppingCart, ChevronDown, Download, Plus, Settings, Trash2 } from 'lucide-react';
+import { Package, AlertTriangle, Warehouse, Building2, Search, Edit2, Save, X, Filter, RefreshCw, ArrowRightLeft, Truck, CheckSquare, FileText, ShoppingCart, ChevronDown, Download, Plus, Settings, Trash2, Loader2 } from 'lucide-react';
 import api from '@shared/config/api';
 import toast from 'react-hot-toast';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 function DashboardInventario() {
   const queryClient = useQueryClient();
@@ -289,7 +294,10 @@ function DashboardInventario() {
   if (loadingCentral || loadingSalones) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando...</div>
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary mb-4" />
+          <p className="text-muted-foreground">Cargando inventario...</p>
+        </div>
       </div>
     );
   }
@@ -465,33 +473,31 @@ function DashboardInventario() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Administración Central</h1>
-          <p className="text-gray-600 mt-1">Gestión del almacén central</p>
+          <h1 className="text-3xl font-bold">Administración Central</h1>
+          <p className="text-muted-foreground mt-1">Gestión del almacén central</p>
         </div>
-        <div className="flex gap-3 flex-wrap">
-          {/* Botón de Descarga de PDFs */}
-          <button
+        <div className="flex flex-wrap gap-2">
+          <Button
             onClick={() => setMostrarModalPDFs(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            variant="outline"
+            size="sm"
           >
             <Download className="w-4 h-4" />
             Descargar PDFs
-          </button>
-          {/* Botón para Añadir Item */}
-          <button
+          </Button>
+          <Button
             onClick={() => setMostrarModalNuevoItem(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+            size="sm"
           >
             <Plus className="w-4 h-4" />
             Añadir Item
-          </button>
+          </Button>
           {ultimaListaData?.tiene_lista && (
-            <button
+            <Button
               onClick={() => {
                 setUltimaListaCompra(ultimaListaData.lista);
-                // Inicializar cantidades recibidas con las cantidades a comprar
                 const cantidades = {};
                 ultimaListaData.lista.items.forEach(item => {
                   cantidades[item.item_id] = item.cantidad_a_comprar || 0;
@@ -499,21 +505,20 @@ function DashboardInventario() {
                 setCantidadesRecibidas(cantidades);
                 setShowRecibirCompra(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
+              variant="outline"
+              size="sm"
             >
               <ShoppingCart className="w-4 h-4" />
               Recibir Compra
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             onClick={() => {
               setShowListaCompra(true);
-              // Pre-seleccionar todos los items bajo de stock
               const itemsBajoStockSeleccionados = {};
               itemsBajoStock.forEach(item => {
                 const cantidadMinima = parseFloat(item.cantidad_minima || 20);
                 const cantidadActual = parseFloat(item.cantidad_actual);
-                // Calcular cantidad sugerida: la diferencia entre mínima y actual, o mínimo 10
                 const cantidadSugerida = Math.max(cantidadMinima - cantidadActual, 10);
                 
                 itemsBajoStockSeleccionados[item.item_id] = {
@@ -521,101 +526,109 @@ function DashboardInventario() {
                   nombre: item.inventario_items?.nombre,
                   cantidad_actual: item.cantidad_actual,
                   cantidad_minima: item.cantidad_minima || 20,
-                  cantidad_a_comprar: cantidadSugerida, // Nueva propiedad
+                  cantidad_a_comprar: cantidadSugerida,
                   unidad_medida: item.inventario_items?.unidad_medida,
                   categoria: item.inventario_items?.categoria
                 };
               });
               setItemsSeleccionadosCompra(itemsBajoStockSeleccionados);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            variant="outline"
+            size="sm"
           >
             <FileText className="w-4 h-4" />
             Lista de Compra
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setShowAbastecimiento({})}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+            variant="outline"
+            size="sm"
           >
             <Truck className="w-4 h-4" />
             Abastecer Salón
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               queryClient.invalidateQueries(['inventario-central']);
               queryClient.invalidateQueries(['inventario-salones']);
               toast.success('Datos actualizados');
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            variant="outline"
+            size="sm"
           >
             <RefreshCw className="w-4 h-4" />
             Actualizar
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Items en Almacén Central</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {inventarioCentral?.total_items || 0}
-              </p>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Items en Almacén Central</p>
+                <p className="text-2xl font-bold mt-1">
+                  {inventarioCentral?.total_items || 0}
+                </p>
+              </div>
+              <Warehouse className="w-12 h-12 text-primary" />
             </div>
-            <Warehouse className="w-12 h-12 text-blue-600" />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Items Bajo Stock</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">
-                {itemsBajoStock.length}
-              </p>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Items Bajo Stock</p>
+                <p className="text-2xl font-bold text-destructive mt-1">
+                  {itemsBajoStock.length}
+                </p>
+              </div>
+              <AlertTriangle className="w-12 h-12 text-destructive" />
             </div>
-            <AlertTriangle className="w-12 h-12 text-red-600" />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Inventario Central */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
+      <Card>
+        <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Inventario Central</h2>
-              <p className="text-sm text-gray-600 mt-1">Almacén central con todos los items ({itemsFiltrados.length} items)</p>
+              <CardTitle>Inventario Central</CardTitle>
+              <CardDescription>Almacén central con todos los items ({itemsFiltrados.length} items)</CardDescription>
             </div>
           </div>
-
+        </CardHeader>
+        <CardContent>
           {/* Filtros y Búsqueda */}
-          <div className="mt-4 flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 mb-6">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
                   type="text"
                   placeholder="Buscar item..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-10"
                 />
               </div>
             </div>
             <select
               value={filterCategoria}
               onChange={(e) => setFilterCategoria(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="">Todas las categorías</option>
               {categorias.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
-            <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+            <label className="flex items-center gap-2 px-4 py-2 border border-input rounded-lg cursor-pointer hover:bg-muted transition">
               <input
                 type="checkbox"
                 checked={filterBajoStock}
@@ -625,8 +638,7 @@ function DashboardInventario() {
               <span className="text-sm">Solo bajo stock</span>
             </label>
           </div>
-        </div>
-        <div className="p-6">
+          
           {itemsFiltrados.length > 0 ? (
             <div className="space-y-4">
               {Object.keys(itemsPorCategoria).sort().map((categoria) => {
@@ -635,22 +647,28 @@ function DashboardInventario() {
                 const estaExpandida = categoriasExpandidas[categoria] !== false; // Por defecto expandida
                 
                 return (
-                  <div key={categoria} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <Card key={categoria} className="overflow-hidden">
                     {/* Header de categoría - Clickable */}
                     <button
                       onClick={() => toggleCategoria(categoria)}
-                      className="w-full bg-gray-100 px-6 py-3 border-b border-gray-200 hover:bg-gray-200 transition flex items-center justify-between"
+                      className={cn(
+                        "w-full px-6 py-3 border-b transition flex items-center justify-between",
+                        "bg-muted/50 hover:bg-muted"
+                      )}
                     >
                       <div className="flex items-center gap-3">
                         <ChevronDown 
-                          className={`w-5 h-5 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`} 
+                          className={cn(
+                            "w-5 h-5 text-muted-foreground transition-transform",
+                            estaExpandida ? '' : '-rotate-90'
+                          )} 
                         />
-                        <h3 className="text-lg font-semibold text-gray-900">{categoria}</h3>
+                        <h3 className="text-lg font-semibold">{categoria}</h3>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>{itemsCategoria.length} items</span>
                         {itemsBajoStockCategoria > 0 && (
-                          <span className="text-red-600 font-medium">
+                          <span className="text-destructive font-medium">
                             {itemsBajoStockCategoria} bajo stock
                           </span>
                         )}
@@ -816,17 +834,17 @@ function DashboardInventario() {
                         </table>
                       </div>
                     )}
-                  </div>
+                  </Card>
                 );
               })}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No hay items que coincidan con los filtros
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Modal de Transferencia */}
       {showTransferencia && (

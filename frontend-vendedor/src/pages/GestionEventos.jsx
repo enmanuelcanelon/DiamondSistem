@@ -8,7 +8,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Filter,
   Search,
   Loader2,
   AlertCircle,
@@ -68,13 +67,11 @@ function GestionEventos() {
   const solicitudes = solicitudesData?.solicitudes || [];
   const contratos = contratosData?.data || [];
 
-  // Obtener conteo de mensajes no leídos para cada contrato
-  const contratosIdsString = contratos?.map(c => c.id).filter(Boolean).join(',') || '';
+  // Obtener conteo de mensajes no leídos para todos los contratos (batch endpoint optimizado)
   const { data: mensajesNoLeidosData, isLoading: loadingMensajes } = useQuery({
     queryKey: ['mensajes-no-leidos-vendedor-batch', user?.id],
     queryFn: async () => {
       if (!contratos || contratos.length === 0) {
-        console.log('📭 No hay contratos para obtener mensajes');
         return {};
       }
       
@@ -104,15 +101,6 @@ function GestionEventos() {
   });
 
   const buzonMensajes = buzonData?.buzón || [];
-  
-  // Debug: mostrar información en consola
-  console.log('🔍 Estado actual:', {
-    contratos: contratos?.length || 0,
-    mensajesNoLeidos: Object.keys(mensajesNoLeidos).length,
-    loadingMensajes,
-    buzonMensajes: buzonMensajes.length,
-    user: user?.id
-  });
 
   // Filtrar solicitudes por búsqueda
   const solicitudesFiltradas = solicitudes.filter((sol) => {
@@ -147,13 +135,6 @@ function GestionEventos() {
     return dias >= 0 && dias <= 30;
   });
 
-  // Debug: mostrar información de eventos
-  console.log('📅 Eventos:', {
-    totalContratos: contratos.length,
-    eventosActivos: eventosActivos.length,
-    eventosProximos: eventosProximos.length,
-    contratosIds: contratos.map(c => c.id)
-  });
 
   if (loadingContratos) {
     return (

@@ -1,11 +1,13 @@
 import * as React from "react"
 import { ChevronDown } from "lucide-react"
+import { useClickOutside } from "../../hooks/useClickOutside"
 
 const SelectContext = React.createContext(undefined)
 
 const Select = ({ value, onValueChange, children, ...props }) => {
   const [open, setOpen] = React.useState(false)
   const [selectedValue, setSelectedValue] = React.useState(value || "")
+  const selectRef = React.useRef(null)
 
   // Sincronizar el estado interno con el prop value cuando cambie
   React.useEffect(() => {
@@ -20,9 +22,19 @@ const Select = ({ value, onValueChange, children, ...props }) => {
     if (onValueChange) onValueChange(newValue)
   }
 
+  // Cerrar el select cuando se hace clic fuera
+  const handleClickOutside = React.useCallback(() => {
+    if (open) {
+      setOpen(false)
+    }
+  }, [open])
+
+  // Usar el hook de click outside con la ref del contenedor
+  useClickOutside(handleClickOutside, open, selectRef)
+
   return (
     <SelectContext.Provider value={{ open, setOpen, selectedValue, handleValueChange }}>
-      <div className="relative" {...props}>
+      <div className="relative" ref={selectRef} {...props}>
         {children}
       </div>
     </SelectContext.Provider>
@@ -66,12 +78,16 @@ SelectValue.displayName = "SelectValue"
 const SelectContent = React.forwardRef(({ className = "", children, ...props }, ref) => {
   const context = React.useContext(SelectContext)
   if (!context) throw new Error("SelectContent must be used within Select")
+  const contentRef = React.useRef(null)
+  
+  // Combinar refs
+  React.useImperativeHandle(ref, () => contentRef.current)
   
   if (!context.open) return null
   
   return (
     <div
-      ref={ref}
+      ref={contentRef}
       className={`absolute z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md ${className}`}
       {...props}
     >

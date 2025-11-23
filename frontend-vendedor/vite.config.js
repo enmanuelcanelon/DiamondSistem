@@ -6,8 +6,11 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173, // Puerto específico para vendedor
-    strictPort: true, // Falla si el puerto está ocupado en lugar de buscar otro
+    port: 5176, // Puerto específico para vendedor
+    strictPort: false, // Busca otro puerto si 5176 está ocupado
+    hmr: {
+      overlay: false, // Desactivar overlay de errores para mejor rendimiento
+    },
   },
   resolve: {
     alias: {
@@ -19,7 +22,15 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['zustand', 'axios', 'react', 'react-dom'],
+    include: ['zustand', 'axios', 'react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+    exclude: [],
+  },
+  // Optimizaciones adicionales para desarrollo rápido
+  esbuild: {
+    target: 'esnext',
+    minifyIdentifiers: false,
+    minifySyntax: false,
+    minifyWhitespace: false,
   },
   build: {
     rollupOptions: {
@@ -28,10 +39,26 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'query-vendor': ['@tanstack/react-query'],
           'ui-vendor': ['lucide-react', 'recharts'],
+          'date-vendor': ['date-fns'],
         },
       },
     },
     chunkSizeWarningLimit: 1000,
+    // Optimizaciones de build
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: false, // Mantener console en desarrollo
+        drop_debugger: true,
+      },
+    },
+    // Mejorar rendimiento de build
+    target: 'esnext',
+    cssCodeSplit: true,
+  },
+  // Optimizaciones adicionales
+  css: {
+    devSourcemap: false, // Desactivar sourcemaps en desarrollo para mejor rendimiento
   },
 })
 

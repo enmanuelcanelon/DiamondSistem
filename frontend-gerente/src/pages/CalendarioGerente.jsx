@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin, DollarSign, Loader2, X, User, FileText, Phone, Mail, Package, Building2, CreditCard, Wallet, CheckCircle2, AlertCircle, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin, DollarSign, Loader2, X, User, FileText, Phone, Mail, Package, Building2, CreditCard, Wallet, CheckCircle2, AlertCircle, Download, RefreshCw } from 'lucide-react';
 import api from '@shared/config/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Select } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 function CalendarioGerente() {
   const fechaActual = new Date();
@@ -13,6 +15,7 @@ function CalendarioGerente() {
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [contratoId, setContratoId] = useState(null);
+  const [tipoCalendario, setTipoCalendario] = useState('general'); // 'general' o 'contratos'
 
   const { data: dashboardData } = useQuery({
     queryKey: ['gerente-dashboard'],
@@ -20,6 +23,21 @@ function CalendarioGerente() {
       const response = await api.get('/gerentes/dashboard');
       return response.data.estadisticas;
     },
+    enabled: tipoCalendario === 'contratos', // Solo cargar cuando se selecciona contratos
+  });
+
+  // Obtener todos los eventos (calendario general) - Funcionalidad movida desde frontend-vendedor
+  const { data: calendarioTodos, isLoading: cargandoTodos, refetch: refetchCalendarioGeneral } = useQuery({
+    queryKey: ['calendario-todos-gerente', mesSeleccionado, añoSeleccionado],
+    queryFn: async () => {
+      const response = await api.get(`/google-calendar/eventos/todos-vendedores/${mesSeleccionado}/${añoSeleccionado}`);
+      return response.data;
+    },
+    enabled: tipoCalendario === 'general',
+    staleTime: 5 * 60 * 1000, // 5 minutos - los eventos pueden cambiar pero no tan frecuentemente
+    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
+    refetchInterval: false, // Sin refresco automático - solo manual con botón
+    gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
   });
 
   // Obtener detalles completos del contrato cuando se selecciona un evento
@@ -57,6 +75,32 @@ function CalendarioGerente() {
 
   const fechasDisponibles = dashboardData?.fechas_disponibles?.eventos || [];
 
+  // Obtener eventos según el tipo de calendario seleccionado
+  const obtenerEventosDelMes = () => {
+    if (tipoCalendario === 'general') {
+      // Usar eventos del calendario general (todos los vendedores)
+      const eventosPorDia = calendarioTodos?.eventos_por_dia || {};
+      const eventos = [];
+      Object.keys(eventosPorDia).forEach(dia => {
+        eventosPorDia[dia].forEach(evento => {
+          eventos.push({
+            ...evento,
+            fecha: evento.fecha_evento || evento.fecha_inicio || evento.hora_inicio,
+            salon: evento.salones?.nombre || evento.salon || evento.ubicacion || 'Sin salón',
+            id: evento.id || evento.contrato_id,
+            codigo_contrato: evento.codigo_contrato
+          });
+        });
+      });
+      return eventos;
+    } else {
+      // Usar eventos del dashboard (contratos)
+      return fechasDisponibles;
+    }
+  };
+
+  const eventosDelMesCompletos = obtenerEventosDelMes();
+
   const nombresMeses = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -93,21 +137,35 @@ function CalendarioGerente() {
 
   const { diasEnMes, diaInicioSemana } = obtenerDiasDelMes();
 
-  // Filtrar eventos del mes actual
-  const eventosDelMes = fechasDisponibles.filter(evento => {
-    const fechaEvento = new Date(evento.fecha);
+  // Filtrar eventos del mes actual según el tipo de calendario
+  const eventosDelMes = eventosDelMesCompletos.filter(evento => {
+    const fechaEvento = new Date(evento.fecha || evento.fecha_evento || evento.fecha_inicio || evento.hora_inicio);
     return fechaEvento.getMonth() + 1 === mesSeleccionado && 
            fechaEvento.getFullYear() === añoSeleccionado;
   });
 
   const eventosPorDia = {};
   eventosDelMes.forEach(evento => {
-    const dia = new Date(evento.fecha).getDate();
+    const fechaEvento = new Date(evento.fecha || evento.fecha_evento || evento.fecha_inicio || evento.hora_inicio);
+    const dia = fechaEvento.getDate();
     if (!eventosPorDia[dia]) {
       eventosPorDia[dia] = [];
     }
     eventosPorDia[dia].push(evento);
   });
+
+  const isLoading = tipoCalendario === 'general' ? cargandoTodos : false;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+          <p className="text-gray-600">Cargando calendario...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -119,7 +177,7 @@ function CalendarioGerente() {
 
       {/* Controles */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => cambiarMes('anterior')}
@@ -143,6 +201,35 @@ function CalendarioGerente() {
             <p className="text-sm text-gray-600">Eventos este mes</p>
             <p className="text-2xl font-bold text-purple-600">{eventosDelMes.length}</p>
           </div>
+        </div>
+        
+        {/* Selector de tipo de calendario */}
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium text-gray-700">Tipo de Calendario:</label>
+          <Select
+            value={tipoCalendario}
+            onChange={(e) => setTipoCalendario(e.target.value)}
+            className="w-[200px]"
+          >
+            <option value="general">📅 Calendario General</option>
+            <option value="contratos">📋 Calendario Contratos</option>
+          </Select>
+          {tipoCalendario === 'general' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                // Refrescar el calendario general
+                await refetchCalendarioGeneral();
+                toast.success('Calendario actualizado');
+              }}
+              disabled={cargandoTodos}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${cargandoTodos ? 'animate-spin' : ''}`} />
+              Refrescar
+            </Button>
+          )}
         </div>
       </div>
 
@@ -185,24 +272,35 @@ function CalendarioGerente() {
                   {eventosDelDia.length === 0 ? (
                     <div className="text-xs text-gray-400 text-center mt-1">Sin eventos</div>
                   ) : (
-                    eventosDelDia.map((evento, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setEventoSeleccionado(evento);
-                          setContratoId(evento.id); // El id del evento es el id del contrato
-                          setMostrarModal(true);
-                        }}
-                        className="text-xs p-1 rounded bg-purple-100 text-purple-800 border border-purple-200 hover:bg-purple-200 cursor-pointer transition"
-                        title={`${evento.salon} - ${format(new Date(evento.fecha), 'dd/MM/yyyy')}`}
-                      >
-                        <div className="font-medium truncate">{evento.salon}</div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {format(new Date(evento.fecha), 'dd/MM', { locale: es })}
+                    eventosDelDia.map((evento, idx) => {
+                      const fechaEvento = evento.fecha || evento.fecha_evento || evento.fecha_inicio || evento.hora_inicio;
+                      const nombreEvento = evento.clientes?.nombre_completo || evento.titulo || evento.summary || evento.salon || 'Evento';
+                      const salonEvento = evento.salones?.nombre || evento.salon || evento.ubicacion || 'Sin salón';
+                      
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            setEventoSeleccionado(evento);
+                            // Solo establecer contratoId si es un contrato (no evento de Google Calendar)
+                            if (evento.id && !evento.es_google_calendar) {
+                              setContratoId(evento.id);
+                            } else {
+                              setContratoId(null);
+                            }
+                            setMostrarModal(true);
+                          }}
+                          className="text-xs p-1 rounded bg-purple-100 text-purple-800 border border-purple-200 hover:bg-purple-200 cursor-pointer transition"
+                          title={`${nombreEvento} - ${salonEvento} - ${format(new Date(fechaEvento), 'dd/MM/yyyy')}`}
+                        >
+                          <div className="font-medium truncate">{nombreEvento}</div>
+                          <div className="flex items-center gap-1 text-[10px]">
+                            <MapPin className="w-2.5 h-2.5" />
+                            <span className="truncate">{salonEvento}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -215,32 +313,46 @@ function CalendarioGerente() {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Próximos 90 Días</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {fechasDisponibles.slice(0, 12).map((evento, idx) => (
-            <div 
-              key={idx} 
-              onClick={() => {
-                setEventoSeleccionado(evento);
-                setContratoId(evento.id); // El id del evento es el id del contrato
-                setMostrarModal(true);
-              }}
-              className="border rounded-lg p-4 hover:shadow-md transition cursor-pointer"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-5 h-5 text-purple-600" />
-                <span className="font-semibold text-gray-900">
-                  {format(new Date(evento.fecha), 'dd/MM/yyyy', { locale: es })}
-                </span>
+          {eventosDelMesCompletos.slice(0, 12).map((evento, idx) => {
+            const fechaEvento = evento.fecha || evento.fecha_evento || evento.fecha_inicio || evento.hora_inicio;
+            const nombreEvento = evento.clientes?.nombre_completo || evento.titulo || evento.summary || evento.salon || 'Evento';
+            const salonEvento = evento.salones?.nombre || evento.salon || evento.ubicacion || 'Sin salón';
+            
+            return (
+              <div 
+                key={idx} 
+                onClick={() => {
+                  setEventoSeleccionado(evento);
+                  // Solo establecer contratoId si es un contrato (no evento de Google Calendar)
+                  if (evento.id && !evento.es_google_calendar) {
+                    setContratoId(evento.id);
+                  } else {
+                    setContratoId(null);
+                  }
+                  setMostrarModal(true);
+                }}
+                className="border rounded-lg p-4 hover:shadow-md transition cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                  <span className="font-semibold text-gray-900">
+                    {format(new Date(fechaEvento), 'dd/MM/yyyy', { locale: es })}
+                  </span>
+                </div>
+                <div className="text-sm font-medium text-gray-900 mb-1 truncate">
+                  {nombreEvento}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <MapPin className="w-4 h-4" />
+                  <span className="truncate">{salonEvento}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <MapPin className="w-4 h-4" />
-                <span>{evento.salon}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-        {fechasDisponibles.length > 12 && (
+        {eventosDelMesCompletos.length > 12 && (
           <p className="text-sm text-gray-500 mt-4 text-center">
-            Y {fechasDisponibles.length - 12} eventos más...
+            Y {eventosDelMesCompletos.length - 12} eventos más...
           </p>
         )}
       </div>
@@ -264,12 +376,12 @@ function CalendarioGerente() {
             </div>
 
             <div className="p-6">
-              {cargandoContrato ? (
+              {cargandoContrato && contratoId ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
                   <p className="ml-3 text-gray-600">Cargando detalles del contrato...</p>
                 </div>
-              ) : contratosData ? (() => {
+              ) : (contratosData && contratoId) ? (() => {
                 // Calcular total pagado y saldo pendiente desde los pagos
                 const totalContrato = parseFloat(contratosData.total_contrato || 0);
                 const pagosActivos = (contratosData.pagos || []).filter(p => p.estado === 'completado');
@@ -485,8 +597,52 @@ function CalendarioGerente() {
                 );
               })() : (
                 <div className="text-center py-12">
-                  <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No se pudieron cargar los detalles del contrato</p>
+                  {eventoSeleccionado && (
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {eventoSeleccionado.clientes?.nombre_completo || eventoSeleccionado.titulo || eventoSeleccionado.summary || 'Evento'}
+                      </h3>
+                      <div className="space-y-2 text-left max-w-md mx-auto">
+                        {eventoSeleccionado.salones?.nombre && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-700">{eventoSeleccionado.salones.nombre}</span>
+                          </div>
+                        )}
+                        {eventoSeleccionado.fecha_evento && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-700">
+                              {format(new Date(eventoSeleccionado.fecha_evento), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+                            </span>
+                          </div>
+                        )}
+                        {eventoSeleccionado.vendedor_nombre && (
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-700">Vendedor: {eventoSeleccionado.vendedor_nombre}</span>
+                          </div>
+                        )}
+                      </div>
+                      {eventoSeleccionado.es_google_calendar && eventoSeleccionado.htmlLink && (
+                        <a
+                          href={eventoSeleccionado.htmlLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Abrir en Google Calendar
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  {!eventoSeleccionado && (
+                    <>
+                      <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">No se pudieron cargar los detalles del evento</p>
+                    </>
+                  )}
                 </div>
               )}
             </div>

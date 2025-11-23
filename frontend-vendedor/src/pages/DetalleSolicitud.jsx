@@ -13,6 +13,12 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import api from '../config/api';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
+import { Separator } from '../components/ui/separator';
 
 function DetalleSolicitud() {
   const { id } = useParams();
@@ -87,23 +93,31 @@ function DetalleSolicitud() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="text-center py-12">
-        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Solicitud no encontrada</h2>
-        <Link
-          to="/eventos"
-          className="text-purple-600 hover:text-purple-700 font-medium"
-        >
-          ← Volver a Gestión de Eventos
-        </Link>
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Solicitud no encontrada</h2>
+              <Button variant="outline" asChild className="mt-4">
+                <Link to="/eventos">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver a Gestión de Eventos
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -113,339 +127,372 @@ function DetalleSolicitud() {
   const cliente = contrato?.clientes;
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link
-          to="/eventos"
-          className="p-2 hover:bg-gray-100 rounded-lg transition"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900">Detalle de Solicitud</h1>
-          <p className="text-gray-600 mt-1">Solicitud #{solicitud.id}</p>
+      <div className="flex items-center justify-between space-y-2">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/eventos">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Detalle de Solicitud</h2>
+            <p className="text-muted-foreground">Solicitud #{solicitud.id}</p>
+          </div>
         </div>
       </div>
 
       {/* Estado de la Solicitud */}
       {solicitud.estado !== 'pendiente' && (
-        <div
-          className={`p-4 rounded-xl ${
-            solicitud.estado === 'aprobada'
-              ? 'bg-green-100 border border-green-300'
-              : 'bg-red-100 border border-red-300'
-          }`}
-        >
-          <p
-            className={`font-bold ${
-              solicitud.estado === 'aprobada' ? 'text-green-700' : 'text-red-700'
-            }`}
-          >
-            {solicitud.estado === 'aprobada'
-              ? '✅ Esta solicitud ya fue aprobada'
-              : '❌ Esta solicitud fue rechazada'}
-          </p>
-          {solicitud.fecha_respuesta && (
-            <p className="text-sm text-gray-600 mt-1">
-              Fecha de respuesta:{' '}
-              {new Date(solicitud.fecha_respuesta).toLocaleDateString('es-ES')}
-            </p>
-          )}
-        </div>
+        <Card className={solicitud.estado === 'aprobada' ? 'border-green-200 bg-green-50 dark:bg-green-950/20' : 'border-red-200 bg-red-50 dark:bg-red-950/20'}>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              {solicitud.estado === 'aprobada' ? (
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              )}
+              <p className={`font-semibold ${
+                solicitud.estado === 'aprobada' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
+              }`}>
+                {solicitud.estado === 'aprobada'
+                  ? 'Esta solicitud ya fue aprobada'
+                  : 'Esta solicitud fue rechazada'}
+              </p>
+            </div>
+            {solicitud.fecha_respuesta && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Fecha de respuesta:{' '}
+                {new Date(solicitud.fecha_respuesta).toLocaleDateString('es-ES')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Columna Izquierda - Info del Cliente y Contrato */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-4 space-y-4">
           {/* Información del Cliente */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="w-6 h-6 text-purple-600" />
-              Información del Cliente
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Nombre Completo</p>
-                <p className="font-bold text-gray-900">{cliente?.nombre_completo}</p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Información del Cliente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Nombre Completo</p>
+                  <p className="font-semibold mt-1">{cliente?.nombre_completo}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-semibold mt-1">{cliente?.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Teléfono</p>
+                  <p className="font-semibold mt-1">{cliente?.telefono}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Código de Contrato</p>
+                  <p className="font-semibold mt-1 font-mono text-primary">{contrato?.codigo_contrato}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Email</p>
-                <p className="font-bold text-gray-900">{cliente?.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Teléfono</p>
-                <p className="font-bold text-gray-900">{cliente?.telefono}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Código de Contrato</p>
-                <p className="font-bold text-purple-600">{contrato?.codigo_contrato}</p>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Información del Contrato */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-blue-600" />
-              Información del Evento
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Fecha del Evento</p>
-                <p className="font-bold text-gray-900">
-                  {contrato?.fecha_evento
-                    ? new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })
-                    : 'No definida'}
-                </p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Información del Evento
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Fecha del Evento</p>
+                  <p className="font-semibold mt-1">
+                    {contrato?.fecha_evento
+                      ? new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })
+                      : 'No definida'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Cantidad de Invitados</p>
+                  <p className="font-semibold mt-1">{contrato?.cantidad_invitados}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total del Contrato</p>
+                  <p className="font-semibold mt-1 text-green-600 dark:text-green-400">
+                    ${parseFloat(contrato?.total_contrato || 0).toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Estado del Contrato</p>
+                  <Badge variant="outline" className="mt-1 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300">
+                    {contrato?.estado}
+                  </Badge>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Cantidad de Invitados</p>
-                <p className="font-bold text-gray-900">{contrato?.cantidad_invitados}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total del Contrato</p>
-                <p className="font-bold text-green-600">
-                  ${parseFloat(contrato?.total_contrato || 0).toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Estado del Contrato</p>
-                <span className="inline-block px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-medium">
-                  {contrato?.estado}
-                </span>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Detalles de la Solicitud */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <FileText className="w-6 h-6 text-orange-600" />
-              Detalles de la Solicitud
-            </h2>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Tipo de Solicitud</p>
-                {solicitud.tipo_solicitud === 'invitados' ? (
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-bold">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Detalles de la Solicitud
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Tipo de Solicitud</p>
+                  {solicitud.tipo_solicitud === 'invitados' ? (
+                    <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
                       👥 Invitados Adicionales
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-bold">
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300">
                       ➕ Servicio Adicional
-                    </span>
+                    </Badge>
+                  )}
+                </div>
+
+                {solicitud.tipo_solicitud === 'invitados' ? (
+                  <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                    <CardContent className="pt-6">
+                      <p className="text-sm text-foreground">
+                        El cliente solicita agregar{' '}
+                        <strong className="text-blue-700 dark:text-blue-300 text-2xl">
+                          {solicitud.invitados_adicionales}
+                        </strong>{' '}
+                        invitados adicionales
+                      </p>
+                      <div className="mt-3 space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          Cantidad actual: <strong>{contrato?.cantidad_invitados}</strong> invitados
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Nueva cantidad:{' '}
+                          <strong>
+                            {contrato?.cantidad_invitados + solicitud.invitados_adicionales}
+                          </strong>{' '}
+                          invitados
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                    <CardContent className="pt-6">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        <strong>Servicio solicitado:</strong>
+                      </p>
+                      <p className="text-xl font-bold text-foreground">
+                        {solicitud.servicios?.nombre}
+                      </p>
+                      {solicitud.servicios?.descripcion && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {solicitud.servicios.descripcion}
+                        </p>
+                      )}
+                      {solicitud.cantidad_servicio > 1 && (
+                        <p className="text-sm text-foreground mt-2">
+                          Cantidad: <strong>{solicitud.cantidad_servicio}</strong>
+                        </p>
+                      )}
+                      {solicitud.costo_adicional && (
+                        <>
+                          <Separator className="my-4" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">Costo adicional:</p>
+                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                              ${parseFloat(solicitud.costo_adicional).toFixed(2)}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Nuevo total del contrato:{' '}
+                              <strong>
+                                $
+                                {(
+                                  parseFloat(contrato?.total_contrato || 0) +
+                                  parseFloat(solicitud.costo_adicional)
+                                ).toFixed(2)}
+                              </strong>
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {solicitud.detalles_solicitud && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Detalles adicionales del cliente:</p>
+                    <Card className="bg-muted/50">
+                      <CardContent className="pt-6">
+                        <p className="text-foreground italic">"{solicitud.detalles_solicitud}"</p>
+                      </CardContent>
+                    </Card>
                   </div>
                 )}
-              </div>
 
-              {solicitud.tipo_solicitud === 'invitados' ? (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-gray-700">
-                    El cliente solicita agregar{' '}
-                    <strong className="text-blue-700 text-2xl">
-                      {solicitud.invitados_adicionales}
-                    </strong>{' '}
-                    invitados adicionales
-                  </p>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Cantidad actual: {contrato?.cantidad_invitados} invitados
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Nueva cantidad:{' '}
-                    <strong>
-                      {contrato?.cantidad_invitados + solicitud.invitados_adicionales}
-                    </strong>{' '}
-                    invitados
-                  </p>
-                </div>
-              ) : (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-gray-700 mb-2">
-                    <strong>Servicio solicitado:</strong>
-                  </p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {solicitud.servicios?.nombre}
-                  </p>
-                  {solicitud.servicios?.descripcion && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      {solicitud.servicios.descripcion}
-                    </p>
-                  )}
-                  {solicitud.cantidad_servicio > 1 && (
-                    <p className="text-sm text-gray-700 mt-2">
-                      Cantidad: <strong>{solicitud.cantidad_servicio}</strong>
-                    </p>
-                  )}
-                  {solicitud.costo_adicional && (
-                    <div className="mt-3 pt-3 border-t border-green-300">
-                      <p className="text-sm text-gray-700">Costo adicional:</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        ${parseFloat(solicitud.costo_adicional).toFixed(2)}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Nuevo total del contrato:{' '}
-                        <strong>
-                          $
-                          {(
-                            parseFloat(contrato?.total_contrato || 0) +
-                            parseFloat(solicitud.costo_adicional)
-                          ).toFixed(2)}
-                        </strong>
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {solicitud.detalles_solicitud && (
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">Detalles adicionales del cliente:</p>
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                    <p className="text-gray-700 italic">"{solicitud.detalles_solicitud}"</p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">Fecha de solicitud</p>
+                  <p className="font-semibold mt-1">
+                    {new Date(solicitud.fecha_solicitud).toLocaleDateString('es-ES', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
                 </div>
-              )}
 
-              <div>
-                <p className="text-sm text-gray-600">Fecha de solicitud</p>
-                <p className="font-bold text-gray-900">
-                  {new Date(solicitud.fecha_solicitud).toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
+                {solicitud.motivo_rechazo && (
+                  <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                    <CardContent className="pt-6">
+                      <p className="text-sm text-red-700 dark:text-red-300 font-semibold mb-2">Motivo de rechazo:</p>
+                      <p className="text-foreground">{solicitud.motivo_rechazo}</p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-
-              {solicitud.motivo_rechazo && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-700 font-bold mb-2">Motivo de rechazo:</p>
-                  <p className="text-gray-700">{solicitud.motivo_rechazo}</p>
-                </div>
-              )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Columna Derecha - Acciones */}
-        <div className="space-y-6">
+        <div className="lg:col-span-3 space-y-4">
           {solicitud.estado === 'pendiente' && (
             <>
               {/* Aprobar Solicitud */}
-              <div className="bg-white rounded-xl shadow-sm border p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  Aprobar Solicitud
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Al aprobar, esta solicitud se aplicará automáticamente al contrato.
-                </p>
-                <button
-                  onClick={handleAprobar}
-                  disabled={aprobarMutation.isPending}
-                  className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {aprobarMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Aprobando...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-5 h-5" />
-                      Aprobar Solicitud
-                    </>
-                  )}
-                </button>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    Aprobar Solicitud
+                  </CardTitle>
+                  <CardDescription>
+                    Al aprobar, esta solicitud se aplicará automáticamente al contrato.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    onClick={handleAprobar}
+                    disabled={aprobarMutation.isPending}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {aprobarMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Aprobando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Aprobar Solicitud
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
 
               {/* Rechazar Solicitud */}
-              <div className="bg-white rounded-xl shadow-sm border p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <XCircle className="w-5 h-5 text-red-600" />
-                  Rechazar Solicitud
-                </h3>
-
-                {!mostrarRechazo ? (
-                  <button
-                    onClick={() => setMostrarRechazo(true)}
-                    className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-bold"
-                  >
-                    Rechazar
-                  </button>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Motivo del rechazo *
-                      </label>
-                      <textarea
-                        value={motivoRechazo}
-                        onChange={(e) => setMotivoRechazo(e.target.value)}
-                        rows={4}
-                        placeholder="Explica al cliente por qué se rechaza esta solicitud..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                      />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    Rechazar Solicitud
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!mostrarRechazo ? (
+                    <Button
+                      onClick={() => setMostrarRechazo(true)}
+                      variant="outline"
+                      className="w-full"
+                      size="lg"
+                    >
+                      Rechazar
+                    </Button>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="motivo-rechazo">Motivo del rechazo *</Label>
+                        <Textarea
+                          id="motivo-rechazo"
+                          value={motivoRechazo}
+                          onChange={(e) => setMotivoRechazo(e.target.value)}
+                          rows={4}
+                          placeholder="Explica al cliente por qué se rechaza esta solicitud..."
+                          className="mt-2"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleRechazar}
+                          disabled={rechazarMutation.isPending || !motivoRechazo.trim()}
+                          variant="destructive"
+                          className="flex-1"
+                        >
+                          {rechazarMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : null}
+                          Confirmar Rechazo
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setMostrarRechazo(false);
+                            setMotivoRechazo('');
+                          }}
+                          variant="outline"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleRechazar}
-                        disabled={rechazarMutation.isPending || !motivoRechazo.trim()}
-                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {rechazarMutation.isPending ? (
-                          <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-                        ) : (
-                          'Confirmar Rechazo'
-                        )}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMostrarRechazo(false);
-                          setMotivoRechazo('');
-                        }}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-bold"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </CardContent>
+              </Card>
             </>
           )}
 
           {/* Acciones Adicionales */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Acciones</h3>
-            <div className="space-y-2">
-              <Link
-                to={`/contratos/${contrato?.id}`}
-                className="block w-full px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition text-center font-medium"
-              >
-                Ver Contrato Completo
-              </Link>
-              <Link
-                to="/eventos"
-                className="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-center font-medium"
-              >
-                Volver a Gestión
-              </Link>
-            </div>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Acciones</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Button variant="outline" className="w-full" asChild>
+                  <Link to={`/contratos/${contrato?.id}`}>
+                    Ver Contrato Completo
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="w-full" asChild>
+                  <Link to="/eventos">
+                    Volver a Gestión
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

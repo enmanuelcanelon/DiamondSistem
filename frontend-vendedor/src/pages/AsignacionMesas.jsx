@@ -282,26 +282,6 @@ function AsignacionMesas() {
       crearMesasIniciales();
     }
   }, [configSalon, mesas, contrato, contratoId, puedeEditar, queryClient, loadingMesas]);
-  
-  // Debug: mostrar información del salón en consola (siempre en desarrollo)
-  console.log('🔍 Debug Asignación Mesas:', {
-    contratoId,
-    salonNombreRaw,
-    salonNombre,
-    salonNombreKey,
-    salonId,
-    tieneSalon: !!contrato?.salones,
-    salonDesdeContrato: contrato?.salones?.nombre,
-    salonDesdeLugar: contrato?.lugar_salon,
-    salonDesdeOferta: contrato?.ofertas?.lugar_salon,
-    contrato: contrato ? {
-      salon_id: contrato.salon_id,
-      lugar_salon: contrato.lugar_salon,
-      tieneSalones: !!contrato.salones,
-      tieneOfertas: !!contrato.ofertas
-    } : null,
-    configSalon: !!configSalon
-  });
 
   // Modal/Dropdown para seleccionar invitado a asignar
   const handleAsignarInvitadoAMesa = (invitadoId) => {

@@ -18,10 +18,7 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
   const { data: mensajesData, isLoading } = useQuery({
     queryKey: ['mensajes', contratoId],
     queryFn: async () => {
-      console.log('🔄 Obteniendo mensajes del contrato:', contratoId);
       const response = await api.get(`/mensajes/contrato/${contratoId}`);
-      console.log('📨 Mensajes recibidos:', response.data.count, 'mensajes');
-      console.log('👤 Usuario actual:', user?.tipo, user?.id);
       return response.data;
     },
     refetchInterval: 15 * 1000, // Refetch cada 15 segundos (balance entre actualización y rendimiento)
@@ -33,35 +30,20 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
   // Mutation para enviar mensaje
   const enviarMutation = useMutation({
     mutationFn: async (mensaje) => {
-      console.log('📤 Enviando mensaje desde frontend:', {
-        contrato_id: contratoId,
-        mensaje,
-        destinatario_tipo: destinatarioTipo,
-        destinatario_id: destinatarioId,
-        remitente_tipo: user?.tipo,
-        remitente_id: user?.id
-      });
-      
       const response = await api.post('/mensajes', {
         contrato_id: parseInt(contratoId),
         mensaje,
         destinatario_tipo: destinatarioTipo,
         destinatario_id: parseInt(destinatarioId),
       });
-      
-      console.log('✅ Respuesta del servidor:', response.data);
-      console.log('✅ Mensaje creado con remitente:', response.data.mensaje?.remitente_tipo, response.data.mensaje?.remitente_id);
       return response.data;
     },
-    onSuccess: (data) => {
-      console.log('✅ Mensaje enviado, refrescando inmediatamente...');
-      // Solo invalidar, React Query refetchará automáticamente
-      // No hacer refetch manual para evitar requests duplicados
+    onSuccess: () => {
       queryClient.invalidateQueries(['mensajes', contratoId]);
       setNuevoMensaje('');
     },
     onError: (error) => {
-      console.error('❌ Error al enviar mensaje:', error.response?.data || error.message);
+      console.error('Error al enviar mensaje:', error.response?.data || error.message);
       alert('Error al enviar el mensaje: ' + (error.response?.data?.message || error.message));
     },
   });
@@ -113,17 +95,6 @@ function Chat({ contratoId, destinatarioId, destinatarioTipo, destinatarioNombre
           <>
             {mensajes.map((mensaje) => {
               const esMio = mensaje.remitente_tipo === user?.tipo && mensaje.remitente_id === user?.id;
-              
-              // Debug log mejorado
-              console.log('📋 Mensaje:', {
-                id: mensaje.id,
-                remitente_tipo: mensaje.remitente_tipo,
-                remitente_id: mensaje.remitente_id,
-                user_tipo: user?.tipo,
-                user_id: user?.id,
-                esMio,
-                mensaje: mensaje.mensaje.substring(0, 20)
-              });
               
               // Determinar etiqueta y estilo según quién lo envió
               let etiqueta, colorFondo, colorTexto, colorBorde;

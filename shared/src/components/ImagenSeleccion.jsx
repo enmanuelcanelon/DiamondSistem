@@ -37,7 +37,9 @@ function ImagenSeleccion({ urlImagen, alt = 'Imagen', tamaño = 'medium', onClos
   const tamaños = {
     small: 'w-32 h-32',
     medium: 'w-48 h-48',
-    large: 'w-64 h-64'
+    large: 'w-80 h-80',
+    'extra-large': 'w-96 h-96',
+    'full-width': 'w-full h-96'
   };
   
   if (!imageUrl) return null;

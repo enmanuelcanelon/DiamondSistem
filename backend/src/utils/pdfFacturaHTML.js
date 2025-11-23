@@ -330,12 +330,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       const logoBuffer = fs.readFileSync(logoPath);
       const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
       logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 400px; height: auto; opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));">`;
-      console.log('Logo cargado correctamente para ofertas:', logoPath);
     } catch (error) {
       console.error('Error al cargar logo:', error);
     }
-  } else {
-    console.log('Logo no encontrado en:', logoPath);
   }
 
   // Cargar fondo para Revolution (Doral/Kendall) - Portada
@@ -359,12 +356,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
             background-repeat: no-repeat;
             opacity: 1;
             display: block;`;
-      console.log('Fondo cargado correctamente para ofertas. Tamaño base64:', fondoBase64.length, 'caracteres');
     } catch (error) {
       console.error('Error al cargar fondo:', error);
     }
-  } else {
-    console.log('Fondo no encontrado o no es Revolution. Path:', fondoPath, 'esRevolution:', esRevolution);
   }
 
   // Cargar fondo general para package-card
@@ -382,7 +376,6 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
               background-position: center;
               background-repeat: no-repeat;
               opacity: 1;`;
-        console.log('Fondo general cargado correctamente para ofertas (Revolution)');
       } catch (error) {
         console.error('Error al cargar fondo general:', error);
         packageCardBackground = '';
@@ -400,13 +393,10 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
               background-position: center;
               background-repeat: no-repeat;
               opacity: 1;`;
-        console.log('Fondo Diamond cargado correctamente para ofertas');
       } catch (error) {
         console.error('Error al cargar fondo Diamond:', error);
         packageCardBackground = '';
       }
-    } else {
-      console.log('Fondo Diamond no encontrado en:', fondoDiamondPath);
     }
   }
 
@@ -489,7 +479,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
         );
       });
     } catch (error) {
-      console.log('Error esperando imágenes:', error);
+      // Error silencioso al esperar imágenes
     }
     
     // Esperar un poco más para asegurar que todo se renderice

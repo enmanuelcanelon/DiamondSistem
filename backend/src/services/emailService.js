@@ -32,7 +32,6 @@ const transporter = nodemailer.createTransport({
 async function verificarConfiguracion() {
   try {
     await transporter.verify();
-    console.log('✅ Servidor de email configurado correctamente');
     return true;
   } catch (error) {
     console.error('❌ Error en configuración de email:', error.message);
@@ -126,7 +125,6 @@ async function enviarConfirmacionContrato(destinatario, contrato, cliente) {
       html,
     });
 
-    console.log('✅ Email de confirmación enviado:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('❌ Error al enviar email de confirmación:', error.message);

@@ -6,8 +6,8 @@ import RateLimitAlert from './components/RateLimitAlert';
 
 // Pages - Vendedor (Lazy Loading para mejor rendimiento)
 import { lazy, Suspense } from 'react';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard'; // Dashboard se carga inmediatamente
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard')); // Dashboard también con lazy loading
 
 // Páginas con lazy loading
 const Clientes = lazy(() => import('./pages/Clientes'));
@@ -61,17 +61,24 @@ import Layout from './components/Layout';
 // import LayoutManager from './components/LayoutManager';
 // import LayoutGerente from './components/LayoutGerente';
 
-// Create a client con configuración optimizada
+// Create a client con configuración optimizada para máximo rendimiento
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      refetchOnMount: false, // No refetch al montar si los datos están frescos
+      refetchOnReconnect: false, // No refetch al reconectar
       retry: 1,
-      // staleTime: 5 minutos - los datos se consideran "frescos" durante este tiempo
+      // staleTime: 10 minutos - los datos se consideran "frescos" durante este tiempo
       // Evita refetch innecesario cuando el usuario navega entre páginas
-      staleTime: 5 * 60 * 1000, // 5 minutos en milisegundos
-      // cacheTime: 10 minutos - tiempo que los datos permanecen en caché después de ser "viejos"
-      gcTime: 10 * 60 * 1000, // 10 minutos (anteriormente cacheTime)
+      staleTime: 10 * 60 * 1000, // 10 minutos en milisegundos (aumentado)
+      // gcTime: 30 minutos - tiempo que los datos permanecen en caché después de ser "viejos"
+      gcTime: 30 * 60 * 1000, // 30 minutos (aumentado para mejor caché)
+      // Usar estructura de datos más eficiente
+      structuralSharing: true,
+    },
+    mutations: {
+      retry: 0, // No reintentar mutaciones por defecto
     },
   },
 });
@@ -151,7 +158,7 @@ function App() {
       <Router>
         <Routes>
           {/* Vendedor Routes */}
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
           
           <Route
             path="/"
@@ -161,7 +168,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Dashboard />} />
+            <Route index element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
             <Route path="clientes" element={<Suspense fallback={<PageLoader />}><Clientes /></Suspense>} />
             <Route path="clientes/nuevo" element={<Suspense fallback={<PageLoader />}><CrearCliente /></Suspense>} />
             <Route path="clientes/editar/:id" element={<Suspense fallback={<PageLoader />}><EditarCliente /></Suspense>} />

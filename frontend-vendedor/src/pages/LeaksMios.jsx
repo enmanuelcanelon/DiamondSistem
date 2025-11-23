@@ -12,7 +12,8 @@ import {
   Clock,
   AlertCircle,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  Trophy
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
@@ -93,11 +94,12 @@ function LeaksMios() {
       const response = await api.get('/leaks', { params });
       return response.data;
     },
-    staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
-    gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
+    staleTime: 10 * 60 * 1000, // Los datos se consideran frescos por 10 minutos (aumentado)
+    gcTime: 30 * 60 * 1000, // Mantener en caché por 30 minutos (aumentado)
     refetchInterval: false, // Sin refresco automático - solo manual
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
+    refetchOnMount: false, // No refetch al montar si los datos están frescos
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit)
       if (error?.response?.status === 429) return false;
@@ -145,6 +147,7 @@ function LeaksMios() {
       contactado_llamar_luego: { label: 'Contactado Llamar Luego', variant: 'secondary', icon: Clock },
       no_contesta_llamar_luego: { label: 'No Contesta Llamar Luego', variant: 'secondary', icon: AlertCircle },
       contactado_no_interesado: { label: 'Contactado No Interesado', variant: 'destructive', icon: XCircle },
+      convertido: { label: 'Convertido', variant: 'default', icon: Trophy },
     };
     return estados[estado] || { label: estado || 'Sin estado', variant: 'outline', icon: AlertCircle };
   };
@@ -320,6 +323,7 @@ function LeaksMios() {
                   <SelectItem value="contactado_llamar_luego">Contactado Llamar Luego</SelectItem>
                   <SelectItem value="no_contesta_llamar_luego">No Contesta Llamar Luego</SelectItem>
                   <SelectItem value="contactado_no_interesado">Contactado No Interesado</SelectItem>
+                  <SelectItem value="convertido">Convertido</SelectItem>
                 </SelectContent>
               </Select>
             </div>

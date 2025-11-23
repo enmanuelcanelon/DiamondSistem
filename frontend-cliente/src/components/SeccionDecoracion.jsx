@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   Save, 
@@ -7,7 +7,10 @@ import {
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
+  CheckCircle,
+  Check,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import ImagenSeleccion from '@shared/components/ImagenSeleccion';
 import { obtenerImagenDecoracion } from '@shared/utils/mapeoImagenes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -212,67 +215,120 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
     switch (pasoActual) {
       case 1: // Cojines
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 1: Elige el Color de los Cojines</h3>
-              <p className="text-muted-foreground">Selecciona el color de los cojines para las sillas</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="space-y-8">
+            {/* Bento Grid for Decoration */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-[minmax(300px,auto)]">
               {[
-                { value: 'negros', label: 'Negros' },
-                { value: 'blancos', label: 'Blancos' }
-              ].map((opcion) => (
-                <button
-                  key={opcion.value}
-                  type="button"
-                  onClick={() => setDatos({ ...datos, cojines_color: opcion.value })}
-                  disabled={estaBloqueado}
-                  className={cn(
-                    "p-8 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                    datos.cojines_color === opcion.value
-                      ? "border-primary bg-primary/10 shadow-lg"
-                      : "border-border bg-card hover:border-primary/50"
-                  )}
-                >
-                  <p className="text-2xl font-semibold mb-2">{opcion.label}</p>
-                  {datos.cojines_color === opcion.value && (
-                    <Badge variant="default" className="text-base px-3 py-1">Seleccionado</Badge>
-                  )}
-                </button>
-              ))}
+                { value: 'negros', label: 'Negros', descripcion: 'Elegante y sofisticado' },
+                { value: 'blancos', label: 'Blancos', descripcion: 'Clásico y luminoso' }
+              ].map((opcion) => {
+                const estaSeleccionado = datos.cojines_color === opcion.value;
+                
+                return (
+                  <div
+                    key={opcion.value}
+                    onClick={() => {
+                      if (!estaBloqueado) {
+                        setDatos({ ...datos, cojines_color: opcion.value });
+                      }
+                    }}
+                    className={cn(
+                      "relative overflow-hidden rounded-xl group transition-all duration-300",
+                      estaSeleccionado
+                        ? "bg-white dark:bg-neutral-900 border-2 border-neutral-900 dark:border-white shadow-lg cursor-pointer"
+                        : "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm dark:shadow-none hover:shadow-lg hover:border-neutral-300 dark:hover:border-neutral-700 cursor-pointer"
+                    )}
+                  >
+                    <div className="absolute inset-0 w-full h-full z-0">
+                      <div className={cn(
+                        "w-full h-full",
+                        estaSeleccionado && opcion.value === 'negros'
+                          ? "bg-gradient-to-br from-neutral-900 to-neutral-700"
+                          : estaSeleccionado && opcion.value === 'blancos'
+                          ? "bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-800 dark:to-neutral-900"
+                          : opcion.value === 'negros'
+                          ? "bg-gradient-to-br from-neutral-900 to-neutral-700"
+                          : "bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-800 dark:to-neutral-900"
+                      )} />
+                    </div>
+                    <div className="relative z-10 h-full w-full p-6">
+                      <div className="flex flex-col justify-between h-full">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className={cn(
+                              "inline-block px-2 py-1 rounded text-xs font-medium mb-3 border",
+                              estaSeleccionado
+                                ? "bg-white/20 text-white border-white/30"
+                                : "bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-300 dark:border-neutral-700"
+                            )}>
+                              {estaSeleccionado ? '⚫ Seleccionado' : '⚪ Disponible'}
+                            </div>
+                            <h3 className={cn(
+                              "text-sm mb-2 uppercase tracking-wider font-medium",
+                              estaSeleccionado && opcion.value === 'negros'
+                                ? "text-white/80"
+                                : estaSeleccionado && opcion.value === 'blancos'
+                                ? "text-neutral-500 dark:text-neutral-400"
+                                : opcion.value === 'negros'
+                                ? "text-white/80"
+                                : "text-neutral-500 dark:text-neutral-400"
+                            )}>
+                              Paso 1: Color de Cojines
+                            </h3>
+                          </div>
+                          {estaSeleccionado && (
+                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
+                              <Check size={20} className="text-neutral-900" strokeWidth={3} />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className={cn(
+                            "text-3xl font-bold mb-2",
+                            estaSeleccionado && opcion.value === 'negros'
+                              ? "text-white drop-shadow-lg"
+                              : estaSeleccionado && opcion.value === 'blancos'
+                              ? "text-neutral-900 dark:text-white drop-shadow-sm dark:drop-shadow-lg"
+                              : opcion.value === 'negros'
+                              ? "text-white drop-shadow-lg"
+                              : "text-neutral-900 dark:text-white drop-shadow-sm dark:drop-shadow-lg"
+                          )}>
+                            {opcion.label}
+                          </div>
+                          <div className={cn(
+                            "text-sm",
+                            estaSeleccionado && opcion.value === 'negros'
+                              ? "text-white/70"
+                              : estaSeleccionado && opcion.value === 'blancos'
+                              ? "text-neutral-600 dark:text-neutral-400"
+                              : opcion.value === 'negros'
+                              ? "text-white/70"
+                              : "text-neutral-600 dark:text-neutral-400"
+                          )}>
+                            {opcion.descripcion}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            {datos.cojines_color && (
-              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-                <CardContent className="pt-6">
-                  <div className="text-center mb-4">
-                    <h4 className="text-xl font-bold mb-2">Vista Previa</h4>
-                    <p className="text-sm text-muted-foreground">Cojines {datos.cojines_color}</p>
-                  </div>
-                  <div className="flex justify-center">
-                    <ImagenSeleccion
-                      urlImagen={obtenerImagenDecoracion('cojin', datos.cojines_color)}
-                      alt={`Cojines ${datos.cojines_color}`}
-                      tamaño="extra-large"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         );
 
       case 2: // Centro de Mesa
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 2: Elige el Centro de Mesa</h3>
-              <p className="text-muted-foreground">Selecciona el tipo de centro de mesa para tus mesas</p>
+          <div className="space-y-8">
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 2: Elige el Centro de Mesa</h3>
+              <p className="text-xl text-neutral-400">Selecciona el tipo de centro de mesa para tus mesas</p>
             </div>
             <select
               value={datos.centro_mesa_1}
               onChange={(e) => setDatos({ ...datos, centro_mesa_1: e.target.value })}
               disabled={estaBloqueado}
-              className="w-full px-4 py-4 text-lg border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted disabled:cursor-not-allowed mb-6"
+              className="w-full px-4 py-4 text-lg border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-8"
             >
               <option value="">Selecciona un centro de mesa...</option>
               {CENTROS_OPCIONES.map(opcion => (
@@ -280,26 +336,21 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
               ))}
             </select>
             {datos.centro_mesa_1 && (
-              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-                <CardContent className="pt-6">
-                  <div className="text-center mb-4">
-                    <h4 className="text-xl font-bold mb-2">Vista Previa</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {CENTROS_OPCIONES.find(c => c.value === datos.centro_mesa_1)?.label}
-                    </p>
-                    {datos.centro_mesa_1 === 'cilindro' && (
-                      <p className="text-xs text-purple-600 mt-1">💡 Incluye 3 cilindros por mesa</p>
-                    )}
-                  </div>
-                  <div className="flex justify-center">
-                    <ImagenSeleccion
-                      urlImagen={obtenerImagenDecoracion('centro_mesa', datos.centro_mesa_1)}
-                      alt={`Centro de mesa ${datos.centro_mesa_1}`}
-                      tamaño="extra-large"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-white/20">
+                <img
+                  src={obtenerImagenDecoracion('centro_mesa', datos.centro_mesa_1)}
+                  alt={`Centro de mesa ${datos.centro_mesa_1}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+                  <p className="text-lg font-medium text-white">
+                    {CENTROS_OPCIONES.find(c => c.value === datos.centro_mesa_1)?.label}
+                  </p>
+                  {datos.centro_mesa_1 === 'cilindro' && (
+                    <p className="text-sm text-purple-300 mt-1">💡 Incluye 3 cilindros por mesa</p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         );
@@ -307,15 +358,15 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
       case 3: // Base
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 3: Elige la Base</h3>
-              <p className="text-muted-foreground">Selecciona el tipo de base para el centro de mesa</p>
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 3: Elige la Base</h3>
+              <p className="text-xl text-neutral-400">Selecciona el tipo de base para el centro de mesa</p>
             </div>
             <select
               value={datos.base_color}
               onChange={(e) => setDatos({ ...datos, base_color: e.target.value })}
               disabled={estaBloqueado}
-              className="w-full px-4 py-4 text-lg border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted disabled:cursor-not-allowed mb-6"
+              className="w-full px-4 py-4 text-lg border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-8"
             >
               <option value="">Selecciona una base...</option>
               {BASE_OPCIONES.map(opcion => (
@@ -347,15 +398,15 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
       case 4: // Challer
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 4: Elige el Challer</h3>
-              <p className="text-muted-foreground">Selecciona el color del challer (cargador de plato)</p>
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 4: Elige el Challer</h3>
+              <p className="text-xl text-neutral-400">Selecciona el color del challer (cargador de plato)</p>
             </div>
             <select
               value={datos.challer_color}
               onChange={(e) => setDatos({ ...datos, challer_color: e.target.value })}
               disabled={estaBloqueado}
-              className="w-full px-4 py-4 text-lg border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted disabled:cursor-not-allowed mb-6"
+              className="w-full px-4 py-4 text-lg border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-8"
             >
               <option value="">Selecciona un challer...</option>
               {CHALLER_OPCIONES.map(opcion => (
@@ -387,15 +438,15 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
       case 5: // Servilletas
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 5: Elige el Color de las Servilletas</h3>
-              <p className="text-muted-foreground">Selecciona el color de las servilletas para tu evento</p>
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 5: Elige el Color de las Servilletas</h3>
+              <p className="text-xl text-neutral-400">Selecciona el color de las servilletas para tu evento</p>
             </div>
             <select
               value={datos.servilletas_color}
               onChange={(e) => setDatos({ ...datos, servilletas_color: e.target.value })}
               disabled={estaBloqueado}
-              className="w-full px-4 py-4 text-lg border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted disabled:cursor-not-allowed mb-6"
+              className="w-full px-4 py-4 text-lg border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-8"
             >
               <option value="">Selecciona un color...</option>
               {SERVILLETAS_OPCIONES.map(opcion => (
@@ -429,15 +480,15 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
       case 6: // Aros
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 6: Elige los Aros</h3>
-              <p className="text-muted-foreground">Selecciona el tipo de aros (anillos para servilleta)</p>
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 6: Elige los Aros</h3>
+              <p className="text-xl text-neutral-400">Selecciona el tipo de aros (anillos para servilleta)</p>
             </div>
             <select
               value={datos.aros_color}
               onChange={(e) => setDatos({ ...datos, aros_color: e.target.value, aros_nota: e.target.value !== 'otro' ? '' : datos.aros_nota })}
               disabled={estaBloqueado}
-              className="w-full px-4 py-4 text-lg border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted disabled:cursor-not-allowed mb-4"
+              className="w-full px-4 py-4 text-lg border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-4"
             >
               <option value="">Selecciona un tipo de aro...</option>
               {AROS_OPCIONES.map(opcion => (
@@ -480,15 +531,15 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
       case 7: // Runner
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 7: Elige el Runner</h3>
-              <p className="text-muted-foreground">Selecciona el tipo de runner (camino de mesa)</p>
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 7: Elige el Runner</h3>
+              <p className="text-xl text-neutral-400">Selecciona el tipo de runner (camino de mesa)</p>
             </div>
             <select
               value={datos.runner_tipo}
               onChange={(e) => setDatos({ ...datos, runner_tipo: e.target.value, runner_nota: e.target.value !== 'otros' ? '' : datos.runner_nota })}
               disabled={estaBloqueado}
-              className="w-full px-4 py-4 text-lg border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted disabled:cursor-not-allowed mb-4"
+              className="w-full px-4 py-4 text-lg border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-4"
             >
               <option value="">Selecciona un tipo de runner...</option>
               {RUNNER_OPCIONES.map(opcion => (
@@ -530,45 +581,63 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
 
       case 8: // Stage
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 8: Elige el Stage</h3>
-              <p className="text-muted-foreground">Selecciona el tipo de stage (escenario/fondo principal)</p>
+          <div className="space-y-8">
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 8: Elige el Stage</h3>
+              <p className="text-xl text-neutral-400">Selecciona el tipo de stage (escenario/fondo principal)</p>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
               {[
                 { value: 'globos', label: 'Globos' },
                 { value: 'flores', label: 'Flores' }
-              ].map((opcion) => (
-                <button
-                  key={opcion.value}
-                  type="button"
-                  onClick={() => setDatos({ ...datos, stage_tipo: opcion.value })}
-                  disabled={estaBloqueado}
-                  className={cn(
-                    "p-8 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                    datos.stage_tipo === opcion.value
-                      ? "border-primary bg-primary/10 shadow-lg"
-                      : "border-border bg-card hover:border-primary/50"
-                  )}
-                >
-                  <p className="text-2xl font-semibold mb-2">{opcion.label}</p>
-                  {datos.stage_tipo === opcion.value && (
-                    <Badge variant="default" className="text-base px-3 py-1">Seleccionado</Badge>
-                  )}
-                </button>
-              ))}
+              ].map((opcion) => {
+                const imagenUrl = obtenerImagenDecoracion('stage', opcion.value);
+                const estaSeleccionado = datos.stage_tipo === opcion.value;
+                
+                return (
+                  <div
+                    key={opcion.value}
+                    onClick={() => {
+                      if (!estaBloqueado) {
+                        setDatos({ ...datos, stage_tipo: opcion.value });
+                      }
+                    }}
+                    className={`group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${
+                      estaSeleccionado
+                        ? 'ring-2 ring-white scale-[1.02] shadow-2xl'
+                        : 'hover:scale-[1.02] opacity-80 hover:opacity-100'
+                    } ${estaBloqueado ? 'cursor-not-allowed opacity-50' : ''}`}
+                  >
+                    <img
+                      src={imagenUrl}
+                      alt={opcion.label}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 left-0 w-full p-6">
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-medium text-white">{opcion.label}</span>
+                        {estaSeleccionado && (
+                          <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-black">
+                            <CheckCircle size={14} strokeWidth={3} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             {datos.stage_tipo === 'globos' && (
               <div>
-                <label className="block text-lg font-medium mb-2">Color(es) de los Globos</label>
+                <label className="block text-lg font-medium text-white mb-2">Color(es) de los Globos</label>
                 <input
                   type="text"
                   value={datos.stage_color_globos}
                   onChange={(e) => setDatos({ ...datos, stage_color_globos: e.target.value })}
                   disabled={estaBloqueado}
                   placeholder="Ej: Blanco y dorado, Rosa y verde..."
-                  className="w-full px-4 py-4 text-lg border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                  className="w-full px-4 py-4 text-lg border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700"
                 />
               </div>
             )}
@@ -578,9 +647,9 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
       case 9: // Preferencias Generales
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 9: Preferencias Generales</h3>
-              <p className="text-muted-foreground">Completa la información sobre el estilo y temática de tu decoración</p>
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 9: Preferencias Generales</h3>
+              <p className="text-xl text-neutral-400">Completa la información sobre el estilo y temática de tu decoración</p>
             </div>
             
             {/* Detalles Premium (solo si es premium) */}
@@ -696,148 +765,194 @@ function SeccionDecoracion({ ajustes, onGuardar, guardando, estaBloqueado, contr
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
-          <Sparkles className="w-8 h-8 text-purple-600" />
+    <form onSubmit={handleSubmit}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="max-w-5xl mx-auto"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs font-medium border border-purple-500/20">
+            Selección Requerida
+          </span>
+          {esPremium && (
+            <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-medium border border-yellow-500/20">
+              ⭐ Premium
+            </span>
+          )}
         </div>
-        <h2 className="text-3xl font-bold mb-2">Personaliza tu Decoración</h2>
-        <p className="text-muted-foreground">
-          Completa cada paso para personalizar la decoración de tu evento
+        <h2 className="text-4xl font-bold text-neutral-900 dark:text-white mb-4">Personaliza tu Decoración</h2>
+        <p className="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mb-8">
+          Completa cada paso para personalizar la decoración de tu evento. Selecciona los elementos que mejor se adapten a tu temática.
         </p>
-        {esPremium && (
-          <Badge variant="secondary" className="mt-3 text-base px-4 py-1">
-            ⭐ Decoración Premium
-          </Badge>
-        )}
-      </div>
 
-      {/* Información Premium */}
-      {esPremium && (
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-          <CardContent className="pt-6">
+        {/* Información Premium */}
+        {esPremium && (
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-6 mb-8">
             <div className="flex items-start gap-4">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Sparkles className="w-5 h-5 text-purple-600" />
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <Sparkles className="w-5 h-5 text-purple-400" />
               </div>
               <div>
-                <p className="font-semibold text-purple-900 mb-2">Decoración Premium Incluida</p>
-                <p className="text-sm text-purple-700">
+                <p className="font-semibold text-purple-200 mb-2">Decoración Premium Incluida</p>
+                <p className="text-sm text-purple-300">
                   Tu decoración premium incluye toda la decoración básica más elementos especiales como: 
                   animales de peluche, estructuras aéreas, columpio, arcos florales, etc.
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {/* Indicador de Pasos Horizontal */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            {PASOS.map((paso, index) => (
-              <div key={paso.numero} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <button
-                    type="button"
-                    onClick={() => irAPaso(paso.numero)}
-                    disabled={estaBloqueado || (paso.numero > pasoActual && !pasoCompleto(paso.numero - 1))}
-                    className={cn(
-                      "relative h-12 w-12 rounded-full border-2 transition-all font-semibold text-sm",
-                      paso.numero === pasoActual
-                        ? "bg-primary border-primary text-primary-foreground shadow-lg scale-110"
-                        : pasoCompleto(paso.numero)
-                        ? "bg-green-50 border-green-500 text-green-700 hover:scale-105 cursor-pointer"
-                        : paso.numero < pasoActual
-                        ? "bg-muted border-muted-foreground/30 text-muted-foreground hover:scale-105 cursor-pointer"
-                        : "bg-background border-border text-muted-foreground cursor-not-allowed opacity-50"
-                    )}
-                  >
+        {/* Progress Steps - 8 pasos */}
+        <div className="mb-8 p-6 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-x-auto">
+          <div className="flex items-center justify-between min-w-max">
+            {/* Paso Actual */}
+            <div className="flex flex-col items-center flex-shrink-0">
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center mb-2 font-bold",
+                pasoActual === 1
+                  ? "bg-neutral-900 dark:bg-white text-white dark:text-black"
+                  : pasoCompleto(1)
+                  ? "bg-green-500 text-white"
+                  : "bg-neutral-300 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400"
+              )}>
+                {pasoCompleto(1) && pasoActual !== 1 ? (
+                  <Check size={20} />
+                ) : (
+                  <span>1</span>
+                )}
+              </div>
+              <span className="text-xs text-neutral-900 dark:text-white font-medium">Cojines</span>
+            </div>
+            <div className={cn(
+              "h-0.5 flex-1 mx-2 min-w-[20px]",
+              pasoCompleto(1) ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-700"
+            )} />
+
+            {/* Pasos completados */}
+            {[
+              { numero: 2, titulo: 'Centro de...' },
+              { numero: 3, titulo: 'Base' },
+              { numero: 4, titulo: 'Chiffon' },
+              { numero: 5, titulo: 'Servilletas' },
+              { numero: 6, titulo: 'Aros' },
+              { numero: 7, titulo: 'Runner' },
+              { numero: 8, titulo: 'Stage' },
+            ].map((paso, index) => (
+              <React.Fragment key={paso.numero}>
+                <div className="flex flex-col items-center flex-shrink-0">
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center mb-2",
+                    paso.numero === pasoActual
+                      ? "bg-neutral-900 dark:bg-white text-white dark:text-black font-bold"
+                      : pasoCompleto(paso.numero)
+                      ? "bg-green-500 text-white"
+                      : "bg-neutral-300 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400"
+                  )}>
                     {pasoCompleto(paso.numero) && paso.numero !== pasoActual ? (
-                      <CheckCircle2 className="h-6 w-6 mx-auto" />
+                      <Check size={20} />
                     ) : (
                       <span>{paso.numero}</span>
                     )}
-                  </button>
-                  <span className={cn(
-                    "mt-2 text-xs font-medium text-center max-w-[80px]",
-                    paso.numero === pasoActual ? "text-primary font-semibold" : "text-muted-foreground"
-                  )}>
+                  </div>
+                  <span className="text-xs text-neutral-600 dark:text-neutral-400 max-w-[60px] text-center truncate">
                     {paso.titulo}
                   </span>
                 </div>
-                {index < PASOS.length - 1 && (
+                {index < 6 && (
                   <div className={cn(
-                    "flex-1 h-0.5 mx-2 transition-all",
-                    pasoCompleto(paso.numero) ? "bg-green-500" : "bg-muted"
+                    "h-0.5 flex-1 mx-2 min-w-[20px]",
+                    pasoCompleto(paso.numero) ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-700"
                   )} />
                 )}
-              </div>
+              </React.Fragment>
             ))}
+
+            <div className={cn(
+              "h-0.5 flex-1 mx-2 min-w-[20px]",
+              pasoCompleto(8) ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-700"
+            )} />
+
+            {/* Paso final - Preferencia */}
+            <div className="flex flex-col items-center flex-shrink-0">
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center mb-2",
+                pasoActual === 9
+                  ? "bg-neutral-900 dark:bg-white text-white dark:text-black font-bold"
+                  : pasoCompleto(9)
+                  ? "bg-green-500 text-white"
+                  : "bg-neutral-300 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400"
+              )}>
+                {pasoCompleto(9) && pasoActual !== 9 ? (
+                  <Check size={20} />
+                ) : (
+                  <span>8</span>
+                )}
+              </div>
+              <span className="text-xs text-neutral-600 dark:text-neutral-400 max-w-[60px] text-center truncate">
+                Preferencia...
+              </span>
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Contenido del Paso Actual */}
-      <Card className="min-h-[500px]">
-        <CardContent className="pt-8">
-          {renderPasoActual()}
-        </CardContent>
-      </Card>
-
-      {/* Navegación */}
-      <div className="flex items-center justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={retrocederPaso}
-          disabled={pasoActual === 1 || estaBloqueado}
-          size="lg"
-        >
-          <ChevronLeft className="w-5 h-5 mr-2" />
-          Anterior
-        </Button>
-
-        <div className="flex gap-2">
-          {pasoActual < PASOS.length ? (
-            <Button
-              type="button"
-              onClick={avanzarPaso}
-              disabled={!pasoCompleto(pasoActual) || estaBloqueado}
-              size="lg"
-            >
-              Siguiente
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </Button>
-          ) : (
-            <Button
-              type="submit"
-              disabled={guardando || estaBloqueado || !pasoCompleto(pasoActual)}
-              size="lg"
-              className="min-w-[200px]"
-            >
-              {guardando ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Guardando...
-                </>
-              ) : estaBloqueado ? (
-                <>
-                  <Lock className="w-5 h-5 mr-2" />
-                  Bloqueado
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5 mr-2" />
-                  Guardar Cambios
-                </>
-              )}
-            </Button>
-          )}
         </div>
-      </div>
+
+        {/* Contenido del Paso Actual */}
+        <div className="bg-neutral-800/30 border border-white/10 rounded-xl p-8 min-h-[500px] mb-8">
+          {renderPasoActual()}
+        </div>
+
+        {/* Navegación */}
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={retrocederPaso}
+            disabled={pasoActual === 1 || estaBloqueado}
+            className="flex items-center gap-2 px-6 py-3 bg-neutral-800 text-white rounded-xl font-medium hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Anterior
+          </button>
+
+          <div className="flex gap-2">
+            {pasoActual < PASOS.length ? (
+              <button
+                type="button"
+                onClick={avanzarPaso}
+                disabled={!pasoCompleto(pasoActual) || estaBloqueado}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-medium hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={guardando || estaBloqueado || !pasoCompleto(pasoActual)}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-medium hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px] justify-center"
+              >
+                {guardando ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Guardando...
+                  </>
+                ) : estaBloqueado ? (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    Bloqueado
+                  </>
+                ) : (
+                  <>
+                    Guardar Selección
+                    <ChevronRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </motion.div>
     </form>
   );
 }

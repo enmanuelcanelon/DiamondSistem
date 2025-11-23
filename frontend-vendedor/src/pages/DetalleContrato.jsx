@@ -455,15 +455,10 @@ function DetalleContrato() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-                  <h3 className="font-semibold text-foreground mb-1">
+                <div className="inline-block p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <h3 className="font-semibold text-foreground">
                     {contrato?.paquetes?.nombre || 'Paquete no especificado'}
                   </h3>
-                  {contrato?.paquetes?.descripcion && (
-                    <p className="text-sm text-muted-foreground">
-                      {contrato.paquetes.descripcion}
-                    </p>
-                  )}
                 </div>
 
                     {(() => {

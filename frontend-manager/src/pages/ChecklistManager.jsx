@@ -4,7 +4,6 @@ import {
   Loader2, 
   CheckCircle2, 
   Clock, 
-  XCircle, 
   Calendar,
   User,
   Building2,
@@ -13,20 +12,19 @@ import {
   Save,
   X,
   ChevronDown,
-  Users,
-  Package,
-  Clock as ClockIcon,
-  Cake,
-  Sparkles,
-  UtensilsCrossed,
-  Music2,
-  Camera,
-  Settings,
-  Wine,
   Download
 } from 'lucide-react';
 import api from '@shared/config/api';
 import toast from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 const SERVICIOS_LABELS = {
   foto_video: 'Foto y Video',
@@ -40,9 +38,9 @@ const SERVICIOS_LABELS = {
   maestro_ceremonia: 'Maestro de Ceremonia'
 };
 
-const ESTADOS_COLORS = {
-  pendiente: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  completado: 'bg-green-100 text-green-800 border-green-300'
+const ESTADOS_VARIANTS = {
+  pendiente: 'warning',
+  completado: 'success'
 };
 
 const ESTADOS_ICONS = {
@@ -176,19 +174,40 @@ function ChecklistManager() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-        <p className="ml-3 text-gray-600">Cargando contratos...</p>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96" />
+          </CardHeader>
+        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <p className="text-red-600">Error al cargar los contratos</p>
-      </div>
+      <Card className="border-destructive">
+        <CardContent className="pt-6">
+          <div className="text-center py-12">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <p className="text-destructive font-medium">Error al cargar los contratos</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -249,23 +268,35 @@ function ChecklistManager() {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Checklist de Servicios Externos</h1>
-          <p className="text-gray-600">Selecciona un salón para ver los eventos</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-3xl">Checklist de Servicios Externos</CardTitle>
+            <CardDescription>Selecciona un salón para ver los eventos</CardDescription>
+          </CardHeader>
+        </Card>
 
         {/* Botones de Salones */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {['Diamond', 'Kendall', 'Doral'].map((salon) => (
-            <button
+            <Card
               key={salon}
+              className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50"
               onClick={() => setSalonSeleccionado(salon)}
-              className="bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-900 rounded-lg shadow-md p-8 transition-all transform hover:scale-105"
             >
-              <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-700" />
-              <h2 className="text-2xl font-bold mb-2 text-gray-900">{salon}</h2>
-              <p className="text-gray-600 text-sm">Ver eventos de {salon}</p>
-            </button>
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <div className="flex justify-center">
+                    <div className="p-4 rounded-full bg-primary/10">
+                      <Building2 className="w-12 h-12 text-primary" />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">{salon}</h2>
+                    <p className="text-muted-foreground text-sm">Ver eventos de {salon}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -276,61 +307,67 @@ function ChecklistManager() {
     return (
       <div className="space-y-6">
         {/* Header con controles */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Checklist de Servicios Externos</h1>
-              <p className="text-gray-600">Salón: <span className="font-semibold">{salonSeleccionado}</span></p>
-            </div>
-            <button
-              onClick={() => setSalonSeleccionado(null)}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
-            >
-              <X className="w-5 h-5" />
-              Cambiar Salón
-            </button>
-          </div>
-
-          {/* Filtros de Mes y Año */}
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Mes</label>
-              <select
-                value={mesSeleccionado}
-                onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-3xl">Checklist de Servicios Externos</CardTitle>
+                <CardDescription className="mt-2">
+                  Salón: <span className="font-semibold text-foreground">{salonSeleccionado}</span>
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setSalonSeleccionado(null)}
               >
-                {meses.map((mes) => (
-                  <option key={mes.valor} value={mes.valor}>
-                    {mes.nombre}
-                  </option>
-                ))}
-              </select>
+                <X className="w-4 h-4 mr-2" />
+                Cambiar Salón
+              </Button>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Año</label>
-              <select
-                value={anioSeleccionado}
-                onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              >
-                {aniosDisponibles.map((anio) => (
-                  <option key={anio} value={anio}>
-                    {anio}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
 
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-          <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay eventos</h3>
-          <p className="text-gray-600">
-            No se encontraron eventos para {salonSeleccionado} en {meses.find(m => m.valor === mesSeleccionado)?.nombre} {anioSeleccionado}.
-          </p>
-        </div>
+            {/* Filtros de Mes y Año */}
+            <div className="flex items-end gap-4 mt-4">
+              <div className="space-y-2">
+                <Label>Mes</Label>
+                <Select
+                  value={mesSeleccionado}
+                  onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
+                >
+                  {meses.map((mes) => (
+                    <option key={mes.valor} value={mes.valor}>
+                      {mes.nombre}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Año</Label>
+                <Select
+                  value={anioSeleccionado}
+                  onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
+                >
+                  {aniosDisponibles.map((anio) => (
+                    <option key={anio} value={anio}>
+                      {anio}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No hay eventos</h3>
+              <p className="text-muted-foreground">
+                No se encontraron eventos para {salonSeleccionado} en {meses.find(m => m.valor === mesSeleccionado)?.nombre} {anioSeleccionado}.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -338,113 +375,117 @@ function ChecklistManager() {
   return (
     <div className="space-y-6">
       {/* Header con controles */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Checklist de Servicios Externos</h1>
-            <p className="text-gray-600">Salón: <span className="font-semibold">{salonSeleccionado}</span></p>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-3xl">Checklist de Servicios Externos</CardTitle>
+              <CardDescription className="mt-2">
+                Salón: <span className="font-semibold text-foreground">{salonSeleccionado}</span>
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setSalonSeleccionado(null)}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cambiar Salón
+            </Button>
           </div>
-          <button
-            onClick={() => setSalonSeleccionado(null)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
-          >
-            <X className="w-5 h-5" />
-            Cambiar Salón
-          </button>
-        </div>
 
-        {/* Filtros de Mes y Año */}
-        <div className="flex items-center gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Mes</label>
-            <select
-              value={mesSeleccionado}
-              onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            >
-              {meses.map((mes) => (
-                <option key={mes.valor} value={mes.valor}>
-                  {mes.nombre}
-                </option>
-              ))}
-            </select>
+          {/* Filtros de Mes y Año */}
+          <div className="flex items-end gap-4 mt-4">
+            <div className="space-y-2">
+              <Label>Mes</Label>
+              <Select
+                value={mesSeleccionado}
+                onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
+              >
+                {meses.map((mes) => (
+                  <option key={mes.valor} value={mes.valor}>
+                    {mes.nombre}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Año</Label>
+              <Select
+                value={anioSeleccionado}
+                onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
+              >
+                {aniosDisponibles.map((anio) => (
+                  <option key={anio} value={anio}>
+                    {anio}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="ml-auto flex items-end">
+              <Badge variant="secondary" className="text-sm">
+                {contratos.length} evento{contratos.length !== 1 ? 's' : ''} encontrado{contratos.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Año</label>
-            <select
-              value={anioSeleccionado}
-              onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            >
-              {aniosDisponibles.map((anio) => (
-                <option key={anio} value={anio}>
-                  {anio}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="ml-auto">
-            <p className="text-sm text-gray-600">
-              <span className="font-semibold">{contratos.length}</span> evento{contratos.length !== 1 ? 's' : ''} encontrado{contratos.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-      </div>
+        </CardHeader>
+      </Card>
 
       {/* Lista de Contratos */}
       <div className="space-y-4">
         {contratos.map((contrato) => (
-          <div key={contrato.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <Card key={contrato.id} className="overflow-hidden">
             {/* Header del Contrato */}
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-4 border-b border-gray-200">
-              <button
-                onClick={() => toggleContratoExpandido(contrato.id)}
-                className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-left hover:opacity-80 transition"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                    {contrato.codigo_contrato}
-                  </h3>
-                    <ChevronDown 
-                      className={`w-5 h-5 text-gray-600 transition-transform ${
-                        contratosExpandidos[contrato.id] ? 'transform rotate-180' : ''
-                      }`}
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      <span>{contrato.clientes?.nombre_completo}</span>
+            <CardHeader className="border-b">
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={() => toggleContratoExpandido(contrato.id)}
+                  className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-left hover:opacity-80 transition"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CardTitle className="text-lg mb-0">
+                        {contrato.codigo_contrato}
+                      </CardTitle>
+                      <ChevronDown 
+                        className={cn(
+                          "w-5 h-5 text-muted-foreground transition-transform",
+                          contratosExpandidos[contrato.id] && "transform rotate-180"
+                        )}
+                      />
                     </div>
-                    {contrato.eventos?.fecha_evento && (
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          {new Date(contrato.eventos.fecha_evento).toLocaleDateString('es-ES', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </span>
+                        <User className="w-4 h-4" />
+                        <span>{contrato.clientes?.nombre_completo}</span>
                       </div>
-                    )}
-                    {contrato.salones?.nombre && (
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4" />
-                        <span>{contrato.salones.nombre}</span>
-                      </div>
-                    )}
+                      {contrato.eventos?.fecha_evento && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>
+                            {new Date(contrato.eventos.fecha_evento).toLocaleDateString('es-ES', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      {contrato.salones?.nombre && (
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4" />
+                          <span>{contrato.salones.nombre}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
 
-              {/* Botón Descargar PDF de Ajustes - Solo visible cuando está expandido */}
-              {contratosExpandidos[contrato.id] && (
-                <div className="mt-4 pt-4 border-t border-gray-200 px-6 pb-4">
-                  <div className="flex justify-end">
-                    <button
+                {/* Botón Descargar PDF de Ajustes - Solo visible cuando está expandido */}
+                {contratosExpandidos[contrato.id] && (
+                  <div className="flex justify-end pt-2 border-t">
+                    <Button
+                      size="sm"
                       onClick={async () => {
                         try {
                           const response = await api.get(`/ajustes/contrato/${contrato.id}/pdf`, {
@@ -462,207 +503,203 @@ function ChecklistManager() {
                           toast.error('Error al descargar el PDF');
                         }
                       }}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 transition shadow-sm"
                     >
-                      <Download className="w-4 h-4" />
-                      <span>Descargar PDF</span>
-                    </button>
-                </div>
+                      <Download className="w-4 h-4 mr-2" />
+                      Descargar PDF
+                    </Button>
+                  </div>
+                )}
               </div>
-              )}
-            </div>
+            </CardHeader>
 
             {/* Checklist Items - Solo visible cuando está expandido */}
             {contratosExpandidos[contrato.id] && (
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {contrato.checklist?.map((item) => {
                   const itemKey = `${contrato.id}-${item.servicio_tipo}`;
                   const isEditing = editingItem === itemKey;
                   const EstadoIcon = ESTADOS_ICONS[item.estado] || Clock;
 
                   return (
-                    <div
+                    <Card
                       key={item.servicio_tipo}
-                      className={`border-2 rounded-lg p-4 transition ${
-                        item.estado === 'completado'
-                          ? 'bg-green-50 border-green-200'
-                          : 'bg-yellow-50 border-yellow-200'
-                      }`}
+                      className="transition-all hover:shadow-md"
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold text-gray-900">
-                          {SERVICIOS_LABELS[item.servicio_tipo] || item.servicio_tipo}
-                        </h4>
-                        <div className={`flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium border ${ESTADOS_COLORS[item.estado] || ESTADOS_COLORS.pendiente}`}>
-                          <EstadoIcon className="w-3 h-3" />
-                          <span className="capitalize">{item.estado?.replace('_', ' ')}</span>
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base font-semibold mb-0">
+                            {SERVICIOS_LABELS[item.servicio_tipo] || item.servicio_tipo}
+                          </CardTitle>
+                          <Badge variant={ESTADOS_VARIANTS[item.estado] || 'warning'} className="gap-1.5">
+                            <EstadoIcon className="w-3.5 h-3.5" />
+                            <span className="capitalize">{item.estado?.replace('_', ' ')}</span>
+                          </Badge>
                         </div>
-                      </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
 
                       {isEditing ? (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Fecha de Contacto
-                            </label>
-                            <input
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`fecha_contacto_${itemKey}`}>Fecha de Contacto</Label>
+                              <Input
+                                id={`fecha_contacto_${itemKey}`}
                                 type="date"
-                              value={editForm.fecha_contacto}
-                              onChange={(e) => setEditForm({ ...editForm, fecha_contacto: e.target.value })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                            />
+                                value={editForm.fecha_contacto}
+                                onChange={(e) => setEditForm({ ...editForm, fecha_contacto: e.target.value })}
+                              />
                             </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Hora de Contacto
-                              </label>
-                              <input
+                            <div className="space-y-2">
+                              <Label htmlFor={`hora_contacto_${itemKey}`}>Hora de Contacto</Label>
+                              <Input
+                                id={`hora_contacto_${itemKey}`}
                                 type="time"
                                 value={editForm.hora_contacto}
                                 onChange={(e) => setEditForm({ ...editForm, hora_contacto: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                               />
                             </div>
                           </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Estado
-                            </label>
-                            <select
+                          <div className="space-y-2">
+                            <Label htmlFor={`estado_${itemKey}`}>Estado</Label>
+                            <Select
+                              id={`estado_${itemKey}`}
                               value={editForm.estado}
                               onChange={(e) => setEditForm({ ...editForm, estado: e.target.value })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                             >
                               <option value="pendiente">Pendiente</option>
                               <option value="completado">Completado</option>
-                            </select>
+                            </Select>
                           </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Fecha de Pago
-                            </label>
-                            <input
+                          <div className="space-y-2">
+                            <Label htmlFor={`fecha_pago_${itemKey}`}>Fecha de Pago</Label>
+                            <Input
+                              id={`fecha_pago_${itemKey}`}
                               type="date"
                               value={editForm.fecha_pago}
                               onChange={(e) => setEditForm({ ...editForm, fecha_pago: e.target.value })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                             />
                           </div>
 
                           {item.servicio_tipo === 'limosina' && (
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Fecha de Recogida
-                                </label>
-                                <input
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label htmlFor={`fecha_recogida_${itemKey}`}>Fecha de Recogida</Label>
+                                <Input
+                                  id={`fecha_recogida_${itemKey}`}
                                   type="date"
                                   value={editForm.fecha_recogida}
                                   onChange={(e) => setEditForm({ ...editForm, fecha_recogida: e.target.value })}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                                 />
                               </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Hora de Recogida
-                                </label>
-                                <input
+                              <div className="space-y-2">
+                                <Label htmlFor={`hora_recogida_${itemKey}`}>Hora de Recogida</Label>
+                                <Input
+                                  id={`hora_recogida_${itemKey}`}
                                   type="time"
                                   value={editForm.hora_recogida}
                                   onChange={(e) => setEditForm({ ...editForm, hora_recogida: e.target.value })}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                                 />
                               </div>
                             </div>
                           )}
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Notas
-                            </label>
-                            <textarea
+                          <div className="space-y-2">
+                            <Label htmlFor={`notas_${itemKey}`}>Notas</Label>
+                            <Textarea
+                              id={`notas_${itemKey}`}
                               value={editForm.notas}
                               onChange={(e) => setEditForm({ ...editForm, notas: e.target.value })}
                               rows={3}
                               placeholder="Agregar notas sobre el contacto..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                             />
                           </div>
 
-                          <div className="flex gap-2">
-                            <button
+                          <div className="flex gap-2 pt-2">
+                            <Button
                               onClick={() => handleSave(contrato.id, item.servicio_tipo)}
                               disabled={updateChecklistMutation.isLoading}
-                              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
+                              className="flex-1"
+                              size="sm"
                             >
-                              <Save className="w-4 h-4 inline mr-1" />
+                              <Save className="w-4 h-4 mr-2" />
                               Guardar
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               onClick={handleCancel}
-                              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition"
+                              variant="outline"
+                              className="flex-1"
+                              size="sm"
                             >
-                              <X className="w-4 h-4 inline mr-1" />
+                              <X className="w-4 h-4 mr-2" />
                               Cancelar
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       ) : (
-                        <div className="space-y-2">
-
+                        <div className="space-y-3">
                           {item.fecha_contacto && (
-                            <div className="text-sm text-gray-600">
-                              <span className="font-medium">Fecha de Contacto:</span>{' '}
-                              {new Date(item.fecha_contacto).toLocaleString('es-ES')}
+                            <div className="text-sm">
+                              <span className="font-medium text-foreground">Fecha de Contacto:</span>{' '}
+                              <span className="text-muted-foreground">
+                                {new Date(item.fecha_contacto).toLocaleString('es-ES')}
+                              </span>
                             </div>
                           )}
 
                           {item.fecha_pago && (
-                            <div className="text-sm text-gray-600">
-                              <span className="font-medium">Fecha de Pago:</span>{' '}
-                              {new Date(item.fecha_pago).toLocaleString('es-ES')}
+                            <div className="text-sm">
+                              <span className="font-medium text-foreground">Fecha de Pago:</span>{' '}
+                              <span className="text-muted-foreground">
+                                {new Date(item.fecha_pago).toLocaleString('es-ES')}
+                              </span>
                             </div>
                           )}
 
                           {item.servicio_tipo === 'limosina' && item.hora_recogida && (
-                            <div className="text-sm text-gray-600">
-                              <span className="font-medium">Hora de Recogida:</span>{' '}
-                              {new Date(item.hora_recogida).toLocaleString('es-ES')}
+                            <div className="text-sm">
+                              <span className="font-medium text-foreground">Hora de Recogida:</span>{' '}
+                              <span className="text-muted-foreground">
+                                {new Date(item.hora_recogida).toLocaleString('es-ES')}
+                              </span>
                             </div>
                           )}
 
                           {item.notas && (
-                            <div className="text-sm text-gray-600">
-                              <span className="font-medium">Notas:</span> {item.notas}
+                            <div className="text-sm">
+                              <span className="font-medium text-foreground block mb-1">Notas:</span>
+                              <span className="text-muted-foreground">{item.notas}</span>
                             </div>
                           )}
 
-                          {item.managers && (
-                            <div className="text-xs text-gray-500">
-                              Gestionado por: {item.managers.nombre_completo}
+                          {item.usuarios && (
+                            <div className="text-xs text-muted-foreground">
+                              Gestionado por: <span className="font-medium">{item.usuarios.nombre_completo}</span>
                             </div>
                           )}
 
-                          <button
+                          <Button
                             onClick={() => handleEdit(item, contrato.id)}
-                            className="mt-2 w-full flex items-center justify-center gap-2 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                            variant="outline"
+                            className="w-full mt-4"
+                            size="sm"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-4 h-4 mr-2" />
                             Editar
-                          </button>
+                          </Button>
                         </div>
                       )}
-                    </div>
+                      </CardContent>
+                    </Card>
                   );
                 })}
               </div>
-            </div>
+            </CardContent>
             )}
-          </div>
+          </Card>
         ))}
       </div>
     </div>

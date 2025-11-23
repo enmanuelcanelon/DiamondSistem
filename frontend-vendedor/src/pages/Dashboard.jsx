@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FileText, FileCheck, DollarSign, TrendingUp, TrendingDown, Calendar, ChevronLeft, ChevronRight, Download, ArrowUpRight, ArrowDownRight, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
+import { Users, FileText, FileCheck, DollarSign, TrendingUp, TrendingDown, Calendar, ChevronLeft, ChevronRight, Download, Eye, EyeOff } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
@@ -43,11 +43,12 @@ function Dashboard() {
   // OPTIMIZADO: Usar endpoint del backend en lugar de calcular en frontend
   const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ['vendedor-stats', user?.id, mesSeleccionado, añoSeleccionado],
-    staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
-    gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
+    staleTime: 10 * 60 * 1000, // Los datos se consideran frescos por 10 minutos (aumentado)
+    gcTime: 30 * 60 * 1000, // Mantener en caché por 30 minutos (aumentado)
     refetchInterval: false, // Sin refresco automático
     refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
+    refetchOnMount: false, // No refetch al montar si los datos están frescos
     refetchOnReconnect: false, // No refetch automático al reconectar
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit) o si ya se intentó 2 veces

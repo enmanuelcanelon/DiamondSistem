@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5174, // Puerto específico para cliente
-    strictPort: true, // Falla si el puerto está ocupado en lugar de buscar otro
+    strictPort: false, // Busca otro puerto si 5174 está ocupado
   },
   resolve: {
     alias: {

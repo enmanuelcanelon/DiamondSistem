@@ -66,6 +66,8 @@ function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
     'Corporativo',
     'Graduación',
     'Baby Shower',
+    'Kids Party',
+    'Dulces 16',
     'Otro',
   ];
 

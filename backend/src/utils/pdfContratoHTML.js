@@ -84,25 +84,8 @@ async function generarContratoHTML(contrato) {
     
     // Si está en el paquete, solo es adicional si tiene precio > 0 (servicio extra agregado)
     // Los servicios del paquete con precio 0 NO deben mostrarse como adicionales
-    const esServicioExtra = precioUnitario > 0;
-    
-    // Debug: Log para servicios que podrían ser "Photobooth Print" o "Hora Extra"
-    if (nombreServicio.toLowerCase().includes('photobooth') || nombreServicio.toLowerCase().includes('hora extra') || nombreServicio.toLowerCase().includes('horaextra')) {
-      console.log('DEBUG - Servicio potencial:', {
-        nombre: nombreServicio,
-        id: servicioId,
-        enPaquete: serviciosPaqueteIds.has(servicioId),
-        esAdicional: !serviciosPaqueteIds.has(servicioId),
-        esServicioExtra: esServicioExtra,
-        cantidad: cs.cantidad || 1,
-        precio: precioUnitario
-      });
-    }
-    
-    return esServicioExtra;
+    return precioUnitario > 0;
   });
-  
-  console.log('Total servicios adicionales filtrados:', serviciosAdicionalesFiltrados.length);
 
   // Crear un mapa de servicios adicionales con sus datos de contrato (cantidad, precio, subtotal)
   const serviciosAdicionalesMap = new Map();
@@ -136,14 +119,6 @@ async function generarContratoHTML(contrato) {
     const nombre = (servicio.nombre || '').toLowerCase();
     const nombreNormalizado = nombre.replace(/[()]/g, '').trim();
     
-    // Debug: Log para verificar servicios adicionales
-    console.log('Servicio adicional encontrado:', {
-      id: servicio.id,
-      nombre: servicio.nombre,
-      categoria: servicio.categoria,
-      cantidad: cs.cantidad,
-      precio_unitario: cs.precio_unitario
-    });
     
     const servicioConDatos = {
       ...servicio,
@@ -185,7 +160,6 @@ async function generarContratoHTML(contrato) {
       
       if (esEspecial) {
         serviciosAdicionalesOrganizados.specials.push(servicioConDatos);
-        console.log('Servicio categorizado como SPECIALS:', servicio.nombre);
       } else if (categoria.includes('coordinación') || categoria.includes('coordinacion') || categoria.includes('coordinador') || categoria.includes('mesero') || categoria.includes('bartender') || nombre.includes('coordinador') || nombre.includes('mesero') || nombre.includes('bartender')) {
         serviciosAdicionalesOrganizados.serviceCoord.push(servicioConDatos);
       } else if (categoria.includes('venue') || nombre.includes('venue') || nombre.includes('salón') || nombre.includes('salon')) {
@@ -488,8 +462,6 @@ async function generarContratoHTML(contrato) {
     const subtotal = parseFloat(cs.subtotal || precioUnitario * cantidad);
     return total + subtotal;
   }, 0);
-  
-  console.log(`Total servicios adicionales calculado desde contratos_servicios: $${totalServiciosAdicionalesCalculado.toFixed(2)}`);
 
   const htmlServiciosPaquete = generarHTMLServicios(serviciosPaquete, true);
   const htmlServiciosAdicionales = generarHTMLServiciosAdicionales();
@@ -514,11 +486,6 @@ async function generarContratoHTML(contrato) {
   let logoPath = '';
   let nombreCompania = 'Diamond Venue';
   
-  console.log('DEBUG - Detección de salón:', { 
-    salonNombre: salon?.nombre, 
-    lugarSalon: lugarSalon,
-    nombreSalon: nombreSalon 
-  });
   
   if (nombreSalon) {
     if (nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
@@ -526,21 +493,16 @@ async function generarContratoHTML(contrato) {
       esRevolution = true;
       nombreCompania = 'Revolution Party Venues';
       logoPath = path.join(__dirname, '../templates/assets/Logorevolution.png');
-      console.log('✓ Detectado como Revolution (Doral)');
     } else if (nombreSalon.includes('kendall')) {
       direccionSalon = 'Salón Kendall<br>14271 Southwest 120th Street<br>Kendall, Miami, FL 33186';
       esRevolution = true;
       nombreCompania = 'Revolution Party Venues';
       logoPath = path.join(__dirname, '../templates/assets/Logorevolution.png');
-      console.log('✓ Detectado como Revolution (Kendall)');
     } else if (nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
       esRevolution = false;
       nombreCompania = 'Diamond Venue';
-      console.log('✓ Detectado como Diamond');
     }
-  } else {
-    console.log('⚠ No se pudo detectar el salón - usando Diamond por defecto');
   }
 
   // Obtener datos del desglose desde la oferta relacionada
@@ -761,12 +723,9 @@ async function generarContratoHTML(contrato) {
       const logoBuffer = fs.readFileSync(logoPath);
       const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
       logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 180px; height: auto; opacity: 0.9; mix-blend-mode: screen;">`;
-      console.log('Logo cargado correctamente:', logoPath);
     } catch (error) {
       console.error('Error al cargar logo:', error);
     }
-  } else {
-    console.log('Logo no encontrado en:', logoPath);
   }
 
   // Cargar fondo para Revolution (Doral/Kendall) - Portada
@@ -791,12 +750,9 @@ async function generarContratoHTML(contrato) {
             background-repeat: no-repeat;
             opacity: 1;
             display: block;`;
-      console.log('Fondo cargado correctamente. Tamaño base64:', fondoBase64.length, 'caracteres');
     } catch (error) {
       console.error('Error al cargar fondo:', error);
     }
-  } else {
-    console.log('Fondo no encontrado o no es Revolution. Path:', fondoPath, 'esRevolution:', esRevolution);
   }
 
   // Cargar fondo general para package-card (servicios, términos, etc.)
@@ -814,7 +770,6 @@ async function generarContratoHTML(contrato) {
               background-position: center;
               background-repeat: no-repeat;
               opacity: 1;`;
-        console.log('Fondo general cargado correctamente para package-card (Revolution)');
       } catch (error) {
         console.error('Error al cargar fondo general:', error);
         packageCardBackground = '';
@@ -832,13 +787,11 @@ async function generarContratoHTML(contrato) {
               background-position: center;
               background-repeat: no-repeat;
               opacity: 1;`;
-        console.log('Fondo Diamond cargado correctamente para contratos');
       } catch (error) {
         console.error('Error al cargar fondo Diamond:', error);
         packageCardBackground = '';
       }
     } else {
-      console.log('Fondo Diamond no encontrado en:', fondoDiamondPath);
     }
   }
 
@@ -946,7 +899,6 @@ async function generarContratoHTML(contrato) {
         );
       });
     } catch (error) {
-      console.log('Error esperando imágenes:', error);
     }
     
     // Esperar un poco más para asegurar que todo se renderice

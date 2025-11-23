@@ -281,25 +281,7 @@ function AsignacionMesas() {
     }
   }, [configSalon, mesas, contrato, contratoId, puedeEditar, queryClient, loadingMesas]);
   
-  // Debug: mostrar información del salón en consola (siempre en desarrollo)
-  console.log('🔍 Debug Asignación Mesas:', {
-    contratoId,
-    salonNombreRaw,
-    salonNombre,
-    salonNombreKey,
-    salonId,
-    tieneSalon: !!contrato?.salones,
-    salonDesdeContrato: contrato?.salones?.nombre,
-    salonDesdeLugar: contrato?.lugar_salon,
-    salonDesdeOferta: contrato?.ofertas?.lugar_salon,
-    contrato: contrato ? {
-      salon_id: contrato.salon_id,
-      lugar_salon: contrato.lugar_salon,
-      tieneSalones: !!contrato.salones,
-      tieneOfertas: !!contrato.ofertas
-    } : null,
-    configSalon: !!configSalon
-  });
+  // Debug removido para evitar re-renders innecesarios
 
   // Modal/Dropdown para seleccionar invitado a asignar
   const handleAsignarInvitadoAMesa = (invitadoId) => {
@@ -313,23 +295,23 @@ function AsignacionMesas() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in">
       {/* Modal para seleccionar invitado */}
       {mesaSeleccionadaParaAsignar && puedeEditar && invitadosSinMesa.length > 0 && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-neutral-900 border border-white/10 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-white">
                 Seleccionar Invitado
               </h3>
               <button
                 onClick={() => setMesaSeleccionadaParaAsignar(null)}
-                className="p-1 rounded hover:bg-gray-100 transition"
+                className="p-1 rounded hover:bg-white/10 transition"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-neutral-400" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-neutral-400 mb-4">
               Selecciona un invitado para asignar a la mesa
             </p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -338,16 +320,16 @@ function AsignacionMesas() {
                   key={invitado.id}
                   onClick={() => handleAsignarInvitadoAMesa(invitado.id)}
                   disabled={asignarInvitadoMutation.isPending}
-                  className="w-full text-left p-3 border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition disabled:opacity-50"
+                  className="w-full text-left p-3 border border-white/10 rounded-lg hover:bg-white/5 hover:border-white/20 transition disabled:opacity-50"
                 >
-                  <p className="font-medium text-gray-900">{invitado.nombre_completo}</p>
-                  <p className="text-xs text-gray-500 capitalize">{invitado.tipo}</p>
+                  <p className="font-medium text-white">{invitado.nombre_completo}</p>
+                  <p className="text-xs text-neutral-400 capitalize">{invitado.tipo}</p>
                 </button>
               ))}
             </div>
             <button
               onClick={() => setMesaSeleccionadaParaAsignar(null)}
-              className="mt-4 w-full px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
+              className="mt-4 w-full px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition border border-white/5"
             >
               Cancelar
             </button>
@@ -356,36 +338,37 @@ function AsignacionMesas() {
       )}
       
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to={`/contratos/${contratoId}`} className="p-2 hover:bg-gray-100 rounded-lg transition">
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900">Asignación de Mesas</h1>
-            {esVendedor && (
-              <span className="px-3 py-1 text-xs font-medium bg-amber-100 text-amber-800 rounded-full flex items-center gap-1">
-                <Eye className="w-3 h-3" />
-                Solo Lectura
-              </span>
-            )}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => window.history.back()}
+            className="p-2 rounded-full bg-neutral-900 border border-white/10 text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Distribución de Mesas</h1>
+            <p className="text-neutral-400 text-sm">Organiza a tus invitados</p>
           </div>
-          <p className="text-gray-600 mt-1">
-            {contrato?.codigo_contrato} - {contrato?.clientes?.nombre_completo}
-          </p>
         </div>
+        {puedeEditar && (
+          <button className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-neutral-200 transition-colors">
+            <Plus size={16} />
+            Nueva Mesa
+          </button>
+        )}
       </div>
 
       {/* Banner informativo para vendedor */}
       {esVendedor && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+        <div className="bg-blue-500/10 border-l-4 border-blue-500 p-4 rounded-lg mb-6">
           <div className="flex items-start gap-3">
-            <Eye className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <Eye className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900">
+              <p className="text-sm font-medium text-blue-400">
                 Vista de Solo Lectura
               </p>
-              <p className="text-sm text-blue-700 mt-1">
+              <p className="text-sm text-neutral-400 mt-1">
                 Como vendedor, puedes ver la asignación de mesas pero no puedes editarla. Solo el cliente puede realizar cambios en esta sección.
               </p>
             </div>
@@ -393,83 +376,57 @@ function AsignacionMesas() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-        {/* Panel Central: Gráfico Visual de Distribución */}
-        <div className="lg:col-span-1 space-y-4">
-          {/* Vista Visual de Distribución - Mostrar si hay salón o si hay mesas */}
-          {(salonNombre || salonId) && (
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                <Table className="w-5 h-5 text-indigo-600" />
-                Distribución Visual - {salonNombreKey || salonNombre || (salonId ? 'Salón ID: ' + salonId : 'Salón')}
-              </h2>
-              
-              {!configSalon ? (
-                <div className="bg-gray-50 border-l-4 border-gray-400 p-6 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      <Table className="w-8 h-8 text-gray-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                        Salón no configurado
-                      </h3>
-                      <p className="text-gray-700">
-                        El salón "{salonNombre}" aún no tiene una distribución visual configurada.
-                        Por favor, utiliza la lista de mesas a continuación para gestionar las asignaciones.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : mostrarMantenimiento ? (
-                <div className="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      <Table className="w-8 h-8 text-amber-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-amber-900 mb-1">
-                        {configSalon.mensaje || 'En Mantenimiento'}
-                      </h3>
-                      <p className="text-amber-700">
-                        La distribución visual de mesas para el salón {salonNombreKey || salonNombre} está en desarrollo.
-                        Por favor, utiliza la lista de mesas a continuación para gestionar las asignaciones.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative bg-white rounded-lg overflow-hidden border-2 border-gray-300">
-                  {/* Imagen del plano del salón */}
-                  <div className="relative w-full">
-                    <img 
-                      src={(() => {
-                        // Construir URL completa si es relativa
-                        const imagenPath = configSalon.imagen;
-                        if (!imagenPath) return '';
-                        if (imagenPath.startsWith('http')) return imagenPath;
-                        
-                        // Si es relativa, construir URL completa
-                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-                        const baseUrl = apiUrl.replace('/api', '') || 'http://localhost:5000';
-                        const path = imagenPath.startsWith('/') ? imagenPath : `/${imagenPath}`;
-                        return `${baseUrl}${path}`;
-                      })()} 
-                      alt={`Plano del salón ${salonNombreKey || salonNombre}`}
-                      className="w-full h-auto object-contain"
-                      style={{ maxHeight: '800px' }}
-                      onError={(e) => {
-                        console.error('Error cargando imagen:', configSalon.imagen);
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                  
-                </div>
-              )}
-            </div>
-          )}
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="bg-neutral-900 border border-white/10 rounded-xl p-5">
+          <div className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">Invitados</div>
+          <div className="text-2xl font-bold text-white">
+            {invitadosData?.total || 0}
+          </div>
         </div>
+        <div className="bg-neutral-900 border border-white/10 rounded-xl p-5">
+          <div className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">Mesas</div>
+          <div className="text-2xl font-bold text-white">{mesas?.length || 0}</div>
+        </div>
+        <div className="bg-neutral-900 border border-white/10 rounded-xl p-5">
+          <div className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">Sin Asignar</div>
+          <div className="text-2xl font-bold text-white">{invitadosSinMesa.length}</div>
+        </div>
+      </div>
+
+      {/* Tables Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {mesas?.map((mesa) => (
+          <div
+            key={mesa.id}
+            className="bg-neutral-900 border border-white/10 rounded-xl p-6 hover:border-white/30 transition-colors cursor-pointer group"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">Mesa {mesa.numero_mesa}</h3>
+              <span className="text-xs text-neutral-500 bg-white/5 px-2 py-1 rounded">
+                {mesa.capacidad} asientos
+              </span>
+            </div>
+            <div className="aspect-square bg-black/50 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center mb-4 group-hover:border-white/20 transition-colors relative">
+              <div className="absolute inset-2 rounded-full border border-white/5" />
+              <Users className="text-neutral-600" size={24} />
+            </div>
+            <div className="space-y-2">
+              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-white rounded-full"
+                  style={{
+                    width: `${(mesa.invitados.length / mesa.capacidad) * 100}%`
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-neutral-500">
+                <span>{mesa.invitados.length} ocupados</span>
+                <span>{mesa.capacidad - mesa.invitados.length} libres</span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ import {
   MessageSquare,
   Settings
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import useAuthStore from '../store/useAuthStore';
 import { Button } from './ui/button';
@@ -30,10 +30,10 @@ function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     navigate('/login');
-  };
+  }, [logout, navigate]);
 
   // Obtener leaks pendientes de contacto (para el badge) - Carga diferida para no bloquear inicio
   const { data: pendientesData } = useQuery({
@@ -46,11 +46,12 @@ function Layout() {
         return { count: 0 };
       }
     },
-    staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
-    gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
+    staleTime: 10 * 60 * 1000, // Los datos se consideran frescos por 10 minutos (aumentado)
+    gcTime: 30 * 60 * 1000, // Mantener en caché por 30 minutos (aumentado)
     refetchInterval: false, // Sin refresco automático - solo manual
     refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
     refetchOnWindowFocus: false, // No refetch al enfocar ventana (evitar spam)
+    refetchOnMount: false, // No refetch al montar si los datos están frescos
     enabled: !!user, // Solo si hay usuario autenticado
     // Cargar después de un pequeño delay para no bloquear la carga inicial
     retry: (failureCount, error) => {
@@ -61,9 +62,9 @@ function Layout() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 
-  const pendientesCount = pendientesData?.count || 0;
+  const pendientesCount = useMemo(() => pendientesData?.count || 0, [pendientesData?.count]);
 
-  const navigation = {
+  const navigation = useMemo(() => ({
     principal: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
       { name: 'Leads', href: '/leaks', icon: MessageSquare },
@@ -81,14 +82,14 @@ function Layout() {
     configuracion: [
       { name: 'Configuración', href: '/configuracion', icon: Settings },
     ],
-  };
+  }), []);
 
-  const isActive = (path) => {
+  const isActive = useCallback((path) => {
     if (path === '/') {
       return location.pathname === '/';
     }
     return location.pathname.startsWith(path);
-  };
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50">

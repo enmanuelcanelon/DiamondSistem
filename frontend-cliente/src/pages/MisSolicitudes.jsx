@@ -1,21 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import {
-  Clock,
-  CheckCircle,
-  XCircle,
-  Users,
-  Plus,
-  Loader2,
-  AlertCircle,
-  DollarSign,
-} from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, Plus, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import useAuthStore from '@shared/store/useAuthStore';
 import api from '@shared/config/api';
+import ModalSolicitarCambios from '@components/ModalSolicitarCambios';
 
 function MisSolicitudes() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const contratoId = user?.contrato_id;
+  const [showModal, setShowModal] = useState(false);
 
   // Obtener solicitudes del contrato
   const { data, isLoading } = useQuery({
@@ -29,242 +25,141 @@ function MisSolicitudes() {
 
   const solicitudes = data?.solicitudes || [];
 
-  const pendientes = solicitudes.filter((s) => s.estado === 'pendiente');
-  const aprobadas = solicitudes.filter((s) => s.estado === 'aprobada');
-  const rechazadas = solicitudes.filter((s) => s.estado === 'rechazada');
-
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-900" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-white" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Mis Solicitudes</h1>
-        <p className="text-gray-600 mt-1">
-          Revisa el estado de tus solicitudes de cambios
-        </p>
-      </div>
-
-      {/* Botón para nueva solicitud */}
-      <Link
-        to="/solicitar-cambios"
-        className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium shadow-sm"
-      >
-        <Plus className="w-5 h-5" />
-        Nueva Solicitud
-      </Link>
-
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pendientes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {pendientes.length}
-              </p>
-            </div>
-            <Clock className="w-12 h-12 text-gray-700" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Aprobadas</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">
-                {aprobadas.length}
-              </p>
-            </div>
-            <CheckCircle className="w-12 h-12 text-green-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Rechazadas</p>
-              <p className="text-3xl font-bold text-red-600 mt-2">
-                {rechazadas.length}
-              </p>
-            </div>
-            <XCircle className="w-12 h-12 text-red-600" />
-          </div>
-        </div>
-      </div>
-
-      {/* Lista de Solicitudes */}
-      {solicitudes.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-          <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            No tienes solicitudes
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Aún no has solicitado cambios a tu evento
-          </p>
-          <Link
-            to="/solicitar-cambios"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium"
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="p-2 rounded-full bg-neutral-900 border border-white/10 text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
           >
-            <Plus className="w-5 h-5" />
-            Solicitar Cambios
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {solicitudes.map((solicitud) => (
-            <SolicitudCard key={solicitud.id} solicitud={solicitud} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Componente para cada solicitud
-function SolicitudCard({ solicitud }) {
-  const getEstadoBadge = () => {
-    if (solicitud.estado === 'pendiente') {
-      return (
-        <span className="px-3 py-1 bg-gray-100 text-gray-900 text-sm rounded-full font-medium inline-flex items-center gap-1">
-          <Clock className="w-4 h-4" />
-          Pendiente
-        </span>
-      );
-    }
-    if (solicitud.estado === 'aprobada') {
-      return (
-        <span className="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-medium inline-flex items-center gap-1">
-          <CheckCircle className="w-4 h-4" />
-          Aprobada
-        </span>
-      );
-    }
-    return (
-      <span className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-medium inline-flex items-center gap-1">
-        <XCircle className="w-4 h-4" />
-        Rechazada
-      </span>
-    );
-  };
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          {solicitud.tipo_solicitud === 'invitados' ? (
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-          ) : (
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <Plus className="w-6 h-6 text-green-600" />
-            </div>
-          )}
+            <ChevronLeft size={20} />
+          </button>
           <div>
-            <h3 className="font-bold text-gray-900">
-              {solicitud.tipo_solicitud === 'invitados'
-                ? 'Invitados Adicionales'
-                : 'Servicio Adicional'}
-            </h3>
-            <p className="text-sm text-gray-600">
-              Solicitado el{' '}
-              {new Date(solicitud.fecha_solicitud).toLocaleDateString('es-ES')}
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Solicitudes</h1>
+            <p className="text-neutral-400 text-sm">Gestiona cambios y peticiones especiales</p>
           </div>
         </div>
-        {getEstadoBadge()}
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-neutral-200 transition-colors"
+        >
+          <Plus size={16} />
+          Nueva Solicitud
+        </button>
       </div>
 
-      {/* Detalles de la solicitud */}
-      <div className="space-y-3">
-        {solicitud.tipo_solicitud === 'invitados' ? (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-gray-700">
-              Solicitaste agregar{' '}
-              <strong className="text-blue-700 text-lg">
-                {solicitud.invitados_adicionales}
-              </strong>{' '}
-              invitados adicionales
-            </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {solicitudes.length === 0 ? (
+          <div className="col-span-full bg-neutral-900 border border-white/10 rounded-xl p-12 text-center">
+            <p className="text-neutral-400 mb-4">No tienes solicitudes aún.</p>
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-4 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-neutral-200 transition-colors"
+            >
+              Crear Primera Solicitud
+            </button>
           </div>
         ) : (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-gray-700 mb-1">
-              <strong>Servicio:</strong> {solicitud.servicios?.nombre}
-            </p>
-            {solicitud.cantidad_servicio > 1 && (
-              <p className="text-sm text-gray-700">
-                <strong>Cantidad:</strong> {solicitud.cantidad_servicio}
-              </p>
-            )}
-            {solicitud.costo_adicional && (
-              <div className="flex items-center gap-2 mt-2">
-                <DollarSign className="w-4 h-4 text-green-600" />
-                <p className="text-green-600 font-bold">
-                  ${parseFloat(solicitud.costo_adicional).toFixed(2)}
-                </p>
+          solicitudes.map((solicitud) => (
+            <div
+              key={solicitud.id}
+              className={`bg-neutral-900 border border-white/10 rounded-xl p-6 relative overflow-hidden ${
+                solicitud.estado === 'rechazada' ? 'opacity-75' : ''
+              }`}
+            >
+              <div className="flex justify-between items-start mb-4">
+                <span
+                  className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 ${
+                    solicitud.estado === 'pendiente'
+                      ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                      : solicitud.estado === 'aprobada'
+                      ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                      : 'bg-red-500/10 text-red-400 border-red-500/20'
+                  }`}
+                >
+                  {solicitud.estado === 'pendiente' && <Clock size={12} />}
+                  {solicitud.estado === 'aprobada' && <CheckCircle size={12} />}
+                  {solicitud.estado === 'rechazada' && <XCircle size={12} />}
+                  {solicitud.estado === 'pendiente'
+                    ? 'Pendiente'
+                    : solicitud.estado === 'aprobada'
+                    ? 'Aprobado'
+                    : 'Rechazado'}
+                </span>
+                <span className="text-xs text-neutral-500">
+                  {new Date(solicitud.fecha_solicitud).toLocaleDateString('es-ES', {
+                    day: 'numeric',
+                    month: 'short'
+                  })}
+                </span>
               </div>
-            )}
-          </div>
-        )}
 
-        {solicitud.detalles_solicitud && (
-          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-            <p className="text-sm text-gray-700 italic">
-              "{solicitud.detalles_solicitud}"
-            </p>
-          </div>
-        )}
+              <h3 className="text-lg font-semibold text-white mb-2">
+                {solicitud.tipo_solicitud === 'invitados'
+                  ? 'Invitados Adicionales'
+                  : 'Servicio Adicional'}
+              </h3>
 
-        {/* Respuesta del vendedor */}
-        {solicitud.estado === 'aprobada' && (
-          <div className="p-4 bg-green-50 border border-green-300 rounded-lg">
-            <p className="text-sm text-green-700 font-bold">
-              ¡Tu solicitud fue aprobada!
-            </p>
-            {solicitud.fecha_respuesta && (
-              <p className="text-xs text-green-600 mt-1">
-                Aprobada el{' '}
-                {new Date(solicitud.fecha_respuesta).toLocaleDateString('es-ES')}
+              <p className="text-sm text-neutral-400 mb-4">
+                {solicitud.tipo_solicitud === 'invitados'
+                  ? `Solicitud para agregar ${solicitud.invitados_adicionales} invitados adicionales.`
+                  : solicitud.servicios
+                  ? `Solicitud para agregar el servicio: ${solicitud.servicios.nombre}`
+                  : solicitud.detalles_solicitud || 'Sin detalles adicionales.'}
               </p>
-            )}
-          </div>
-        )}
 
-        {solicitud.estado === 'rechazada' && solicitud.motivo_rechazo && (
-          <div className="p-4 bg-red-50 border border-red-300 rounded-lg">
-            <p className="text-sm text-red-700 font-bold mb-2">
-              Solicitud Rechazada
-            </p>
-            <p className="text-sm text-gray-700">
-              <strong>Motivo:</strong> {solicitud.motivo_rechazo}
-            </p>
-            {solicitud.fecha_respuesta && (
-              <p className="text-xs text-red-600 mt-2">
-                Rechazada el{' '}
-                {new Date(solicitud.fecha_respuesta).toLocaleDateString('es-ES')}
-              </p>
-            )}
-          </div>
-        )}
+              {solicitud.estado === 'rechazada' && solicitud.motivo_rechazo && (
+                <div className="p-3 bg-red-500/5 rounded-lg border border-red-500/10 mb-4">
+                  <p className="text-xs text-red-300">
+                    <span className="font-bold">Motivo:</span> {solicitud.motivo_rechazo}
+                  </p>
+                </div>
+              )}
 
-        {solicitud.estado === 'pendiente' && (
-          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-            <p className="text-sm text-gray-700">
-              Tu vendedor está revisando esta solicitud. Te notificaremos
-              cuando responda.
-            </p>
-          </div>
+              {solicitud.costo_adicional && (
+                <div className="pt-4 border-t border-white/5">
+                  <p className="text-xs text-neutral-500 mb-1">Costo adicional</p>
+                  <p className="text-sm font-semibold text-white">
+                    ${parseFloat(solicitud.costo_adicional).toLocaleString('es-ES', {
+                      minimumFractionDigits: 2
+                    })}
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-white/5 flex items-center gap-2 mt-4">
+                <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center text-xs text-white">
+                  {user?.nombre_completo?.charAt(0) || 'U'}
+                </div>
+                <span className="text-xs text-neutral-500">
+                  {user?.nombre_completo || 'Usuario'}
+                </span>
+              </div>
+            </div>
+          ))
         )}
       </div>
+
+      {/* Modal Solicitar Cambios */}
+      <ModalSolicitarCambios
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSuccess={() => {
+          // Refrescar datos después de crear solicitud
+          queryClient.invalidateQueries(['mis-solicitudes']);
+        }}
+      />
     </div>
   );
 }

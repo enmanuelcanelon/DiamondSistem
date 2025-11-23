@@ -51,6 +51,47 @@ const parsearFechaLocal = (fecha) => {
   
   return null;
 };
+
+// Función helper para parsear fechas con hora preservada
+const parsearFechaConHora = (fecha) => {
+  if (!fecha) return null;
+  
+  // Si es un string ISO con hora (formato: YYYY-MM-DDTHH:mm:ss o YYYY-MM-DD HH:mm:ss)
+  if (typeof fecha === 'string') {
+    // Intentar parsear como ISO completo
+    const isoMatch = fecha.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (isoMatch) {
+      const [, year, month, day, hour, minute, second] = isoMatch;
+      return new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+        second ? parseInt(second) : 0
+      );
+    }
+    
+    // Si solo tiene fecha, usar parsearFechaLocal
+    const datePart = fecha.split('T')[0].split(' ')[0];
+    if (datePart.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return parsearFechaLocal(fecha);
+    }
+  }
+  
+  // Si es un objeto Date, devolverlo directamente
+  if (fecha instanceof Date) {
+    return fecha;
+  }
+  
+  // Último recurso: parsear normalmente
+  const date = new Date(fecha);
+  if (!isNaN(date.getTime())) {
+    return date;
+  }
+  
+  return null;
+};
 import api from '../config/api';
 import toast from 'react-hot-toast';
 
@@ -268,7 +309,14 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Fecha de Asignación</label>
                       <p className="text-base mt-1">
-                        {format(parsearFechaLocal(leak.fecha_asignacion), 'yyyy-MM-dd HH:mm')}
+                        {(() => {
+                          const fecha = parsearFechaConHora(leak.fecha_asignacion);
+                          if (!fecha) return '-';
+                          const tieneHora = leak.fecha_asignacion.includes('T') && leak.fecha_asignacion.includes(':');
+                          return tieneHora 
+                            ? format(fecha, 'yyyy-MM-dd hh:mm a', { locale: es })
+                            : format(fecha, 'yyyy-MM-dd');
+                        })()}
                       </p>
                     </div>
                   )}
@@ -276,7 +324,14 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Último Contacto</label>
                       <p className="text-base mt-1">
-                        {format(parsearFechaLocal(leak.fecha_ultimo_contacto), 'yyyy-MM-dd HH:mm')}
+                        {(() => {
+                          const fecha = parsearFechaConHora(leak.fecha_ultimo_contacto);
+                          if (!fecha) return '-';
+                          const tieneHora = leak.fecha_ultimo_contacto.includes('T') && leak.fecha_ultimo_contacto.includes(':');
+                          return tieneHora 
+                            ? format(fecha, 'yyyy-MM-dd hh:mm a', { locale: es })
+                            : format(fecha, 'yyyy-MM-dd');
+                        })()}
                       </p>
                     </div>
                   )}
@@ -284,7 +339,14 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Próximo Contacto</label>
                       <p className="text-base mt-1">
-                        {format(parsearFechaLocal(leak.fecha_proximo_contacto), 'yyyy-MM-dd')}
+                        {(() => {
+                          const fecha = parsearFechaConHora(leak.fecha_proximo_contacto);
+                          if (!fecha) return '-';
+                          const tieneHora = leak.fecha_proximo_contacto.includes('T') && leak.fecha_proximo_contacto.includes(':');
+                          return tieneHora 
+                            ? format(fecha, 'yyyy-MM-dd hh:mm a', { locale: es })
+                            : format(fecha, 'yyyy-MM-dd');
+                        })()}
                       </p>
                     </div>
                   )}
@@ -292,8 +354,21 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Fecha de Cita al Salón</label>
                       <p className="text-base mt-1">
-                        {format(parsearFechaLocal(leak.fecha_cita_salon), 'yyyy-MM-dd HH:mm')}
+                        {(() => {
+                          const fecha = parsearFechaConHora(leak.fecha_cita_salon);
+                          if (!fecha) return '-';
+                          const tieneHora = leak.fecha_cita_salon.includes('T') && leak.fecha_cita_salon.includes(':');
+                          return tieneHora 
+                            ? format(fecha, 'yyyy-MM-dd hh:mm a', { locale: es })
+                            : format(fecha, 'yyyy-MM-dd');
+                        })()}
                       </p>
+                    </div>
+                  )}
+                  {leak.motivo_no_interesado && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-muted-foreground">Motivo de No Interés</label>
+                      <p className="text-base mt-1 text-destructive">{leak.motivo_no_interesado}</p>
                     </div>
                   )}
                   {leak.motivo_rechazo && (
@@ -302,10 +377,20 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
                       <p className="text-base mt-1 text-destructive">{leak.motivo_rechazo}</p>
                     </div>
                   )}
+                  {leak.detalles_interesado && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-muted-foreground">Detalles del Interés</label>
+                      <p className="text-base mt-1 whitespace-pre-wrap">{leak.detalles_interesado}</p>
+                    </div>
+                  )}
                   {leak.notas_vendedor && (
                     <div className="md:col-span-2">
-                      <label className="text-sm font-medium text-muted-foreground">Notas del Vendedor</label>
-                      <p className="text-base mt-1">{leak.notas_vendedor}</p>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        {leak.estado === 'contactado_llamar_luego' || leak.estado === 'no_contesta_llamar_luego' 
+                          ? 'Detalles del Contacto' 
+                          : 'Notas del Vendedor'}
+                      </label>
+                      <p className="text-base mt-1 whitespace-pre-wrap">{leak.notas_vendedor}</p>
                     </div>
                   )}
                 </div>

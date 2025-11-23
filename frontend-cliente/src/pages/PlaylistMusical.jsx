@@ -269,13 +269,13 @@ function PlaylistMusical() {
   const getCategoriaColor = (categoria) => {
     switch (categoria) {
       case 'favorita':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-500/10 border-red-500/20';
       case 'prohibida':
-        return 'bg-gray-50 border-gray-300';
+        return 'bg-neutral-800 border-neutral-700';
       case 'sugerida':
-        return 'bg-yellow-50 border-yellow-200';
+        return 'bg-yellow-500/10 border-yellow-500/20';
       default:
-        return 'bg-white border-gray-200';
+        return 'bg-black/20 border-white/10';
     }
   };
 
@@ -300,10 +300,10 @@ function PlaylistMusical() {
     const [imagenError, setImagenError] = useState(false);
     
     return (
-      <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+      <div className="flex items-start gap-4 p-4 bg-black/20 rounded-lg border border-white/10 hover:border-white/20 transition">
         {/* Preview/Thumbnail de la playlist */}
         <div className="flex-shrink-0">
-          <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-gray-200 bg-white shadow-sm">
+          <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-white/10 bg-black/50">
             {previewUrl && !imagenError ? (
               <img
                 src={previewUrl}
@@ -328,12 +328,12 @@ function PlaylistMusical() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             {plataforma && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-900 rounded text-xs font-medium">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white/10 text-white rounded text-xs font-medium">
                 {plataforma === 'youtube' ? '🎵 YouTube Music' : '🎵 Spotify'}
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-600 break-all" title={url}>
+          <p className="text-sm text-neutral-400 break-all" title={url}>
             {url}
           </p>
         </div>
@@ -341,14 +341,14 @@ function PlaylistMusical() {
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => onCopiar(url)}
-            className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition"
+            className="p-2 text-neutral-400 hover:bg-white/10 hover:text-white rounded-lg transition"
             title="Copiar URL"
           >
             <Copy className="w-4 h-4" />
           </button>
           <button
             onClick={() => onAbrir(url)}
-            className="p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition"
+            className="p-2 text-neutral-400 hover:bg-white/10 hover:text-white rounded-lg transition"
             title="Abrir en plataforma"
           >
             <ExternalLink className="w-4 h-4" />
@@ -357,7 +357,7 @@ function PlaylistMusical() {
             <button
               onClick={() => onEliminar(url)}
               disabled={guardandoUrl}
-              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+              className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition disabled:opacity-50"
               title="Eliminar URL"
             >
               <Trash2 className="w-4 h-4" />
@@ -369,26 +369,20 @@ function PlaylistMusical() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to={`/contratos/${contratoId}`} className="p-2 hover:bg-gray-100 rounded-lg transition">
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Music className="w-8 h-8 text-gray-700" />
-            Playlist Musical
-            {esVendedor && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
-                <Eye className="w-4 h-4" />
-                Solo lectura
-              </span>
-            )}
-          </h1>
-          <p className="text-gray-600 mt-1">
-            {contrato?.codigo_contrato} - {contrato?.clientes?.nombre_completo}
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-12">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => window.history.back()}
+            className="p-2 rounded-full bg-neutral-900 border border-white/10 text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-1">Playlist</h1>
+            <p className="text-neutral-400 text-sm">Gestiona la música de tu evento</p>
+          </div>
         </div>
         <button
           onClick={async () => {
@@ -408,315 +402,327 @@ function PlaylistMusical() {
               alert('Error al descargar el PDF');
             }
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition shadow-md"
+          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-neutral-200 transition-colors"
         >
-          <Download className="w-5 h-5" />
-          <span className="hidden sm:inline">Descargar PDF</span>
+          <Download size={16} />
+          Descargar PDF
         </button>
       </div>
 
-      {/* Sección de Playlist Externa */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Share2 className="w-5 h-5 text-gray-700" />
-          Playlists Externas (YouTube/Spotify)
-        </h3>
-        <div className="space-y-4">
-          {puedeEditar && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Agregar Nueva URL de Playlist
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={nuevaPlaylistUrl}
-                  onChange={(e) => setNuevaPlaylistUrl(e.target.value)}
-                  placeholder="https://music.youtube.com/playlist?list=... o https://open.spotify.com/..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
-                />
-                <button
-                  onClick={handleAgregarPlaylistUrl}
-                  disabled={guardandoUrl || !nuevaPlaylistUrl.trim()}
-                  className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                >
-                  {guardandoUrl ? 'Guardando...' : 'Agregar'}
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Puedes agregar múltiples playlists de YouTube Music o Spotify
-              </p>
-            </div>
-          )}
-
-          {/* Lista de URLs guardadas */}
-          {playlistUrls.length > 0 ? (
-            <div className="space-y-3 pt-4 border-t border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-700">
-                Playlists Agregadas ({playlistUrls.length})
-              </h4>
-              {playlistUrls.map((url, index) => {
-                const plataforma = detectarPlataforma(url);
-                const previewUrl = obtenerPreviewUrl(url);
-                
-                return (
-                  <PlaylistItem
-                    key={index}
-                    url={url}
-                    index={index}
-                    plataforma={plataforma}
-                    previewUrl={previewUrl}
-                    onCopiar={copiarUrl}
-                    onAbrir={abrirEnPlataforma}
-                    onEliminar={handleEliminarPlaylistUrl}
-                    puedeEditar={puedeEditar}
-                    guardandoUrl={guardandoUrl}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 border-t border-gray-200">
-              <Music className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">
-                {puedeEditar 
-                  ? 'No hay playlists agregadas. Agrega una URL arriba.' 
-                  : 'No hay playlists agregadas por el cliente.'}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <Heart className="w-8 h-8 text-red-500 fill-red-500" />
-            <div>
-              <p className="text-sm text-gray-600">Canciones Favoritas</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {playlistData?.stats?.favoritas || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <Ban className="w-8 h-8 text-red-600" />
-            <div>
-              <p className="text-sm text-gray-600">Canciones Prohibidas</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {playlistData?.stats?.prohibidas || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <Lightbulb className="w-8 h-8 text-yellow-500" />
-            <div>
-              <p className="text-sm text-gray-600">Canciones Sugeridas</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {playlistData?.stats?.sugeridas || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filtros y búsqueda */}
-      <div className="bg-white rounded-xl shadow-sm border p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Buscar por título, artista o género..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+      {/* Bento Grid Layout for Top Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {/* Main Feature Card - External Playlists */}
+        <div className="md:col-span-2 relative overflow-hidden rounded-xl bg-neutral-900 border border-neutral-800 group min-h-[240px]">
+          <div className="absolute inset-0">
+            <img
+              src="https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=2000&auto=format&fit=crop"
+              alt="Music Background"
+              className="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
           </div>
-          <select
-            value={filtroCategoria}
-            onChange={(e) => setFiltroCategoria(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
-          >
-            <option value="">Todas las categorías</option>
-            <option value="favorita">Favoritas</option>
-            <option value="prohibida">Prohibidas</option>
-            <option value="sugerida">Sugeridas</option>
-          </select>
+
+          <div className="relative z-10 p-8 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Music className="text-white" size={20} />
+                <h2 className="text-lg font-semibold text-white">Playlists Externas</h2>
+              </div>
+              <p className="text-neutral-400 text-sm max-w-md">
+                Importa tus playlists favoritas de Spotify o YouTube Music para que el DJ conozca tu estilo.
+              </p>
+            </div>
+
+            {puedeEditar && (
+              <div className="mt-6">
+                <div className="flex gap-2 max-w-lg">
+                  <input
+                    type="url"
+                    value={nuevaPlaylistUrl}
+                    onChange={(e) => setNuevaPlaylistUrl(e.target.value)}
+                    placeholder="Pega el enlace de Spotify o YouTube..."
+                    className="flex-1 bg-white/10 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/30 backdrop-blur-sm transition-colors"
+                  />
+                  <button
+                    onClick={handleAgregarPlaylistUrl}
+                    disabled={guardandoUrl || !nuevaPlaylistUrl.trim()}
+                    className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50"
+                  >
+                    {guardandoUrl ? 'Guardando...' : 'Agregar'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Stats Column */}
+        <div className="space-y-4">
+          {/* Favoritas */}
+          <div className="bg-neutral-900 border border-white/10 rounded-xl p-5 flex items-center justify-between group hover:border-white/20 transition-colors">
+            <div>
+              <div className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">Favoritas</div>
+              <div className="text-2xl font-bold text-white">{playlistData?.stats?.favoritas || 0}</div>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+              <Heart size={18} fill="currentColor" className="opacity-50" />
+            </div>
+          </div>
+
+          {/* Prohibidas */}
+          <div className="bg-neutral-900 border border-white/10 rounded-xl p-5 flex items-center justify-between group hover:border-white/20 transition-colors">
+            <div>
+              <div className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">Prohibidas</div>
+              <div className="text-2xl font-bold text-white">{playlistData?.stats?.prohibidas || 0}</div>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-400 group-hover:scale-110 transition-transform">
+              <Ban size={18} />
+            </div>
+          </div>
+
+          {/* Sugeridas */}
+          <div className="bg-neutral-900 border border-white/10 rounded-xl p-5 flex items-center justify-between group hover:border-white/20 transition-colors">
+            <div>
+              <div className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">Sugeridas</div>
+              <div className="text-2xl font-bold text-white">{playlistData?.stats?.sugeridas || 0}</div>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform">
+              <Lightbulb size={18} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sección de Playlist Externa - Lista */}
+      {playlistUrls.length > 0 && (
+        <div className="bg-neutral-900 border border-white/10 rounded-xl p-6 mb-8">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Share2 className="w-5 h-5" />
+            Playlists Agregadas ({playlistUrls.length})
+          </h3>
+          <div className="space-y-3">
+            {playlistUrls.map((url, index) => {
+              const plataforma = detectarPlataforma(url);
+              const previewUrl = obtenerPreviewUrl(url);
+              
+              return (
+                <PlaylistItem
+                  key={index}
+                  url={url}
+                  index={index}
+                  plataforma={plataforma}
+                  previewUrl={previewUrl}
+                  onCopiar={copiarUrl}
+                  onAbrir={abrirEnPlataforma}
+                  onEliminar={handleEliminarPlaylistUrl}
+                  puedeEditar={puedeEditar}
+                  guardandoUrl={guardandoUrl}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Song List Section */}
+      <div className="bg-neutral-900 border border-white/10 rounded-xl overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-white/10 flex flex-col sm:flex-row gap-4 justify-between items-center bg-white/5">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar canciones..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full bg-black/20 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/30 transition-colors"
+              />
+            </div>
+            <div className="flex gap-1 bg-black/20 p-1 rounded-lg border border-white/10">
+              {['Todas', 'Favoritas', 'Prohibidas'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setFiltroCategoria(cat === 'Todas' ? '' : cat.toLowerCase())}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    (cat === 'Todas' && !filtroCategoria) || filtroCategoria === cat.toLowerCase()
+                      ? 'bg-white/10 text-white'
+                      : 'text-neutral-500 hover:text-neutral-300'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
           {puedeEditar && (
             <button
               onClick={() => setMostrarForm(!mostrarForm)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition whitespace-nowrap"
+              className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-neutral-200 transition-colors w-full sm:w-auto justify-center"
             >
-              <Plus className="w-5 h-5" />
+              <Plus size={16} />
               Agregar Canción
             </button>
           )}
         </div>
-      </div>
 
-      {/* Formulario para agregar canción */}
-      {puedeEditar && mostrarForm && (
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Nueva Canción</h3>
-          <form onSubmit={handleCrearCancion} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Título de la canción *
-                </label>
-                <input
-                  type="text"
-                  value={nuevaCancion.titulo}
-                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, titulo: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
-                  placeholder="Ej: Amor Eterno"
-                  required
-                />
+        {/* Formulario para agregar canción */}
+        {puedeEditar && mostrarForm && (
+          <div className="p-6 border-b border-white/10 bg-black/20">
+            <h3 className="text-lg font-semibold text-white mb-4">Nueva Canción</h3>
+            <form onSubmit={handleCrearCancion} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Título de la canción *
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevaCancion.titulo}
+                    onChange={(e) => setNuevaCancion({ ...nuevaCancion, titulo: e.target.value })}
+                    className="w-full px-4 py-2 bg-black/20 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/30"
+                    placeholder="Ej: Amor Eterno"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Artista
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevaCancion.artista}
+                    onChange={(e) => setNuevaCancion({ ...nuevaCancion, artista: e.target.value })}
+                    className="w-full px-4 py-2 bg-black/20 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/30"
+                    placeholder="Ej: Rocío Dúrcal"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Género Musical
+                  </label>
+                  <select
+                    value={nuevaCancion.genero}
+                    onChange={(e) => setNuevaCancion({ ...nuevaCancion, genero: e.target.value })}
+                    className="w-full px-4 py-2 bg-black/20 border border-white/10 rounded-lg text-white focus:outline-none focus:border-white/30"
+                  >
+                    <option value="">Seleccionar género</option>
+                    {generosMusicales.map((genero) => (
+                      <option key={genero} value={genero} className="bg-neutral-900">{genero}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Categoría *
+                  </label>
+                  <select
+                    value={nuevaCancion.categoria}
+                    onChange={(e) => setNuevaCancion({ ...nuevaCancion, categoria: e.target.value })}
+                    className="w-full px-4 py-2 bg-black/20 border border-white/10 rounded-lg text-white focus:outline-none focus:border-white/30"
+                    required
+                  >
+                    <option value="favorita" className="bg-neutral-900">⭐ Favorita (Debe sonar)</option>
+                    <option value="prohibida" className="bg-neutral-900">🚫 Prohibida (No debe sonar)</option>
+                    <option value="sugerida" className="bg-neutral-900">💡 Sugerida (Opcional)</option>
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Artista
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Notas adicionales
                 </label>
-                <input
-                  type="text"
-                  value={nuevaCancion.artista}
-                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, artista: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
-                  placeholder="Ej: Rocío Dúrcal"
-                />
+                <textarea
+                  value={nuevaCancion.notas}
+                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, notas: e.target.value })}
+                  rows="2"
+                  className="w-full px-4 py-2 bg-black/20 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/30"
+                  placeholder="Ej: Para el primer baile, momento especial, etc."
+                ></textarea>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Género Musical
-                </label>
-                <select
-                  value={nuevaCancion.genero}
-                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, genero: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={crearCancionMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200 transition disabled:opacity-50 font-medium"
                 >
-                  <option value="">Seleccionar género</option>
-                  {generosMusicales.map((genero) => (
-                    <option key={genero} value={genero}>{genero}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoría *
-                </label>
-                <select
-                  value={nuevaCancion.categoria}
-                  onChange={(e) => setNuevaCancion({ ...nuevaCancion, categoria: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
-                  required
+                  {crearCancionMutation.isPending ? 'Agregando...' : 'Agregar Canción'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMostrarForm(false)}
+                  className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition border border-white/5"
                 >
-                  <option value="favorita">⭐ Favorita (Debe sonar)</option>
-                  <option value="prohibida">🚫 Prohibida (No debe sonar)</option>
-                  <option value="sugerida">💡 Sugerida (Opcional)</option>
-                </select>
+                  Cancelar
+                </button>
               </div>
-            </div>
+            </form>
+          </div>
+        )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notas adicionales
-              </label>
-              <textarea
-                value={nuevaCancion.notas}
-                onChange={(e) => setNuevaCancion({ ...nuevaCancion, notas: e.target.value })}
-                rows="2"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
-                placeholder="Ej: Para el primer baile, momento especial, etc."
-              ></textarea>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={crearCancionMutation.isPending}
-                className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
-              >
-                {crearCancionMutation.isPending ? 'Agregando...' : 'Agregar Canción'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMostrarForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Lista de canciones */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Canciones ({cancionesFiltradas?.length || 0})
-        </h3>
-
+        {/* Empty State */}
         {isLoading ? (
-          <p className="text-gray-500 text-center py-8">Cargando playlist...</p>
+          <div className="min-h-[400px] flex items-center justify-center p-8">
+            <p className="text-neutral-400">Cargando playlist...</p>
+          </div>
         ) : !cancionesFiltradas || cancionesFiltradas.length === 0 ? (
-          <div className="text-center py-12">
-            <Music className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">
-              {busqueda || filtroCategoria ? 'No se encontraron canciones' : 'La playlist está vacía'}
+          <div className="min-h-[400px] flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-20 h-20 bg-neutral-800/50 rounded-full flex items-center justify-center mb-4 animate-pulse">
+              <Music size={32} className="text-neutral-600" />
+            </div>
+            <h3 className="text-white font-medium text-lg mb-2">Tu playlist está vacía</h3>
+            <p className="text-neutral-500 text-sm max-w-sm mb-6">
+              {busqueda || filtroCategoria 
+                ? 'No se encontraron canciones con los filtros aplicados'
+                : 'Comienza a construir el ambiente de tu evento agregando las canciones que no pueden faltar.'}
             </p>
             {puedeEditar && (
               <button
                 onClick={() => setMostrarForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors font-medium"
               >
-                <Plus className="w-5 h-5" />
+                <Plus size={16} />
                 Agregar Primera Canción
               </button>
             )}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="p-6 space-y-3">
             {cancionesFiltradas.map((cancion) => (
               <div
                 key={cancion.id}
-                className={`border rounded-lg p-4 transition group ${getCategoriaColor(cancion.categoria)}`}
+                className="border border-white/10 rounded-lg p-4 transition group hover:border-white/20 bg-black/20"
               >
                 <div className="flex items-start gap-3">
                   <div className="mt-1">
                     {getCategoriaIcon(cancion.categoria)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900 truncate">
+                    <h4 className="font-semibold text-white truncate">
                       {cancion.titulo}
                     </h4>
                     {cancion.artista && (
-                      <p className="text-sm text-gray-600 truncate">
+                      <p className="text-sm text-neutral-400 truncate">
                         {cancion.artista}
                       </p>
                     )}
                     <div className="flex flex-wrap gap-2 mt-2">
                       {cancion.genero && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-900">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/10 text-neutral-300">
                           {cancion.genero}
                         </span>
                       )}
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 capitalize">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/10 text-neutral-300 capitalize">
                         {cancion.categoria}
                       </span>
                     </div>
                     {cancion.notas && (
-                      <p className="text-sm text-gray-500 mt-2 italic">
+                      <p className="text-sm text-neutral-400 mt-2 italic">
                         "{cancion.notas}"
                       </p>
                     )}
@@ -725,7 +731,7 @@ function PlaylistMusical() {
                     <button
                       onClick={() => handleEliminarCancion(cancion.id, cancion.titulo)}
                       disabled={eliminarCancionMutation.isPending}
-                      className="p-2 rounded text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
+                      className="p-2 rounded text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition"
                       title="Eliminar canción"
                     >
                       <Trash2 className="w-4 h-4" />

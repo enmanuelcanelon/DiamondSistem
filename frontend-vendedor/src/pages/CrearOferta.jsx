@@ -78,6 +78,8 @@ function CrearOferta() {
     'Corporativo',
     'Graduación',
     'Baby Shower',
+    'Kids Party',
+    'Dulces 16',
     'Otro'
   ];
   

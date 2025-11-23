@@ -122,7 +122,54 @@ node scripts/migrar_usuarios.js
 
 ---
 
-## Estado: ~60% Completado
+## Estado: ~90% Completado ✅
 
-La estructura base está lista. Falta actualizar el código del backend para usar completamente la nueva tabla `usuarios`.
+### ✅ Completado Recientemente:
+
+1. **Autenticación**:
+   - ✅ Todos los endpoints de login actualizados (`/login/vendedor`, `/login/manager`, `/login/gerente`, `/login/inventario`)
+   - ✅ Endpoint `/auth/me` actualizado para buscar en tabla usuarios
+   - ✅ Endpoint `/change-password` actualizado para funcionar con todos los tipos de usuarios
+
+2. **Scripts de Creación**:
+   - ✅ `crear_usuario_prueba.js` → crea en tabla `usuarios` con `rol='vendedor'`
+   - ✅ `crear_gerentes.js` → crea en tabla `usuarios` con `rol='gerente'`
+   - ✅ `crear_managers.js` → crea en tabla `usuarios` con `rol='manager'`
+   - ✅ `crear_administradores.js` → crea en tabla `usuarios` con `rol='inventario'`
+
+### ⏳ Pendiente:
+
+1. **Migración de Datos**:
+   - Ejecutar `migrar_usuarios.js` para migrar datos existentes
+   - Actualizar foreign keys en todas las tablas relacionadas
+
+2. **Actualizar Rutas del Backend**:
+   - Las rutas principales (`vendedores.routes.js`, etc.) aún buscan en tablas antiguas
+   - Esto funciona gracias a la compatibilidad, pero debería actualizarse gradualmente
+
+3. **Limpieza Final**:
+   - Eliminar tablas antiguas después de verificar que todo funciona
+   - Eliminar código deprecated
+
+---
+
+## Próximos Pasos Recomendados:
+
+1. **Ejecutar migración de datos**:
+   ```bash
+   cd backend
+   node scripts/migrar_usuarios.js
+   ```
+
+2. **Probar el sistema**:
+   - Probar login de todos los tipos de usuarios
+   - Verificar que las funcionalidades principales funcionan
+
+3. **Actualizar rutas gradualmente**:
+   - Empezar con rutas más simples
+   - Probar cada cambio antes de continuar
+
+4. **Limpieza final**:
+   - Eliminar tablas antiguas del schema
+   - Eliminar código deprecated
 

@@ -6,7 +6,6 @@ import api from '../config/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Label } from '../components/ui/label';
 import toast from 'react-hot-toast';
@@ -19,7 +18,6 @@ function EditarCliente() {
     nombre_completo: '',
     email: '',
     telefono: '',
-    direccion: '',
     como_nos_conocio: '',
   });
   const [comoNosConocioOtro, setComoNosConocioOtro] = useState('');
@@ -40,7 +38,6 @@ function EditarCliente() {
         nombre_completo: cliente.nombre_completo || '',
         email: cliente.email || '',
         telefono: cliente.telefono || '',
-        direccion: cliente.direccion || '',
         como_nos_conocio: cliente.como_nos_conocio || '',
       });
       // Si el valor no está en la lista de fuentes, es un valor personalizado
@@ -174,20 +171,6 @@ function EditarCliente() {
                   value={formData.telefono}
                   onChange={handleChange}
                   required
-                  className="mt-2"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="direccion">
-                  Dirección
-                </Label>
-                <Textarea
-                  id="direccion"
-                  name="direccion"
-                  value={formData.direccion}
-                  onChange={handleChange}
-                  rows="2"
                   className="mt-2"
                 />
               </div>
