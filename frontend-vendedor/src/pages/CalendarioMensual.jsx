@@ -71,10 +71,10 @@ function CalendarioMensual() {
       return response.data;
     },
     enabled: !!user?.id && tipoCalendario === 'general',
-    staleTime: 2 * 60 * 1000, // 2 minutos - los eventos pueden cambiar pero no tan frecuentemente
+    staleTime: 5 * 60 * 1000, // 5 minutos - los eventos pueden cambiar pero no tan frecuentemente
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
-    refetchInterval: 2 * 60 * 1000, // Refrescar cada 2 minutos en lugar de 10 segundos
-    gcTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
+    refetchInterval: false, // Sin refresco automático - solo manual con botón
+    gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
   });
 
   // Obtener solo eventos de CITAS (leads)
@@ -85,10 +85,10 @@ function CalendarioMensual() {
       return response.data;
     },
     enabled: !!user?.id && tipoCalendario === 'leads',
-    staleTime: 2 * 60 * 1000, // 2 minutos - los eventos pueden cambiar pero no tan frecuentemente
+    staleTime: 5 * 60 * 1000, // 5 minutos - los eventos pueden cambiar pero no tan frecuentemente
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
-    refetchInterval: 2 * 60 * 1000, // Refrescar cada 2 minutos en lugar de 10 segundos
-    gcTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
+    refetchInterval: false, // Sin refresco automático - solo manual con botón
+    gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
   });
 
   // Función para refrescar manualmente

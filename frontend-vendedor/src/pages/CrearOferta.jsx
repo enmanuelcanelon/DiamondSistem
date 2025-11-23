@@ -319,8 +319,8 @@ function CrearOferta() {
       return response.data;
     },
     enabled: !!user?.id && pasoActual === 2 && !!formData.salon_id && formData.salon_id !== '',
-    staleTime: 2 * 60 * 1000, // 2 minutos - los eventos del calendario pueden cambiar
-    refetchInterval: 2 * 60 * 1000, // Refrescar cada 2 minutos en lugar de constante
+    staleTime: 5 * 60 * 1000, // 5 minutos - los eventos del calendario pueden cambiar
+    refetchInterval: false, // Sin refresco automático - solo cuando cambia el mes/año
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
   });
 

@@ -150,12 +150,12 @@ function LeaksDisponibles() {
       const response = await api.get('/leaks/disponibles', { params });
       return response.data;
     },
-    staleTime: 2 * 60 * 1000, // Los datos se consideran frescos por 2 minutos
-    gcTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
-    refetchInterval: 3 * 60 * 1000, // Auto-refresh cada 3 minutos (optimizado de 60 segundos)
+    staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
+    gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
+    refetchInterval: false, // Sin refresco automático - solo manual con botón
     refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
-    refetchOnReconnect: true, // Refetch cuando se reconecta
+    refetchOnReconnect: false, // No refetch automático al reconectar (solo manual)
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit)
       if (error?.response?.status === 429) return false;
@@ -453,7 +453,7 @@ function LeaksDisponibles() {
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Leads Disponibles</h2>
             <p className="text-muted-foreground">
-              Leaks sin asignar que puedes tomar. Se actualizan automáticamente cada minuto.
+              Leaks sin asignar que puedes tomar. Usa el botón "Refrescar" para actualizar la lista.
             </p>
           </div>
         </div>
