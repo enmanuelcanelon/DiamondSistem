@@ -259,9 +259,13 @@ copy env.example .env
    PORT=5000
    NODE_ENV=development
    
-   # CORS (en desarrollo, permite todos los frontends)
+   # CORS - IMPORTANTE: Incluir TODOS los puertos de frontends
    CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177
    ```
+   
+   **⚠️ IMPORTANTE:** 
+   - `NODE_ENV=development` es CRÍTICO para que CORS funcione correctamente
+   - `CORS_ORIGINS` debe incluir todos los puertos separados por comas (sin espacios)
 
 ### Paso 5: Inicializar Base de Datos
 
@@ -435,9 +439,13 @@ JWT_EXPIRES_IN=7d
 PORT=5000
 NODE_ENV=development
 
-# CORS
+# CORS - IMPORTANTE: Incluir TODOS los puertos de frontends
 CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177
 ```
+
+**⚠️ IMPORTANTE:** 
+- `NODE_ENV=development` es CRÍTICO para que CORS funcione correctamente
+- `CORS_ORIGINS` debe incluir todos los puertos separados por comas (sin espacios)
 
 ### Paso 6: Inicializar Base de Datos
 

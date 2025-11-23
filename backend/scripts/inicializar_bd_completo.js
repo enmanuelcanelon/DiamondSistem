@@ -9,12 +9,15 @@ async function inicializarBDCompleto() {
     console.log('🚀 Inicializando base de datos completa...\n');
     console.log('═══════════════════════════════════════════════════════\n');
 
+    // Obtener el directorio del backend (padre de scripts)
+    const backendDir = path.resolve(__dirname, '..');
+
     // Paso 1: Crear salones
     console.log('📋 Paso 1: Creando salones...');
     try {
       execSync('node scripts/crear_salones.js', { 
         stdio: 'inherit',
-        cwd: __dirname 
+        cwd: backendDir 
       });
       console.log('✅ Salones creados\n');
     } catch (error) {
@@ -26,7 +29,7 @@ async function inicializarBDCompleto() {
     try {
       execSync('node scripts/ejecutar_seeds.js', { 
         stdio: 'inherit',
-        cwd: __dirname 
+        cwd: backendDir 
       });
       console.log('✅ Seeds ejecutados\n');
     } catch (error) {
@@ -38,7 +41,7 @@ async function inicializarBDCompleto() {
     try {
       execSync('node scripts/crear_paquetes_salones.js', { 
         stdio: 'inherit',
-        cwd: __dirname 
+        cwd: backendDir 
       });
       console.log('✅ Relaciones creadas\n');
     } catch (error) {
