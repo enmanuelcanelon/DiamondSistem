@@ -7,6 +7,55 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// MODELO UNIFICADO DE USUARIOS
+// ============================================
+model usuarios {
+  id                  Int       @id @default(autoincrement())
+  nombre_completo     String    @db.VarChar(255)
+  codigo_usuario      String    @unique @db.VarChar(50)  // Código único para login (codigo_vendedor, codigo_gerente, etc.)
+  email               String    @unique @db.VarChar(255)
+  telefono            String?   @db.VarChar(20)
+  password_hash       String    @db.VarChar(255)
+  rol                 String    @db.VarChar(50)  // 'vendedor', 'gerente', 'manager', 'inventario'
+  activo              Boolean?  @default(true)
+  fecha_registro      DateTime? @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
+  
+  // Campos específicos para vendedores (nullable)
+  comision_porcentaje Decimal?  @db.Decimal(5, 2)  // Solo para vendedores
+  salario_base        Decimal?  @default(0.00) @db.Decimal(10, 2)
+  total_ventas        Decimal?  @default(0.00) @db.Decimal(10, 2)
+  total_comisiones    Decimal?  @default(0.00) @db.Decimal(10, 2)
+  
+  // Google Calendar OAuth (solo para vendedores)
+  google_calendar_id          String?   @db.VarChar(255)
+  google_access_token         String?   @db.Text  // Encriptado
+  google_refresh_token        String?   @db.Text  // Encriptado
+  google_token_expires_at     DateTime? @db.Timestamp(6)
+  google_calendar_sync_enabled Boolean?  @default(false)
+
+  // Relaciones
+  clientes                clientes[]                @relation("clientes_vendedor")
+  ofertas                 ofertas[]
+  contratos               contratos[]
+  versiones_contratos_pdf versiones_contratos_pdf[]
+  solicitudes_cliente     solicitudes_cliente[]     @relation("respondido_por")
+  leaks                   leaks[]
+  checklist_servicios_externos checklist_servicios_externos[]
+  movimientos_inventario  movimientos_inventario[]
+  historial_cambios_precios historial_cambios_precios[]
+  pagos                   pagos[]                   @relation("pagos_registrado_por")
+
+  @@index([rol], map: "idx_usuarios_rol")
+  @@index([codigo_usuario], map: "idx_usuarios_codigo")
+  @@index([email], map: "idx_usuarios_email")
+  @@index([activo], map: "idx_usuarios_activo")
+}
+
+// ============================================
+// TABLAS DEPRECATED - MANTENER TEMPORALMENTE PARA MIGRACIÓN
+// ============================================
 model vendedores {
   id                  Int       @id @default(autoincrement())
   nombre_completo     String    @db.VarChar(255)
@@ -15,27 +64,27 @@ model vendedores {
   telefono            String?   @db.VarChar(20)
   password_hash       String    @db.VarChar(255)
   comision_porcentaje Decimal?  @default(10.00) @db.Decimal(5, 2)
-  salario_base        Decimal?  @default(0.00) @db.Decimal(10, 2)  // Salario base mensual para todos los vendedores
+  salario_base        Decimal?  @default(0.00) @db.Decimal(10, 2)
   total_ventas        Decimal?  @default(0.00) @db.Decimal(10, 2)
   total_comisiones    Decimal?  @default(0.00) @db.Decimal(10, 2)
   activo              Boolean?  @default(true)
   fecha_registro      DateTime? @default(now()) @db.Timestamp(6)
   fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
   
-  // Google Calendar OAuth
   google_calendar_id          String?   @db.VarChar(255)
-  google_access_token         String?   @db.Text  // Encriptado
-  google_refresh_token        String?   @db.Text  // Encriptado
+  google_access_token         String?   @db.Text
+  google_refresh_token        String?   @db.Text
   google_token_expires_at     DateTime? @db.Timestamp(6)
   google_calendar_sync_enabled Boolean?  @default(false)
 
-  // Relaciones
   clientes                clientes[]
   ofertas                 ofertas[]
   contratos               contratos[]
   versiones_contratos_pdf versiones_contratos_pdf[]
   solicitudes_cliente     solicitudes_cliente[]     @relation("respondido_por")
   leaks                   leaks[]
+  
+  @@map("vendedores")
 }
 
 model clientes {
@@ -46,18 +95,21 @@ model clientes {
   direccion           String?
   como_nos_conocio    String?  @db.VarChar(255)
   tipo_evento         String?  @db.VarChar(100)
-  vendedor_id         Int?
+  vendedor_id         Int?     // Deprecated: usar usuario_id
+  usuario_id          Int?     // Nueva relación con usuarios (rol='vendedor')
   fecha_registro      DateTime @default(now())
   fecha_actualizacion DateTime @default(now())
 
   // Relaciones
-  vendedores          vendedores?           @relation(fields: [vendedor_id], references: [id])
+  vendedores          vendedores?           @relation(fields: [vendedor_id], references: [id])  // Deprecated
+  usuarios            usuarios?              @relation("clientes_vendedor", fields: [usuario_id], references: [id])  // Nueva
   ofertas             ofertas[]
   contratos           contratos[]
   solicitudes_cliente solicitudes_cliente[]
   leaks               leaks[]
 
   @@index([vendedor_id], map: "idx_clientes_vendedor")
+  @@index([usuario_id], map: "idx_clientes_usuario")
   @@index([vendedor_id, tipo_evento], map: "idx_clientes_vendedor_tipo")
   @@index([email], map: "idx_clientes_email")
 }
@@ -80,7 +132,8 @@ model leaks {
   
   // Campos de gestión
   estado                  String?   @default("nuevo") @db.VarChar(50)  // nuevo, interesado, contactado_llamar_luego, no_contesta_llamar_luego, contactado_no_interesado
-  vendedor_id             Int?
+  vendedor_id             Int?      // Deprecated: usar usuario_id
+  usuario_id              Int?      // Nueva relación con usuarios (rol='vendedor')
   fecha_asignacion        DateTime?
   fecha_ultimo_contacto   DateTime?
   fecha_proximo_contacto  DateTime?
@@ -95,10 +148,12 @@ model leaks {
   fecha_actualizacion     DateTime  @default(now())
   
   // Relaciones
-  vendedores              vendedores? @relation(fields: [vendedor_id], references: [id])
+  vendedores              vendedores? @relation(fields: [vendedor_id], references: [id])  // Deprecated
+  usuarios                usuarios?   @relation("leaks_vendedor", fields: [usuario_id], references: [id])  // Nueva
   clientes                clientes?   @relation(fields: [cliente_id], references: [id])
   
   @@index([vendedor_id], map: "idx_leaks_vendedor")
+  @@index([usuario_id], map: "idx_leaks_usuario")
   @@index([estado], map: "idx_leaks_estado")
   @@index([salon_preferido], map: "idx_leaks_salon")
   @@index([fecha_proximo_contacto], map: "idx_leaks_fecha_proximo")
@@ -206,7 +261,8 @@ model ofertas {
   id                         Int       @id @default(autoincrement())
   codigo_oferta              String    @unique @db.VarChar(50)
   cliente_id                 Int?
-  vendedor_id                Int?
+  vendedor_id                Int?      // Deprecated: usar usuario_id
+  usuario_id                 Int?      // Nueva relación con usuarios (rol='vendedor')
   paquete_id                 Int?
   fecha_evento               DateTime  @db.Date
   hora_inicio                DateTime  @db.Time(6)
@@ -239,7 +295,8 @@ model ofertas {
 
   // Relaciones
   clientes                      clientes?                       @relation(fields: [cliente_id], references: [id])
-  vendedores                    vendedores?                     @relation(fields: [vendedor_id], references: [id])
+  vendedores                    vendedores?                     @relation(fields: [vendedor_id], references: [id])  // Deprecated
+  usuarios                      usuarios?                       @relation("ofertas_vendedor", fields: [usuario_id], references: [id])  // Nueva
   paquetes                      paquetes?                       @relation(fields: [paquete_id], references: [id])
   temporadas                    temporadas?                     @relation(fields: [temporada_id], references: [id])
   salones                       salones?                        @relation(fields: [salon_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -248,7 +305,9 @@ model ofertas {
 
   @@index([salon_id], map: "idx_ofertas_salon")
   @@index([vendedor_id, estado], map: "idx_ofertas_vendedor_estado")
+  @@index([usuario_id, estado], map: "idx_ofertas_usuario_estado")
   @@index([vendedor_id, fecha_evento], map: "idx_ofertas_vendedor_fecha")
+  @@index([usuario_id, fecha_evento], map: "idx_ofertas_usuario_fecha")
   @@index([cliente_id, estado], map: "idx_ofertas_cliente_estado")
 }
 
@@ -273,7 +332,8 @@ model contratos {
   codigo_contrato       String    @unique @db.VarChar(50)
   oferta_id             Int?
   cliente_id            Int?
-  vendedor_id           Int?
+  vendedor_id           Int?      // Deprecated: usar usuario_id
+  usuario_id            Int?      // Nueva relación con usuarios (rol='vendedor')
   paquete_id            Int?
   fecha_evento          DateTime  @db.Date
   hora_inicio           DateTime  @db.Time(6)
@@ -314,7 +374,8 @@ model contratos {
   // Relaciones
   ofertas                      ofertas?                       @relation(fields: [oferta_id], references: [id])
   clientes                     clientes?                      @relation(fields: [cliente_id], references: [id])
-  vendedores                   vendedores?                    @relation(fields: [vendedor_id], references: [id])
+  vendedores                   vendedores?                    @relation(fields: [vendedor_id], references: [id])  // Deprecated
+  usuarios                     usuarios?                      @relation("contratos_vendedor", fields: [usuario_id], references: [id])  // Nueva
   paquetes                     paquetes?                      @relation(fields: [paquete_id], references: [id])
   salones                      salones?                       @relation(fields: [salon_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   contratos_servicios          contratos_servicios[]
@@ -334,7 +395,9 @@ model contratos {
   @@index([salon_id], map: "idx_contratos_salon")
   @@index([tipo_pago], map: "idx_contratos_tipo_pago")
   @@index([vendedor_id, estado_pago], map: "idx_contratos_vendedor_estado_pago")
+  @@index([usuario_id, estado_pago], map: "idx_contratos_usuario_estado_pago")
   @@index([vendedor_id, fecha_evento], map: "idx_contratos_vendedor_fecha")
+  @@index([usuario_id, fecha_evento], map: "idx_contratos_usuario_fecha")
   @@index([cliente_id, estado_pago], map: "idx_contratos_cliente_estado_pago")
   @@index([codigo_acceso_cliente], map: "idx_contratos_codigo_acceso")
 }
@@ -364,12 +427,15 @@ model pagos {
   estado            String?    @default("completado") @db.VarChar(50)
   notas             String?
   fecha_pago        DateTime?  @default(now()) @db.Timestamp(6)
-  registrado_por    Int?
+  registrado_por    Int?       // Deprecated: usar usuario_id
+  usuario_id        Int?       // Nueva relación con usuarios (cualquier rol)
   contratos         contratos? @relation(fields: [contrato_id], references: [id])
+  usuarios          usuarios?  @relation("pagos_registrado_por", fields: [usuario_id], references: [id])  // Nueva
 
   @@index([contrato_id], map: "idx_pagos_contrato")
   @@index([contrato_id, estado], map: "idx_pagos_contrato_estado")
   @@index([fecha_pago], map: "idx_pagos_fecha")
+  @@index([usuario_id], map: "idx_pagos_usuario")
 }
 
 model eventos {
@@ -414,7 +480,8 @@ model solicitudes_cliente {
   contratos  contratos?  @relation(fields: [contrato_id], references: [id])
   clientes   clientes?   @relation(fields: [cliente_id], references: [id])
   servicios  servicios?  @relation(fields: [servicio_id], references: [id])
-  vendedores vendedores? @relation("respondido_por", fields: [respondido_por], references: [id])
+  vendedores vendedores? @relation("respondido_por", fields: [respondido_por], references: [id])  // Deprecated
+  usuarios   usuarios?   @relation("respondido_por", fields: [usuario_id], references: [id])  // Nueva
 }
 
 model mensajes {
@@ -452,8 +519,12 @@ model historial_cambios_precios {
   precio_original Decimal   @db.Decimal(10, 2)
   precio_nuevo    Decimal   @db.Decimal(10, 2)
   motivo          String?
-  modificado_por  Int?
+  modificado_por  Int?      // Deprecated: usar usuario_id
+  usuario_id      Int?      // Nueva relación con usuarios (cualquier rol)
   fecha_cambio    DateTime? @default(now()) @db.Timestamp(6)
+  
+  // Relaciones
+  usuarios usuarios? @relation(fields: [usuario_id], references: [id])
 }
 
 model versiones_contratos_pdf {
@@ -465,12 +536,14 @@ model versiones_contratos_pdf {
   motivo_cambio      String?
   cambios_detalle    Json?
   pdf_contenido      Bytes?
-  generado_por       Int?
+  generado_por       Int?      // Deprecated: usar usuario_id
+  usuario_id         Int?      // Nueva relación con usuarios (cualquier rol)
   fecha_generacion   DateTime? @default(now()) @db.Timestamp(6)
 
   // Relaciones
   contratos  contratos   @relation(fields: [contrato_id], references: [id])
-  vendedores vendedores? @relation(fields: [generado_por], references: [id])
+  vendedores vendedores? @relation(fields: [generado_por], references: [id])  // Deprecated
+  usuarios   usuarios?   @relation(fields: [usuario_id], references: [id])  // Nueva
 
   @@unique([contrato_id, version_numero])
 }
@@ -658,18 +731,21 @@ model checklist_servicios_externos {
   hora_recogida       DateTime? @db.Timestamp(6) // Solo para limosina
   notas               String?
   estado              String?   @default("pendiente") @db.VarChar(50) // pendiente, completado
-  manager_id          Int?
+  manager_id          Int?      // Deprecated: usar usuario_id
+  usuario_id          Int?      // Nueva relación con usuarios (rol='manager')
   fecha_creacion      DateTime? @default(now()) @db.Timestamp(6)
   fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
 
   // Relaciones
   contratos contratos? @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
-  managers  managers?  @relation(fields: [manager_id], references: [id])
+  managers  managers?  @relation(fields: [manager_id], references: [id])  // Deprecated
+  usuarios  usuarios?   @relation(fields: [usuario_id], references: [id])  // Nueva
 
   @@unique([contrato_id, servicio_tipo])
   @@index([contrato_id], map: "idx_checklist_contrato")
   @@index([estado], map: "idx_checklist_estado")
   @@index([manager_id], map: "idx_checklist_manager")
+  @@index([usuario_id], map: "idx_checklist_usuario")
 }
 
 // ============================================
@@ -777,14 +853,14 @@ model movimientos_inventario {
   motivo              String?   @db.VarChar(255)
   contrato_id         Int?
   asignacion_id       Int?
-  usuario_id          Int?
-  fecha_movimiento     DateTime? @default(now()) @db.Timestamp(6)
+  usuario_id          Int?      // Ya apunta a usuarios (rol='inventario')
 
   // Relaciones
   inventario_items      inventario_items?      @relation(fields: [item_id], references: [id])
   contratos             contratos?             @relation(fields: [contrato_id], references: [id])
   asignaciones_inventario asignaciones_inventario? @relation(fields: [asignacion_id], references: [id])
-  usuarios_inventario   usuarios_inventario?   @relation(fields: [usuario_id], references: [id])
+  usuarios_inventario   usuarios_inventario?   @relation(fields: [usuario_id], references: [id])  // Deprecated
+  usuarios              usuarios?              @relation(fields: [usuario_id], references: [id])  // Nueva
 
   @@index([item_id], map: "idx_movimientos_item")
   @@index([tipo_movimiento], map: "idx_movimientos_tipo")

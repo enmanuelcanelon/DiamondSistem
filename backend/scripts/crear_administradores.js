@@ -43,37 +43,61 @@ async function crearAdministradores() {
 
     for (const adminData of administradores) {
       try {
-        // Verificar si ya existe
-        const existe = await prisma.usuarios_inventario.findUnique({
-          where: { codigo_usuario: adminData.codigo_usuario }
+        // Verificar si ya existe en tabla usuarios
+        let existe = await prisma.usuarios.findFirst({
+          where: { 
+            codigo_usuario: adminData.codigo_usuario,
+            rol: 'inventario'
+          }
         });
+
+        // Si no existe en usuarios, verificar en tabla antigua (compatibilidad)
+        if (!existe) {
+          existe = await prisma.usuarios_inventario.findUnique({
+            where: { codigo_usuario: adminData.codigo_usuario }
+          });
+        }
 
         // Crear hash de la contraseña
         const passwordHash = await hashPassword(adminData.password);
 
         if (existe) {
-          // Actualizar si existe
-          await prisma.usuarios_inventario.update({
-            where: { codigo_usuario: adminData.codigo_usuario },
-            data: {
-              nombre_completo: adminData.nombre_completo,
-              email: adminData.email,
-              telefono: adminData.telefono,
-              password_hash: passwordHash,
-              activo: true
-            }
-          });
+          // Actualizar si existe (en tabla usuarios o antigua)
+          if (existe.rol || existe.codigo_usuario) {
+            await prisma.usuarios.update({
+              where: { id: existe.id },
+              data: {
+                nombre_completo: adminData.nombre_completo,
+                email: adminData.email,
+                telefono: adminData.telefono,
+                password_hash: passwordHash,
+                activo: true
+              }
+            });
+          } else {
+            await prisma.usuarios_inventario.update({
+              where: { codigo_usuario: adminData.codigo_usuario },
+              data: {
+                nombre_completo: adminData.nombre_completo,
+                email: adminData.email,
+                telefono: adminData.telefono,
+                password_hash: passwordHash,
+                activo: true
+              }
+            });
+          }
           actualizados++;
           console.log(`✅ Administrador "${adminData.codigo_usuario}" actualizado`);
         } else {
-          // Crear nuevo
-          await prisma.usuarios_inventario.create({
+          // Crear nuevo en tabla usuarios
+          await prisma.usuarios.create({
             data: {
               nombre_completo: adminData.nombre_completo,
               codigo_usuario: adminData.codigo_usuario,
               email: adminData.email,
               telefono: adminData.telefono,
               password_hash: passwordHash,
+              rol: 'inventario',
               activo: true
             }
           });

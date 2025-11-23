@@ -43,37 +43,61 @@ async function crearGerentes() {
 
     for (const gerenteData of gerentes) {
       try {
-        // Verificar si ya existe
-        const existe = await prisma.gerentes.findUnique({
-          where: { codigo_gerente: gerenteData.codigo_gerente }
+        // Verificar si ya existe en tabla usuarios
+        let existe = await prisma.usuarios.findFirst({
+          where: { 
+            codigo_usuario: gerenteData.codigo_gerente,
+            rol: 'gerente'
+          }
         });
+
+        // Si no existe en usuarios, verificar en tabla antigua (compatibilidad)
+        if (!existe) {
+          existe = await prisma.gerentes.findUnique({
+            where: { codigo_gerente: gerenteData.codigo_gerente }
+          });
+        }
 
         // Crear hash de la contraseña
         const passwordHash = await hashPassword(gerenteData.password);
 
         if (existe) {
-          // Actualizar si existe
-          await prisma.gerentes.update({
-            where: { codigo_gerente: gerenteData.codigo_gerente },
-            data: {
-              nombre_completo: gerenteData.nombre_completo,
-              email: gerenteData.email,
-              telefono: gerenteData.telefono,
-              password_hash: passwordHash,
-              activo: true
-            }
-          });
+          // Actualizar si existe (en tabla usuarios o antigua)
+          if (existe.rol || existe.codigo_usuario) {
+            await prisma.usuarios.update({
+              where: { id: existe.id },
+              data: {
+                nombre_completo: gerenteData.nombre_completo,
+                email: gerenteData.email,
+                telefono: gerenteData.telefono,
+                password_hash: passwordHash,
+                activo: true
+              }
+            });
+          } else {
+            await prisma.gerentes.update({
+              where: { codigo_gerente: gerenteData.codigo_gerente },
+              data: {
+                nombre_completo: gerenteData.nombre_completo,
+                email: gerenteData.email,
+                telefono: gerenteData.telefono,
+                password_hash: passwordHash,
+                activo: true
+              }
+            });
+          }
           actualizados++;
           console.log(`✅ Gerente "${gerenteData.codigo_gerente}" actualizado`);
         } else {
-          // Crear nuevo
-          await prisma.gerentes.create({
+          // Crear nuevo en tabla usuarios
+          await prisma.usuarios.create({
             data: {
               nombre_completo: gerenteData.nombre_completo,
-              codigo_gerente: gerenteData.codigo_gerente,
+              codigo_usuario: gerenteData.codigo_gerente,
               email: gerenteData.email,
               telefono: gerenteData.telefono,
               password_hash: passwordHash,
+              rol: 'gerente',
               activo: true
             }
           });

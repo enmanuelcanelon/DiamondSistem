@@ -96,6 +96,18 @@ const generateInventarioToken = (usuario) => {
   });
 };
 
+/**
+ * Generar token para usuario unificado (nueva función)
+ */
+const generateUsuarioToken = (usuario) => {
+  return generateToken({
+    id: usuario.id,
+    tipo: usuario.rol,
+    codigoUsuario: usuario.codigo_usuario,
+    email: usuario.email
+  });
+};
+
 module.exports = {
   generateToken,
   verifyToken,
@@ -104,5 +116,6 @@ module.exports = {
   generateClienteToken,
   generateManagerToken,
   generateGerenteToken,
-  generateInventarioToken
+  generateInventarioToken,
+  generateUsuarioToken  // Nueva función unificada
 };

@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { getPrismaClient } = require('../config/database');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
-const { generateVendedorToken, generateClienteToken, generateManagerToken, generateGerenteToken, generateInventarioToken } = require('../utils/jwt');
+const { generateVendedorToken, generateClienteToken, generateManagerToken, generateGerenteToken, generateInventarioToken, generateUsuarioToken } = require('../utils/jwt');
 const { authenticate, requireVendedor, requireManager, requireGerente, requireInventario } = require('../middleware/auth');
 const { UnauthorizedError, ValidationError, NotFoundError } = require('../middleware/errorHandler');
 
@@ -14,7 +14,7 @@ const prisma = getPrismaClient();
 
 /**
  * @route   POST /api/auth/login/vendedor
- * @desc    Login de vendedor
+ * @desc    Login de vendedor (compatibilidad - busca en usuarios con rol='vendedor')
  * @access  Public
  */
 router.post('/login/vendedor', async (req, res, next) => {
@@ -26,10 +26,21 @@ router.post('/login/vendedor', async (req, res, next) => {
       throw new ValidationError('Código de vendedor y contraseña son requeridos');
     }
 
-    // Buscar vendedor
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { codigo_vendedor }
+    // Buscar usuario con rol vendedor
+    const usuario = await prisma.usuarios.findFirst({
+      where: { 
+        codigo_usuario: codigo_vendedor,
+        rol: 'vendedor'
+      }
     });
+
+    // Si no se encuentra en usuarios, buscar en tabla antigua (compatibilidad)
+    let vendedor = usuario;
+    if (!vendedor) {
+      vendedor = await prisma.vendedores.findUnique({
+        where: { codigo_vendedor }
+      });
+    }
 
     if (!vendedor) {
       throw new UnauthorizedError('Credenciales inválidas');
@@ -47,8 +58,8 @@ router.post('/login/vendedor', async (req, res, next) => {
       throw new UnauthorizedError('Credenciales inválidas');
     }
 
-    // Generar token
-    const token = generateVendedorToken(vendedor);
+    // Generar token (usar función unificada si es de tabla usuarios)
+    const token = usuario ? generateUsuarioToken(usuario) : generateVendedorToken(vendedor);
 
     // Remover password del response
     const { password_hash, ...vendedorData } = vendedor;
@@ -147,7 +158,7 @@ router.post('/login/cliente', async (req, res, next) => {
 
 /**
  * @route   POST /api/auth/login/manager
- * @desc    Login de manager
+ * @desc    Login de manager (compatibilidad - busca en usuarios con rol='manager')
  * @access  Public
  */
 router.post('/login/manager', async (req, res, next) => {
@@ -159,10 +170,21 @@ router.post('/login/manager', async (req, res, next) => {
       throw new ValidationError('Código de manager y contraseña son requeridos');
     }
 
-    // Buscar manager
-    const manager = await prisma.managers.findUnique({
-      where: { codigo_manager }
+    // Buscar usuario con rol manager
+    let usuario = await prisma.usuarios.findFirst({
+      where: { 
+        codigo_usuario: codigo_manager,
+        rol: 'manager'
+      }
     });
+
+    // Si no se encuentra en usuarios, buscar en tabla antigua (compatibilidad)
+    let manager = usuario;
+    if (!manager) {
+      manager = await prisma.managers.findUnique({
+        where: { codigo_manager }
+      });
+    }
 
     if (!manager) {
       throw new UnauthorizedError('Credenciales inválidas');
@@ -180,8 +202,8 @@ router.post('/login/manager', async (req, res, next) => {
       throw new UnauthorizedError('Credenciales inválidas');
     }
 
-    // Generar token
-    const token = generateManagerToken(manager);
+    // Generar token (usar función unificada si es de tabla usuarios)
+    const token = usuario ? generateUsuarioToken(usuario) : generateManagerToken(manager);
 
     // Remover password del response
     const { password_hash, ...managerData } = manager;
@@ -200,7 +222,7 @@ router.post('/login/manager', async (req, res, next) => {
 
 /**
  * @route   POST /api/auth/login/gerente
- * @desc    Login de gerente
+ * @desc    Login de gerente (compatibilidad - busca en usuarios con rol='gerente')
  * @access  Public
  */
 router.post('/login/gerente', async (req, res, next) => {
@@ -212,10 +234,21 @@ router.post('/login/gerente', async (req, res, next) => {
       throw new ValidationError('Código de gerente y contraseña son requeridos');
     }
 
-    // Buscar gerente
-    const gerente = await prisma.gerentes.findUnique({
-      where: { codigo_gerente }
+    // Buscar usuario con rol gerente
+    let usuario = await prisma.usuarios.findFirst({
+      where: { 
+        codigo_usuario: codigo_gerente,
+        rol: 'gerente'
+      }
     });
+
+    // Si no se encuentra en usuarios, buscar en tabla antigua (compatibilidad)
+    let gerente = usuario;
+    if (!gerente) {
+      gerente = await prisma.gerentes.findUnique({
+        where: { codigo_gerente }
+      });
+    }
 
     if (!gerente) {
       throw new UnauthorizedError('Credenciales inválidas');
@@ -233,8 +266,8 @@ router.post('/login/gerente', async (req, res, next) => {
       throw new UnauthorizedError('Credenciales inválidas');
     }
 
-    // Generar token
-    const token = generateGerenteToken(gerente);
+    // Generar token (usar función unificada si es de tabla usuarios)
+    const token = usuario ? generateUsuarioToken(usuario) : generateGerenteToken(gerente);
 
     // Remover password del response
     const { password_hash, ...gerenteData } = gerente;
@@ -253,7 +286,7 @@ router.post('/login/gerente', async (req, res, next) => {
 
 /**
  * @route   POST /api/auth/login/inventario
- * @desc    Login de usuario de inventario
+ * @desc    Login de usuario de inventario (compatibilidad - busca en usuarios con rol='inventario')
  * @access  Public
  */
 router.post('/login/inventario', async (req, res, next) => {
@@ -265,32 +298,43 @@ router.post('/login/inventario', async (req, res, next) => {
       throw new ValidationError('Código de usuario y contraseña son requeridos');
     }
 
-    // Buscar usuario de inventario
-    const usuario = await prisma.usuarios_inventario.findUnique({
-      where: { codigo_usuario }
+    // Buscar usuario con rol inventario
+    let usuario = await prisma.usuarios.findFirst({
+      where: { 
+        codigo_usuario: codigo_usuario,
+        rol: 'inventario'
+      }
     });
 
-    if (!usuario) {
+    // Si no se encuentra en usuarios, buscar en tabla antigua (compatibilidad)
+    let usuarioInv = usuario;
+    if (!usuarioInv) {
+      usuarioInv = await prisma.usuarios_inventario.findUnique({
+        where: { codigo_usuario }
+      });
+    }
+
+    if (!usuarioInv) {
       throw new UnauthorizedError('Credenciales inválidas');
     }
 
     // Verificar si está activo
-    if (!usuario.activo) {
+    if (!usuarioInv.activo) {
       throw new UnauthorizedError('Cuenta de usuario desactivada');
     }
 
     // Verificar password
-    const isValidPassword = await comparePassword(password, usuario.password_hash);
+    const isValidPassword = await comparePassword(password, usuarioInv.password_hash);
     
     if (!isValidPassword) {
       throw new UnauthorizedError('Credenciales inválidas');
     }
 
-    // Generar token
-    const token = generateInventarioToken(usuario);
+    // Generar token (usar función unificada si es de tabla usuarios)
+    const token = usuario ? generateUsuarioToken(usuario) : generateInventarioToken(usuarioInv);
 
     // Remover password del response
-    const { password_hash, ...usuarioData } = usuario;
+    const { password_hash, ...usuarioData } = usuarioInv;
 
     res.json({
       success: true,
@@ -385,14 +429,16 @@ router.post('/register/vendedor', authenticate, requireVendedor, async (req, res
 router.get('/me', authenticate, async (req, res, next) => {
   try {
     if (req.user.tipo === 'vendedor') {
-      const vendedor = await prisma.vendedores.findUnique({
+      // Buscar primero en tabla usuarios
+      let usuario = await prisma.usuarios.findUnique({
         where: { id: req.user.id },
         select: {
           id: true,
           nombre_completo: true,
-          codigo_vendedor: true,
+          codigo_usuario: true,
           email: true,
           telefono: true,
+          rol: true,
           comision_porcentaje: true,
           total_ventas: true,
           total_comisiones: true,
@@ -401,15 +447,43 @@ router.get('/me', authenticate, async (req, res, next) => {
         }
       });
 
-      if (!vendedor) {
-        throw new NotFoundError('Vendedor no encontrado');
+      // Si no está en usuarios, buscar en tabla antigua (compatibilidad)
+      if (!usuario) {
+        const vendedor = await prisma.vendedores.findUnique({
+          where: { id: req.user.id },
+          select: {
+            id: true,
+            nombre_completo: true,
+            codigo_vendedor: true,
+            email: true,
+            telefono: true,
+            comision_porcentaje: true,
+            total_ventas: true,
+            total_comisiones: true,
+            activo: true,
+            fecha_registro: true
+          }
+        });
+
+        if (!vendedor) {
+          throw new NotFoundError('Vendedor no encontrado');
+        }
+
+        return res.json({
+          success: true,
+          user: {
+            ...vendedor,
+            tipo: 'vendedor'
+          }
+        });
       }
 
       res.json({
         success: true,
         user: {
-          ...vendedor,
-          tipo: 'vendedor'
+          ...usuario,
+          codigo_vendedor: usuario.codigo_usuario, // Compatibilidad
+          tipo: usuario.rol
         }
       });
 
@@ -444,53 +518,158 @@ router.get('/me', authenticate, async (req, res, next) => {
         evento: contrato.eventos || null
       });
     } else if (req.user.tipo === 'manager') {
-      const manager = await prisma.managers.findUnique({
+      // Buscar primero en tabla usuarios
+      let usuario = await prisma.usuarios.findUnique({
         where: { id: req.user.id },
         select: {
           id: true,
           nombre_completo: true,
-          codigo_manager: true,
+          codigo_usuario: true,
           email: true,
           telefono: true,
+          rol: true,
           activo: true,
           fecha_registro: true
         }
       });
 
-      if (!manager) {
-        throw new NotFoundError('Manager no encontrado');
+      // Si no está en usuarios, buscar en tabla antigua (compatibilidad)
+      if (!usuario) {
+        const manager = await prisma.managers.findUnique({
+          where: { id: req.user.id },
+          select: {
+            id: true,
+            nombre_completo: true,
+            codigo_manager: true,
+            email: true,
+            telefono: true,
+            activo: true,
+            fecha_registro: true
+          }
+        });
+
+        if (!manager) {
+          throw new NotFoundError('Manager no encontrado');
+        }
+
+        return res.json({
+          success: true,
+          user: {
+            ...manager,
+            tipo: 'manager'
+          }
+        });
       }
 
       res.json({
         success: true,
         user: {
-          ...manager,
-          tipo: 'manager'
+          ...usuario,
+          codigo_manager: usuario.codigo_usuario, // Compatibilidad
+          tipo: usuario.rol
         }
       });
     } else if (req.user.tipo === 'gerente') {
-      const gerente = await prisma.gerentes.findUnique({
+      // Buscar primero en tabla usuarios
+      let usuario = await prisma.usuarios.findUnique({
         where: { id: req.user.id },
         select: {
           id: true,
           nombre_completo: true,
-          codigo_gerente: true,
+          codigo_usuario: true,
           email: true,
           telefono: true,
+          rol: true,
           activo: true,
           fecha_registro: true
         }
       });
 
-      if (!gerente) {
-        throw new NotFoundError('Gerente no encontrado');
+      // Si no está en usuarios, buscar en tabla antigua (compatibilidad)
+      if (!usuario) {
+        const gerente = await prisma.gerentes.findUnique({
+          where: { id: req.user.id },
+          select: {
+            id: true,
+            nombre_completo: true,
+            codigo_gerente: true,
+            email: true,
+            telefono: true,
+            activo: true,
+            fecha_registro: true
+          }
+        });
+
+        if (!gerente) {
+          throw new NotFoundError('Gerente no encontrado');
+        }
+
+        return res.json({
+          success: true,
+          user: {
+            ...gerente,
+            tipo: 'gerente'
+          }
+        });
       }
 
       res.json({
         success: true,
         user: {
-          ...gerente,
-          tipo: 'gerente'
+          ...usuario,
+          codigo_gerente: usuario.codigo_usuario, // Compatibilidad
+          tipo: usuario.rol
+        }
+      });
+    } else if (req.user.tipo === 'inventario') {
+      // Buscar primero en tabla usuarios
+      let usuario = await prisma.usuarios.findUnique({
+        where: { id: req.user.id },
+        select: {
+          id: true,
+          nombre_completo: true,
+          codigo_usuario: true,
+          email: true,
+          telefono: true,
+          rol: true,
+          activo: true,
+          fecha_registro: true
+        }
+      });
+
+      // Si no está en usuarios, buscar en tabla antigua (compatibilidad)
+      if (!usuario) {
+        const usuarioInv = await prisma.usuarios_inventario.findUnique({
+          where: { id: req.user.id },
+          select: {
+            id: true,
+            nombre_completo: true,
+            codigo_usuario: true,
+            email: true,
+            telefono: true,
+            activo: true,
+            fecha_registro: true
+          }
+        });
+
+        if (!usuarioInv) {
+          throw new NotFoundError('Usuario de inventario no encontrado');
+        }
+
+        return res.json({
+          success: true,
+          user: {
+            ...usuarioInv,
+            tipo: 'inventario'
+          }
+        });
+      }
+
+      res.json({
+        success: true,
+        user: {
+          ...usuario,
+          tipo: usuario.rol
         }
       });
     }

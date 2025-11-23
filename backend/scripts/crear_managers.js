@@ -43,37 +43,61 @@ async function crearManagers() {
 
     for (const managerData of managers) {
       try {
-        // Verificar si ya existe
-        const existe = await prisma.managers.findUnique({
-          where: { codigo_manager: managerData.codigo_manager }
+        // Verificar si ya existe en tabla usuarios
+        let existe = await prisma.usuarios.findFirst({
+          where: { 
+            codigo_usuario: managerData.codigo_manager,
+            rol: 'manager'
+          }
         });
+
+        // Si no existe en usuarios, verificar en tabla antigua (compatibilidad)
+        if (!existe) {
+          existe = await prisma.managers.findUnique({
+            where: { codigo_manager: managerData.codigo_manager }
+          });
+        }
 
         // Crear hash de la contraseña
         const passwordHash = await hashPassword(managerData.password);
 
         if (existe) {
-          // Actualizar si existe
-          await prisma.managers.update({
-            where: { codigo_manager: managerData.codigo_manager },
-            data: {
-              nombre_completo: managerData.nombre_completo,
-              email: managerData.email,
-              telefono: managerData.telefono,
-              password_hash: passwordHash,
-              activo: true
-            }
-          });
+          // Actualizar si existe (en tabla usuarios o antigua)
+          if (existe.rol || existe.codigo_usuario) {
+            await prisma.usuarios.update({
+              where: { id: existe.id },
+              data: {
+                nombre_completo: managerData.nombre_completo,
+                email: managerData.email,
+                telefono: managerData.telefono,
+                password_hash: passwordHash,
+                activo: true
+              }
+            });
+          } else {
+            await prisma.managers.update({
+              where: { codigo_manager: managerData.codigo_manager },
+              data: {
+                nombre_completo: managerData.nombre_completo,
+                email: managerData.email,
+                telefono: managerData.telefono,
+                password_hash: passwordHash,
+                activo: true
+              }
+            });
+          }
           actualizados++;
           console.log(`✅ Manager "${managerData.codigo_manager}" actualizado`);
         } else {
-          // Crear nuevo
-          await prisma.managers.create({
+          // Crear nuevo en tabla usuarios
+          await prisma.usuarios.create({
             data: {
               nombre_completo: managerData.nombre_completo,
-              codigo_manager: managerData.codigo_manager,
+              codigo_usuario: managerData.codigo_manager,
               email: managerData.email,
               telefono: managerData.telefono,
               password_hash: passwordHash,
+              rol: 'manager',
               activo: true
             }
           });
