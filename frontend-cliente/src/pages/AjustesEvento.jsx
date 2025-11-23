@@ -10,6 +10,7 @@ import {
   Save,
   Loader2,
   CheckCircle2,
+  CheckCircle,
   AlertTriangle,
   Lock,
   Wine,
@@ -22,7 +23,10 @@ import {
   ArrowLeft,
   ChevronRight,
   ChevronLeft,
+  Info,
+  Check,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '@shared/store/useAuthStore';
 import api from '@shared/config/api';
@@ -33,6 +37,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import PremiumToggle from '@/components/ui/PremiumToggle';
 import { cn } from '@/lib/utils';
 
 function AjustesEvento() {
@@ -141,183 +146,161 @@ function AjustesEvento() {
       <button
         onClick={() => setTabActivo(tab.id)}
         className={cn(
-          "flex flex-col items-center gap-2 px-6 py-4 rounded-xl transition-all duration-200 border-2 min-w-[120px]",
+          "relative overflow-hidden rounded-xl p-4 flex flex-col items-center justify-center gap-3 border transition-all duration-300 group min-w-[120px]",
           activo
-            ? "bg-primary text-primary-foreground border-primary shadow-lg scale-105"
-            : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:bg-muted"
+            ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+            : "bg-neutral-900 border-white/10 text-neutral-400 hover:bg-neutral-800 hover:text-white"
         )}
       >
-        <Icon className={cn("w-6 h-6", activo && "scale-110")} />
-        <span className="font-semibold text-sm">{tab.label}</span>
-        {activo && <span className="text-xs opacity-90">{tab.description}</span>}
+        <Icon className={cn("w-6 h-6", activo ? "text-black" : "text-neutral-500 group-hover:text-white")} />
+        <span className="text-sm font-medium">{tab.label}</span>
+        {activo && <span className="text-xs text-black/70">{tab.description}</span>}
       </button>
     );
   };
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-10 w-64" />
-            <Skeleton className="h-4 w-96 mt-2" />
-          </CardHeader>
-        </Card>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <CardContent className="pt-6">
-                <Skeleton className="h-24 w-full" />
-              </CardContent>
-            </Card>
-          ))}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="space-y-6">
+          <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
+            <div className="h-10 w-64 bg-neutral-800 rounded mb-2 animate-pulse" />
+            <div className="h-4 w-96 bg-neutral-800 rounded animate-pulse" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-neutral-900 border border-white/10 rounded-xl p-6">
+                <div className="h-24 w-full bg-neutral-800 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in">
       {/* Toast Notifications */}
       <Toaster position="top-right" />
       
       {/* Header */}
-      <Card>
-        <CardHeader>
-      <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/dashboard')}
-                className="h-10 w-10"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-        <div>
-                <CardTitle className="text-3xl">Ajustes del Evento</CardTitle>
-                <CardDescription className="text-base mt-2">
-                  Personaliza todos los detalles de tu día especial. Selecciona cada sección para comenzar.
-                </CardDescription>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="p-2 rounded-full bg-neutral-900 border border-white/10 text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Ajustes</h1>
+            <p className="text-neutral-400 text-sm">Personaliza cada detalle de tu evento</p>
+          </div>
         </div>
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:block">
+            <div className="text-xs text-neutral-500 mb-1">Progreso</div>
+            <div className="w-32 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+              <div className="h-full bg-white rounded-full" style={{ width: `${ajustes?.porcentaje_completado || 0}%` }} />
             </div>
-            <Button
-          onClick={async () => {
-            try {
-              const response = await api.get(`/ajustes/contrato/${contratoId}/pdf`, {
-                responseType: 'blob'
-              });
-              const url = window.URL.createObjectURL(new Blob([response.data]));
-              const link = document.createElement('a');
-              link.href = url;
-              link.setAttribute('download', `Ajustes-Evento-${contrato?.codigo_contrato || 'evento'}.pdf`);
-              document.body.appendChild(link);
-              link.click();
-              link.remove();
-              toast.success('PDF descargado exitosamente', {
-                duration: 3000,
-                icon: '✅',
-              });
-            } catch (error) {
-              toast.error('Error al descargar el PDF', {
-                duration: 4000,
-                icon: '❌',
-              });
-            }
-          }}
-              variant="outline"
-              className="gap-2"
-        >
-              <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Descargar PDF</span>
-            </Button>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                const response = await api.get(`/ajustes/contrato/${contratoId}/pdf`, {
+                  responseType: 'blob'
+                });
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `Ajustes-Evento-${contrato?.codigo_contrato || 'evento'}.pdf`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                toast.success('PDF descargado exitosamente', {
+                  duration: 3000,
+                  icon: '✅',
+                });
+              } catch (error) {
+                toast.error('Error al descargar el PDF', {
+                  duration: 4000,
+                  icon: '❌',
+                });
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-neutral-200 transition-colors"
+          >
+            <Download size={16} />
+            Descargar PDF
+          </button>
+        </div>
       </div>
-        </CardHeader>
-      </Card>
 
       {/* Banner de Bloqueo */}
       {estaBloqueado && (
-        <Card className="border-destructive">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-destructive/10 rounded-full">
-                <Lock className="w-6 h-6 text-destructive" />
-              </div>
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-red-500/20 rounded-full">
+              <Lock className="w-6 h-6 text-red-400" />
+            </div>
             <div className="flex-1">
-                <h3 className="font-bold text-lg text-destructive mb-2">
+              <h3 className="font-bold text-lg text-red-400 mb-2">
                 ⚠️ Ajustes Bloqueados
               </h3>
-                <p className="text-sm text-muted-foreground mb-2">
+              <p className="text-sm text-neutral-400 mb-2">
                 Faltan menos de 10 días para tu evento. Los ajustes están bloqueados para garantizar 
                 que todo esté listo a tiempo. Si necesitas hacer cambios urgentes, por favor contacta 
                 a tu asesor de eventos a través del chat.
               </p>
-                <Badge variant="destructive" className="mt-2">
-                  📅 Días restantes: {diasHastaEvento}
-                </Badge>
+              <span className="px-3 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full border border-red-500/30">
+                📅 Días restantes: {diasHastaEvento}
+              </span>
             </div>
           </div>
-          </CardContent>
-        </Card>
+        </div>
       )}
 
       {/* Banner de Advertencia (5-10 días) */}
       {!estaBloqueado && diasHastaEvento !== null && diasHastaEvento >= 0 && diasHastaEvento < 15 && (
-        <Card className="border-yellow-200 bg-yellow-50/50">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-yellow-600" />
-              </div>
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-yellow-500/20 rounded-full">
+              <AlertTriangle className="w-6 h-6 text-yellow-400" />
+            </div>
             <div className="flex-1">
-                <h3 className="font-bold text-lg text-yellow-900 mb-2">
+              <h3 className="font-bold text-lg text-yellow-400 mb-2">
                 Tiempo Limitado
               </h3>
-              <p className="text-sm text-yellow-800">
+              <p className="text-sm text-neutral-400">
                 Tu evento está próximo ({diasHastaEvento} días). Asegúrate de finalizar todos 
                 los ajustes pronto. Recuerda que no podrás modificar nada 10 días antes del evento.
               </p>
             </div>
           </div>
-          </CardContent>
-        </Card>
+        </div>
       )}
 
-      {/* Progress Bar */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium">Progreso de Personalización</span>
-            <Badge variant="secondary" className="text-base px-3 py-1">
-            {ajustes?.porcentaje_completado || 0}%
-            </Badge>
-        </div>
-          <div className="w-full bg-muted rounded-full h-4 overflow-hidden">
-          <div
-              className="bg-primary h-full rounded-full transition-all duration-500"
-            style={{ width: `${ajustes?.porcentaje_completado || 0}%` }}
-          ></div>
-        </div>
-          <p className="text-xs text-muted-foreground mt-3">
-          Completa los campos importantes para asegurar que todo esté a tu gusto
-        </p>
-        </CardContent>
-      </Card>
+      {/* Navigation Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+        {tabs.map((tab) => (
+          <TabButton key={tab.id} tab={tab} />
+        ))}
+      </div>
 
-      {/* Tabs - Diseño mejorado */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-3 justify-center">
-          {tabs.map((tab) => (
-            <TabButton key={tab.id} tab={tab} />
-          ))}
+      {/* Main Content Area - Bento Style */}
+      <div className="relative rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 min-h-[600px]">
+        {/* Background Image for the Section */}
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1605807646983-377bc5a76493?q=80&w=2000&auto=format&fit=crop"
+            alt="Settings Background"
+            className="w-full h-full object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-[#0a0a0a]/40" />
         </div>
-        </CardContent>
-      </Card>
 
-      {/* Content */}
-      <Card>
-        <CardContent className="pt-6">
+        <div className="relative z-10 p-8 md:p-12">
         {tabActivo === 'torta' && (
           <SeccionTorta 
             ajustes={ajustes} 
@@ -362,8 +345,8 @@ function AjustesEvento() {
             contrato={contrato}
           />
         )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
@@ -405,80 +388,81 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-pink-100 rounded-full mb-4">
-          <Cake className="w-8 h-8 text-pink-600" />
+    <form onSubmit={handleSubmit}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="max-w-5xl mx-auto"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <span className="px-3 py-1 rounded-full bg-pink-500/10 text-pink-400 text-xs font-medium border border-pink-500/20">
+            Selección Requerida
+          </span>
         </div>
-        <h2 className="text-3xl font-bold mb-2">Elige tu Torta Perfecta</h2>
-        <p className="text-muted-foreground">
-          Selecciona el diseño y sabor que más te guste. Verás una vista previa grande de cada opción.
+        <h2 className="text-4xl font-bold text-white mb-4">Elige tu Torta Perfecta</h2>
+        <p className="text-xl text-neutral-400 max-w-2xl mb-12">
+          El salón {nombreSalon} incluye automáticamente una torta de {pisosAutomaticos} {pisosAutomaticos === 1 ? 'piso' : 'pisos'}. Selecciona el diseño que mejor se adapte a tu temática.
         </p>
-      </div>
 
-      {/* Información de Pisos */}
-      <Card className="bg-blue-50/50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Cake className="w-5 h-5 text-blue-600" />
-            </div>
-        <div>
-              <p className="font-semibold text-blue-900">Número de Pisos</p>
-              <p className="text-sm text-blue-700">
-                Tu salón ({nombreSalon}) incluye automáticamente <strong>{pisosAutomaticos} {pisosAutomaticos === 1 ? 'piso' : 'pisos'}</strong>
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {diseños.map((option) => {
+            const imagenUrl = obtenerImagenTorta(option.value, pisosAutomaticos);
+            const estaSeleccionado = datos.diseno_torta === option.value;
+            
+            return (
+              <div
+                key={option.value}
+                onClick={() => {
+                  if (!estaBloqueado) {
+                    setDatos({ ...datos, diseno_torta: option.value, diseno_otro: '' });
+                    setMostrarDisenoOtro(false);
+                  }
+                }}
+                className={`group relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${
+                  estaSeleccionado
+                    ? 'ring-2 ring-white scale-[1.02] shadow-2xl'
+                    : 'hover:scale-[1.02] opacity-80 hover:opacity-100'
+                } ${estaBloqueado ? 'cursor-not-allowed opacity-50' : ''}`}
+              >
+                <img
+                  src={imagenUrl}
+                  alt={option.label}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
-      {/* Selección de Diseño */}
-      <div>
-        <label className="block text-lg font-semibold mb-4">
-          Paso 1: Elige el Diseño de la Torta *
-          </label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {diseños.map((diseño) => (
-            <button
-              key={diseño.value}
-              type="button"
-              onClick={() => {
-                setDatos({ ...datos, diseno_torta: diseño.value, diseno_otro: '' });
-                setMostrarDisenoOtro(false);
-            }}
-            disabled={estaBloqueado}
-              className={cn(
-                "p-4 rounded-xl border-2 transition-all duration-200 hover:scale-105",
-                datos.diseno_torta === diseño.value
-                  ? "border-primary bg-primary/10 shadow-lg"
-                  : "border-border bg-card hover:border-primary/50"
-              )}
-            >
-              <div className="text-center">
-                <p className="font-semibold mb-2">{diseño.label}</p>
-                {datos.diseno_torta === diseño.value && (
-                  <Badge variant="default" className="text-xs">Seleccionado</Badge>
-                )}
+                <div className="absolute bottom-0 left-0 w-full p-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-medium text-white">{option.label}</span>
+                    {estaSeleccionado && (
+                      <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-black">
+                        <CheckCircle size={14} strokeWidth={3} />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </button>
-          ))}
+            );
+          })}
         </div>
-        
+
         {/* Opción Otro */}
-        <div className="mb-6">
-          <label className="flex items-center gap-2 mb-2">
+        <div className="mt-6">
+          <label className="flex items-center gap-2 mb-2 text-neutral-300">
             <input
               type="radio"
               name="diseno_torta"
               value="Otro"
               checked={datos.diseno_torta === 'Otro'}
               onChange={(e) => {
-                setDatos({ ...datos, diseno_torta: 'Otro', diseno_otro: '' });
-                setMostrarDisenoOtro(true);
+                if (!estaBloqueado) {
+                  setDatos({ ...datos, diseno_torta: 'Otro', diseno_otro: '' });
+                  setMostrarDisenoOtro(true);
+                }
               }}
               disabled={estaBloqueado}
-              className="w-4 h-4"
+              className="w-4 h-4 text-white bg-neutral-800 border-neutral-700 focus:ring-white"
             />
             <span className="font-medium">Otro diseño (especificar)</span>
           </label>
@@ -489,132 +473,97 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
               onChange={(e) => setDatos({ ...datos, diseno_otro: e.target.value })}
               disabled={estaBloqueado}
               placeholder="Describe el diseño que deseas..."
-              className="w-full px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none disabled:bg-muted"
+              className="w-full px-4 py-2 border border-white/10 rounded-lg focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700"
             />
           )}
         </div>
 
-        {/* Vista Previa Grande de la Imagen */}
-          {datos.diseno_torta && datos.diseno_torta !== 'Otro' && (
-          <Card className="bg-gradient-to-br from-pink-50 to-purple-50 border-pink-200">
-            <CardContent className="pt-6">
-              <div className="text-center mb-4">
-                <h3 className="text-xl font-bold mb-2">Vista Previa</h3>
-                <p className="text-sm text-muted-foreground">
-                  Así se verá tu torta {datos.diseno_torta} de {pisosAutomaticos} {pisosAutomaticos === 1 ? 'piso' : 'pisos'}
-                </p>
+        {/* Selección de Sabor */}
+        {datos.diseno_torta && datos.diseno_torta !== 'Otro' && (
+          <div className="mt-12">
+            <h3 className="text-2xl font-bold text-white mb-6">Elige el Sabor</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {['Vainilla', 'Marmoleado'].map((sabor) => (
+                <button
+                  key={sabor}
+                  type="button"
+                  onClick={() => {
+                    if (!estaBloqueado) {
+                      setDatos({ ...datos, sabor_torta: sabor, sabor_otro: '' });
+                      setMostrarSaborOtro(false);
+                    }
+                  }}
+                  disabled={estaBloqueado}
+                  className={cn(
+                    "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
+                    datos.sabor_torta === sabor
+                      ? "border-white bg-white/10 shadow-lg text-white"
+                      : "border-white/10 bg-neutral-800 hover:border-white/30 text-neutral-300"
+                  )}
+                >
+                  <p className="text-xl font-semibold mb-2">{sabor}</p>
+                  {datos.sabor_torta === sabor && (
+                    <div className="inline-flex items-center gap-1 text-xs text-white">
+                      <CheckCircle size={12} />
+                      Seleccionado
+                    </div>
+                  )}
+                </button>
+              ))}
+              <div>
+                <label className="flex items-center gap-2 p-6 rounded-xl border-2 border-white/10 bg-neutral-800 hover:border-white/30 transition cursor-pointer text-neutral-300">
+                  <input
+                    type="radio"
+                    name="sabor_torta"
+                    value="Otro"
+                    checked={datos.sabor_torta === 'Otro'}
+                    onChange={(e) => {
+                      if (!estaBloqueado) {
+                        setDatos({ ...datos, sabor_torta: 'Otro', sabor_otro: '' });
+                        setMostrarSaborOtro(true);
+                      }
+                    }}
+                    disabled={estaBloqueado}
+                    className="w-4 h-4 text-white bg-neutral-800 border-neutral-700 focus:ring-white"
+                  />
+                  <span className="font-semibold">Otro sabor</span>
+                </label>
+                {mostrarSaborOtro && (
+                  <input
+                    type="text"
+                    value={datos.sabor_otro}
+                    onChange={(e) => setDatos({ ...datos, sabor_otro: e.target.value })}
+                    disabled={estaBloqueado}
+                    placeholder="Especificar sabor..."
+                    className="mt-2 w-full px-4 py-2 border border-white/10 rounded-lg focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700"
+                  />
+                )}
               </div>
-              <div className="flex justify-center">
-              <ImagenSeleccion
-                urlImagen={obtenerImagenTorta(datos.diseno_torta, pisosAutomaticos)}
-                alt={`Torta ${datos.diseno_torta} de ${pisosAutomaticos} pisos`}
-                  tamaño="extra-large"
-              />
             </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Selección de Sabor */}
-      <div>
-        <label className="block text-lg font-semibold mb-4">
-          Paso 2: Elige el Sabor *
-            </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {['Vainilla', 'Marmoleado'].map((sabor) => (
-            <button
-              key={sabor}
-              type="button"
-              onClick={() => {
-                setDatos({ ...datos, sabor_torta: sabor, sabor_otro: '' });
-                setMostrarSaborOtro(false);
-              }}
-              disabled={estaBloqueado}
-              className={cn(
-                "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                datos.sabor_torta === sabor
-                  ? "border-primary bg-primary/10 shadow-lg"
-                  : "border-border bg-card hover:border-primary/50"
-              )}
-            >
-              <p className="text-xl font-semibold mb-2">{sabor}</p>
-              {datos.sabor_torta === sabor && (
-                <Badge variant="default" className="text-xs">Seleccionado</Badge>
-              )}
-            </button>
-          ))}
-          <div>
-            <label className="flex items-center gap-2 p-6 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition cursor-pointer">
-              <input
-                type="radio"
-                name="sabor_torta"
-                value="Otro"
-                checked={datos.sabor_torta === 'Otro'}
-                onChange={(e) => {
-                  setDatos({ ...datos, sabor_torta: 'Otro', sabor_otro: '' });
-                  setMostrarSaborOtro(true);
-                }}
-                disabled={estaBloqueado}
-                className="w-4 h-4"
-              />
-              <span className="font-semibold">Otro sabor</span>
-            </label>
-            {mostrarSaborOtro && (
-              <input
-                type="text"
-                value={datos.sabor_otro}
-                onChange={(e) => setDatos({ ...datos, sabor_otro: e.target.value })}
-                disabled={estaBloqueado}
-                placeholder="Especificar sabor..."
-                className="mt-2 w-full px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none disabled:bg-muted"
-              />
-            )}
           </div>
-        </div>
-      </div>
-
-      {/* Notas Adicionales */}
-      <div>
-        <label className="block text-lg font-semibold mb-4">
-          Notas Adicionales (Opcional)
-        </label>
-        <textarea
-          value={datos.notas_torta}
-          onChange={(e) => setDatos({ ...datos, notas_torta: e.target.value })}
-          rows="4"
-          placeholder="¿Algún detalle especial sobre la torta? Por ejemplo: decoración adicional, mensaje especial, etc..."
-          className="w-full px-4 py-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none resize-none"
-          disabled={estaBloqueado}
-        />
-      </div>
-
-      {/* Botón Guardar */}
-      <div className="flex justify-end gap-4 pt-4 border-t">
-        <Button
-        type="submit"
-        disabled={guardando || estaBloqueado}
-          size="lg"
-          className="min-w-[200px]"
-      >
-        {guardando ? (
-          <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Guardando...
-          </>
-        ) : estaBloqueado ? (
-          <>
-              <Lock className="w-5 h-5 mr-2" />
-            Bloqueado
-          </>
-        ) : (
-          <>
-              <Save className="w-5 h-5 mr-2" />
-            Guardar Cambios
-          </>
         )}
-        </Button>
-      </div>
+
+        {/* Botón Guardar */}
+        <div className="mt-12 flex justify-end">
+          <button
+            type="submit"
+            disabled={guardando || estaBloqueado || !datos.diseno_torta}
+            className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-medium hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {guardando ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                Guardar Selección
+                <ChevronRight size={18} />
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
     </form>
   );
 }
@@ -726,61 +675,59 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
   const renderPasoActual = () => {
     switch (pasoActual) {
       case 1: // Entrada
-  return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 1: Entrada (Incluida)</h3>
-              <p className="text-muted-foreground">Tu entrada está incluida por defecto</p>
-      </div>
-            <Card className="bg-orange-50/50 border-orange-200">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4 mb-4 justify-center">
-                  <Badge variant="secondary" className="text-base px-3 py-1">
-                    🥗 {datos.entrada}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">Incluida por defecto</span>
-                </div>
-                {datos.entrada === 'Ensalada César' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                    <div className="text-center">
-                      <div className="mb-3">
-                        <ImagenSeleccion
-                          urlImagen={obtenerImagenMenu('entrada', datos.entrada)}
-                          alt="Ensalada César"
-                          tamaño="extra-large"
-                        />
-                      </div>
-                      <p className="font-semibold text-lg">Ensalada César</p>
+        return (
+          <div className="space-y-8">
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 1: Entrada (Incluida)</h3>
+              <p className="text-xl text-neutral-400">Tu entrada está incluida por defecto</p>
+            </div>
+            <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
+              <div className="flex items-center gap-4 mb-6 justify-center">
+                <span className="px-3 py-1 rounded-full bg-white/10 text-white text-base font-medium border border-white/20">
+                  🥗 {datos.entrada}
+                </span>
+                <span className="text-sm text-neutral-400">Incluida por defecto</span>
+              </div>
+              {datos.entrada === 'Ensalada César' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                  <div className="text-center">
+                    <div className="mb-3">
+                      <ImagenSeleccion
+                        urlImagen={obtenerImagenMenu('entrada', datos.entrada)}
+                        alt="Ensalada César"
+                        tamaño="extra-large"
+                      />
                     </div>
-                    <div className="text-center">
-                      <div className="mb-3">
-                        <ImagenSeleccion
-                          urlImagen={obtenerImagenMenu('pan', 'pan y mantequilla')}
-                          alt="Pan y Mantequilla"
-                          tamaño="extra-large"
-                        />
-                      </div>
-                      <p className="font-semibold text-lg">Pan y Mantequilla</p>
-                    </div>
+                    <p className="font-semibold text-lg text-white">Ensalada César</p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <div className="text-center">
+                    <div className="mb-3">
+                      <ImagenSeleccion
+                        urlImagen={obtenerImagenMenu('pan', 'pan y mantequilla')}
+                        alt="Pan y Mantequilla"
+                        tamaño="extra-large"
+                      />
+                    </div>
+                    <p className="font-semibold text-lg text-white">Pan y Mantequilla</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         );
 
       case 2: // Plato Principal
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 2: Elige el Plato Principal</h3>
-              <p className="text-muted-foreground">Selecciona el plato principal que más te guste</p>
+          <div className="space-y-8">
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 2: Elige el Plato Principal</h3>
+              <p className="text-xl text-neutral-400">Selecciona el plato principal que más te guste</p>
             </div>
             <select
               value={datos.plato_principal}
               onChange={(e) => setDatos({ ...datos, plato_principal: e.target.value })}
               disabled={estaBloqueado}
-              className="w-full px-4 py-4 text-lg border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted disabled:cursor-not-allowed mb-6"
+              className="w-full px-4 py-3 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-8"
             >
               <option value="">Selecciona un plato principal...</option>
               <option value="Pollo Strogonoff con una salsa cremosa y champiñones">
@@ -795,37 +742,32 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
               </option>
             </select>
             {datos.plato_principal && (
-              <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
-                <CardContent className="pt-6">
-                  <div className="text-center mb-4">
-                    <h4 className="text-xl font-bold mb-2">Vista Previa</h4>
-                    <p className="text-sm text-muted-foreground">{datos.plato_principal}</p>
-                  </div>
-                  <div className="flex justify-center">
-                    <ImagenSeleccion
-                      urlImagen={obtenerImagenMenu('plato_principal', datos.plato_principal)}
-                      alt={datos.plato_principal}
-                      tamaño="extra-large"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-        )}
-      </div>
+              <div className="relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-white/20">
+                <img
+                  src={obtenerImagenMenu('plato_principal', datos.plato_principal)}
+                  alt={datos.plato_principal}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+                  <p className="text-lg font-medium text-white">{datos.plato_principal}</p>
+                </div>
+              </div>
+            )}
+          </div>
         );
 
       case 3: // Acompañamiento
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 3: Elige el Acompañamiento</h3>
-              <p className="text-muted-foreground">Selecciona el acompañamiento que más te guste</p>
-          </div>
+          <div className="space-y-8">
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 3: Elige el Acompañamiento</h3>
+              <p className="text-xl text-neutral-400">Selecciona el acompañamiento que más te guste</p>
+            </div>
             <select
               value={datos.acompanamientos}
               onChange={(e) => setDatos({ ...datos, acompanamientos: e.target.value, acompanamiento_seleccionado: '' })}
               disabled={estaBloqueado}
-              className="w-full px-4 py-4 text-lg border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted disabled:cursor-not-allowed mb-4"
+              className="w-full px-4 py-3 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-4"
             >
               <option value="">Selecciona un acompañamiento...</option>
               <option value="Arroz Blanco o Amarillo">Arroz Blanco o Amarillo</option>
@@ -837,21 +779,20 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
             </select>
             
             {datos.acompanamientos === 'Arroz Blanco o Amarillo' && (
-              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-                <CardContent className="pt-6">
-                  <p className="text-lg font-semibold mb-4 text-center">Selecciona el tipo de arroz:</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <button
-                      type="button"
-                      onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Arroz Blanco' })}
-                      disabled={estaBloqueado}
-                      className={cn(
-                        "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                        datos.acompanamiento_seleccionado === 'Arroz Blanco'
-                          ? "border-primary bg-primary/10 shadow-lg"
-                          : "border-border bg-card hover:border-primary/50"
-                      )}
-                    >
+              <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
+                <p className="text-lg font-semibold mb-4 text-center text-white">Selecciona el tipo de arroz:</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <button
+                    type="button"
+                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Arroz Blanco' })}
+                    disabled={estaBloqueado}
+                    className={cn(
+                      "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
+                      datos.acompanamiento_seleccionado === 'Arroz Blanco'
+                        ? "border-white bg-white/10 shadow-lg"
+                        : "border-white/10 bg-neutral-800/50 hover:border-white/20"
+                    )}
+                  >
                       <div className="mb-4 flex justify-center">
               <ImagenSeleccion
                           urlImagen={obtenerImagenMenu('acompanamiento', 'arroz blanco')}
@@ -859,9 +800,9 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                           tamaño="large"
                         />
             </div>
-                      <p className="text-lg font-semibold mb-2">Arroz Blanco</p>
+                      <p className="text-lg font-semibold mb-2 text-white">Arroz Blanco</p>
                       {datos.acompanamiento_seleccionado === 'Arroz Blanco' && (
-                        <Badge variant="default">Seleccionado</Badge>
+                        <span className="text-xs px-2 py-1 rounded bg-white/20 text-white">Seleccionado</span>
                       )}
                     </button>
                     <button
@@ -871,8 +812,8 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                       className={cn(
                         "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
                         datos.acompanamiento_seleccionado === 'Arroz Amarillo'
-                          ? "border-primary bg-primary/10 shadow-lg"
-                          : "border-border bg-card hover:border-primary/50"
+                          ? "border-white bg-white/10 shadow-lg"
+                          : "border-white/10 bg-neutral-800/50 hover:border-white/20"
                       )}
                     >
                       <div className="mb-4 flex justify-center">
@@ -882,90 +823,85 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                           tamaño="large"
                         />
             </div>
-                      <p className="text-lg font-semibold mb-2">Arroz Amarillo</p>
+                      <p className="text-lg font-semibold mb-2 text-white">Arroz Amarillo</p>
                       {datos.acompanamiento_seleccionado === 'Arroz Amarillo' && (
-                        <Badge variant="default">Seleccionado</Badge>
+                        <span className="text-xs px-2 py-1 rounded bg-white/20 text-white">Seleccionado</span>
                       )}
                     </button>
                   </div>
-                </CardContent>
-              </Card>
+              </div>
             )}
 
             {datos.acompanamientos === 'Puré de Patatas o Patatas al Romero' && (
-              <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200">
-                <CardContent className="pt-6">
-                  <p className="text-lg font-semibold mb-4 text-center">Selecciona el tipo de patatas:</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <button
-                      type="button"
-                      onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Puré de Patatas' })}
-                      disabled={estaBloqueado}
-                      className={cn(
-                        "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                        datos.acompanamiento_seleccionado === 'Puré de Patatas'
-                          ? "border-primary bg-primary/10 shadow-lg"
-                          : "border-border bg-card hover:border-primary/50"
-                      )}
-                    >
-                      <div className="mb-4 flex justify-center">
+              <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
+                <p className="text-lg font-semibold mb-4 text-center text-white">Selecciona el tipo de patatas:</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <button
+                    type="button"
+                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Puré de Patatas' })}
+                    disabled={estaBloqueado}
+                    className={cn(
+                      "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
+                      datos.acompanamiento_seleccionado === 'Puré de Patatas'
+                        ? "border-white bg-white/10 shadow-lg"
+                        : "border-white/10 bg-neutral-800/50 hover:border-white/20"
+                    )}
+                  >
+                    <div className="mb-4 flex justify-center">
               <ImagenSeleccion
                           urlImagen={obtenerImagenMenu('acompanamiento', 'puré de patatas')}
                           alt="Puré de Patatas"
                           tamaño="large"
                         />
             </div>
-                      <p className="text-lg font-semibold mb-2">Puré de Patatas</p>
-                      {datos.acompanamiento_seleccionado === 'Puré de Patatas' && (
-                        <Badge variant="default">Seleccionado</Badge>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Patatas al Romero' })}
-                      disabled={estaBloqueado}
-                      className={cn(
-                        "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                        datos.acompanamiento_seleccionado === 'Patatas al Romero'
-                          ? "border-primary bg-primary/10 shadow-lg"
-                          : "border-border bg-card hover:border-primary/50"
-                      )}
-                    >
-                      <div className="mb-4 flex justify-center">
+                    <p className="text-lg font-semibold mb-2 text-white">Puré de Patatas</p>
+                    {datos.acompanamiento_seleccionado === 'Puré de Patatas' && (
+                      <span className="text-xs px-2 py-1 rounded bg-white/20 text-white">Seleccionado</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Patatas al Romero' })}
+                    disabled={estaBloqueado}
+                    className={cn(
+                      "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
+                      datos.acompanamiento_seleccionado === 'Patatas al Romero'
+                        ? "border-white bg-white/10 shadow-lg"
+                        : "border-white/10 bg-neutral-800/50 hover:border-white/20"
+                    )}
+                  >
+                    <div className="mb-4 flex justify-center">
               <ImagenSeleccion
                           urlImagen={obtenerImagenMenu('acompanamiento', 'patatas al romero')}
                           alt="Patatas al Romero"
                           tamaño="large"
                         />
                       </div>
-                      <p className="text-lg font-semibold mb-2">Patatas al Romero</p>
-                      {datos.acompanamiento_seleccionado === 'Patatas al Romero' && (
-                        <Badge variant="default">Seleccionado</Badge>
-                      )}
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
+                    <p className="text-lg font-semibold mb-2 text-white">Patatas al Romero</p>
+                    {datos.acompanamiento_seleccionado === 'Patatas al Romero' && (
+                      <span className="text-xs px-2 py-1 rounded bg-white/20 text-white">Seleccionado</span>
+                    )}
+                  </button>
+                </div>
+              </div>
             )}
 
             {datos.acompanamientos && 
              datos.acompanamientos !== 'Arroz Blanco o Amarillo' && 
              datos.acompanamientos !== 'Puré de Patatas o Patatas al Romero' && (
-              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-                <CardContent className="pt-6">
-                  <div className="text-center mb-4">
-                    <h4 className="text-xl font-bold mb-2">Vista Previa</h4>
-                    <p className="text-sm text-muted-foreground">{datos.acompanamientos}</p>
-                  </div>
-                  <div className="flex justify-center">
-                    <ImagenSeleccion
-                      urlImagen={obtenerImagenMenu('acompanamiento', datos.acompanamientos)}
-                      alt={datos.acompanamientos}
-                      tamaño="extra-large"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
+                <div className="text-center mb-4">
+                  <h4 className="text-xl font-bold mb-2 text-white">Vista Previa</h4>
+                  <p className="text-sm text-neutral-400">{datos.acompanamientos}</p>
+                </div>
+                <div className="flex justify-center">
+                  <ImagenSeleccion
+                    urlImagen={obtenerImagenMenu('acompanamiento', datos.acompanamientos)}
+                    alt={datos.acompanamientos}
+                    tamaño="extra-large"
+                  />
+                </div>
+              </div>
             )}
           </div>
         );
@@ -977,8 +913,7 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
               <h3 className="text-2xl font-bold mb-2">Paso 4: Teenagers/Kids</h3>
               <p className="text-muted-foreground">Indica si habrá teenagers o niños en el evento</p>
             </div>
-            <Card>
-              <CardContent className="pt-6">
+            <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <input
                     type="checkbox"
@@ -986,9 +921,9 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                     checked={datos.hay_teenagers}
                     onChange={(e) => setDatos({ ...datos, hay_teenagers: e.target.checked, cantidad_teenagers: e.target.checked ? datos.cantidad_teenagers : 0 })}
                     disabled={estaBloqueado}
-                    className="w-5 h-5 text-primary border-input rounded focus:ring-primary disabled:opacity-50"
+                    className="w-5 h-5 text-white border-white/20 rounded focus:ring-white/50 disabled:opacity-50"
                   />
-                  <label htmlFor="hay_teenagers" className="text-lg font-semibold cursor-pointer">
+                  <label htmlFor="hay_teenagers" className="text-lg font-semibold cursor-pointer text-white">
                     ¿Habrá Teenagers/Kids en el evento?
                   </label>
                 </div>
@@ -996,7 +931,7 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                 {datos.hay_teenagers && (
                   <div className="space-y-4 mt-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-neutral-300">
                         Cantidad de Teens/Kids *
                       </label>
                       <input
@@ -1011,14 +946,14 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                           }
                         }}
                         disabled={estaBloqueado}
-                        className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                        className="w-full px-4 py-2 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white disabled:bg-neutral-700"
                         required
                       />
                     </div>
 
                     {datos.cantidad_teenagers > 0 && (
                       <div>
-                        <label className="block text-sm font-medium mb-2">
+                        <label className="block text-sm font-medium mb-2 text-neutral-300">
                           ¿Quieren pasta o menú? *
                         </label>
                         <div className="flex gap-4">
@@ -1030,10 +965,10 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                               checked={datos.teenagers_tipo_comida === 'pasta'}
                               onChange={(e) => setDatos({ ...datos, teenagers_tipo_comida: e.target.value, teenagers_tipo_pasta: '' })}
                               disabled={estaBloqueado}
-                              className="w-4 h-4 text-primary border-input focus:ring-primary disabled:opacity-50"
+                              className="w-4 h-4 text-white border-white/20 focus:ring-white/50 disabled:opacity-50"
                               required
                             />
-                            <span className="text-sm font-medium">Pasta</span>
+                            <span className="text-sm font-medium text-white">Pasta</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -1043,10 +978,10 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                               checked={datos.teenagers_tipo_comida === 'menu'}
                               onChange={(e) => setDatos({ ...datos, teenagers_tipo_comida: e.target.value, teenagers_tipo_pasta: '' })}
                               disabled={estaBloqueado}
-                              className="w-4 h-4 text-primary border-input focus:ring-primary disabled:opacity-50"
+                              className="w-4 h-4 text-white border-white/20 focus:ring-white/50 disabled:opacity-50"
                               required
                             />
-                            <span className="text-sm font-medium">Menú</span>
+                            <span className="text-sm font-medium text-white">Menú</span>
                           </label>
                         </div>
                       </div>
@@ -1054,14 +989,14 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
 
                     {datos.cantidad_teenagers > 0 && datos.teenagers_tipo_comida === 'pasta' && (
                       <div>
-                        <label className="block text-sm font-medium mb-2">
+                        <label className="block text-sm font-medium mb-2 text-neutral-300">
                           Tipo de Pasta *
                         </label>
                         <select
                           value={datos.teenagers_tipo_pasta}
                           onChange={(e) => setDatos({ ...datos, teenagers_tipo_pasta: e.target.value })}
                           disabled={estaBloqueado}
-                          className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                          className="w-full px-4 py-2 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white disabled:bg-neutral-700"
                           required
                         >
                           <option value="">Seleccionar tipo de pasta...</option>
@@ -1081,27 +1016,24 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                     )}
 
                     {datos.cantidad_teenagers > 0 && (
-                      <Card className="bg-blue-50/50 border-blue-200">
-                        <CardContent className="pt-6">
-                          <p className="text-sm font-medium text-blue-900 mb-2">
-                            📋 Resumen de platos:
-                          </p>
-                          <ul className="text-sm text-blue-800 space-y-1">
-                            <li>• {invitadosAdultos} platos según selección de menú (adultos)</li>
-                            <li>
-                              • {datos.cantidad_teenagers} {datos.teenagers_tipo_comida === 'pasta' 
-                                ? `pasta(s) ${datos.teenagers_tipo_pasta === 'napolitana' ? 'Napolitana' : datos.teenagers_tipo_pasta === 'alfredo' ? 'Alfredo' : ''}`
-                                : 'menú(es) según selección'}
-                              {' '}(teens/kids)
-                            </li>
-                          </ul>
-                        </CardContent>
-                      </Card>
+                      <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-4">
+                        <p className="text-sm font-medium text-white mb-2">
+                          📋 Resumen de platos:
+                        </p>
+                        <ul className="text-sm text-neutral-300 space-y-1">
+                          <li>• {invitadosAdultos} platos según selección de menú (adultos)</li>
+                          <li>
+                            • {datos.cantidad_teenagers} {datos.teenagers_tipo_comida === 'pasta' 
+                              ? `pasta(s) ${datos.teenagers_tipo_pasta === 'napolitana' ? 'Napolitana' : datos.teenagers_tipo_pasta === 'alfredo' ? 'Alfredo' : ''}`
+                              : 'menú(es) según selección'}
+                            {' '}(teens/kids)
+                          </li>
+                        </ul>
+                      </div>
                     )}
             </div>
                 )}
-              </CardContent>
-            </Card>
+            </div>
           </div>
         );
 
@@ -1109,21 +1041,21 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 5: Restricciones y Notas</h3>
-              <p className="text-muted-foreground">Información adicional sobre restricciones alimentarias y notas especiales</p>
+              <h3 className="text-2xl font-bold mb-2 text-white">Paso 5: Restricciones y Notas</h3>
+              <p className="text-neutral-400">Información adicional sobre restricciones alimentarias y notas especiales</p>
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
+              <div className="mb-4">
+                <h4 className="text-lg font-semibold flex items-center gap-2 text-white mb-2">
                   🌱 Restricciones y Detalles Especiales
-                </CardTitle>
-                <CardDescription>
+                </h4>
+                <p className="text-sm text-neutral-400">
                   Información importante sobre alergias, restricciones alimentarias o preferencias especiales
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                </p>
+              </div>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-2 text-neutral-300">
                     Restricciones Alimentarias / Alergias / Vegetarianos
                   </label>
                   <textarea
@@ -1132,11 +1064,11 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                     disabled={estaBloqueado}
                     rows={4}
                     placeholder="Ej: 2 personas vegetarianas, 1 alergia a frutos secos, 1 intolerancia a lactosa..."
-                    className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted resize-none"
+                    className="w-full px-4 py-3 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 resize-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-2 text-neutral-300">
                     Notas Adicionales del Menú
                   </label>
                   <textarea
@@ -1145,11 +1077,11 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                     disabled={estaBloqueado}
                     rows={4}
                     placeholder="Cualquier comentario o solicitud especial sobre el menú..."
-                    className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted resize-none"
+                    className="w-full px-4 py-3 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 resize-none"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         );
 
@@ -1159,50 +1091,57 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
-          <UtensilsCrossed className="w-8 h-8 text-orange-600" />
+    <form onSubmit={handleSubmit}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="max-w-5xl mx-auto"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <span className="px-3 py-1 rounded-full bg-orange-500/10 text-orange-400 text-xs font-medium border border-orange-500/20">
+            Selección Requerida
+          </span>
         </div>
-        <h2 className="text-3xl font-bold mb-2">Elige tu Menú</h2>
-        <p className="text-muted-foreground">
-          Completa cada paso para personalizar el menú de tu evento
-            </p>
-          </div>
+        <h2 className="text-4xl font-bold text-white mb-4">Elige tu Menú</h2>
+        <p className="text-xl text-neutral-400 max-w-2xl mb-8">
+          Completa cada paso para personalizar el menú de tu evento. Selecciona los platos que mejor se adapten a tu celebración.
+        </p>
 
-      {/* Información de distribución */}
-      <Card className="bg-blue-50/50 border-blue-200">
-        <CardContent className="pt-6">
+        {/* Banner de Invitados Mejorado */}
+        <div className="mb-8 p-6 rounded-xl bg-neutral-900 border border-white/10">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-blue-900 mb-1">
-                📊 Total de invitados: <strong className="text-lg">{totalInvitados}</strong>
-              </p>
-              {datos.hay_teenagers && (
-                <p className="text-sm text-blue-700">
-                  👥 Adultos: <strong>{invitadosAdultos}</strong> | 👶 Teens/Kids: <strong>{datos.cantidad_teenagers || 0}</strong>
-                </p>
-              )}
-        </div>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                <span className="text-2xl">👥</span>
+              </div>
+              <div>
+                <div className="text-sm text-neutral-400 font-medium mb-1">Total de Invitados</div>
+                <div className="text-3xl font-bold text-white">{totalInvitados}</div>
+                {datos.hay_teenagers && (
+                  <div className="text-xs text-neutral-400 mt-1">
+                    👥 Adultos: {invitadosAdultos} | 👶 Teens/Kids: {datos.cantidad_teenagers || 0}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="text-xs text-neutral-400 max-w-xs text-right">
+              El menú se ajustará según el número de invitados confirmados
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Sección de Pasapalos (Solo informativa) */}
-      {tienePasapalos && (
-        <Card className="border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-2xl">
+        {/* Sección de Pasapalos (Solo informativa) */}
+        {tienePasapalos && (
+          <div className="border border-white/10 bg-neutral-900 rounded-xl p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
               <span className="text-3xl">🥟</span>
-              Pasapalos Incluidos
-            </CardTitle>
-            <CardDescription className="text-base">
+              <h3 className="text-2xl font-bold text-white">Pasapalos Incluidos</h3>
+            </div>
+            <p className="text-neutral-400 mb-6">
               Tu evento incluye los siguientes pasapalos para deleitar a tus invitados durante el cóctel de bienvenida
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
                 { nombre: 'Tequeños', desc: 'Clásicos y deliciosos' },
                 { nombre: 'Bolitas de carne', desc: 'Jugosas y sabrosas' },
@@ -1217,120 +1156,114 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
                       tamaño="large"
                     />
                   </div>
-                  <p className="font-semibold text-sm mb-1">{item.nombre}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                  <p className="font-semibold text-sm mb-1 text-white">{item.nombre}</p>
+                  <p className="text-xs text-neutral-400">{item.desc}</p>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {/* Indicador de Pasos Horizontal */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
+        {/* Indicador de Pasos Horizontal */}
+        <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6 mb-8">
+          <div className="flex items-center justify-between overflow-x-auto pb-2">
             {PASOS.map((paso, index) => (
-              <div key={paso.numero} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
+              <div key={paso.numero} className="flex items-center flex-1 min-w-0">
+                <div className="flex flex-col items-center flex-1 min-w-0">
                   <button
                     type="button"
                     onClick={() => irAPaso(paso.numero)}
                     disabled={estaBloqueado || (paso.numero > pasoActual && !pasoCompleto(paso.numero - 1))}
                     className={cn(
-                      "relative h-12 w-12 rounded-full border-2 transition-all font-semibold text-sm",
+                      "relative h-12 w-12 rounded-full border-2 transition-all font-semibold text-sm flex items-center justify-center",
                       paso.numero === pasoActual
-                        ? "bg-primary border-primary text-primary-foreground shadow-lg scale-110"
+                        ? "bg-white border-white text-black shadow-lg scale-110"
                         : pasoCompleto(paso.numero)
-                        ? "bg-green-50 border-green-500 text-green-700 hover:scale-105 cursor-pointer"
+                        ? "bg-green-500/20 border-green-500 text-green-400 hover:scale-105 cursor-pointer"
                         : paso.numero < pasoActual
-                        ? "bg-muted border-muted-foreground/30 text-muted-foreground hover:scale-105 cursor-pointer"
-                        : "bg-background border-border text-muted-foreground cursor-not-allowed opacity-50"
+                        ? "bg-neutral-700 border-neutral-600 text-neutral-400 hover:scale-105 cursor-pointer"
+                        : "bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
                     )}
                   >
                     {pasoCompleto(paso.numero) && paso.numero !== pasoActual ? (
-                      <CheckCircle2 className="h-6 w-6 mx-auto" />
+                      <CheckCircle className="h-6 w-6" />
                     ) : (
                       <span>{paso.numero}</span>
                     )}
                   </button>
                   <span className={cn(
-                    "mt-2 text-xs font-medium text-center max-w-[80px]",
-                    paso.numero === pasoActual ? "text-primary font-semibold" : "text-muted-foreground"
+                    "mt-2 text-xs font-medium text-center max-w-[80px] truncate",
+                    paso.numero === pasoActual ? "text-white font-semibold" : "text-neutral-400"
                   )}>
                     {paso.titulo}
                   </span>
                 </div>
                 {index < PASOS.length - 1 && (
                   <div className={cn(
-                    "flex-1 h-0.5 mx-2 transition-all",
-                    pasoCompleto(paso.numero) ? "bg-green-500" : "bg-muted"
+                    "flex-1 h-0.5 mx-2 transition-all min-w-[20px]",
+                    pasoCompleto(paso.numero) ? "bg-green-500" : "bg-neutral-700"
                   )} />
                 )}
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Contenido del Paso Actual */}
-      <Card className="min-h-[500px]">
-        <CardContent className="pt-8">
-          {renderPasoActual()}
-        </CardContent>
-      </Card>
-
-      {/* Navegación */}
-      <div className="flex items-center justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={retrocederPaso}
-          disabled={pasoActual === 1 || estaBloqueado}
-          size="lg"
-        >
-          <ChevronLeft className="w-5 h-5 mr-2" />
-          Anterior
-        </Button>
-
-        <div className="flex gap-2">
-          {pasoActual < PASOS.length ? (
-            <Button
-              type="button"
-              onClick={avanzarPaso}
-              disabled={!pasoCompleto(pasoActual) || estaBloqueado}
-              size="lg"
-            >
-              Siguiente
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </Button>
-          ) : (
-            <Button
-              type="submit"
-              disabled={guardando || estaBloqueado}
-              size="lg"
-              className="min-w-[200px]"
-            >
-              {guardando ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Guardando...
-                </>
-              ) : estaBloqueado ? (
-                <>
-                  <Lock className="w-5 h-5 mr-2" />
-                  Bloqueado
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5 mr-2" />
-                  Guardar Cambios
-                </>
-              )}
-            </Button>
-          )}
         </div>
-      </div>
+
+        {/* Contenido del Paso Actual */}
+        <div className="bg-neutral-800/30 border border-white/10 rounded-xl p-8 min-h-[500px] mb-8">
+          {renderPasoActual()}
+        </div>
+
+        {/* Navegación */}
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={retrocederPaso}
+            disabled={pasoActual === 1 || estaBloqueado}
+            className="flex items-center gap-2 px-6 py-3 bg-neutral-800 text-white rounded-xl font-medium hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Anterior
+          </button>
+
+          <div className="flex gap-2">
+            {pasoActual < PASOS.length ? (
+              <button
+                type="button"
+                onClick={avanzarPaso}
+                disabled={!pasoCompleto(pasoActual) || estaBloqueado}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-medium hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={guardando || estaBloqueado}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-medium hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px] justify-center"
+              >
+                {guardando ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Guardando...
+                  </>
+                ) : estaBloqueado ? (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    Bloqueado
+                  </>
+                ) : (
+                  <>
+                    Guardar Selección
+                    <ChevronRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </motion.div>
     </form>
   );
 }
@@ -1347,7 +1280,7 @@ function SeccionEntretenimiento({ ajustes, onGuardar, guardando, estaBloqueado }
   const [datos, setDatos] = useState({
     musica_ceremonial: ajustes?.musica_ceremonial || '',
     primer_baile: ajustes?.primer_baile || '',
-    bailes: bailesIniciales.length > 0 ? bailesIniciales : [{ nombre: '', con_quien: '' }],
+    bailes: bailesIniciales.length > 0 ? bailesIniciales : [],
     cancion_sorpresa: ajustes?.cancion_sorpresa || '',
     notas_entretenimiento: ajustes?.notas_entretenimiento || '',
   });
@@ -1363,7 +1296,7 @@ function SeccionEntretenimiento({ ajustes, onGuardar, guardando, estaBloqueado }
     const nuevosBailes = datos.bailes.filter((_, i) => i !== index);
     setDatos({
       ...datos,
-      bailes: nuevosBailes.length > 0 ? nuevosBailes : [{ nombre: '', con_quien: '' }]
+      bailes: nuevosBailes
     });
   };
 
@@ -1386,158 +1319,328 @@ function SeccionEntretenimiento({ ajustes, onGuardar, guardando, estaBloqueado }
     });
   };
 
+  // Parsear canción ceremonial (título - artista)
+  const parsearCancion = (cancion) => {
+    if (!cancion) return { titulo: '', artista: '' };
+    const partes = cancion.split(' - ');
+    return {
+      titulo: partes[0] || cancion,
+      artista: partes[1] || ''
+    };
+  };
+
+  const musicaCeremonial = parsearCancion(datos.musica_ceremonial);
+  const primerBaileParsed = parsearCancion(datos.primer_baile);
+  // Mostrar todos los bailes (incluyendo vacíos) para que se puedan editar
+  const bailesParaMostrar = datos.bailes.length > 0 ? datos.bailes : [];
+  const bailesFiltrados = datos.bailes.filter(b => b.nombre.trim() || b.con_quien.trim());
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <Music2 className="w-6 h-6 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Música</h2>
-      </div>
-
-      <div className="space-y-6">
-        {/* Música para Ceremonia / Entrada */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Música para Ceremonia / Entrada
-          </label>
-          <input
-            type="text"
-            value={datos.musica_ceremonial}
-            onChange={(e) => setDatos({ ...datos, musica_ceremonial: e.target.value })}
-            placeholder="Ej: A Thousand Years - Christina Perri"
-            disabled={estaBloqueado}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
-          />
-        </div>
-
-        {/* Primer Baile */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Primer Baile
-          </label>
-          <input
-            type="text"
-            value={datos.primer_baile}
-            onChange={(e) => setDatos({ ...datos, primer_baile: e.target.value })}
-            placeholder="Ej: Perfect - Ed Sheeran"
-            disabled={estaBloqueado}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
-          />
-        </div>
-
-        {/* Bailes Adicionales */}
-        <div className="border-2 border-blue-200 rounded-xl p-6 bg-blue-50">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-blue-900">Bailes Adicionales</h3>
-            {!estaBloqueado && (
-              <button
-                type="button"
-                onClick={agregarBaile}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                Agregar Baile
-              </button>
-            )}
-          </div>
-          
-          <div className="space-y-4">
-            {datos.bailes.map((baile, index) => (
-              <div key={index} className="bg-white p-4 rounded-lg border border-blue-200">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-blue-900">
-                    Baile {index + 1}
-                  </span>
-                  {!estaBloqueado && datos.bailes.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => eliminarBaile(index)}
-                      className="text-red-600 hover:text-red-700 transition"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Canción
-                    </label>
-                    <input
-                      type="text"
-                      value={baile.nombre}
-                      onChange={(e) => actualizarBaile(index, 'nombre', e.target.value)}
-                      placeholder="Ej: My Girl - The Temptations"
-                      disabled={estaBloqueado}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm disabled:bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Con quién
-                    </label>
-                    <input
-                      type="text"
-                      value={baile.con_quien}
-                      onChange={(e) => actualizarBaile(index, 'con_quien', e.target.value)}
-                      placeholder="Ej: Con papá, Con mamá, Con hermano"
-                      disabled={estaBloqueado}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm disabled:bg-gray-100"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Canción Sorpresa */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Canción Sorpresa
-          </label>
-          <input
-            type="text"
-            value={datos.cancion_sorpresa}
-            onChange={(e) => setDatos({ ...datos, cancion_sorpresa: e.target.value })}
-            placeholder="Ej: Canción especial para sorprender a alguien"
-            disabled={estaBloqueado}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
-          />
-        </div>
-
-        {/* Notas Adicionales */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Notas Adicionales
-          </label>
-          <textarea
-            value={datos.notas_entretenimiento}
-            onChange={(e) => setDatos({ ...datos, notas_entretenimiento: e.target.value })}
-            rows={3}
-            placeholder="Cualquier detalle especial sobre la música..."
-            disabled={estaBloqueado}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
-          />
-        </div>
-      </div>
-
-      <button
-        type="submit"
-        disabled={guardando || estaBloqueado}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition font-medium disabled:opacity-50"
+    <form onSubmit={handleSubmit}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="max-w-6xl mx-auto"
       >
-        {guardando ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Guardando...
-          </>
-        ) : (
-          <>
-            <Save className="w-5 h-5" />
-            Guardar Cambios
-          </>
-        )}
-      </button>
+        <div className="flex items-center gap-3 mb-2">
+          <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-medium border border-blue-500/20">
+            Opcional
+          </span>
+        </div>
+        <h2 className="text-4xl font-bold text-white mb-4">Música</h2>
+        <p className="text-xl text-neutral-400 max-w-2xl mb-8">
+          Personaliza la música especial para momentos importantes de tu evento.
+        </p>
+
+        {/* Bento Grid for Music */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-[minmax(180px,auto)] mb-8">
+          {/* Música para Ceremonia / Entrada */}
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group transition-all duration-300 hover:border-white/20">
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img
+                src="https://images.unsplash.com/photo-1465847899084-d164df4dedc6?q=80&w=2000&auto=format&fit=crop"
+                alt="Ceremonia"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </div>
+            <div className="relative z-10 h-full w-full p-6">
+              <div className="flex flex-col justify-center h-full">
+                <h3 className="text-sm text-neutral-400 mb-2 uppercase tracking-wider font-medium">Música para Ceremonia / Entrada</h3>
+                {!estaBloqueado ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={musicaCeremonial.titulo}
+                      onChange={(e) => {
+                        const nuevaCancion = e.target.value + (musicaCeremonial.artista ? ` - ${musicaCeremonial.artista}` : '');
+                        setDatos({ ...datos, musica_ceremonial: nuevaCancion });
+                      }}
+                      placeholder="Título de la canción"
+                      className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-white focus:border-transparent outline-none text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={musicaCeremonial.artista}
+                      onChange={(e) => {
+                        const nuevaCancion = (musicaCeremonial.titulo || '') + (e.target.value ? ` - ${e.target.value}` : '');
+                        setDatos({ ...datos, musica_ceremonial: nuevaCancion });
+                      }}
+                      placeholder="Artista"
+                      className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-white focus:border-transparent outline-none text-sm"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-lg font-semibold text-white mb-1 drop-shadow-lg">
+                      {musicaCeremonial.titulo || 'Sin especificar'}
+                    </div>
+                    {musicaCeremonial.artista && (
+                      <div className="text-sm text-neutral-300 drop-shadow-sm">{musicaCeremonial.artista}</div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Primer Baile */}
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group transition-all duration-300 hover:border-white/20">
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img
+                src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=2000&auto=format&fit=crop"
+                alt="Primer Baile"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </div>
+            <div className="relative z-10 h-full w-full p-6">
+              <div className="flex flex-col justify-center h-full">
+                <h3 className="text-sm text-neutral-400 mb-2 uppercase tracking-wider font-medium">Primer Baile</h3>
+                {!estaBloqueado ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={primerBaileParsed.titulo}
+                      onChange={(e) => {
+                        const nuevaCancion = e.target.value + (primerBaileParsed.artista ? ` - ${primerBaileParsed.artista}` : '');
+                        setDatos({ ...datos, primer_baile: nuevaCancion });
+                      }}
+                      placeholder="Título de la canción"
+                      className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-white focus:border-transparent outline-none text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={primerBaileParsed.artista}
+                      onChange={(e) => {
+                        const nuevaCancion = (primerBaileParsed.titulo || '') + (e.target.value ? ` - ${e.target.value}` : '');
+                        setDatos({ ...datos, primer_baile: nuevaCancion });
+                      }}
+                      placeholder="Artista"
+                      className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-white focus:border-transparent outline-none text-sm"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-lg font-semibold text-white mb-1 drop-shadow-lg">
+                      {primerBaileParsed.titulo || 'Sin especificar'}
+                    </div>
+                    {primerBaileParsed.artista && (
+                      <div className="text-sm text-neutral-300 drop-shadow-sm">{primerBaileParsed.artista}</div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bailes Adicionales - Large Card */}
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group transition-all duration-300 hover:border-white/20 col-span-1 md:col-span-2">
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img
+                src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=2000&auto=format&fit=crop"
+                alt="Bailes Adicionales"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </div>
+            <div className="relative z-10 h-full w-full p-6">
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm text-neutral-400 uppercase tracking-wider font-medium">Bailes Adicionales</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-white drop-shadow-lg">{bailesFiltrados.length}</span>
+                    {!estaBloqueado && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          agregarBaile();
+                        }}
+                        className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition text-white"
+                        title="Agregar Baile"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {bailesParaMostrar.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-neutral-400 text-sm">No hay bailes adicionales configurados</p>
+                    {!estaBloqueado && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          agregarBaile();
+                        }}
+                        className="mt-4 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition text-sm font-medium"
+                      >
+                        Agregar Primer Baile
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                    {bailesParaMostrar.map((baile, index) => (
+                      <div key={index} className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 relative">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-xs text-neutral-400 mb-2 font-medium">Baile {index + 1}</div>
+                          {!estaBloqueado && bailesParaMostrar.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                eliminarBaile(index);
+                              }}
+                              className="p-1.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition text-red-400 hover:text-red-300"
+                              title="Eliminar Baile"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                        {!estaBloqueado ? (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={baile.nombre}
+                              onChange={(e) => actualizarBaile(index, 'nombre', e.target.value)}
+                              placeholder="Canción"
+                              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-white focus:border-transparent outline-none text-sm"
+                            />
+                            <input
+                              type="text"
+                              value={baile.con_quien}
+                              onChange={(e) => actualizarBaile(index, 'con_quien', e.target.value)}
+                              placeholder="Con quién"
+                              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-white focus:border-transparent outline-none text-sm"
+                            />
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-base font-semibold text-white mb-1 drop-shadow-sm">
+                              {baile.nombre || 'Sin especificar'}
+                            </div>
+                            {baile.con_quien && (
+                              <div className="text-sm text-neutral-300 drop-shadow-sm">• {baile.con_quien}</div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Canción Sorpresa */}
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group transition-all duration-300 hover:border-white/20">
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img
+                src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2000&auto=format&fit=crop"
+                alt="Sorpresa"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </div>
+            <div className="relative z-10 h-full w-full p-6">
+              <div className="flex flex-col justify-center h-full">
+                <h3 className="text-sm text-neutral-400 mb-2 uppercase tracking-wider font-medium">Canción Sorpresa</h3>
+                {!estaBloqueado ? (
+                  <input
+                    type="text"
+                    value={datos.cancion_sorpresa}
+                    onChange={(e) => setDatos({ ...datos, cancion_sorpresa: e.target.value })}
+                    placeholder="Canción especial para sorprender..."
+                    className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-white focus:border-transparent outline-none text-sm italic"
+                  />
+                ) : (
+                  <div className="text-base text-neutral-300 italic drop-shadow-sm">
+                    {datos.cancion_sorpresa || 'Sin especificar'}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Notas Adicionales */}
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group transition-all duration-300 hover:border-white/20">
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img
+                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2000&auto=format&fit=crop"
+                alt="Notas"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </div>
+            <div className="relative z-10 h-full w-full p-6">
+              <div className="flex flex-col justify-center h-full">
+                <h3 className="text-sm text-neutral-400 mb-2 uppercase tracking-wider font-medium">Notas Adicionales</h3>
+                {!estaBloqueado ? (
+                  <textarea
+                    value={datos.notas_entretenimiento}
+                    onChange={(e) => setDatos({ ...datos, notas_entretenimiento: e.target.value })}
+                    placeholder="Cualquier detalle especial..."
+                    rows={3}
+                    className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-white focus:border-transparent outline-none text-sm resize-none"
+                  />
+                ) : (
+                  <div className="text-sm text-neutral-300 italic drop-shadow-sm">
+                    {datos.notas_entretenimiento || 'Sin notas adicionales'}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={guardando || estaBloqueado}
+            className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-medium hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {guardando ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                Guardar Selección
+                <ChevronRight className="w-5 h-5" />
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
     </form>
   );
 }
@@ -1608,171 +1711,212 @@ function SeccionBar({ ajustes, contrato }) {
     ...licorBasico // Premium incluye todo lo del básico
   ];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <Wine className="w-6 h-6 text-indigo-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Bar - Cócteles y Bebidas</h2>
-      </div>
+  // Obtener productos según tipo de licor
+  const rones = tipoLicor === 'premium' 
+    ? ['Ron Bacardi Blanco', 'Ron Bacardi Gold'] 
+    : ['Ron Spice', 'Ron Blanco'];
+  
+  const whisky = tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House';
 
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="max-w-6xl mx-auto"
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-xs font-medium border border-purple-500/20">
+          Bebidas Incluidas
+        </span>
+        {tipoLicor === 'premium' && (
+          <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-xs font-medium border border-purple-500/30">
+            ⭐ Premium
+          </span>
+        )}
+        {tipoLicor === 'basico' && (
+          <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium border border-blue-500/30">
+            📦 Básico
+          </span>
+        )}
+      </div>
+      <h2 className="text-4xl font-bold text-white mb-4">Bar - Cócteles y Bebidas</h2>
+      <p className="text-xl text-neutral-400 max-w-2xl mb-8">
+        Revisa las bebidas incluidas en tu paquete de bar.
+      </p>
 
       {!tipoLicor ? (
-        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
-          <Wine className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-yellow-900 mb-2">Servicio de Bar no Contratado</h3>
-          <p className="text-yellow-800">
+        <div className="bg-yellow-500/10 border-2 border-yellow-500/30 rounded-xl p-6 text-center">
+          <Wine className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-yellow-200 mb-2">Servicio de Bar no Contratado</h3>
+          <p className="text-yellow-300">
             No tienes contratado ningún servicio de licor (Básico o Premium) en tu evento.
           </p>
         </div>
       ) : (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            {tipoLicor === 'premium' && (
-              <span className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-medium">
-                ⭐ Premium
-              </span>
-            )}
-            {tipoLicor === 'basico' && (
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                📦 Básico
-              </span>
-            )}
+        <>
+          <div className="mb-8 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+            <div className="flex items-start gap-3">
+              <Info size={20} className="text-blue-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-200 mb-1">Información del Bar</p>
+                <p className="text-sm text-blue-300">
+                  Esta es la lista completa de bebidas incluidas en el servicio de <span className="font-semibold text-white">{tipoLicor === 'premium' ? 'Licor Premium' : 'Licor Básico'}</span>.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
-        <p className="text-sm text-blue-800">
-          <strong>Información del Bar:</strong> Esta es la lista completa de bebidas incluidas en tu servicio de {tipoLicor === 'premium' ? 'Licor Premium' : 'Licor Básico'}.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Alcohol - Izquierda */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Wine className="w-6 h-6 text-red-600" />
-              <h3 className="text-xl font-bold text-gray-900">Licores y Alcohol</h3>
-            </div>
-            
-            {/* Vinos */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <span className="text-red-500">🍷</span> Vinos
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                {vinos.map((vino, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg text-center">
-                    <span className="text-gray-900 text-sm font-medium">{vino}</span>
+          {/* Bento Grid for Drinks */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(200px,auto)]">
+            {/* Licores y Alcohol - Large Card */}
+            <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 md:col-span-2 row-span-1 transition-all duration-300 hover:border-white/20">
+              <div className="absolute inset-0 w-full h-full z-0">
+                <img
+                  src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=2000&auto=format&fit=crop"
+                  alt="Licores"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+              </div>
+              <div className="relative z-10 h-full w-full p-6">
+                <div className="flex flex-col h-full">
+                  <div className="mb-4">
+                    <h3 className="text-sm text-neutral-400 mb-2 uppercase tracking-wider font-medium flex items-center gap-2">
+                      <Wine size={16} />
+                      Licores y Alcohol
+                    </h3>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Ron */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <span className="text-amber-600">🍸</span> Ron
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                {(tipoLicor === 'premium' 
-                  ? ['Ron Bacardi Blanco', 'Ron Bacardi Gold'] 
-                  : ['Ron Spice', 'Ron Blanco']
-                ).map((ron, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg text-center">
-                    <span className="text-gray-900 text-sm font-medium">{ron}</span>
+                  <div className="grid grid-cols-2 gap-3 flex-1">
+                    <div>
+                      <div className="text-xs text-neutral-400 mb-2 font-medium">Vinos</div>
+                      <div className="space-y-1">
+                        {vinos.map((item) => (
+                          <div key={item} className="text-sm text-white drop-shadow-sm">• {item}</div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-neutral-400 mb-2 font-medium">Ron</div>
+                      <div className="space-y-1">
+                        {rones.map((item) => (
+                          <div key={item} className="text-sm text-white drop-shadow-sm">• {item}</div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-neutral-400 mb-2 font-medium">Whisky</div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-white drop-shadow-sm">• {whisky}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-neutral-400 mb-2 font-medium">Otros</div>
+                      <div className="space-y-1">
+                        {['Vodka', 'Tequila'].map((item) => (
+                          <div key={item} className="text-sm text-white drop-shadow-sm">• {item}</div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Whisky */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <span className="text-amber-700">🥃</span> Whisky
-              </h4>
-              <div className="flex justify-center">
-                <div className="p-3 bg-gray-50 rounded-lg text-center">
-                  <span className="text-gray-900 text-sm font-medium">
-                    {tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House'}
-                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Vodka y Tequila */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="p-3 bg-gray-50 rounded-lg text-center">
-                <span className="text-gray-900 text-sm font-medium">Vodka</span>
+            {/* Refrescos Card */}
+            <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:border-white/20">
+              <div className="absolute inset-0 w-full h-full z-0">
+                <img
+                  src="https://images.unsplash.com/photo-1581006852262-e4307cf6283a?q=80&w=2000&auto=format&fit=crop"
+                  alt="Refrescos"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
               </div>
-              <div className="p-3 bg-gray-50 rounded-lg text-center">
-                <span className="text-gray-900 text-sm font-medium">Tequila</span>
+              <div className="relative z-10 h-full w-full p-6">
+                <div className="flex flex-col h-full">
+                  <h3 className="text-sm text-neutral-400 mb-3 uppercase tracking-wider font-medium">Refrescos</h3>
+                  <div className="space-y-1 flex-1">
+                    {refrescos.map((item) => (
+                      <div key={item} className="text-sm text-white drop-shadow-sm">• {item}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Jugos Card */}
+            <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:border-white/20">
+              <div className="absolute inset-0 w-full h-full z-0">
+                <img
+                  src="https://images.unsplash.com/photo-1600271886742-f049cd451bba?q=80&w=2000&auto=format&fit=crop"
+                  alt="Jugos"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+              </div>
+              <div className="relative z-10 h-full w-full p-6">
+                <div className="flex flex-col justify-center h-full">
+                  <h3 className="text-sm text-neutral-400 mb-2 uppercase tracking-wider font-medium">Jugos</h3>
+                  <div className="text-4xl font-bold tracking-tight text-white mb-3 drop-shadow-lg">{jugos.length}</div>
+                  <div className="space-y-1">
+                    {jugos.map((item) => (
+                      <div key={item} className="text-sm text-neutral-300 drop-shadow-sm">• {item}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cócteles Card */}
+            <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:border-white/20">
+              <div className="absolute inset-0 w-full h-full z-0">
+                <img
+                  src="https://images.unsplash.com/photo-1536935338788-846bb9981813?q=80&w=2000&auto=format&fit=crop"
+                  alt="Cócteles"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+              </div>
+              <div className="relative z-10 h-full w-full p-6">
+                <div className="flex flex-col justify-center h-full">
+                  <h3 className="text-sm text-neutral-400 mb-2 uppercase tracking-wider font-medium">Cócteles</h3>
+                  <div className="text-4xl font-bold tracking-tight text-white mb-3 drop-shadow-lg">{cocteles.length}</div>
+                  <div className="space-y-1">
+                    {cocteles.map((item) => (
+                      <div key={item} className="text-sm text-neutral-300 drop-shadow-sm">• {item}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Otros Card */}
+            <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:border-white/20">
+              <div className="absolute inset-0 w-full h-full z-0">
+                <img
+                  src="https://images.unsplash.com/photo-1587223075055-82e9a937ddff?q=80&w=2000&auto=format&fit=crop"
+                  alt="Otros"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+              </div>
+              <div className="relative z-10 h-full w-full p-6">
+                <div className="flex flex-col justify-center h-full">
+                  <h3 className="text-sm text-neutral-400 mb-2 uppercase tracking-wider font-medium">Otros</h3>
+                  <div className="text-4xl font-bold tracking-tight text-white mb-3 drop-shadow-lg">{otros.length}</div>
+                  <div className="space-y-1">
+                    {otros.map((item) => (
+                      <div key={item} className="text-sm text-neutral-300 drop-shadow-sm">• {item}</div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Cócteles */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-purple-500">🍹</span> Cócteles
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {cocteles.map((coctel, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg text-center">
-                  <span className="text-gray-900 text-sm font-medium">{coctel}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Refrescos, Jugos y Otros - Derecha */}
-        <div className="space-y-4">
-          {/* Refrescos */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-blue-500">🥤</span> Refrescos
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {refrescos.map((refresco, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg text-center">
-                  <span className="text-gray-900 text-sm font-medium">{refresco}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Jugos */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-orange-500">🧃</span> Jugos
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {jugos.map((jugo, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg text-center">
-                  <span className="text-gray-900 text-sm font-medium">{jugo}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Otros */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-purple-500">✨</span> Otros
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {otros.map((otro, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg text-center">
-                  <span className="text-gray-900 text-sm font-medium">{otro}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
+        </>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -1906,18 +2050,21 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
 
   // Componente para botones Sí/No mejorados
   const ToggleButton = ({ label, value, onChange, disabled }) => (
-    <div className="flex items-center justify-between p-4 bg-card rounded-lg border">
-      <span className="text-base font-medium">{label}</span>
-      <div className="flex gap-2">
+    <div className={cn(
+      "flex items-center gap-2",
+      label && "justify-between"
+    )}>
+      {label && <span className="text-xs font-medium text-neutral-400">{label}</span>}
+      <div className="flex gap-1.5">
         <button
           type="button"
           onClick={() => onChange(true)}
           disabled={disabled}
           className={cn(
-            "px-6 py-2 rounded-lg font-semibold transition-all duration-200 min-w-[80px]",
+            "px-3 py-1 rounded-md text-xs font-medium transition-all duration-200 min-w-[50px]",
             value === true
-              ? "bg-green-500 text-white shadow-lg scale-105"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
+              ? "bg-green-500 text-white"
+              : "bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 border border-white/5"
           )}
         >
           Sí
@@ -1927,10 +2074,10 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
           onClick={() => onChange(false)}
           disabled={disabled}
           className={cn(
-            "px-6 py-2 rounded-lg font-semibold transition-all duration-200 min-w-[80px]",
+            "px-3 py-1 rounded-md text-xs font-medium transition-all duration-200 min-w-[50px]",
             value === false
-              ? "bg-red-500 text-white shadow-lg scale-105"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
+              ? "bg-red-500 text-white"
+              : "bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 border border-white/5"
           )}
         >
           No
@@ -1944,260 +2091,230 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
     switch (pasoActual) {
       case 1: // Información General
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 1: Información General</h3>
-              <p className="text-muted-foreground">Completa la información adicional sobre tu evento</p>
+          <div className="space-y-8">
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 1: Información General</h3>
+              <p className="text-xl text-neutral-400">Completa la información adicional sobre tu evento</p>
             </div>
             
             {/* Limosina (solo si está contratada) */}
             {tieneLimosina && (
-              <Card className="bg-blue-50/50 border-blue-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Car className="w-6 h-6 text-blue-600" />
-                    Servicio de Limosina
-                  </CardTitle>
-                  <CardDescription>
-                    Indica la hora en que deseas que la limosina te recoga
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div>
-                    <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      Hora de Recogida
-                    </label>
-                    <input
-                      type="time"
-                      value={datos.hora_limosina}
-                      onChange={(e) => setDatos({ ...datos, hora_limosina: e.target.value })}
-                      disabled={estaBloqueado}
-                      className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      💡 Esta hora puede ser ajustada por tu asesor según las necesidades del evento
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Car className="w-6 h-6 text-blue-400" />
+                  <h4 className="text-xl font-bold text-white">Servicio de Limosina</h4>
+                </div>
+                <p className="text-neutral-400 mb-4">
+                  Indica la hora en que deseas que la limosina te recoga
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Hora de Recogida
+                  </label>
+                  <input
+                    type="time"
+                    value={datos.hora_limosina}
+                    onChange={(e) => setDatos({ ...datos, hora_limosina: e.target.value })}
+                    disabled={estaBloqueado}
+                    className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white disabled:bg-neutral-700"
+                  />
+                  <p className="text-xs text-neutral-400 mt-2">
+                    💡 Esta hora puede ser ajustada por tu asesor según las necesidades del evento
+                  </p>
+                </div>
+              </div>
             )}
 
             {/* Vestido de la niña (solo si es 15 años) */}
             {esQuinceanera && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Vestido de la Quinceañera</CardTitle>
-                  <CardDescription>
-                    Describe el vestido o estilo que llevará la quinceañera
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <input
-                    type="text"
-                    value={datos.vestido_nina}
-                    onChange={(e) => setDatos({ ...datos, vestido_nina: e.target.value })}
-                    disabled={estaBloqueado}
-                    placeholder="Ej: Vestido largo blanco con detalles dorados, estilo princesa..."
-                    className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
-                  />
-                </CardContent>
-              </Card>
+              <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6">
+                <h4 className="text-lg font-bold text-white mb-2">Vestido de la Quinceañera</h4>
+                <p className="text-neutral-400 mb-4 text-sm">
+                  Describe el vestido o estilo que llevará la quinceañera
+                </p>
+                <input
+                  type="text"
+                  value={datos.vestido_nina}
+                  onChange={(e) => setDatos({ ...datos, vestido_nina: e.target.value })}
+                  disabled={estaBloqueado}
+                  placeholder="Ej: Vestido largo blanco con detalles dorados, estilo princesa..."
+                  className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-900 text-white placeholder:text-neutral-500 disabled:bg-neutral-700"
+                />
+              </div>
             )}
 
             {/* Items Especiales */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Items Especiales que Traerás</CardTitle>
-                <CardDescription>
-                  Indica cualquier elemento especial que planeas traer al evento
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <textarea
-                  value={datos.items_especiales}
-                  onChange={(e) => setDatos({ ...datos, items_especiales: e.target.value })}
-                  disabled={estaBloqueado}
-                  rows={4}
-                  placeholder="Ej: Flores, recuerdos, fotos, decoración especial, elementos personales..."
-                  className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted resize-none"
-                />
-              </CardContent>
-            </Card>
+            <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2">Items Especiales que Traerás</h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                Indica cualquier elemento especial que planeas traer al evento
+              </p>
+              <textarea
+                value={datos.items_especiales}
+                onChange={(e) => setDatos({ ...datos, items_especiales: e.target.value })}
+                disabled={estaBloqueado}
+                rows={4}
+                placeholder="Ej: Flores, recuerdos, fotos, decoración especial, elementos personales..."
+                className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-900 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 resize-none"
+              />
+            </div>
 
             {/* Sorpresas Planeadas */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Sorpresas Planeadas</CardTitle>
-                <CardDescription>
-                  Describe cualquier sorpresa especial que estés planeando para el evento
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <textarea
-                  value={datos.sorpresas_planeadas}
-                  onChange={(e) => setDatos({ ...datos, sorpresas_planeadas: e.target.value })}
-                  disabled={estaBloqueado}
-                  rows={4}
-                  placeholder="Ej: Sorpresa de video, presentación especial, sorpresa para los padres..."
-                  className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted resize-none"
-                />
-              </CardContent>
-            </Card>
+            <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2">Sorpresas Planeadas</h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                Describe cualquier sorpresa especial que estés planeando para el evento
+              </p>
+              <textarea
+                value={datos.sorpresas_planeadas}
+                onChange={(e) => setDatos({ ...datos, sorpresas_planeadas: e.target.value })}
+                disabled={estaBloqueado}
+                rows={4}
+                placeholder="Ej: Sorpresa de video, presentación especial, sorpresa para los padres..."
+                className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-900 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 resize-none"
+              />
+            </div>
 
             {/* Observaciones Adicionales */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Observaciones Adicionales</CardTitle>
-                <CardDescription>
-                  Cualquier otra observación o detalle que quieras comunicar
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <textarea
-                  value={datos.observaciones_adicionales}
-                  onChange={(e) => setDatos({ ...datos, observaciones_adicionales: e.target.value })}
-                  disabled={estaBloqueado}
-                  rows={4}
-                  placeholder="Cualquier observación o detalle adicional que quieras comunicar..."
-                  className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted resize-none"
-                />
-              </CardContent>
-            </Card>
+            <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2">Observaciones Adicionales</h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                Cualquier otra observación o detalle que quieras comunicar
+              </p>
+              <textarea
+                value={datos.observaciones_adicionales}
+                onChange={(e) => setDatos({ ...datos, observaciones_adicionales: e.target.value })}
+                disabled={estaBloqueado}
+                rows={4}
+                placeholder="Cualquier observación o detalle adicional que quieras comunicar..."
+                className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-900 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 resize-none"
+              />
+            </div>
           </div>
         );
 
       case 2: // Protocolo Básico
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 2: Protocolo Básico</h3>
-              <p className="text-muted-foreground">Completa la información básica del protocolo del evento</p>
+          <div className="space-y-8">
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 2: Protocolo Básico</h3>
+              <p className="text-xl text-neutral-400">Completa la información básica del protocolo del evento</p>
             </div>
 
             {/* Hora de Apertura */}
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  🕐 Hora de Apertura del Salón
-                </CardTitle>
-                <CardDescription>
-                  Hora en que se abrirá el salón para que los invitados puedan ingresar
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <input
-                  type="time"
-                  value={datos.protocolo?.hora_apertura || ''}
-                  onChange={(e) => actualizarProtocolo('hora_apertura', e.target.value)}
-                  disabled={estaBloqueado}
-                  className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
-                />
-              </CardContent>
-            </Card>
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                🕐 Hora de Apertura del Salón
+              </h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                Hora en que se abrirá el salón para que los invitados puedan ingresar
+              </p>
+              <input
+                type="time"
+                value={datos.protocolo?.hora_apertura || ''}
+                onChange={(e) => actualizarProtocolo('hora_apertura', e.target.value)}
+                disabled={estaBloqueado}
+                className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white disabled:bg-neutral-700"
+              />
+            </div>
 
             {/* Anuncio de Padres */}
-            <Card className="bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  👨‍👩‍👧 Anuncio de Padres
-                </CardTitle>
-                <CardDescription>
-                  Información sobre el anuncio de entrada de los padres
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="bg-pink-500/10 border border-pink-500/30 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                👨‍👩‍👧 Anuncio de Padres
+              </h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                Información sobre el anuncio de entrada de los padres
+              </p>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Hora del Anuncio *</label>
+                  <label className="block text-sm font-medium text-white mb-2">Hora del Anuncio *</label>
                   <input
                     type="time"
                     value={datos.protocolo?.hora_anuncio_padres || ''}
                     onChange={(e) => actualizarProtocolo('hora_anuncio_padres', e.target.value)}
                     disabled={estaBloqueado}
-                    className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                    className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white disabled:bg-neutral-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Nombres de los Padres *</label>
+                  <label className="block text-sm font-medium text-white mb-2">Nombres de los Padres *</label>
                   <input
                     type="text"
                     value={datos.protocolo?.nombres_padres || ''}
                     onChange={(e) => actualizarProtocolo('nombres_padres', e.target.value)}
                     disabled={estaBloqueado}
                     placeholder="Ej: Sr. Yael y Sra. Yaneli"
-                    className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                    className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Anuncio de Homenajeado */}
-            <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  ⭐ Anuncio del Homenajeado
-                </CardTitle>
-                <CardDescription>
-                  Información sobre el anuncio de entrada del homenajeado
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                ⭐ Anuncio del Homenajeado
+              </h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                Información sobre el anuncio de entrada del homenajeado
+              </p>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Hora del Anuncio *</label>
+                  <label className="block text-sm font-medium text-white mb-2">Hora del Anuncio *</label>
                   <input
                     type="time"
                     value={datos.protocolo?.hora_anuncio_homenajeado || ''}
                     onChange={(e) => actualizarProtocolo('hora_anuncio_homenajeado', e.target.value)}
                     disabled={estaBloqueado}
-                    className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                    className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white disabled:bg-neutral-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Nombre del Homenajeado *</label>
+                  <label className="block text-sm font-medium text-white mb-2">Nombre del Homenajeado *</label>
                   <input
                     type="text"
                     value={datos.protocolo?.nombre_homenajeado || contrato?.homenajeado || ''}
                     onChange={(e) => actualizarProtocolo('nombre_homenajeado', e.target.value)}
                     disabled={estaBloqueado}
                     placeholder="Nombre completo"
-                    className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                    className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Acompañado de (opcional)</label>
+                  <label className="block text-sm font-medium text-white mb-2">Acompañado de (opcional)</label>
                   <input
                     type="text"
                     value={datos.protocolo?.acompanantes || ''}
                     onChange={(e) => actualizarProtocolo('acompanantes', e.target.value)}
                     disabled={estaBloqueado}
                     placeholder="Ej: Sus hermanos Yoel y Sebastian"
-                    className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                    className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-800 text-white placeholder:text-neutral-500 disabled:bg-neutral-700"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         );
 
       case 3: // Actividades Especiales
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 3: Actividades Especiales</h3>
-              <p className="text-muted-foreground">Selecciona las actividades especiales que deseas incluir en el protocolo</p>
+          <div className="space-y-8">
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 3: Actividades Especiales</h3>
+              <p className="text-xl text-neutral-400">Selecciona las actividades especiales que deseas incluir en el protocolo</p>
             </div>
 
             {/* Cambio de Zapatilla */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  👠 Cambio de Zapatilla
-                </CardTitle>
-                <CardDescription>
-                  ¿Deseas incluir el cambio de zapatilla en el protocolo?
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                👠 Cambio de Zapatilla
+              </h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                ¿Deseas incluir el cambio de zapatilla en el protocolo?
+              </p>
+              <div className="space-y-4">
                 <ToggleButton
                   label="¿Incluir cambio de zapatilla?"
                   value={datos.protocolo?.cambio_zapatilla}
@@ -2206,31 +2323,29 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
                 />
                 {datos.protocolo?.cambio_zapatilla === true && (
                   <div>
-                    <label className="block text-sm font-medium mb-2">A cargo de</label>
+                    <label className="block text-sm font-medium text-white mb-2">A cargo de</label>
                     <input
                       type="text"
                       value={datos.protocolo?.cambio_zapatilla_a_cargo || 'El papá'}
                       onChange={(e) => actualizarProtocolo('cambio_zapatilla_a_cargo', e.target.value)}
                       disabled={estaBloqueado}
                       placeholder="Ej: El papá"
-                      className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                      className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-900 text-white placeholder:text-neutral-500 disabled:bg-neutral-700"
                     />
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Bailes Especiales */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  💃 Bailes Especiales
-                </CardTitle>
-                <CardDescription>
-                  Selecciona los bailes especiales que deseas incluir en el protocolo
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                💃 Bailes Especiales
+              </h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                Selecciona los bailes especiales que deseas incluir en el protocolo
+              </p>
+              <div className="space-y-4">
                 <ToggleButton
                   label="Baile con Papá"
                   value={datos.protocolo?.baile_papa}
@@ -2243,53 +2358,47 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
                   onChange={(val) => actualizarProtocolo('baile_mama', val)}
                   disabled={estaBloqueado}
                 />
-                <div className="pt-4 border-t">
-                  <label className="block text-sm font-medium mb-2">Otros Bailes (Opcional)</label>
+                <div className="pt-4 border-t border-white/10">
+                  <label className="block text-sm font-medium text-white mb-2">Otros Bailes (Opcional)</label>
                   <textarea
                     value={datos.protocolo?.bailes_adicionales || ''}
                     onChange={(e) => actualizarProtocolo('bailes_adicionales', e.target.value)}
                     disabled={estaBloqueado}
                     rows={3}
                     placeholder="Ej: Baile con hermano Yoel, Baile con hermano Sebastian..."
-                    className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted resize-none"
+                    className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-900 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 resize-none"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Ceremonia de las 15 Velas */}
             {esQuinceanera && (
-              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    🕯️ Ceremonia de las 15 Velas
-                  </CardTitle>
-                  <CardDescription>
-                    ¿Deseas incluir la ceremonia tradicional de las 15 velas?
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ToggleButton
-                    label="¿Incluir ceremonia de las 15 velas?"
-                    value={datos.protocolo?.ceremonia_velas}
-                    onChange={(val) => actualizarProtocolo('ceremonia_velas', val)}
-                    disabled={estaBloqueado}
-                  />
-                </CardContent>
-              </Card>
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-6">
+                <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                  🕯️ Ceremonia de las 15 Velas
+                </h4>
+                <p className="text-neutral-400 mb-4 text-sm">
+                  ¿Deseas incluir la ceremonia tradicional de las 15 velas?
+                </p>
+                <ToggleButton
+                  label="¿Incluir ceremonia de las 15 velas?"
+                  value={datos.protocolo?.ceremonia_velas}
+                  onChange={(val) => actualizarProtocolo('ceremonia_velas', val)}
+                  disabled={estaBloqueado}
+                />
+              </div>
             )}
 
             {/* Palabras / Brindis */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  🥂 Palabras / Brindis
-                </CardTitle>
-                <CardDescription>
-                  ¿Deseas incluir un brindis o palabras especiales en el protocolo?
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                🥂 Palabras / Brindis
+              </h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                ¿Deseas incluir un brindis o palabras especiales en el protocolo?
+              </p>
+              <div className="space-y-4">
                 <ToggleButton
                   label="¿Incluir brindis?"
                   value={datos.protocolo?.brindis}
@@ -2298,39 +2407,37 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
                 />
                 {datos.protocolo?.brindis === true && (
                   <div>
-                    <label className="block text-sm font-medium mb-2">A cargo de (opcional)</label>
+                    <label className="block text-sm font-medium text-white mb-2">A cargo de (opcional)</label>
                     <input
                       type="text"
                       value={datos.protocolo?.brindis_a_cargo || ''}
                       onChange={(e) => actualizarProtocolo('brindis_a_cargo', e.target.value)}
                       disabled={estaBloqueado}
                       placeholder="Ej: El padrino"
-                      className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                      className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-900 text-white placeholder:text-neutral-500 disabled:bg-neutral-700"
                     />
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         );
 
       case 4: // Horarios de Actividades
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 4: Horarios de Actividades</h3>
-              <p className="text-muted-foreground">Indica los horarios aproximados para las diferentes actividades del evento</p>
+          <div className="space-y-8">
+            <div className="mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 4: Horarios de Actividades</h3>
+              <p className="text-xl text-neutral-400">Indica los horarios aproximados para las diferentes actividades del evento</p>
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  📅 Horarios de Actividades
-                </CardTitle>
-                <CardDescription>
-                  Completa los horarios para cada actividad (todos son opcionales)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6">
+              <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                📅 Horarios de Actividades
+              </h4>
+              <p className="text-neutral-400 mb-4 text-sm">
+                Completa los horarios para cada actividad (todos son opcionales)
+              </p>
+              <div className="space-y-4">
                 {[
                   { key: 'hora_fotos', label: 'Momento Social / Fotos', icon: '📸' },
                   { key: 'hora_cena', label: 'Cena / Proyección de Video', icon: '🍽️' },
@@ -2340,7 +2447,7 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
                   { key: 'hora_fin', label: 'Fin del Evento', icon: '🏁' },
                 ].map((actividad) => (
                   <div key={actividad.key}>
-                    <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                    <label className="block text-sm font-medium text-white mb-2 flex items-center gap-2">
                       <span>{actividad.icon}</span>
                       {actividad.label}
                     </label>
@@ -2349,12 +2456,12 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
                       value={datos.protocolo?.[actividad.key] || ''}
                       onChange={(e) => actualizarProtocolo(actividad.key, e.target.value)}
                       disabled={estaBloqueado}
-                      className="w-full px-4 py-3 text-base border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none bg-background disabled:bg-muted"
+                      className="w-full px-4 py-3 text-base border border-white/10 rounded-xl focus:ring-2 focus:ring-white focus:border-transparent outline-none bg-neutral-900 text-white disabled:bg-neutral-700"
                     />
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         );
 
@@ -2363,125 +2470,463 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
     }
   };
 
+  // Formatear hora para mostrar
+  const formatearHora = (hora) => {
+    if (!hora) return '--:-- --';
+    const [h, m] = hora.split(':');
+    const hora12 = parseInt(h);
+    const ampm = hora12 >= 12 ? 'PM' : 'AM';
+    const hora12h = hora12 % 12 || 12;
+    return `${hora12h.toString().padStart(2, '0')}:${m} ${ampm}`;
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-          <Settings className="w-8 h-8 text-gray-600" />
-        </div>
-        <h2 className="text-3xl font-bold mb-2">Detalles Finales</h2>
-        <p className="text-muted-foreground">
-          Completa cada paso para finalizar los detalles de tu evento
-        </p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="max-w-6xl mx-auto"
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-xs font-medium border border-green-500/20">
+          Opcional
+        </span>
       </div>
+      <h2 className="text-4xl font-bold text-white mb-4">Detalles Finales</h2>
+      <p className="text-xl text-neutral-400 max-w-2xl mb-8">
+        Completa cada paso para finalizar los detalles de tu evento.
+      </p>
 
-      {/* Indicador de Pasos Horizontal */}
-      <Card>
-        <CardContent className="pt-6">
+      {/* Progress Steps */}
+      <div className="mb-8 p-6 rounded-xl bg-neutral-900 border border-white/10">
           <div className="flex items-center justify-between">
-            {PASOS.map((paso, index) => (
-              <div key={paso.numero} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <button
-                    type="button"
-                    onClick={() => irAPaso(paso.numero)}
-                    disabled={estaBloqueado || (paso.numero > pasoActual && !pasoCompleto(paso.numero - 1))}
-                    className={cn(
-                      "relative h-12 w-12 rounded-full border-2 transition-all font-semibold text-sm",
-                      paso.numero === pasoActual
-                        ? "bg-primary border-primary text-primary-foreground shadow-lg scale-110"
-                        : pasoCompleto(paso.numero)
-                        ? "bg-green-50 border-green-500 text-green-700 hover:scale-105 cursor-pointer"
-                        : paso.numero < pasoActual
-                        ? "bg-muted border-muted-foreground/30 text-muted-foreground hover:scale-105 cursor-pointer"
-                        : "bg-background border-border text-muted-foreground cursor-not-allowed opacity-50"
-                    )}
-                  >
-                    {pasoCompleto(paso.numero) && paso.numero !== pasoActual ? (
-                      <CheckCircle2 className="h-6 w-6 mx-auto" />
-                    ) : (
-                      <span>{paso.numero}</span>
-                    )}
-                  </button>
-                  <span className={cn(
-                    "mt-2 text-xs font-medium text-center max-w-[80px]",
-                    paso.numero === pasoActual ? "text-primary font-semibold" : "text-muted-foreground"
-                  )}>
-                    {paso.titulo}
-                  </span>
-                </div>
-                {index < PASOS.length - 1 && (
-                  <div className={cn(
-                    "flex-1 h-0.5 mx-2 transition-all",
-                    pasoCompleto(paso.numero) ? "bg-green-500" : "bg-muted"
-                  )} />
-                )}
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2">
+                <Check size={20} />
               </div>
-            ))}
+              <span className="text-xs text-neutral-400">Información...</span>
+            </div>
+            <div className="h-0.5 bg-green-500 flex-1 mx-2" />
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2">
+                <Check size={20} />
+              </div>
+              <span className="text-xs text-neutral-400">Protocolo B...</span>
+            </div>
+            <div className="h-0.5 bg-green-500 flex-1 mx-2" />
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2">
+                <Check size={20} />
+              </div>
+              <span className="text-xs text-neutral-400">Actividades...</span>
+            </div>
+            <div className="h-0.5 bg-neutral-700 flex-1 mx-2" />
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center text-white mb-2">
+                4
+              </div>
+              <span className="text-xs text-neutral-400">Horarios</span>
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Contenido del Paso Actual */}
-      <Card className="min-h-[500px]">
-        <CardContent className="pt-8">
-          {renderPasoActual()}
-        </CardContent>
-      </Card>
-
-      {/* Navegación */}
-      <div className="flex items-center justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={retrocederPaso}
-          disabled={pasoActual === 1 || estaBloqueado}
-          size="lg"
-        >
-          <ChevronLeft className="w-5 h-5 mr-2" />
-          Anterior
-        </Button>
-
-        <div className="flex gap-2">
-          {pasoActual < PASOS.length ? (
-            <Button
-              type="button"
-              onClick={avanzarPaso}
-              disabled={!pasoCompleto(pasoActual) || estaBloqueado}
-              size="lg"
-            >
-              Siguiente
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </Button>
-          ) : (
-            <Button
-              type="submit"
-              disabled={guardando || estaBloqueado}
-              size="lg"
-              className="min-w-[200px]"
-            >
-              {guardando ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Guardando...
-                </>
-              ) : estaBloqueado ? (
-                <>
-                  <Lock className="w-5 h-5 mr-2" />
-                  Bloqueado
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5 mr-2" />
-                  Guardar Cambios
-                </>
-              )}
-            </Button>
-          )}
         </div>
-      </div>
-    </form>
+
+        {/* Bento Grid for Final Details */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(200px,auto)] mb-8">
+          {/* Paso 1: Información General - Large Card */}
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 md:col-span-2 row-span-1 transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img
+                src="https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?q=80&w=2000&auto=format&fit=crop"
+                alt="Información General"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </div>
+            <div className="relative z-10 h-full w-full p-6">
+              <div className="flex flex-col h-full">
+                <h3 className="text-sm text-neutral-400 mb-4 uppercase tracking-wider font-medium">Paso 1: Información General</h3>
+                <div className="grid grid-cols-1 gap-4 flex-1">
+                  <div>
+                    <div className="text-xs text-neutral-400 mb-1 font-medium">Items Especiales que Traerás</div>
+                    {!estaBloqueado ? (
+                      <textarea
+                        value={datos.items_especiales}
+                        onChange={(e) => setDatos({ ...datos, items_especiales: e.target.value })}
+                        onBlur={handleSubmit}
+                        placeholder="Ej: Flores, recuerdos, fotos..."
+                        className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
+                        rows={2}
+                      />
+                    ) : (
+                      <div className="text-sm text-white drop-shadow-sm">
+                        {datos.items_especiales || 'No especificado'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-neutral-400 mb-1 font-medium">Sorpresas Planeadas</div>
+                    {!estaBloqueado ? (
+                      <textarea
+                        value={datos.sorpresas_planeadas}
+                        onChange={(e) => setDatos({ ...datos, sorpresas_planeadas: e.target.value })}
+                        onBlur={handleSubmit}
+                        placeholder="Ej: Sorpresa de video, presentación especial..."
+                        className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
+                        rows={2}
+                      />
+                    ) : (
+                      <div className="text-sm text-white drop-shadow-sm">
+                        {datos.sorpresas_planeadas || 'No especificado'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-neutral-400 mb-1 font-medium">Observaciones Adicionales</div>
+                    {!estaBloqueado ? (
+                      <textarea
+                        value={datos.observaciones_adicionales}
+                        onChange={(e) => setDatos({ ...datos, observaciones_adicionales: e.target.value })}
+                        onBlur={handleSubmit}
+                        placeholder="Cualquier observación adicional..."
+                        className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
+                        rows={2}
+                      />
+                    ) : (
+                      <div className="text-sm text-white drop-shadow-sm">
+                        {datos.observaciones_adicionales || 'No especificado'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Paso 2: Protocolo Básico */}
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img
+                src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=2000&auto=format&fit=crop"
+                alt="Protocolo"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </div>
+            <div className="relative z-10 h-full w-full p-6">
+              <div className="flex flex-col h-full">
+                <h3 className="text-sm text-neutral-400 mb-3 uppercase tracking-wider font-medium">Paso 2: Protocolo Básico</h3>
+                <div className="space-y-3 flex-1">
+                  <div>
+                    <div className="text-xs text-neutral-400 mb-1 font-medium">🕐 Apertura del Salón</div>
+                    {!estaBloqueado ? (
+                      <input
+                        type="time"
+                        value={datos.protocolo?.hora_apertura || ''}
+                        onChange={(e) => {
+                          actualizarProtocolo('hora_apertura', e.target.value);
+                          setTimeout(() => handleSubmit(e), 500);
+                        }}
+                        className="w-full px-3 py-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                      />
+                    ) : (
+                      <div className="text-base font-bold text-white drop-shadow-sm">
+                        {formatearHora(datos.protocolo?.hora_apertura)}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-neutral-400 mb-1 font-medium">👨‍👩‍👧 Anuncio de Padres</div>
+                    {!estaBloqueado ? (
+                      <>
+                        <input
+                          type="time"
+                          value={datos.protocolo?.hora_anuncio_padres || ''}
+                          onChange={(e) => {
+                            actualizarProtocolo('hora_anuncio_padres', e.target.value);
+                            setTimeout(() => handleSubmit(e), 500);
+                          }}
+                          className="w-full px-3 py-2 mb-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={datos.protocolo?.nombres_padres || ''}
+                          onChange={(e) => {
+                            actualizarProtocolo('nombres_padres', e.target.value);
+                            setTimeout(() => handleSubmit(e), 500);
+                          }}
+                          placeholder="Nombres"
+                          className="w-full px-3 py-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-xs focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm text-white drop-shadow-sm">
+                          {formatearHora(datos.protocolo?.hora_anuncio_padres)}
+                        </div>
+                        <div className="text-xs text-neutral-300">
+                          {datos.protocolo?.nombres_padres || 'No especificado'}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-neutral-400 mb-1 font-medium">⭐ Anuncio Homenajeado</div>
+                    {!estaBloqueado ? (
+                      <>
+                        <input
+                          type="time"
+                          value={datos.protocolo?.hora_anuncio_homenajeado || ''}
+                          onChange={(e) => {
+                            actualizarProtocolo('hora_anuncio_homenajeado', e.target.value);
+                            setTimeout(() => handleSubmit(e), 500);
+                          }}
+                          className="w-full px-3 py-2 mb-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={datos.protocolo?.nombre_homenajeado || contrato?.homenajeado || ''}
+                          onChange={(e) => {
+                            actualizarProtocolo('nombre_homenajeado', e.target.value);
+                            setTimeout(() => handleSubmit(e), 500);
+                          }}
+                          placeholder="Nombre"
+                          className="w-full px-3 py-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-xs focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                        />
+                        {datos.protocolo?.acompanantes && (
+                          <div className="text-xs text-neutral-300 mt-1">
+                            ({datos.protocolo.acompanantes})
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm text-white drop-shadow-sm">
+                          {formatearHora(datos.protocolo?.hora_anuncio_homenajeado)}
+                        </div>
+                        <div className="text-xs text-neutral-300">
+                          {datos.protocolo?.nombre_homenajeado || contrato?.homenajeado || 'No especificado'}
+                          {datos.protocolo?.acompanantes && ` (${datos.protocolo.acompanantes})`}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Paso 3: Actividades Especiales - Large Card */}
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 md:col-span-2 row-span-1 transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img
+                src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?q=80&w=2000&auto=format&fit=crop"
+                alt="Actividades"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </div>
+            <div className="relative z-10 h-full w-full p-8">
+              <div className="flex flex-col h-full justify-center">
+                <h3 className="text-sm text-neutral-400 mb-6 uppercase tracking-wider font-medium text-center">Paso 3: Actividades Especiales</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 items-start">
+                  {/* Columna Izquierda: Bailes y Brindis */}
+                  <div className="flex flex-col space-y-4">
+                    {!estaBloqueado ? (
+                      <div className="space-y-4">
+                        <div className="flex flex-col space-y-2">
+                          <div className="text-xs text-neutral-400 font-medium">💃 Baile con Papá</div>
+                          <PremiumToggle
+                            label=""
+                            value={datos.protocolo?.baile_papa}
+                            onChange={(val) => {
+                              actualizarProtocolo('baile_papa', val);
+                              setTimeout(() => handleSubmit({ preventDefault: () => {} }), 500);
+                            }}
+                            disabled={estaBloqueado}
+                          />
+                        </div>
+                        <div className="flex flex-col space-y-2">
+                          <div className="text-xs text-neutral-400 font-medium">💃 Baile con Mamá</div>
+                          <PremiumToggle
+                            label=""
+                            value={datos.protocolo?.baile_mama}
+                            onChange={(val) => {
+                              actualizarProtocolo('baile_mama', val);
+                              setTimeout(() => handleSubmit({ preventDefault: () => {} }), 500);
+                            }}
+                            disabled={estaBloqueado}
+                          />
+                        </div>
+                        <div className="flex flex-col space-y-2">
+                          <div className="text-xs text-neutral-400 font-medium">🎤 Palabras / Brindis</div>
+                          <PremiumToggle
+                            label=""
+                            value={datos.protocolo?.brindis}
+                            onChange={(val) => {
+                              actualizarProtocolo('brindis', val);
+                              setTimeout(() => handleSubmit({ preventDefault: () => {} }), 500);
+                            }}
+                            disabled={estaBloqueado}
+                          />
+                          {datos.protocolo?.brindis === true && (
+                            <input
+                              type="text"
+                              value={datos.protocolo?.brindis_a_cargo || ''}
+                              onChange={(e) => {
+                                actualizarProtocolo('brindis_a_cargo', e.target.value);
+                                setTimeout(() => handleSubmit(e), 500);
+                              }}
+                              placeholder="A cargo de"
+                              className="w-full mt-2 px-3 py-2 bg-neutral-800/50 border border-white/5 rounded text-white placeholder:text-neutral-500 text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <div className="text-xs text-neutral-400 mb-2 font-medium">💃 Baile con Papá</div>
+                          <div className="text-sm text-white drop-shadow-sm">
+                            {datos.protocolo?.baile_papa ? '✓ Sí' : '✗ No'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-neutral-400 mb-2 font-medium">💃 Baile con Mamá</div>
+                          <div className="text-sm text-white drop-shadow-sm">
+                            {datos.protocolo?.baile_mama ? '✓ Sí' : '✗ No'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-neutral-400 mb-2 font-medium">🎤 Palabras / Brindis</div>
+                          <div className="text-sm text-white drop-shadow-sm mb-1">
+                            {datos.protocolo?.brindis ? '✓ Sí' : '✗ No'}
+                          </div>
+                          {datos.protocolo?.brindis && datos.protocolo?.brindis_a_cargo && (
+                            <div className="text-xs text-neutral-300">
+                              A cargo de: {datos.protocolo.brindis_a_cargo}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Columna Derecha: Cambio de Zapatilla y Otros Bailes */}
+                  <div className="flex flex-col space-y-4">
+                    <div className="flex flex-col space-y-2">
+                      <div className="text-xs text-neutral-400 font-medium">👠 Cambio de Zapatilla</div>
+                      {!estaBloqueado ? (
+                        <>
+                          <PremiumToggle
+                            label=""
+                            value={datos.protocolo?.cambio_zapatilla}
+                            onChange={(val) => {
+                              actualizarProtocolo('cambio_zapatilla', val);
+                              setTimeout(() => handleSubmit({ preventDefault: () => {} }), 500);
+                            }}
+                            disabled={estaBloqueado}
+                          />
+                          {datos.protocolo?.cambio_zapatilla === true && (
+                            <input
+                              type="text"
+                              value={datos.protocolo?.cambio_zapatilla_a_cargo || 'El papá'}
+                              onChange={(e) => {
+                                actualizarProtocolo('cambio_zapatilla_a_cargo', e.target.value);
+                                setTimeout(() => handleSubmit(e), 500);
+                              }}
+                              placeholder="A cargo de"
+                              className="w-full mt-2 px-3 py-2 bg-neutral-800/50 border border-white/5 rounded text-white placeholder:text-neutral-500 text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                            />
+                          )}
+                        </>
+                      ) : (
+                        <div>
+                          <div className="text-sm text-white drop-shadow-sm mb-1">
+                            {datos.protocolo?.cambio_zapatilla ? '✓ Sí' : '✗ No'}
+                          </div>
+                          {datos.protocolo?.cambio_zapatilla && datos.protocolo?.cambio_zapatilla_a_cargo && (
+                            <div className="text-xs text-neutral-300">
+                              A cargo de: {datos.protocolo.cambio_zapatilla_a_cargo}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col space-y-2 mt-4">
+                      <div className="text-xs text-neutral-400 font-medium">Otros Bailes</div>
+                      {!estaBloqueado ? (
+                        <textarea
+                          value={datos.protocolo?.bailes_adicionales || ''}
+                          onChange={(e) => actualizarProtocolo('bailes_adicionales', e.target.value)}
+                          onBlur={handleSubmit}
+                          placeholder="Ej: Baile con hermano..."
+                          className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
+                          rows={3}
+                        />
+                      ) : (
+                        <div className="text-xs text-neutral-300">
+                          {datos.protocolo?.bailes_adicionales || 'No especificado'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Paso 4: Horarios de Actividades */}
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 w-full h-full z-0">
+              <img
+                src="https://images.unsplash.com/photo-1495364141860-b0d03eccd065?q=80&w=2000&auto=format&fit=crop"
+                alt="Horarios"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </div>
+            <div className="relative z-10 h-full w-full p-6">
+              <div className="flex flex-col h-full">
+                <h3 className="text-sm text-neutral-400 mb-3 uppercase tracking-wider font-medium">Paso 4: Horarios</h3>
+                <div className="space-y-2 flex-1">
+                  {[
+                    { key: 'hora_fotos', label: '📸 Momento Social / Fotos' },
+                    { key: 'hora_cena', label: '🍽️ Cena / Video' },
+                    { key: 'hora_photobooth', label: '📷 Photobooth' },
+                    { key: 'hora_loca', label: '🎊 Hora Loca' },
+                    { key: 'hora_happy_birthday', label: '🎂 Happy Birthday' },
+                    { key: 'hora_fin', label: '🏁 Fin del Evento' },
+                  ].map((actividad, index, array) => (
+                    <div
+                      key={actividad.key}
+                      className={cn(
+                        "flex justify-between items-center text-xs",
+                        index < array.length - 1 && "border-b border-white/10 pb-1"
+                      )}
+                    >
+                      <span className="text-neutral-400">{actividad.label}</span>
+                      {!estaBloqueado ? (
+                        <input
+                          type="time"
+                          value={datos.protocolo?.[actividad.key] || ''}
+                          onChange={(e) => {
+                            actualizarProtocolo(actividad.key, e.target.value);
+                            setTimeout(() => handleSubmit(e), 500);
+                          }}
+                          className="px-3 py-1.5 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-xs font-mono focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none w-24"
+                        />
+                      ) : (
+                        <span className="font-mono text-neutral-500">
+                          {formatearHora(datos.protocolo?.[actividad.key])}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
   );
 }
 
