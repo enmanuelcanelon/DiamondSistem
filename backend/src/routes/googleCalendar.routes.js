@@ -72,8 +72,11 @@ router.get('/auth/callback', async (req, res, next) => {
     }
 
     // Verificar que el vendedor existe
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId }
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      }
     });
 
     if (!vendedor) {
@@ -92,7 +95,7 @@ router.get('/auth/callback', async (req, res, next) => {
     const expiryDate = tokens.expiry_date ? new Date(tokens.expiry_date) : new Date(Date.now() + 3600 * 1000);
 
     // Guardar tokens y calendar ID en la base de datos
-    await prisma.vendedores.update({
+    await prisma.usuarios.update({
       where: { id: vendedorId },
       data: {
         google_access_token: accessTokenEncriptado,
@@ -122,7 +125,7 @@ router.post('/disconnect', authenticate, requireVendedor, async (req, res, next)
   try {
     const vendedorId = req.user.id;
 
-    await prisma.vendedores.update({
+    await prisma.usuarios.update({
       where: { id: vendedorId },
       data: {
         google_access_token: null,
@@ -154,8 +157,11 @@ router.get('/status', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const vendedorId = req.user.id;
 
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId },
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
       select: {
         google_calendar_sync_enabled: true,
         google_calendar_id: true,
@@ -691,8 +697,11 @@ router.post('/contratos/:contratoId/agregar', authenticate, requireVendedor, asy
     }
 
     // Verificar que el vendedor tenga Google Calendar habilitado
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId },
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
       select: {
         google_calendar_sync_enabled: true,
         google_calendar_id: true

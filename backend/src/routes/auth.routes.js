@@ -27,20 +27,12 @@ router.post('/login/vendedor', async (req, res, next) => {
     }
 
     // Buscar usuario con rol vendedor
-    const usuario = await prisma.usuarios.findFirst({
+    const vendedor = await prisma.usuarios.findFirst({
       where: { 
         codigo_usuario: codigo_vendedor,
         rol: 'vendedor'
       }
     });
-
-    // Si no se encuentra en usuarios, buscar en tabla antigua (compatibilidad)
-    let vendedor = usuario;
-    if (!vendedor) {
-      vendedor = await prisma.vendedores.findUnique({
-        where: { codigo_vendedor }
-      });
-    }
 
     if (!vendedor) {
       throw new UnauthorizedError('Credenciales inválidas');
@@ -58,8 +50,8 @@ router.post('/login/vendedor', async (req, res, next) => {
       throw new UnauthorizedError('Credenciales inválidas');
     }
 
-    // Generar token (usar función unificada si es de tabla usuarios)
-    const token = usuario ? generateUsuarioToken(usuario) : generateVendedorToken(vendedor);
+    // Generar token usando función unificada
+    const token = generateUsuarioToken(vendedor);
 
     // Remover password del response
     const { password_hash, ...vendedorData } = vendedor;
@@ -375,33 +367,38 @@ router.post('/register/vendedor', authenticate, requireVendedor, async (req, res
     }
 
     // Verificar si el email ya existe
-    const existingVendedor = await prisma.vendedores.findUnique({
-      where: { email }
+    const existingUsuario = await prisma.usuarios.findFirst({
+      where: { 
+        email,
+        rol: 'vendedor'
+      }
     });
 
-    if (existingVendedor) {
+    if (existingUsuario) {
       throw new ValidationError('El email ya está registrado');
     }
 
     // Obtener último ID para generar código
-    const ultimoVendedor = await prisma.vendedores.findFirst({
+    const ultimoUsuario = await prisma.usuarios.findFirst({
+      where: { rol: 'vendedor' },
       orderBy: { id: 'desc' }
     });
 
     const { generarCodigoVendedor } = require('../utils/codeGenerator');
-    const codigo_vendedor = generarCodigoVendedor(ultimoVendedor?.id || 0);
+    const codigo_usuario = generarCodigoVendedor(ultimoUsuario?.id || 0);
 
     // Hashear password
     const password_hash = await hashPassword(password);
 
-    // Crear vendedor
-    const vendedor = await prisma.vendedores.create({
+    // Crear vendedor en tabla usuarios
+    const vendedor = await prisma.usuarios.create({
       data: {
         nombre_completo,
-        codigo_vendedor,
+        codigo_usuario,
         email,
         telefono,
         password_hash,
+        rol: 'vendedor',
         comision_porcentaje: comision_porcentaje || 3.00,
         activo: true
       }
@@ -447,35 +444,8 @@ router.get('/me', authenticate, async (req, res, next) => {
         }
       });
 
-      // Si no está en usuarios, buscar en tabla antigua (compatibilidad)
       if (!usuario) {
-        const vendedor = await prisma.vendedores.findUnique({
-          where: { id: req.user.id },
-          select: {
-            id: true,
-            nombre_completo: true,
-            codigo_vendedor: true,
-            email: true,
-            telefono: true,
-            comision_porcentaje: true,
-            total_ventas: true,
-            total_comisiones: true,
-            activo: true,
-            fecha_registro: true
-          }
-        });
-
-        if (!vendedor) {
-          throw new NotFoundError('Vendedor no encontrado');
-        }
-
-        return res.json({
-          success: true,
-          user: {
-            ...vendedor,
-            tipo: 'vendedor'
-          }
-        });
+        throw new NotFoundError('Vendedor no encontrado');
       }
 
       res.json({
@@ -702,10 +672,17 @@ router.post('/change-password', authenticate, async (req, res, next) => {
       throw new ValidationError('Contraseña nueva débil', passwordValidation.errors);
     }
 
-    // Obtener vendedor
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: req.user.id }
+    // Obtener usuario vendedor
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: req.user.id,
+        rol: 'vendedor'
+      }
     });
+
+    if (!vendedor) {
+      throw new NotFoundError('Vendedor no encontrado');
+    }
 
     // Verificar contraseña actual
     const isValidPassword = await comparePassword(password_actual, vendedor.password_hash);
@@ -718,7 +695,7 @@ router.post('/change-password', authenticate, async (req, res, next) => {
     const password_hash = await hashPassword(password_nueva);
 
     // Actualizar contraseña
-    await prisma.vendedores.update({
+    await prisma.usuarios.update({
       where: { id: req.user.id },
       data: { password_hash }
     });

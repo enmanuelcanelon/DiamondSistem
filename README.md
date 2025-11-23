@@ -691,27 +691,34 @@ Password: Inventario123!
 
 ---
 
-## 🆕 Cambios Recientes (Noviembre 2025)
+## 🆕 Cambios Recientes (Enero 2025)
 
-### Generación de PDFs Mejorada
-- ✅ **Templates HTML personalizados** para Diamond y Revolution
-- ✅ **Fuente Poppins** implementada en PDFs de Diamond
-- ✅ **Texto blanco** en PDFs para mejor legibilidad sobre fondos oscuros
-- ✅ **Layout optimizado** para contratos de Revolution (página 1 ajustada)
-- ✅ **Fondos personalizados** por compañía (Diamond y Revolution)
+### Migración de Usuarios Unificada
+- ✅ **Tabla `usuarios` unificada**: Consolidación de todas las tablas de usuarios (`vendedores`, `gerentes`, `managers`, `usuarios_inventario`) en una sola tabla con sistema de roles
+- ✅ **Sistema de roles**: `vendedor`, `gerente`, `manager`, `inventario`
+- ✅ **Migración completa**: Todas las rutas backend migradas a usar `usuarios` con filtro `rol`
+- ✅ **Compatibilidad**: Estructura adaptada para mantener compatibilidad con frontend existente
 
-### Scripts de Utilidad
-- ✅ **Script de limpieza completa**: `limpiar_todo_completo.js`
-  - Elimina todos los datos (clientes, contratos, ofertas, leaks)
-  - Elimina PDFs guardados en base de datos
-  - Reinicia todas las secuencias de IDs a 0
-  - Prepara la base de datos para empezar desde cero
+### Optimizaciones de Rendimiento
+- ✅ **Índices compuestos**: Agregados en tabla `mensajes` para mejorar queries
+- ✅ **Connection pooling**: Optimizado para Supabase (4 conexiones máximo)
+- ✅ **Caché en memoria**: Implementado para endpoints de estadísticas
+- ✅ **Batch queries**: Mensajes no leídos obtenidos en una sola query
+- ✅ **Queries optimizadas**: Uso de `select` en lugar de `include` en Prisma
+- ✅ **RefetchInterval reducido**: De 30s a 2-5 minutos para datos menos críticos
 
-### Mejoras de Layout
-- ✅ **Contratos Revolution**: Página 1 ajustada para que todo quepa en una sola página
-- ✅ Tamaños de fuente optimizados
-- ✅ Espaciados ajustados
-- ✅ Mejor organización del contenido
+### Mejoras de Funcionalidad
+- ✅ **Buzón de mensajes**: Nueva sección en gestión de eventos para ver todos los chats
+- ✅ **Click Outside**: Funcionalidad aplicada a todos los dropdowns y modales
+- ✅ **Detalles en leads**: Campo "Detalles" agregado para estados de contacto
+- ✅ **Tipos de evento**: Agregados "Kids Party" y "Dulces 16"
+- ✅ **PDFs mejorados**: Tamaño de fuente aumentado en ofertas (Kendall y Doral)
+
+### Limpieza de Código
+- ✅ **Console.logs eliminados**: Removidos logs de desarrollo
+- ✅ **Imports no utilizados**: Limpiados en todo el proyecto
+- ✅ **Código duplicado**: Eliminado y refactorizado
+- ✅ **Documentación actualizada**: README y CHANGELOG actualizados
 
 ---
 
@@ -849,9 +856,17 @@ brew services restart postgresql@14
 
 ## 📊 Estado del Proyecto
 
-**Versión**: 3.0.0  
+**Versión**: 3.1.0  
 **Estado**: ✅ **Producción Ready**  
-**Última actualización**: Noviembre 2025
+**Última actualización**: Enero 2025
+
+### Cambios en esta versión
+- ✅ Migración completa a tabla `usuarios` unificada
+- ✅ Optimizaciones de rendimiento para Supabase
+- ✅ Código limpio y listo para producción
+- ✅ Documentación actualizada
+
+Ver [CHANGELOG.md](CHANGELOG.md) para detalles completos de cambios.
 
 ### Completado ✅
 - [x] Arquitectura de micro-frontends (5 aplicaciones)

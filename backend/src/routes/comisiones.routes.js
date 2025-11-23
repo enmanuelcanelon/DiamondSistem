@@ -36,20 +36,29 @@ router.get('/', authenticate, requireInventario, async (req, res, next) => {
     }
 
     // Obtener todos los vendedores activos
-    const vendedores = await prisma.vendedores.findMany({
-      where: { activo: true },
+    const vendedores = await prisma.usuarios.findMany({
+      where: { 
+        rol: 'vendedor',
+        activo: true
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true
       },
       orderBy: { nombre_completo: 'asc' }
     });
 
+    // Adaptar estructura para compatibilidad
+    const vendedoresAdaptados = vendedores.map(v => ({
+      ...v,
+      codigo_vendedor: v.codigo_usuario
+    }));
+
     // Calcular comisiones desbloqueadas para cada vendedor
     const vendedoresConComisiones = await Promise.all(
-      vendedores.map(async (vendedor) => {
+      vendedoresAdaptados.map(async (vendedor) => {
         // Calcular comisiones desbloqueadas (con filtro de fecha si aplica)
         const comisionesData = await calcularComisionesDesbloqueadasVendedor(
           vendedor.id,
@@ -657,16 +666,25 @@ router.get('/resumen-pdf', authenticate, requireInventario, async (req, res, nex
     }
 
     // Obtener todos los vendedores activos
-    const vendedores = await prisma.vendedores.findMany({
-      where: { activo: true },
+    const vendedores = await prisma.usuarios.findMany({
+      where: { 
+        rol: 'vendedor',
+        activo: true
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true
       },
       orderBy: { nombre_completo: 'asc' }
     });
+
+    // Adaptar estructura para compatibilidad
+    const vendedoresAdaptados = vendedores.map(v => ({
+      ...v,
+      codigo_vendedor: v.codigo_usuario
+    }));
 
     // Construir filtro de fecha
     const fechaInicio = new Date(añoNum, mesNum - 1, 1);
@@ -678,7 +696,7 @@ router.get('/resumen-pdf', authenticate, requireInventario, async (req, res, nex
 
     // Obtener comisiones para cada vendedor (reutilizar lógica del endpoint principal)
     const vendedoresConComisiones = await Promise.all(
-      vendedores.map(async (vendedor) => {
+      vendedoresAdaptados.map(async (vendedor) => {
         const comisionesData = await calcularComisionesDesbloqueadasVendedor(
           vendedor.id,
           fechaFiltro

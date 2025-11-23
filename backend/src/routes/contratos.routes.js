@@ -566,17 +566,20 @@ router.get('/:id/pagos', authenticate, async (req, res, next) => {
       orderBy: { fecha_pago: 'desc' }
     });
 
-    // Obtener información de vendedores si hay registrado_por - Optimizado: evitar N+1 queries
+    // Obtener información de usuarios vendedores si hay registrado_por - Optimizado: evitar N+1 queries
     const vendedoresIds = [...new Set(pagos.filter(p => p.registrado_por).map(p => p.registrado_por))];
-    const vendedores = await prisma.vendedores.findMany({
-      where: { id: { in: vendedoresIds } },
+    const vendedores = await prisma.usuarios.findMany({
+      where: { 
+        id: { in: vendedoresIds },
+        rol: 'vendedor'
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true
+        codigo_usuario: true
       }
     });
-    const vendedoresMap = new Map(vendedores.map(v => [v.id, v]));
+    const vendedoresMap = new Map(vendedores.map(v => [v.id, { ...v, codigo_vendedor: v.codigo_usuario }]));
     
     const pagosConVendedor = pagos.map(pago => ({
       ...pago,
@@ -867,17 +870,20 @@ router.get('/:id/historial', authenticate, async (req, res, next) => {
       },
     });
 
-    // Obtener información de vendedores si hay modificado_por - Optimizado: evitar N+1 queries
+    // Obtener información de usuarios vendedores si hay modificado_por - Optimizado: evitar N+1 queries
     const vendedoresIds = [...new Set(historial.filter(h => h.modificado_por).map(h => h.modificado_por))];
-    const vendedores = await prisma.vendedores.findMany({
-      where: { id: { in: vendedoresIds } },
+    const vendedores = await prisma.usuarios.findMany({
+      where: { 
+        id: { in: vendedoresIds },
+        rol: 'vendedor'
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
       }
     });
-    const vendedoresMap = new Map(vendedores.map(v => [v.id, v]));
+    const vendedoresMap = new Map(vendedores.map(v => [v.id, { ...v, codigo_vendedor: v.codigo_usuario }]));
     
     const historialConVendedor = historial.map(item => ({
       ...item,

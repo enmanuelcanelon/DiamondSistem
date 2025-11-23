@@ -25,12 +25,15 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const [vendedores, total] = await Promise.all([
-      prisma.vendedores.findMany({
-        where: { activo: true },
+      prisma.usuarios.findMany({
+        where: { 
+          activo: true,
+          rol: 'vendedor'
+        },
         select: {
           id: true,
           nombre_completo: true,
-          codigo_vendedor: true,
+          codigo_usuario: true,
           email: true,
           telefono: true,
           comision_porcentaje: true,
@@ -42,16 +45,27 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
         take: limit,
         skip: skip
       }),
-      prisma.vendedores.count({ where: { activo: true } })
+      prisma.usuarios.count({ 
+        where: { 
+          activo: true,
+          rol: 'vendedor'
+        } 
+      })
     ]);
+
+    // Adaptar estructura para compatibilidad con código frontend
+    const vendedoresAdaptados = vendedores.map(v => ({
+      ...v,
+      codigo_vendedor: v.codigo_usuario
+    }));
 
     res.json({
       success: true,
-      count: vendedores.length,
+      count: vendedoresAdaptados.length,
       total,
       page,
       totalPages: Math.ceil(total / limit),
-      vendedores
+      vendedores: vendedoresAdaptados
     });
 
   } catch (error) {
@@ -68,12 +82,15 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: parseInt(id) },
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: parseInt(id),
+        rol: 'vendedor'
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true,
         telefono: true,
         comision_porcentaje: true,
@@ -88,9 +105,15 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
       throw new NotFoundError('Vendedor no encontrado');
     }
 
+    // Adaptar estructura para compatibilidad
+    const vendedorAdaptado = {
+      ...vendedor,
+      codigo_vendedor: vendedor.codigo_usuario
+    };
+
     res.json({
       success: true,
-      vendedor
+      vendedor: vendedorAdaptado
     });
 
   } catch (error) {
@@ -108,8 +131,11 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
     const { id } = req.params;
 
     // Verificar que el vendedor existe
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: parseInt(id) }
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: parseInt(id),
+        rol: 'vendedor'
+      }
     });
 
     if (!vendedor) {
@@ -166,7 +192,7 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
       vendedor: {
         id: vendedor.id,
         nombre_completo: vendedor.nombre_completo,
-        codigo_vendedor: vendedor.codigo_vendedor
+        codigo_vendedor: vendedor.codigo_usuario
       },
       estadisticas: {
         clientes: {
@@ -325,8 +351,11 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
     const { mes, año } = req.query;
 
     // Validar que el vendedor existe
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: parseInt(id) }
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: parseInt(id),
+        rol: 'vendedor'
+      }
     });
 
     if (!vendedor) {
@@ -813,12 +842,15 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
     }
 
     // Obtener vendedor
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: parseInt(id) },
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: parseInt(id),
+        rol: 'vendedor'
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true,
         telefono: true,
         comision_porcentaje: true
@@ -828,6 +860,12 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
     if (!vendedor) {
       throw new NotFoundError('Vendedor no encontrado');
     }
+
+    // Adaptar estructura para compatibilidad
+    const vendedorAdaptado = {
+      ...vendedor,
+      codigo_vendedor: vendedor.codigo_usuario
+    };
 
     // Obtener estadísticas del mes (reutilizar lógica del endpoint de stats)
     const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
@@ -1066,12 +1104,15 @@ router.get('/:id/comisiones', authenticate, requireVendedor, async (req, res, ne
     }
 
     // Obtener vendedor
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId },
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true
       }
     });
@@ -1079,6 +1120,12 @@ router.get('/:id/comisiones', authenticate, requireVendedor, async (req, res, ne
     if (!vendedor) {
       throw new NotFoundError('Vendedor no encontrado');
     }
+
+    // Adaptar estructura para compatibilidad
+    const vendedorAdaptado = {
+      ...vendedor,
+      codigo_vendedor: vendedor.codigo_usuario
+    };
 
     // Calcular comisiones desbloqueadas
     const comisionesData = await calcularComisionesDesbloqueadasVendedor(
@@ -1327,10 +1374,10 @@ router.get('/:id/comisiones', authenticate, requireVendedor, async (req, res, ne
     res.json({
       success: true,
       vendedor: {
-        id: vendedor.id,
-        nombre_completo: vendedor.nombre_completo,
-        codigo_vendedor: vendedor.codigo_vendedor,
-        email: vendedor.email
+        id: vendedorAdaptado.id,
+        nombre_completo: vendedorAdaptado.nombre_completo,
+        codigo_vendedor: vendedorAdaptado.codigo_vendedor,
+        email: vendedorAdaptado.email
       },
       comisiones: {
         total_desbloqueadas: comisionesData.totalComisionesDesbloqueadas,
@@ -1374,12 +1421,15 @@ router.get('/:id/comisiones/resumen-pdf', authenticate, requireVendedor, async (
     const fechaInicio = new Date(añoNum, mesNum - 1, 1);
     const fechaFin = new Date(añoNum, mesNum, 0, 23, 59, 59);
 
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId },
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true
       }
     });
@@ -1387,6 +1437,12 @@ router.get('/:id/comisiones/resumen-pdf', authenticate, requireVendedor, async (
     if (!vendedor) {
       throw new NotFoundError('Vendedor no encontrado');
     }
+
+    // Adaptar estructura para compatibilidad
+    const vendedorAdaptado = {
+      ...vendedor,
+      codigo_vendedor: vendedor.codigo_usuario
+    };
 
     // Obtener datos de comisiones (similar al endpoint anterior)
     const comisionesData = await calcularComisionesDesbloqueadasVendedor(
@@ -1556,10 +1612,10 @@ router.get('/:id/comisiones/resumen-pdf', authenticate, requireVendedor, async (
     // Preparar datos para el PDF (formato similar al de gerente pero con un solo vendedor)
     const vendedorConComisiones = {
       vendedor: {
-        id: vendedor.id,
-        nombre_completo: vendedor.nombre_completo,
-        codigo_vendedor: vendedor.codigo_vendedor,
-        email: vendedor.email
+        id: vendedorAdaptado.id,
+        nombre_completo: vendedorAdaptado.nombre_completo,
+        codigo_vendedor: vendedorAdaptado.codigo_vendedor,
+        email: vendedorAdaptado.email
       },
       comisiones: {
         total_desbloqueadas: comisionesData.totalComisionesDesbloqueadas,

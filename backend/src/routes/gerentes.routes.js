@@ -27,12 +27,13 @@ const prisma = getPrismaClient();
 router.get('/vendedores', authenticate, requireGerente, async (req, res, next) => {
   try {
     // Obtener todos los vendedores (el gerente puede ver todos y eliminar los que no quiere)
-    const vendedores = await prisma.vendedores.findMany({
+    const vendedores = await prisma.usuarios.findMany({
+      where: { rol: 'vendedor' },
       orderBy: { fecha_registro: 'desc' },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true,
         telefono: true,
         comision_porcentaje: true,
@@ -43,9 +44,15 @@ router.get('/vendedores', authenticate, requireGerente, async (req, res, next) =
       }
     });
 
+    // Adaptar estructura para compatibilidad
+    const vendedoresAdaptados = vendedores.map(v => ({
+      ...v,
+      codigo_vendedor: v.codigo_usuario
+    }));
+
     // Calcular comisiones desbloqueadas para cada vendedor
     const vendedoresConComisiones = await Promise.all(
-      vendedores.map(async (vendedor) => {
+      vendedoresAdaptados.map(async (vendedor) => {
         const comisionesDesbloqueadas = await calcularComisionesDesbloqueadasVendedor(vendedor.id);
         return {
           ...vendedor,
@@ -90,39 +97,44 @@ router.post('/vendedores', authenticate, requireGerente, async (req, res, next) 
     }
 
     // Verificar si el email ya existe
-    const existingVendedor = await prisma.vendedores.findUnique({
-      where: { email }
+    const existingUsuario = await prisma.usuarios.findFirst({
+      where: { 
+        email,
+        rol: 'vendedor'
+      }
     });
 
-    if (existingVendedor) {
+    if (existingUsuario) {
       throw new ValidationError('El email ya está registrado');
     }
 
     // Obtener último ID para generar código
-    const ultimoVendedor = await prisma.vendedores.findFirst({
+    const ultimoUsuario = await prisma.usuarios.findFirst({
+      where: { rol: 'vendedor' },
       orderBy: { id: 'desc' }
     });
 
-    const codigo_vendedor = generarCodigoVendedor(ultimoVendedor?.id || 0);
+    const codigo_usuario = generarCodigoVendedor(ultimoUsuario?.id || 0);
 
     // Hashear password
     const password_hash = await hashPassword(password);
 
-    // Crear vendedor
-    const vendedor = await prisma.vendedores.create({
+    // Crear vendedor en tabla usuarios
+    const vendedor = await prisma.usuarios.create({
       data: {
         nombre_completo,
-        codigo_vendedor,
+        codigo_usuario,
         email,
         telefono,
         password_hash,
+        rol: 'vendedor',
         comision_porcentaje: comision_porcentaje || 3.00,
         activo: true
       },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true,
         telefono: true,
         comision_porcentaje: true,
@@ -152,8 +164,11 @@ router.put('/vendedores/:id', authenticate, requireGerente, async (req, res, nex
     const { id } = req.params;
     const { nombre_completo, email, telefono, comision_porcentaje, activo } = req.body;
 
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: parseInt(id) }
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: parseInt(id),
+        rol: 'vendedor'
+      }
     });
 
     if (!vendedor) {
@@ -162,15 +177,18 @@ router.put('/vendedores/:id', authenticate, requireGerente, async (req, res, nex
 
     // Si se actualiza el email, verificar que no exista
     if (email && email !== vendedor.email) {
-      const existingVendedor = await prisma.vendedores.findUnique({
-        where: { email }
+      const existingUsuario = await prisma.usuarios.findFirst({
+        where: { 
+          email,
+          rol: 'vendedor'
+        }
       });
-      if (existingVendedor) {
+      if (existingUsuario) {
         throw new ValidationError('El email ya está registrado');
       }
     }
 
-    const updatedVendedor = await prisma.vendedores.update({
+    const updatedVendedor = await prisma.usuarios.update({
       where: { id: parseInt(id) },
       data: {
         nombre_completo: nombre_completo || vendedor.nombre_completo,
@@ -183,7 +201,7 @@ router.put('/vendedores/:id', authenticate, requireGerente, async (req, res, nex
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true,
         telefono: true,
         comision_porcentaje: true,
@@ -223,8 +241,11 @@ router.put('/vendedores/:id/password', authenticate, requireGerente, async (req,
       throw new ValidationError('Contraseña débil', passwordValidation.errors);
     }
 
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: parseInt(id) }
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: parseInt(id),
+        rol: 'vendedor'
+      }
     });
 
     if (!vendedor) {
@@ -234,7 +255,7 @@ router.put('/vendedores/:id/password', authenticate, requireGerente, async (req,
     // Hashear nueva contraseña
     const password_hash = await hashPassword(password);
 
-    await prisma.vendedores.update({
+    await prisma.usuarios.update({
       where: { id: parseInt(id) },
       data: { password_hash, fecha_actualizacion: new Date() }
     });
@@ -258,8 +279,11 @@ router.delete('/vendedores/:id', authenticate, requireGerente, async (req, res, 
   try {
     const { id } = req.params;
 
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: parseInt(id) },
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: parseInt(id),
+        rol: 'vendedor'
+      },
       include: {
         _count: {
           select: {
@@ -283,7 +307,7 @@ router.delete('/vendedores/:id', authenticate, requireGerente, async (req, res, 
     }
 
     // Eliminar vendedor
-    await prisma.vendedores.delete({
+    await prisma.usuarios.delete({
       where: { id: parseInt(id) }
     });
 
@@ -321,14 +345,15 @@ router.get('/dashboard', authenticate, requireGerente, async (req, res, next) =>
     }
 
     // Estadísticas de vendedores (filtrar solo PRUEBA001 y vendedores reales)
-    const vendedores = await prisma.vendedores.findMany({
+    const vendedores = await prisma.usuarios.findMany({
       where: {
+        rol: 'vendedor',
         OR: [
-          { codigo_vendedor: 'PRUEBA001' },
+          { codigo_usuario: 'PRUEBA001' },
           { 
             AND: [
-              { codigo_vendedor: { not: { startsWith: 'PRUEBA' } } },
-              { codigo_vendedor: { not: { startsWith: 'TEST' } } }
+              { codigo_usuario: { not: { startsWith: 'PRUEBA' } } },
+              { codigo_usuario: { not: { startsWith: 'TEST' } } }
             ]
           }
         ]
@@ -336,13 +361,19 @@ router.get('/dashboard', authenticate, requireGerente, async (req, res, next) =>
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         total_ventas: true,
         total_comisiones: true,
         comision_porcentaje: true,
         activo: true
       }
     });
+
+    // Adaptar estructura para compatibilidad
+    const vendedoresAdaptados = vendedores.map(v => ({
+      ...v,
+      codigo_vendedor: v.codigo_usuario
+    }));
 
     // Calcular estadísticas por vendedor
     const estadisticasVendedores = await Promise.all(
@@ -772,7 +803,7 @@ router.get('/ofertas/:id', authenticate, requireGerente, async (req, res, next) 
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true,
+            codigo_usuario: true,
             email: true
           }
         },
@@ -927,12 +958,15 @@ router.get('/vendedores/:id/reporte-mensual/:mes/:año', authenticate, requireGe
     }
 
     // Obtener vendedor
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: parseInt(id) },
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: parseInt(id),
+        rol: 'vendedor'
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true,
         telefono: true,
         comision_porcentaje: true
@@ -942,6 +976,12 @@ router.get('/vendedores/:id/reporte-mensual/:mes/:año', authenticate, requireGe
     if (!vendedor) {
       throw new NotFoundError('Vendedor no encontrado');
     }
+
+    // Adaptar estructura para compatibilidad
+    const vendedorAdaptado = {
+      ...vendedor,
+      codigo_vendedor: vendedor.codigo_usuario
+    };
 
     // Obtener estadísticas del mes (reutilizar lógica del endpoint de stats)
     const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
@@ -1481,20 +1521,29 @@ router.get('/comisiones', authenticate, requireGerente, async (req, res, next) =
     }
 
     // Obtener todos los vendedores activos
-    const vendedores = await prisma.vendedores.findMany({
-      where: { activo: true },
+    const vendedores = await prisma.usuarios.findMany({
+      where: { 
+        activo: true,
+        rol: 'vendedor'
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true
       },
       orderBy: { nombre_completo: 'asc' }
     });
 
+    // Adaptar estructura para compatibilidad
+    const vendedoresAdaptados = vendedores.map(v => ({
+      ...v,
+      codigo_vendedor: v.codigo_usuario
+    }));
+
     // Calcular comisiones desbloqueadas para cada vendedor (reutilizar lógica de comisiones.routes.js)
     const vendedoresConComisiones = await Promise.all(
-      vendedores.map(async (vendedor) => {
+      vendedoresAdaptados.map(async (vendedor) => {
         const comisionesData = await calcularComisionesDesbloqueadasVendedor(
           vendedor.id,
           fechaFiltro ? { gte: fechaFiltro.gte, lte: fechaFiltro.lte } : null
@@ -1696,16 +1745,25 @@ router.get('/comisiones/resumen-pdf', authenticate, requireGerente, async (req, 
     }
 
     // Obtener todos los vendedores activos
-    const vendedores = await prisma.vendedores.findMany({
-      where: { activo: true },
+    const vendedores = await prisma.usuarios.findMany({
+      where: { 
+        activo: true,
+        rol: 'vendedor'
+      },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         email: true
       },
       orderBy: { nombre_completo: 'asc' }
     });
+
+    // Adaptar estructura para compatibilidad
+    const vendedoresAdaptados = vendedores.map(v => ({
+      ...v,
+      codigo_vendedor: v.codigo_usuario
+    }));
 
     // Construir filtro de fecha
     const fechaInicio = new Date(añoNum, mesNum - 1, 1);
@@ -1717,7 +1775,7 @@ router.get('/comisiones/resumen-pdf', authenticate, requireGerente, async (req, 
 
     // Obtener comisiones para cada vendedor (reutilizar lógica del endpoint GET /comisiones)
     const vendedoresConComisiones = await Promise.all(
-      vendedores.map(async (vendedor) => {
+      vendedoresAdaptados.map(async (vendedor) => {
         const comisionesData = await calcularComisionesDesbloqueadasVendedor(
           vendedor.id,
           fechaFiltro
