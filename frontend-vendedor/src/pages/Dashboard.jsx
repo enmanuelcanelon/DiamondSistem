@@ -42,11 +42,11 @@ function Dashboard() {
   // Obtener estadísticas del vendedor filtradas por mes seleccionado
   const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ['vendedor-stats', user?.id, mesSeleccionado, añoSeleccionado],
-    staleTime: 60000, // Los datos se consideran frescos por 60 segundos
-    cacheTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
-    refetchInterval: 300000, // Auto-refresh cada 5 minutos (stats no cambian tan frecuentemente)
+    staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
+    gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
+    refetchInterval: 10 * 60 * 1000, // Auto-refresh cada 10 minutos (optimizado de 5 minutos)
     refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
-    refetchOnWindowFocus: true, // Refetch cuando la ventana recupera el foco
+    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
     refetchOnReconnect: true, // Refetch cuando se reconecta
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit) o si ya se intentó 2 veces

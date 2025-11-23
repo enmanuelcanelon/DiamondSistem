@@ -59,8 +59,8 @@ function CalendarioMensual() {
       return response.data;
     },
     enabled: !!user?.id && tipoCalendario === 'vendedor',
-    staleTime: 0, // Los datos siempre se consideran obsoletos - forzar refresco
-    refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
   });
 
   // Obtener todos los eventos (calendario general)
@@ -71,10 +71,10 @@ function CalendarioMensual() {
       return response.data;
     },
     enabled: !!user?.id && tipoCalendario === 'general',
-    staleTime: 0, // Los datos siempre se consideran obsoletos - forzar refresco
-    refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
-    refetchInterval: 10000, // Refrescar automáticamente cada 10 segundos para detectar cambios en Google Calendar
-    cacheTime: 0, // No cachear los datos para siempre obtener la versión más reciente
+    staleTime: 2 * 60 * 1000, // 2 minutos - los eventos pueden cambiar pero no tan frecuentemente
+    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
+    refetchInterval: 2 * 60 * 1000, // Refrescar cada 2 minutos en lugar de 10 segundos
+    gcTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
   });
 
   // Obtener solo eventos de CITAS (leads)
@@ -85,10 +85,10 @@ function CalendarioMensual() {
       return response.data;
     },
     enabled: !!user?.id && tipoCalendario === 'leads',
-    staleTime: 0, // Los datos siempre se consideran obsoletos - forzar refresco
-    refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
-    refetchInterval: 10000, // Refrescar automáticamente cada 10 segundos para detectar cambios en Google Calendar
-    cacheTime: 0, // No cachear los datos para siempre obtener la versión más reciente
+    staleTime: 2 * 60 * 1000, // 2 minutos - los eventos pueden cambiar pero no tan frecuentemente
+    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
+    refetchInterval: 2 * 60 * 1000, // Refrescar cada 2 minutos en lugar de 10 segundos
+    gcTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
   });
 
   // Función para refrescar manualmente

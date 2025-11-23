@@ -238,6 +238,8 @@ function CrearOferta() {
         return [];
       }
     },
+    staleTime: 10 * 60 * 1000, // 10 minutos - los salones no cambian frecuentemente
+    refetchOnWindowFocus: false,
   });
 
   // Query para obtener paquetes según el salón seleccionado
@@ -273,6 +275,8 @@ function CrearOferta() {
         return [];
       }
     },
+    staleTime: 10 * 60 * 1000, // 10 minutos - las temporadas no cambian frecuentemente
+    refetchOnWindowFocus: false,
   });
 
   const { data: servicios = [] } = useQuery({
@@ -286,6 +290,8 @@ function CrearOferta() {
         return [];
       }
     },
+    staleTime: 10 * 60 * 1000, // 10 minutos - los servicios no cambian frecuentemente
+    refetchOnWindowFocus: false,
   });
 
   // Obtener detalles del paquete seleccionado con sus servicios incluidos
@@ -313,8 +319,9 @@ function CrearOferta() {
       return response.data;
     },
     enabled: !!user?.id && pasoActual === 2 && !!formData.salon_id && formData.salon_id !== '',
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000, // 2 minutos - los eventos del calendario pueden cambiar
+    refetchInterval: 2 * 60 * 1000, // Refrescar cada 2 minutos en lugar de constante
+    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
   });
 
   // Detectar temporada automáticamente cuando cambia la fecha

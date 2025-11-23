@@ -150,11 +150,11 @@ function LeaksDisponibles() {
       const response = await api.get('/leaks/disponibles', { params });
       return response.data;
     },
-    staleTime: 10000, // Los datos se consideran frescos por 10 segundos
-    cacheTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
-    refetchInterval: 60000, // Auto-refresh cada 60 segundos (reducido de 30)
+    staleTime: 2 * 60 * 1000, // Los datos se consideran frescos por 2 minutos
+    gcTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
+    refetchInterval: 3 * 60 * 1000, // Auto-refresh cada 3 minutos (optimizado de 60 segundos)
     refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
-    refetchOnWindowFocus: true, // Refetch cuando la ventana recupera el foco
+    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
     refetchOnReconnect: true, // Refetch cuando se reconecta
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit)

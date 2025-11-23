@@ -31,11 +31,11 @@ function Leaks() {
       const response = await api.get('/leaks/stats');
       return response.data;
     },
-    staleTime: 30000, // Los datos se consideran frescos por 30 segundos
-    cacheTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
-    refetchInterval: 120000, // Auto-refresh cada 2 minutos (stats no cambian tan frecuentemente)
+    staleTime: 2 * 60 * 1000, // Los datos se consideran frescos por 2 minutos
+    gcTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh cada 5 minutos (optimizado de 2 minutos)
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit)
       if (error?.response?.status === 429) return false;
