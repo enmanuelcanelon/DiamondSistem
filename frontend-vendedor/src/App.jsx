@@ -4,28 +4,41 @@ import { Toaster } from 'react-hot-toast';
 import useAuthStore from './store/useAuthStore';
 import RateLimitAlert from './components/RateLimitAlert';
 
-// Pages - Vendedor
+// Pages - Vendedor (Lazy Loading para mejor rendimiento)
+import { lazy, Suspense } from 'react';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Clientes from './pages/Clientes';
-import CrearCliente from './pages/CrearCliente';
-import EditarCliente from './pages/EditarCliente';
-import Ofertas from './pages/Ofertas';
-import CrearOferta from './pages/CrearOferta';
-import Contratos from './pages/Contratos';
-import DetalleContrato from './pages/DetalleContrato';
-import AsignacionMesas from './pages/AsignacionMesas';
-import PlaylistMusical from './pages/PlaylistMusical';
-import GestionEventos from './pages/GestionEventos';
-import DetalleSolicitud from './pages/DetalleSolicitud';
-import ChatVendedor from './pages/ChatVendedor';
-import AjustesEventoVendedor from './pages/AjustesEventoVendedor';
-import CalendarioMensual from './pages/CalendarioMensual';
-import ComisionesVendedor from './pages/ComisionesVendedor';
-import Leaks from './pages/Leaks';
-import LeaksDisponibles from './pages/LeaksDisponibles';
-import LeaksMios from './pages/LeaksMios';
-import Configuracion from './pages/Configuracion';
+import Dashboard from './pages/Dashboard'; // Dashboard se carga inmediatamente
+
+// Páginas con lazy loading
+const Clientes = lazy(() => import('./pages/Clientes'));
+const CrearCliente = lazy(() => import('./pages/CrearCliente'));
+const EditarCliente = lazy(() => import('./pages/EditarCliente'));
+const Ofertas = lazy(() => import('./pages/Ofertas'));
+const CrearOferta = lazy(() => import('./pages/CrearOferta'));
+const Contratos = lazy(() => import('./pages/Contratos'));
+const DetalleContrato = lazy(() => import('./pages/DetalleContrato'));
+const AsignacionMesas = lazy(() => import('./pages/AsignacionMesas'));
+const PlaylistMusical = lazy(() => import('./pages/PlaylistMusical'));
+const GestionEventos = lazy(() => import('./pages/GestionEventos'));
+const DetalleSolicitud = lazy(() => import('./pages/DetalleSolicitud'));
+const ChatVendedor = lazy(() => import('./pages/ChatVendedor'));
+const AjustesEventoVendedor = lazy(() => import('./pages/AjustesEventoVendedor'));
+const CalendarioMensual = lazy(() => import('./pages/CalendarioMensual'));
+const ComisionesVendedor = lazy(() => import('./pages/ComisionesVendedor'));
+const Leaks = lazy(() => import('./pages/Leaks'));
+const LeaksDisponibles = lazy(() => import('./pages/LeaksDisponibles'));
+const LeaksMios = lazy(() => import('./pages/LeaksMios'));
+const Configuracion = lazy(() => import('./pages/Configuracion'));
+
+// Componente de carga
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <p className="text-muted-foreground">Cargando...</p>
+    </div>
+  </div>
+);
 
 // Pages - Cliente (ELIMINADAS - Ahora están en frontend-cliente)
 
@@ -149,25 +162,25 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
-            <Route path="clientes" element={<Clientes />} />
-            <Route path="clientes/nuevo" element={<CrearCliente />} />
-            <Route path="clientes/editar/:id" element={<EditarCliente />} />
-            <Route path="ofertas" element={<Ofertas />} />
-            <Route path="ofertas/nueva" element={<CrearOferta />} />
-            <Route path="contratos" element={<Contratos />} />
-            <Route path="contratos/:id" element={<DetalleContrato />} />
-            <Route path="contratos/:id/mesas" element={<AsignacionMesas />} />
-            <Route path="contratos/:id/playlist" element={<PlaylistMusical />} />
-            <Route path="eventos" element={<GestionEventos />} />
-            <Route path="calendario" element={<CalendarioMensual />} />
-            <Route path="comisiones" element={<ComisionesVendedor />} />
-            <Route path="leaks" element={<Leaks />} />
-            <Route path="leaks/disponibles" element={<LeaksDisponibles />} />
-            <Route path="leaks/misleaks" element={<LeaksMios />} />
-            <Route path="configuracion" element={<Configuracion />} />
-            <Route path="solicitudes/:id" element={<DetalleSolicitud />} />
-            <Route path="chat/:contratoId" element={<ChatVendedor />} />
-            <Route path="ajustes/:contratoId" element={<AjustesEventoVendedor />} />
+            <Route path="clientes" element={<Suspense fallback={<PageLoader />}><Clientes /></Suspense>} />
+            <Route path="clientes/nuevo" element={<Suspense fallback={<PageLoader />}><CrearCliente /></Suspense>} />
+            <Route path="clientes/editar/:id" element={<Suspense fallback={<PageLoader />}><EditarCliente /></Suspense>} />
+            <Route path="ofertas" element={<Suspense fallback={<PageLoader />}><Ofertas /></Suspense>} />
+            <Route path="ofertas/nueva" element={<Suspense fallback={<PageLoader />}><CrearOferta /></Suspense>} />
+            <Route path="contratos" element={<Suspense fallback={<PageLoader />}><Contratos /></Suspense>} />
+            <Route path="contratos/:id" element={<Suspense fallback={<PageLoader />}><DetalleContrato /></Suspense>} />
+            <Route path="contratos/:id/mesas" element={<Suspense fallback={<PageLoader />}><AsignacionMesas /></Suspense>} />
+            <Route path="contratos/:id/playlist" element={<Suspense fallback={<PageLoader />}><PlaylistMusical /></Suspense>} />
+            <Route path="eventos" element={<Suspense fallback={<PageLoader />}><GestionEventos /></Suspense>} />
+            <Route path="calendario" element={<Suspense fallback={<PageLoader />}><CalendarioMensual /></Suspense>} />
+            <Route path="comisiones" element={<Suspense fallback={<PageLoader />}><ComisionesVendedor /></Suspense>} />
+            <Route path="leaks" element={<Suspense fallback={<PageLoader />}><Leaks /></Suspense>} />
+            <Route path="leaks/disponibles" element={<Suspense fallback={<PageLoader />}><LeaksDisponibles /></Suspense>} />
+            <Route path="leaks/misleaks" element={<Suspense fallback={<PageLoader />}><LeaksMios /></Suspense>} />
+            <Route path="configuracion" element={<Suspense fallback={<PageLoader />}><Configuracion /></Suspense>} />
+            <Route path="solicitudes/:id" element={<Suspense fallback={<PageLoader />}><DetalleSolicitud /></Suspense>} />
+            <Route path="chat/:contratoId" element={<Suspense fallback={<PageLoader />}><ChatVendedor /></Suspense>} />
+            <Route path="ajustes/:contratoId" element={<Suspense fallback={<PageLoader />}><AjustesEventoVendedor /></Suspense>} />
           </Route>
 
           {/* Cliente Routes - ELIMINADAS (ahora están en frontend-cliente en puerto 5174) */}

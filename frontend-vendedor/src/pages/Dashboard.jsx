@@ -302,7 +302,7 @@ function Dashboard() {
 
   const { desde: fechaDesde, hasta: fechaHasta } = calcularFechasPorMes(mesSeleccionado, añoSeleccionado);
 
-  // Obtener contratos del mes seleccionado
+  // Obtener contratos del mes seleccionado - Carga diferida para no bloquear stats iniciales
   const { data: contratosData, isLoading: isLoadingContratos } = useQuery({
     queryKey: ['contratos-dashboard', user?.id, mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
@@ -345,6 +345,9 @@ function Dashboard() {
       };
     },
     enabled: !!user?.id,
+    // Cargar después de que las stats principales estén listas
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const contratos = contratosData?.data || [];

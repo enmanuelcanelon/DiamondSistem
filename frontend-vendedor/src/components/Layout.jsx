@@ -35,7 +35,7 @@ function Layout() {
     navigate('/login');
   };
 
-  // Obtener leaks pendientes de contacto (para el badge)
+  // Obtener leaks pendientes de contacto (para el badge) - Carga diferida para no bloquear inicio
   const { data: pendientesData } = useQuery({
     queryKey: ['leaks-pendientes-badge'],
     queryFn: async () => {
@@ -46,12 +46,13 @@ function Layout() {
         return { count: 0 };
       }
     },
-    staleTime: 60000, // Los datos se consideran frescos por 60 segundos
-    cacheTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
-    refetchInterval: 120000, // Refrescar cada 2 minutos (reducido)
+    staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
+    gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
+    refetchInterval: false, // Sin refresco automático - solo manual
     refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
     refetchOnWindowFocus: false, // No refetch al enfocar ventana (evitar spam)
     enabled: !!user, // Solo si hay usuario autenticado
+    // Cargar después de un pequeño delay para no bloquear la carga inicial
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit)
       if (error?.isRateLimit || error?.response?.status === 429) return false;

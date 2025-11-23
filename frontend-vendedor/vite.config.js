@@ -21,6 +21,18 @@ export default defineConfig({
   optimizeDeps: {
     include: ['zustand', 'axios', 'react', 'react-dom'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'query-vendor': ['@tanstack/react-query'],
+          'ui-vendor': ['lucide-react', 'recharts'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
 })
 
 
