@@ -40,16 +40,120 @@ function Dashboard() {
   };
 
   // Obtener estadísticas del vendedor filtradas por mes seleccionado
+  // OPTIMIZADO: Usar endpoint del backend en lugar de calcular en frontend
   const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ['vendedor-stats', user?.id, mesSeleccionado, añoSeleccionado],
     staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
     gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
-    refetchInterval: 10 * 60 * 1000, // Auto-refresh cada 10 minutos (optimizado de 5 minutos)
+    refetchInterval: false, // Sin refresco automático
     refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
     refetchOnWindowFocus: false, // No refetch al cambiar de pestaña (reduce carga)
-    refetchOnReconnect: true, // Refetch cuando se reconecta
+    refetchOnReconnect: false, // No refetch automático al reconectar
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit) o si ya se intentó 2 veces
+      if (error?.response?.status === 429) return false;
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    queryFn: async () => {
+      // Usar endpoint optimizado del backend en lugar de múltiples queries
+      const response = await api.get(`/vendedores/${user.id}/stats/mes`, {
+        params: {
+          mes: mesSeleccionado,
+          año: añoSeleccionado
+        }
+      });
+      
+      const statsData = response.data?.estadisticas || {};
+      
+      // Calcular período anterior para comparación
+      let mesAnterior = mesSeleccionado - 1;
+      let añoAnterior = añoSeleccionado;
+      if (mesAnterior === 0) {
+        mesAnterior = 12;
+        añoAnterior = añoSeleccionado - 1;
+      }
+      
+      // Obtener stats del mes anterior para comparación (solo si es necesario)
+      let datosAnteriores = {
+        clientes: 0,
+        ofertas: 0,
+        contratos: 0,
+        ventas: 0,
+        comisiones: 0
+      };
+      
+      try {
+        const responseAnterior = await api.get(`/vendedores/${user.id}/stats/mes`, {
+          params: {
+            mes: mesAnterior,
+            año: añoAnterior
+          }
+        });
+        
+        const statsAnteriores = responseAnterior.data?.estadisticas || {};
+        datosAnteriores = {
+          clientes: statsAnteriores.clientes?.total || 0,
+          ofertas: statsAnteriores.ofertas?.total || 0,
+          contratos: statsAnteriores.contratos?.total || 0,
+          ventas: statsAnteriores.finanzas?.total_ventas || 0,
+          comisiones: statsAnteriores.finanzas?.total_comisiones || 0
+        };
+      } catch (error) {
+        // Si falla, usar valores por defecto
+      }
+      
+      // Formatear datos para compatibilidad con el código existente
+      return {
+        clientes: {
+          total: statsData.clientes?.total || 0,
+          cambio: (statsData.clientes?.total || 0) - datosAnteriores.clientes
+        },
+        ofertas: {
+          total: statsData.ofertas?.total || 0,
+          aceptadas: statsData.ofertas?.aceptadas || 0,
+          pendientes: statsData.ofertas?.pendientes || 0,
+          rechazadas: statsData.ofertas?.rechazadas || 0,
+          tasa_conversion: statsData.ofertas?.tasa_conversion || '0.00%',
+          cambio: (statsData.ofertas?.total || 0) - datosAnteriores.ofertas
+        },
+        contratos: {
+          total: statsData.contratos?.total || 0,
+          activos: statsData.contratos?.activos || 0,
+          pagados_completo: statsData.contratos?.pagados_completo || 0,
+          cambio: (statsData.contratos?.total || 0) - datosAnteriores.contratos
+        },
+        finanzas: {
+          total_ventas: statsData.finanzas?.total_ventas || 0,
+          total_comisiones: statsData.finanzas?.total_comisiones || 0,
+          comision_porcentaje: statsData.finanzas?.comision_porcentaje || 3.0,
+          total_comisiones_desbloqueadas: statsData.finanzas?.total_comisiones_desbloqueadas || 0,
+          total_comisiones_pendientes: statsData.finanzas?.total_comisiones_pendientes || 0,
+          cambio_ventas: (statsData.finanzas?.total_ventas || 0) - datosAnteriores.ventas,
+          cambio_comisiones: (statsData.finanzas?.total_comisiones || 0) - datosAnteriores.comisiones
+        },
+        comisiones: {
+          total: statsData.comisiones?.total || 0,
+          desbloqueadas: statsData.comisiones?.desbloqueadas || 0,
+          pendientes: statsData.comisiones?.pendientes || 0,
+          por_mes: statsData.comisiones?.por_mes || []
+        }
+      };
+    },
+    enabled: !!user?.id,
+  });
+
+  // Código antiguo eliminado - ahora usa endpoint optimizado del backend
+  // El endpoint /vendedores/:id/stats/mes hace todas las queries en paralelo en el backend
+
+  const { desde: fechaDesde, hasta: fechaHasta } = calcularFechasPorMes(mesSeleccionado, añoSeleccionado);
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: (failureCount, error) => {
       if (error?.response?.status === 429) return false;
       return failureCount < 2;
     },
