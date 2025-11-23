@@ -26,25 +26,25 @@ async function crearPaquetesSalones() {
     // Mapeo de precios por salón según migration_salones.sql
     const preciosPorSalon = {
       'Diamond': {
-        'Especial': { precio: 3500, invitados: 80 },
-        'Platinum': { precio: 7500, invitados: 80 },
-        'Diamond': { precio: 10500, invitados: 80 },
-        'Deluxe': { precio: 12500, invitados: 80 },
-        'Personalizado': { precio: 6000, invitados: 50 }
+        'Especial': { precio: 3500, invitados: 80, disponible: true },
+        'Platinum': { precio: 7500, invitados: 80, disponible: true },
+        'Diamond': { precio: 10500, invitados: 80, disponible: true },
+        'Deluxe': { precio: 12500, invitados: 80, disponible: true },
+        'Personalizado': { precio: 6000, invitados: 50, disponible: true }
       },
       'Kendall': {
-        'Especial': { precio: 3500, invitados: 80 },
-        'Platinum': { precio: 7500, invitados: 80 },
-        'Diamond': { precio: 10500, invitados: 80 },
-        'Deluxe': { precio: 12500, invitados: 80 },
-        'Personalizado': { precio: 6000, invitados: 50 }
+        'Especial': { precio: 2500, invitados: 60, disponible: true },
+        'Platinum': { precio: 4200, invitados: 60, disponible: true },
+        'Diamond': { precio: 5500, invitados: 60, disponible: true },
+        'Deluxe': { precio: 0, invitados: 60, disponible: false }, // No disponible en Kendall
+        'Personalizado': { precio: 3500, invitados: 60, disponible: true }
       },
       'Doral': {
-        'Especial': { precio: 3500, invitados: 80 },
-        'Platinum': { precio: 7500, invitados: 80 },
-        'Diamond': { precio: 10500, invitados: 80 },
-        'Deluxe': { precio: 12500, invitados: 80 },
-        'Personalizado': { precio: 6000, invitados: 50 }
+        'Especial': { precio: 2500, invitados: 60, disponible: true },
+        'Platinum': { precio: 4200, invitados: 60, disponible: true },
+        'Diamond': { precio: 5500, invitados: 60, disponible: true },
+        'Deluxe': { precio: 0, invitados: 60, disponible: false }, // No disponible en Doral
+        'Personalizado': { precio: 3500, invitados: 60, disponible: true }
       }
     };
 
@@ -73,7 +73,7 @@ async function crearPaquetesSalones() {
           paquete_id: paquete.id,
           precio_base: precioInfo.precio,
           invitados_minimo: precioInfo.invitados,
-          disponible: true
+          disponible: precioInfo.disponible
         };
 
         if (existe) {
