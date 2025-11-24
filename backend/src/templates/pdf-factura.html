@@ -121,7 +121,7 @@
             color: #fff;
             text-transform: uppercase;
             margin-top: 8px;
-            margin-bottom: 35px;
+            margin-bottom: 3px;
             letter-spacing: 3px;
         }
 
@@ -489,11 +489,11 @@
 
         .package-content {
             flex: 1;
-            padding: 20px 50px 30px 50px;
+            padding: 8px 50px 15px 50px;
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 25px;
-            row-gap: 20px;
+            gap: 32px;
+            row-gap: 28px;
             width: 100%;
             color: #1a1a1a;
             height: 100%;
@@ -507,14 +507,14 @@
         }
 
         .package-info-block {
-            margin-bottom: 30px;
+            margin-bottom: 35px;
         }
 
         .package-info-block h3 {
-            font-size: 1.8rem;
+            font-size: 2.4rem;
             font-weight: 400;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            margin-bottom: 14px;
             letter-spacing: 2px;
             color: #000;
             font-family: 'Montserrat', sans-serif;
@@ -529,11 +529,11 @@
 
         .package-info-block p,
         .package-info-block li {
-            font-size: 1.5rem;
-            line-height: 1.6;
+            font-size: 2.0rem;
+            line-height: 1.7;
             color: #333;
             font-weight: 400;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             font-family: 'Montserrat', sans-serif;
         }
 
@@ -586,6 +586,38 @@
         
         .additional-services-section .section-title-corporate {
             margin-bottom: 25px;
+        }
+
+        /* Estilos específicos para EXTRAS - más grandes */
+        .page-2b .package-info-block {
+            margin-bottom: 38px;
+        }
+        
+        .page-2b .package-content {
+            padding: 8px 50px 15px 50px;
+            gap: 32px;
+            row-gap: 28px;
+        }
+
+        .page-2b .package-info-block h3 {
+            font-size: 2.4rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            letter-spacing: 2px;
+            color: #000;
+            font-family: 'Montserrat', sans-serif;
+            line-height: 1.2;
+        }
+
+        .page-2b .package-info-block p,
+        .page-2b .package-info-block li {
+            font-size: 2.0rem;
+            line-height: 1.7;
+            color: #333;
+            font-weight: 400;
+            margin-bottom: 8px;
+            font-family: 'Montserrat', sans-serif;
         }
 
         .additional-services-grid {
@@ -721,7 +753,8 @@
 
             <div class="cover-left-col">
                 <h1>{{EVENT_TYPE}}</h1>
-                <div class="cover-packages-text">PACKAGES</div>
+                <div class="cover-packages-text">PACKAGE</div>
+                <div class="cover-package-name" style="font-size: 2.2rem; font-family: 'Montserrat', sans-serif; font-weight: 400; color: #D4AF37; text-transform: uppercase; letter-spacing: 2px; margin-top: 0px;">{{PACKAGE_NAME}}</div>
 
                 <h2 class="cover-section-title">Event Details</h2>
                 
@@ -732,6 +765,7 @@
                     <p>Date: <span>{{EVENT_DATE}}</span></p>
                     <p>Time: <span>{{EVENT_TIME}}</span></p>
                     <p>Number of Guests: <span>{{GUEST_COUNT}}</span></p>
+                    <p>Sales Representative: <span>{{VENDEDOR_NAME}}</span></p>
                 </div>
 
                 <div class="cover-contact-info">
@@ -766,18 +800,7 @@
     </div>
 
     <!-- PÁGINA 2: SERVICIOS -->
-    <div class="page page-2">
-        <div class="page-content" style="padding: 0; height: 100%;">
-            <div class="package-card">
-                <div style="padding: 15px 50px 10px 50px; text-align: left; flex-shrink: 0;">
-                    <h2 style="font-size: 2.2rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">PAQUETE {{PACKAGE_NAME}}</h2>
-                </div>
-                <div class="package-content" style="flex: 1; padding-top: 0; overflow: hidden;">
-                    {{SERVICIOS_PAQUETE}}
-                </div>
-            </div>
-        </div>
-    </div>
+    {{SECCION_PAQUETE}}
     
     <!-- PÁGINA 2B: SERVICIOS ADICIONALES (si hay) -->
     {{SERVICIOS_ADICIONALES}}
@@ -792,25 +815,26 @@
                 <div style="padding: 0 50px 45px 50px; flex: 1; display: flex; flex-direction: column; align-content: start;">
                     <!-- Desglose de Inversión -->
                     <div style="margin-bottom: 30px;">
-                        <h3 style="font-size: 1.7rem; font-weight: 400; text-transform: uppercase; letter-spacing: 2px; color: #000; font-family: 'Montserrat', sans-serif; margin-bottom: 12px;">Desglose de Inversión</h3>
-                        <table class="info-table" style="margin: 0; font-size: 15px;">
-                            <tr class="info-table-row">
-                                <td class="info-table-label" style="padding: 10px 15px; font-size: 15px;">Precio del Paquete</td>
-                                <td class="info-table-value" style="padding: 10px 15px; font-size: 16px;">{{PACKAGE_PRICE}}</td>
-                            </tr>
-                            <tr class="info-table-row">
-                                <td class="info-table-label" style="padding: 10px 15px; font-size: 15px;">Impuesto (7%)</td>
-                                <td class="info-table-value" style="padding: 10px 15px; font-size: 16px;">{{TAX_AMOUNT}}</td>
-                            </tr>
-                            <tr class="info-table-row">
-                                <td class="info-table-label" style="padding: 10px 15px; font-size: 15px;">Tarifa de Servicio (18%)</td>
-                                <td class="info-table-value" style="padding: 10px 15px; font-size: 16px;">{{SERVICE_FEE}}</td>
-                            </tr>
-                            <tr class="info-table-row">
-                                <td class="info-table-label" style="font-weight: 600; border-top: 2px solid #000000; padding-top: 12px; font-size: 18px;">TOTAL A PAGAR</td>
-                                <td class="info-table-value" style="font-weight: 600; border-top: 2px solid #000000; padding-top: 12px; font-size: 18px;">{{TOTAL_TO_PAY}}</td>
-                            </tr>
-                        </table>
+                        <h3 style="font-size: 2.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 2px; color: #000; font-family: 'Montserrat', sans-serif; margin-bottom: 25px;">Desglose de Inversión</h3>
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.1);">
+                                <span style="font-size: 18px; color: #333; font-weight: 400; font-family: 'Montserrat', sans-serif;">Precio del Paquete</span>
+                                <span style="font-size: 19px; color: #000; font-weight: 500; font-family: 'Montserrat', sans-serif; text-align: right;">{{PACKAGE_PRICE}}</span>
+                            </div>
+                            {{DESCUENTO_ROW}}
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.1);">
+                                <span style="font-size: 18px; color: #333; font-weight: 400; font-family: 'Montserrat', sans-serif;">Impuesto (7%)</span>
+                                <span style="font-size: 19px; color: #000; font-weight: 500; font-family: 'Montserrat', sans-serif; text-align: right;">{{TAX_AMOUNT}}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.1);">
+                                <span style="font-size: 18px; color: #333; font-weight: 400; font-family: 'Montserrat', sans-serif;">Tarifa de Servicio ({{SERVICE_FEE_PERCENTAGE}}%)</span>
+                                <span style="font-size: 19px; color: #000; font-weight: 500; font-family: 'Montserrat', sans-serif; text-align: right;">{{SERVICE_FEE}}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 0; margin-top: 10px; border-top: 2px solid rgba(0, 0, 0, 0.2);">
+                                <span style="font-size: 22px; color: #000; font-weight: 600; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 1px;">TOTAL A PAGAR</span>
+                                <span style="font-size: 24px; color: #000; font-weight: 700; font-family: 'Montserrat', sans-serif; text-align: right;">{{TOTAL_TO_PAY}}</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Nota Importante -->
