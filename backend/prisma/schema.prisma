@@ -292,6 +292,8 @@ model ofertas {
   lugar_salon                String?   @db.VarChar(100)
   photobooth_tipo            String?   @db.VarChar(50)
   homenajeado                String?   @db.VarChar(200)
+  tipo_evento                String?   @db.VarChar(100)  // Tipo de evento específico de esta oferta
+  seleccion_sidra_champana   String?   @db.VarChar(20)   // 'Sidra' o 'Champaña' - selección del usuario en el paso 3
 
   // Relaciones
   clientes                      clientes?                       @relation(fields: [cliente_id], references: [id])

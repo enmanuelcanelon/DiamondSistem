@@ -574,9 +574,14 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           tarifa_servicio_monto: parseFloat(calculo.desglose.impuestos.tarifaServicio.monto),
           total_final: parseFloat(calculo.desglose.totalFinal),
           estado: 'pendiente',
-          notas_vendedor: datos.notas_vendedor || null
+          notas_vendedor: datos.notas_vendedor || null,
+          tipo_evento: datos.tipo_evento || null,  // Guardar tipo de evento específico de esta oferta
+          seleccion_sidra_champana: datos.seleccion_sidra_champana || null  // Guardar selección de Sidra/Champaña
         }
       });
+      
+      // Debug: Verificar que tipo_evento se guardó
+      console.log('✅ Oferta creada - ID:', nuevaOferta.id, 'tipo_evento guardado:', nuevaOferta.tipo_evento, 'tipo_evento recibido:', datos.tipo_evento);
 
       // Guardar servicios adicionales
       if (servicios.length > 0) {
@@ -819,9 +824,13 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
           tarifa_servicio_porcentaje: calculo.desglose.impuestos.tarifaServicio.porcentaje,
           tarifa_servicio_monto: parseFloat(calculo.desglose.impuestos.tarifaServicio.monto),
           total_final: parseFloat(calculo.desglose.totalFinal),
-          notas_vendedor: datos.notas_vendedor || null
+          notas_vendedor: datos.notas_vendedor || null,
+          ...(datos.tipo_evento !== undefined && { tipo_evento: datos.tipo_evento })  // Actualizar tipo de evento si se proporciona
         }
       });
+      
+      // Debug: Verificar que tipo_evento se actualizó
+      console.log('✅ Oferta actualizada - ID:', ofertaActualizada.id, 'tipo_evento actualizado:', ofertaActualizada.tipo_evento, 'tipo_evento recibido:', datos.tipo_evento);
 
       // Eliminar servicios adicionales anteriores
       await prisma.ofertas_servicios_adicionales.deleteMany({

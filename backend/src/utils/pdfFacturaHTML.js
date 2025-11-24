@@ -31,11 +31,25 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
   const nombreClientePrimero = nombreClienteCompleto.split(' ')[0] || nombreClienteCompleto;
 
   const nombreCliente = datos.clientes?.nombre_completo || 'N/A';
-  const nombreVendedor = datos.vendedores?.nombre_completo || datos.vendedor?.nombre_completo || 'N/A';
-  const telefonoVendedor = '+1 (786) 332-7065';
-  const emailVendedor = 'diamondvenueatdoral@gmail.com';
+  const nombreVendedor = datos.vendedores?.nombre_completo || datos.vendedor?.nombre_completo || datos.usuarios?.nombre_completo || 'N/A';
+  // Obtener teléfono del vendedor - asegurar que no sea undefined, vacío o 0000000000
+  const telefonoVendedorRaw = datos.vendedores?.telefono || datos.vendedor?.telefono || datos.usuarios?.telefono;
+  const telefonoVendedor = (telefonoVendedorRaw && telefonoVendedorRaw.trim() !== '' && telefonoVendedorRaw !== '0000000000') 
+    ? telefonoVendedorRaw 
+    : '+1 (786) 332-7065';
+  const emailVendedor = datos.vendedores?.email || datos.vendedor?.email || datos.usuarios?.email || 'diamondvenueatdoral@gmail.com';
   const homenajeado = datos.homenajeado || '';
-  const tipoEvento = datos.clientes?.tipo_evento || 'Event';
+  // IMPORTANTE: Usar el tipo de evento de la oferta específica (datos.tipo_evento)
+  // NO usar el del cliente para que cada oferta sea independiente
+  // El campo tipo_evento debe estar directamente en el objeto datos (oferta)
+  const tipoEvento = datos.tipo_evento || (datos.clientes && datos.clientes.tipo_evento) || 'Event';
+  
+  // Debug: Verificar que se está usando el tipo_evento de la oferta
+  console.log('🔍 Tipo de evento - Oferta ID:', datos.id, 'tipo_evento oferta:', datos.tipo_evento, 'tipo_evento cliente:', datos.clientes?.tipo_evento, '→ Usando:', tipoEvento);
+  
+  if (!datos.tipo_evento) {
+    console.warn('⚠️ Oferta sin tipo_evento. ID:', datos.id || 'N/A', 'Usando:', datos.clientes?.tipo_evento || 'Event');
+  }
   const fechaEvento = new Date(datos.fecha_evento);
   const fechaCreacionOferta = datos.fecha_creacion 
     ? new Date(datos.fecha_creacion).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -44,7 +58,11 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
   const horaFin = formatearHora(datos.hora_fin);
   const cantidadInvitados = datos.cantidad_invitados || 0;
   const emailCliente = datos.clientes?.email || '';
-  const telefonoCliente = datos.clientes?.telefono || '';
+  // Obtener teléfono del cliente - asegurar que no sea undefined, vacío o 0000000000
+  const telefonoClienteRaw = datos.clientes?.telefono;
+  const telefonoCliente = (telefonoClienteRaw && telefonoClienteRaw.trim() !== '' && telefonoClienteRaw !== '0000000000') 
+    ? telefonoClienteRaw 
+    : '';
 
   // Obtener información del salón y detectar compañía
   const salon = datos.salones || null;
@@ -128,8 +146,17 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     const descripcion = (servicio.descripcion || servicio.servicios?.descripcion || '').toLowerCase();
     const texto = `${nombre} ${descripcion}`;
 
-    // BEBIDAS - Champaña debe detectarse ANTES que sidra
-    if (texto.includes('champaña') || texto.includes('champagne')) {
+    // BEBIDAS - Champaña debe detectarse ANTES que sidra y de forma más específica
+    // Priorizar detección por nombre exacto primero
+    const nombreExacto = nombre.trim();
+    if (nombreExacto.includes('champaña') || nombreExacto.includes('champagne')) {
+      // Si el nombre contiene champaña, es champaña (a menos que también diga sidra explícitamente)
+      if (!nombreExacto.includes('sidra') && !nombreExacto.includes('cider')) {
+        return { categoria: 'bebidas', item: 'Champaña' };
+      }
+    }
+    // Luego verificar en el texto completo, pero excluyendo sidra
+    if ((texto.includes('champaña') || texto.includes('champagne')) && !texto.includes('sidra') && !texto.includes('cider')) {
       return { categoria: 'bebidas', item: 'Champaña' };
     }
     // Licor Premium debe detectarse ANTES que "premium" genérico
@@ -144,7 +171,15 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       return { categoria: 'bebidas', item: 'Refrescos/Jugo/Agua' };
     }
     // Sidra debe detectarse DESPUÉS de champaña para evitar conflictos
-    if (texto.includes('sidra') || texto.includes('cider')) {
+    // Priorizar detección por nombre exacto primero
+    if (nombreExacto.includes('sidra') || nombreExacto.includes('cider')) {
+      // Si el nombre contiene sidra, es sidra (a menos que también diga champaña explícitamente)
+      if (!nombreExacto.includes('champaña') && !nombreExacto.includes('champagne')) {
+        return { categoria: 'bebidas', item: 'Sidra' };
+      }
+    }
+    // Luego verificar en el texto completo, pero excluyendo champaña
+    if ((texto.includes('sidra') || texto.includes('cider')) && !texto.includes('champaña') && !texto.includes('champagne')) {
       return { categoria: 'bebidas', item: 'Sidra' };
     }
 
@@ -193,19 +228,28 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     }
 
     // ENTRETENIMIENTO
-    // Animador debe detectarse ANTES que "hora loca" para evitar conflictos
-    if (texto.includes('animador') || texto.includes('animación') || texto.includes('animacion')) {
-      // Excluir "animador adicional" que va a personal
-      if (!texto.includes('adicional')) {
+    // Hora Loca debe detectarse PRIMERO y de forma muy específica para no confundirse con animador
+    if (nombreExacto.includes('hora loca') || 
+        texto.includes('hora loca') ||
+        (nombreExacto.includes('hora') && nombreExacto.includes('loca') && !nombreExacto.includes('extra'))) {
+      return { categoria: 'entretenimiento', item: 'Hora Loca' };
+    }
+    // Animador - solo si NO es hora loca
+    // Detectar por nombre exacto primero (más específico)
+    if (nombreExacto.includes('animador') || nombreExacto.includes('animación') || nombreExacto.includes('animacion')) {
+      // Si el nombre contiene animador, es animador (a menos que también diga hora loca o adicional explícitamente)
+      if (!nombreExacto.includes('hora loca') && !nombreExacto.includes('adicional')) {
         return { categoria: 'entretenimiento', item: 'Animador' };
       }
     }
+    // Luego verificar en el texto completo, pero excluyendo hora loca y adicional
+    if ((texto.includes('animador') || texto.includes('animación') || texto.includes('animacion')) &&
+        !texto.includes('hora loca') && !nombreExacto.includes('hora loca') &&
+        !texto.includes('adicional')) {
+      return { categoria: 'entretenimiento', item: 'Animador' };
+    }
     if (texto.includes('dj') || texto.includes('disc jockey')) {
       return { categoria: 'entretenimiento', item: 'DJ Profesional' };
-    }
-    // Hora Loca debe ser específico para no confundirse con animador
-    if (texto.includes('hora loca') || (texto.includes('hora') && texto.includes('loca'))) {
-      return { categoria: 'entretenimiento', item: 'Hora Loca' };
     }
     if (texto.includes('maestro de ceremonia') || texto.includes('mc') || texto.includes('master of ceremony')) {
       return { categoria: 'entretenimiento', item: 'Maestro de Ceremonia' };
@@ -267,6 +311,13 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       return { categoria: 'fotografia', item: 'Photobooth Print' };
     }
 
+    // TRANSPORTE - Debe detectarse ANTES de PERSONAL para evitar conflictos
+    // Detectar limosina de forma más específica
+    if (texto.includes('limosina') || texto.includes('limousine') || texto.includes('limo') ||
+        nombreExacto.includes('limosina') || nombreExacto.includes('limousine') || nombreExacto.includes('limo')) {
+      return { categoria: 'transporte', item: 'Limosina (15 Millas)' };
+    }
+
     // PERSONAL
     if (texto.includes('bartender') || texto.includes('barman')) {
       return { categoria: 'personal', item: 'Bartender' };
@@ -274,19 +325,17 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     if (texto.includes('coordinador') || texto.includes('coordinator') || texto.includes('event coordinator')) {
       return { categoria: 'personal', item: 'Coordinador de Eventos' };
     }
-    if (texto.includes('mesero') || texto.includes('waiter') || texto.includes('personal de servicio') || texto.includes('servicio')) {
+    // Personal de Servicio - excluir limosina explícitamente
+    if ((texto.includes('mesero') || texto.includes('waiter') || texto.includes('personal de servicio') || texto.includes('servicio')) &&
+        !texto.includes('limosina') && !texto.includes('limousine') && !texto.includes('limo')) {
       return { categoria: 'personal', item: 'Personal de Servicio' };
-    }
-
-    // TRANSPORTE
-    if (texto.includes('limosina') || texto.includes('limousine') || texto.includes('limo')) {
-      return { categoria: 'transporte', item: 'Limosina (15 Millas)' };
     }
 
     return null; // Si no coincide con ninguna categoría, no se muestra
   };
 
   // Función para generar HTML de servicios por categoría (nuevo diseño organizado)
+  // Retorna un objeto con el HTML y el estilo del grid
   const generarHTMLServicios = (serviciosPorCategoria, esPaquete) => {
     // Reorganizar servicios según las nuevas categorías
     const serviciosOrganizados = {
@@ -311,9 +360,33 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       
       const mapeo = mapearServicioACategoria(servicio);
       if (mapeo) {
-        // Evitar duplicados
-        if (!serviciosOrganizados[mapeo.categoria].includes(mapeo.item)) {
-          serviciosOrganizados[mapeo.categoria].push(mapeo.item);
+        // Debug: Log para servicios de entretenimiento
+        if (mapeo.categoria === 'entretenimiento') {
+          console.log('Servicio de entretenimiento detectado:', {
+            nombre: servicio.nombre || servicio.servicios?.nombre,
+            mapeo: mapeo,
+            esPaquete: servicioEsPaquete,
+            esPaqueteParam: esPaquete
+          });
+        }
+        // Para bebidas, permitir que Champaña y Sidra aparezcan juntos si están en diferentes secciones
+        // (paquete vs extras) - la exclusión mutua solo aplica dentro de la misma sección
+        if (mapeo.categoria === 'bebidas') {
+          // Agregar el servicio si no existe ya en la lista
+          if (!serviciosOrganizados.bebidas.includes(mapeo.item)) {
+            serviciosOrganizados.bebidas.push(mapeo.item);
+          }
+        } else if (mapeo.categoria === 'entretenimiento') {
+          // Para entretenimiento, permitir que Hora Loca y Animador aparezcan juntos si ambos están seleccionados
+          // Solo evitar duplicados, pero permitir ambos servicios
+          if (!serviciosOrganizados.entretenimiento.includes(mapeo.item)) {
+            serviciosOrganizados.entretenimiento.push(mapeo.item);
+          }
+        } else {
+          // Para otras categorías, evitar duplicados normalmente
+          if (!serviciosOrganizados[mapeo.categoria].includes(mapeo.item)) {
+            serviciosOrganizados[mapeo.categoria].push(mapeo.item);
+          }
         }
       }
     });
@@ -342,19 +415,27 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       serviciosOrganizados[cat.key] && serviciosOrganizados[cat.key].length > 0
     );
     
-    const col1 = ['bebidas', 'decoracion', 'equipos'].filter(key => 
+    // Organizar columnas para usar esquinas primero
+    // Columna 1 (izquierda): bebidas, decoracion, equipos, transporte
+    const col1 = ['bebidas', 'decoracion', 'equipos', 'transporte'].filter(key => 
       serviciosOrganizados[key] && serviciosOrganizados[key].length > 0
     );
+    // Columna 2 (centro): comida, entretenimiento, fotografia
     const col2 = ['comida', 'entretenimiento', 'fotografia'].filter(key => 
       serviciosOrganizados[key] && serviciosOrganizados[key].length > 0
     );
-    const col3 = ['extras', 'personal', 'transporte'].filter(key => 
+    // Columna 3 (derecha): extras, personal
+    const col3 = ['extras', 'personal'].filter(key => 
       serviciosOrganizados[key] && serviciosOrganizados[key].length > 0
     );
 
-    let htmlCol1 = '<div class="package-col">';
-    let htmlCol2 = '<div class="package-col">';
-    let htmlCol3 = '<div class="package-col">';
+    // Determinar cuántas columnas tienen contenido
+    const columnasConContenido = [col1.length > 0, col2.length > 0, col3.length > 0].filter(Boolean).length;
+    
+    // Aplicar estilos para usar esquinas primero
+    let htmlCol1 = '<div class="package-col" style="justify-self: start;">';
+    let htmlCol2 = '<div class="package-col" style="justify-self: ' + (columnasConContenido === 2 ? 'end;' : (columnasConContenido === 1 ? 'start;' : 'center;')) + '">';
+    let htmlCol3 = '<div class="package-col" style="justify-self: end;">';
 
     const generarCategoriaHTML = (cat, items) => {
       if (items.length > 0) {
@@ -363,9 +444,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
             <h3>${cat.titulo}</h3>
             <ul>`;
         
-        items.forEach(item => {
-          html += `<li>${item}</li>`;
-        });
+          items.forEach(item => {
+              html += `<li>${item}</li>`;
+          });
         
         html += `</ul></div>`;
         return html;
@@ -403,7 +484,23 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     });
     htmlCol3 += '</div>';
 
-    return htmlCol1 + htmlCol2 + htmlCol3;
+    // Determinar el estilo del grid según el número de columnas
+    let gridStyle = '';
+    if (columnasConContenido === 1) {
+      // Si solo hay 1 columna, usar solo la primera columna (izquierda)
+      gridStyle = 'grid-template-columns: 1fr; justify-content: start;';
+    } else if (columnasConContenido === 2) {
+      // Si hay 2 columnas, usar esquinas (izquierda y derecha)
+      gridStyle = 'grid-template-columns: 1fr 1fr; justify-content: space-between;';
+    } else {
+      // Si hay 3 columnas, usar las 3 normalmente
+      gridStyle = 'grid-template-columns: 1fr 1fr 1fr;';
+    }
+
+    return {
+      html: htmlCol1 + htmlCol2 + htmlCol3,
+      gridStyle: gridStyle
+    };
   };
 
   // Función para procesar y reorganizar servicios adicionales según las instrucciones
@@ -419,9 +516,11 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     };
 
     // Buscar y mover "Animador adicional" de specials a serviceCoord
+    // IMPORTANTE: Solo mover si dice "adicional" explícitamente, no todos los animadores
     const animadorIndex = procesados.specials.findIndex(s => {
       const desc = (s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').toLowerCase();
-      return desc.includes('animador') && desc.includes('adicional');
+      // Solo mover si dice "animador" Y "adicional" juntos
+      return desc.includes('animador') && desc.includes('adicional') && !desc.includes('hora loca');
     });
     if (animadorIndex !== -1) {
       procesados.serviceCoord.push(procesados.specials[animadorIndex]);
@@ -481,12 +580,30 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     return procesados;
   };
 
-  const htmlServiciosPaquete = generarHTMLServicios(serviciosPaquete, true);
+  // Procesar servicios adicionales primero
   const serviciosAdicionalesProcesados = procesarServiciosAdicionales(serviciosAdicionales);
-  const htmlServiciosAdicionales = generarHTMLServicios(serviciosAdicionalesProcesados, false);
+  
+  // NOTA: La lógica de Sidra/Champaña ahora se maneja en organizarServiciosPorCategoria usando seleccion_sidra_champana
+  // Ya no necesitamos mover servicios entre paquete y extras aquí
+  // Los servicios del paquete ya fueron procesados correctamente en organizarServiciosPorCategoria
+  
+  // Regenerar HTML del paquete y extras con servicios procesados
+  const serviciosPaqueteHTML = generarHTMLServicios(serviciosPaquete, true);
+  const serviciosAdicionalesHTML = generarHTMLServicios(serviciosAdicionalesProcesados, false);
+  
+  const htmlServiciosPaqueteFinal = serviciosPaqueteHTML.html;
+  const gridStylePaquete = serviciosPaqueteHTML.gridStyle || 'grid-template-columns: 1fr 1fr 1fr;';
+  
+  const htmlServiciosAdicionales = serviciosAdicionalesHTML.html;
+  const gridStyleExtras = serviciosAdicionalesHTML.gridStyle || 'grid-template-columns: 1fr 1fr 1fr;';
   
   // Verificar si el paquete tiene servicios (si no tiene, no mostrar la sección de paquete)
-  const tieneServiciosPaquete = Object.values(serviciosPaquete).some(arr => arr.length > 0);
+  // Los servicios del paquete ya fueron procesados en organizarServiciosPorCategoria
+  const serviciosPaqueteOrganizados = serviciosOrganizados;
+  const tieneServiciosPaquete = Object.values(serviciosPaqueteOrganizados).some(arr => {
+    // Filtrar solo servicios del paquete
+    return arr.some(s => s.esPaquete === true);
+  });
   
   // Generar HTML completo de la sección de servicios adicionales si hay servicios (nuevo diseño)
   const tieneServiciosAdicionales = Object.values(serviciosAdicionalesProcesados).some(arr => arr.length > 0);
@@ -498,7 +615,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
             <div style="padding: 10px 50px 15px 50px; text-align: left; flex-shrink: 0;">
               <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
             </div>
-            <div class="package-content" style="flex: 1; padding-top: 8px; overflow: hidden;">
+            <div class="package-content" style="flex: 1; padding-top: 8px; overflow: hidden; ${gridStyleExtras}">
               ${htmlServiciosAdicionales}
             </div>
           </div>
@@ -606,8 +723,8 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
                 <div style="padding: 5px 50px 15px 50px; text-align: left; flex-shrink: 0;">
                     <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">PAQUETE ${nombrePaqueteLimpio}</h2>
                 </div>
-                <div class="package-content" style="flex: 1; padding-top: 8px; overflow: hidden;">
-                    ${htmlServiciosPaquete}
+                <div class="package-content" style="flex: 1; padding-top: 8px; overflow: hidden; ${gridStylePaquete}">
+                    ${htmlServiciosPaqueteFinal}
                 </div>
             </div>
         </div>
@@ -732,21 +849,157 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
 function organizarServiciosPorCategoria(datos) {
   const serviciosAdicionales = datos.ofertas_servicios_adicionales || datos.contratos_servicios || [];
   const serviciosPaquete = datos.paquetes?.paquetes_servicios || [];
+  
+  // Extraer todos los servicios disponibles de los servicios adicionales para buscar IDs correctos
+  const todosServiciosDisponibles = serviciosAdicionales.map(os => os.servicios || os);
 
-  // Crear un Set con los IDs de servicios que están en el paquete
+  // Obtener la selección de Sidra/Champaña de la oferta
+  const seleccionSidraChampana = datos.seleccion_sidra_champana || null;
+  console.log('🍾 Selección Sidra/Champaña en PDF:', seleccionSidraChampana);
+  console.log('🍾 Servicios del paquete originales:', serviciosPaquete.map(ps => ({
+    id: ps.servicios?.id,
+    nombre: ps.servicios?.nombre,
+    descripcion: ps.servicios?.descripcion
+  })));
+
+  // Servicios del paquete - Aplicar selección de Sidra/Champaña PRIMERO
+  const serviciosPaqueteList = serviciosPaquete
+    .map(ps => {
+      const nombreServicio = (ps.servicios?.nombre || '').toLowerCase();
+      const esSidra = nombreServicio.includes('sidra') || nombreServicio.includes('cider');
+      const esChampana = nombreServicio.includes('champaña') || nombreServicio.includes('champagne');
+      
+      // Si hay una selección de Sidra/Champaña, aplicar el reemplazo
+      if (seleccionSidraChampana) {
+        // Si el servicio coincide con la selección, mantenerlo (caso más común)
+        if ((esSidra && seleccionSidraChampana === 'Sidra') || 
+            (esChampana && seleccionSidraChampana === 'Champaña')) {
+          return {
+      ...ps.servicios,
+      categoria: ps.servicios?.categoria,
+      esPaquete: true,
+      descripcion: ps.servicios?.descripcion || ps.servicios?.nombre
+          };
+        }
+        
+        // Si se seleccionó Champaña y el paquete tiene Sidra, reemplazar Sidra con Champaña
+        if (esSidra && seleccionSidraChampana === 'Champaña') {
+          // Buscar el servicio de Champaña en todos los servicios disponibles
+          const champanaServicio = todosServiciosDisponibles.find(servicio => {
+            const nombre = (servicio.nombre || '').toLowerCase();
+            return (nombre.includes('champaña') || nombre.includes('champagne')) && servicio.id !== ps.servicios?.id;
+          });
+          
+          if (champanaServicio) {
+            // Usar el servicio de Champaña con su ID real
+            return {
+              ...champanaServicio,
+              categoria: champanaServicio?.categoria || ps.servicios?.categoria,
+              esPaquete: true,
+              descripcion: champanaServicio?.descripcion || champanaServicio?.nombre || 'Champaña'
+            };
+          } else {
+            // Si no se encuentra, crear un objeto temporal pero con un ID null
+            // para que no interfiera con el filtrado de servicios adicionales
+            const servicioTemporal = {
+              ...ps.servicios,
+              id: null, // NO usar el mismo ID de Sidra para evitar conflictos
+              nombre: 'Champaña',
+              categoria: ps.servicios?.categoria || 'barService',
+              esPaquete: true,
+              descripcion: 'Champaña',
+              // Asegurar que el servicio tenga todos los campos necesarios
+              servicios: {
+                ...ps.servicios,
+                id: null, // NO usar el mismo ID
+                nombre: 'Champaña',
+                descripcion: 'Champaña'
+              }
+            };
+            console.log('🍾 Creando servicio temporal Champaña (sin ID para evitar conflictos):', servicioTemporal);
+            return servicioTemporal;
+          }
+        }
+        
+        // Si se seleccionó Sidra y el paquete tiene Champaña, reemplazar
+        if (esChampana && seleccionSidraChampana === 'Sidra') {
+          // Buscar el servicio de Sidra en todos los servicios disponibles (primero en adicionales, luego en todos)
+          const sidraServicio = todosServiciosDisponibles.find(servicio => {
+            const nombre = (servicio.nombre || '').toLowerCase();
+            return (nombre.includes('sidra') || nombre.includes('cider')) && servicio.id !== ps.servicios?.id;
+          });
+          
+          if (sidraServicio) {
+            // Usar el servicio de Sidra con su ID real
+            return {
+              ...sidraServicio,
+              categoria: sidraServicio?.categoria || ps.servicios?.categoria,
+              esPaquete: true,
+              descripcion: sidraServicio?.descripcion || sidraServicio?.nombre || 'Sidra'
+            };
+          } else {
+            // Si no se encuentra, crear un objeto temporal pero con un ID diferente o null
+            // para que no interfiera con el filtrado de servicios adicionales
+            const servicioTemporal = {
+              ...ps.servicios,
+              id: null, // NO usar el mismo ID de Champaña para evitar conflictos
+              nombre: 'Sidra',
+              categoria: ps.servicios?.categoria || 'barService',
+              esPaquete: true,
+              descripcion: 'Sidra',
+              // Asegurar que el servicio tenga todos los campos necesarios
+              servicios: {
+                ...ps.servicios,
+                id: null, // NO usar el mismo ID
+                nombre: 'Sidra',
+                descripcion: 'Sidra'
+              }
+            };
+            console.log('🍾 Creando servicio temporal Sidra (sin ID para evitar conflictos):', servicioTemporal);
+            return servicioTemporal;
+          }
+        }
+      }
+      
+      // Si no hay selección o el servicio no es Sidra/Champaña, mantenerlo tal cual
+      return {
+        ...ps.servicios,
+        categoria: ps.servicios?.categoria,
+        esPaquete: true,
+        descripcion: ps.servicios?.descripcion || ps.servicios?.nombre
+      };
+    })
+    .filter(ps => {
+      // Filtrar: si hay selección, excluir el servicio que NO fue seleccionado
+      if (seleccionSidraChampana) {
+        const nombreServicio = (ps.nombre || '').toLowerCase();
+        const esSidra = nombreServicio.includes('sidra') || nombreServicio.includes('cider');
+        const esChampana = nombreServicio.includes('champaña') || nombreServicio.includes('champagne');
+        
+        // Si es Sidra pero se seleccionó Champaña, excluir (ya fue reemplazado arriba, pero por si acaso)
+        if (esSidra && seleccionSidraChampana === 'Champaña') {
+          return false;
+        }
+        // Si es Champaña pero se seleccionó Sidra, excluir (ya fue reemplazado arriba, pero por si acaso)
+        if (esChampana && seleccionSidraChampana === 'Sidra') {
+          return false;
+        }
+      }
+      return true;
+    });
+
+  // Crear un Set con los IDs de servicios que están REALMENTE en el paquete (después de aplicar la selección)
   const serviciosPaqueteIds = new Set();
-  serviciosPaquete.forEach(ps => {
-    if (ps.servicios?.id) {
-      serviciosPaqueteIds.add(ps.servicios.id);
+  serviciosPaqueteList.forEach(ps => {
+    if (ps.id) {
+      serviciosPaqueteIds.add(ps.id);
     }
   });
-
-  // Servicios del paquete
-  const serviciosPaqueteList = serviciosPaquete.map(ps => ({
-    ...ps.servicios,
-    categoria: ps.servicios?.categoria,
-    esPaquete: true,
-    descripcion: ps.servicios?.descripcion || ps.servicios?.nombre
+  
+  console.log('🍾 IDs de servicios en el paquete (después de selección):', Array.from(serviciosPaqueteIds));
+  console.log('🍾 Servicios adicionales recibidos:', serviciosAdicionales.map(os => {
+    const servicio = os.servicios || os;
+    return { id: servicio.id, nombre: servicio.nombre };
   }));
 
   // Servicios adicionales: solo los que NO están en el paquete
@@ -754,16 +1007,25 @@ function organizarServiciosPorCategoria(datos) {
     .filter(os => {
       const servicio = os.servicios || os;
       const servicioId = servicio.id;
-      // Solo incluir si NO está en el paquete
-      return servicioId && !serviciosPaqueteIds.has(servicioId);
+      // Solo incluir si NO está en el paquete (después de aplicar la selección)
+      const estaEnPaquete = servicioId && serviciosPaqueteIds.has(servicioId);
+      if (estaEnPaquete) {
+        console.log('🍾 Filtrando servicio adicional (está en paquete):', servicio.nombre, 'ID:', servicioId);
+      }
+      return servicioId && !estaEnPaquete;
     })
     .map(os => {
       const servicio = os.servicios || os;
+      // Asegurar que el servicio tenga nombre y descripción
+      const nombre = servicio.nombre || servicio.descripcion || 'Servicio';
+      const descripcion = servicio.descripcion || servicio.nombre || 'Servicio';
+      
       return {
         ...servicio,
+        nombre: nombre, // Asegurar que siempre tenga nombre
         categoria: servicio?.categoria,
         esPaquete: false,
-        descripcion: servicio?.descripcion || servicio?.nombre
+        descripcion: descripcion
       };
     });
 
@@ -771,6 +1033,19 @@ function organizarServiciosPorCategoria(datos) {
     ...serviciosPaqueteList,
     ...serviciosAdicionalesFiltrados
   ];
+  
+  console.log('🍾 Servicios del paquete después de procesar:', serviciosPaqueteList.map(s => ({
+    id: s.id,
+    nombre: s.nombre,
+    descripcion: s.descripcion,
+    esPaquete: s.esPaquete
+  })));
+  console.log('🍾 Servicios adicionales filtrados:', serviciosAdicionalesFiltrados.map(s => ({
+    id: s.id,
+    nombre: s.nombre,
+    descripcion: s.descripcion,
+    esPaquete: s.esPaquete
+  })));
 
   const organizados = {
     venue: [],
@@ -822,6 +1097,10 @@ function organizarServiciosPorCategoria(datos) {
       organizados.specials.push(servicio); // Los equipos van a specials para ser procesados después
     } else if (categoria.includes('coordinación') || categoria.includes('coordinador') || categoria.includes('mesero') || categoria.includes('bartender') || categoria.includes('service') || nombre.includes('coordinador') || nombre.includes('mesero') || nombre.includes('bartender') || nombre.includes('personal de servicio') || nombre.includes('waiters') || descripcion.includes('coordinator') || descripcion.includes('waiters') || descripcion.includes('bartender')) {
       organizados.serviceCoord.push(servicio);
+    } else if (categoria.includes('transporte') || categoria.includes('transport') ||
+               nombre.includes('limosina') || nombre.includes('limousine') || nombre.includes('limo') ||
+               descripcion.includes('limosina') || descripcion.includes('limousine') || descripcion.includes('limo')) {
+      organizados.specials.push(servicio); // Los servicios de transporte van a specials para ser procesados después
     } else if (categoria.includes('venue') || nombre.includes('venue') || nombre.includes('salón')) {
       organizados.venue.push(servicio);
     } else {
@@ -858,10 +1137,16 @@ function formatearHora(hora) {
       horas = parseInt(partes[0], 10);
       minutos = parseInt(partes[1] || '0', 10);
     } 
-    // Si es un objeto Date
+    // Si es un objeto Date - usar UTC para evitar problemas de zona horaria
     else if (hora instanceof Date) {
-      horas = hora.getHours();
-      minutos = hora.getMinutes();
+      // Si la fecha es 1970-01-01, es un objeto Time de Prisma, usar getHours/getMinutes directamente
+      if (hora.getFullYear() === 1970 && hora.getMonth() === 0 && hora.getDate() === 1) {
+        horas = hora.getUTCHours();
+        minutos = hora.getUTCMinutes();
+      } else {
+        horas = hora.getHours();
+        minutos = hora.getMinutes();
+      }
     }
     // Si es un objeto con métodos getHours/getMinutes (como objetos Time de Prisma)
     else if (typeof hora === 'object' && hora.getHours) {
@@ -870,12 +1155,18 @@ function formatearHora(hora) {
     }
     // Intentar parsear como Date
     else {
-      const fecha = new Date(hora);
+    const fecha = new Date(hora);
       if (isNaN(fecha.getTime())) {
         return '8:00PM';
       }
-      horas = fecha.getHours();
-      minutos = fecha.getMinutes();
+      // Si es una fecha de 1970-01-01, usar UTC
+      if (fecha.getFullYear() === 1970 && fecha.getMonth() === 0 && fecha.getDate() === 1) {
+        horas = fecha.getUTCHours();
+        minutos = fecha.getUTCMinutes();
+      } else {
+        horas = fecha.getHours();
+        minutos = fecha.getMinutes();
+      }
     }
     
     const periodo = horas >= 12 ? 'PM' : 'AM';
