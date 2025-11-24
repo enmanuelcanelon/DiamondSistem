@@ -426,11 +426,13 @@ function CrearOferta() {
     }
   }, [formData.salon_id, salones, lugarPersonalizado]);
 
-  // Cargar tipo de evento del cliente cuando se seleccione
+  // Cargar tipo de evento del cliente cuando se seleccione (solo si el campo está vacío)
+  // NO cargar automáticamente para permitir que cada oferta tenga su propio tipo de evento
   useEffect(() => {
-    if (formData.cliente_id && clientes.length > 0) {
+    if (formData.cliente_id && clientes.length > 0 && !tipoEvento) {
       const cliente = clientes.find(c => c.id.toString() === formData.cliente_id.toString());
       if (cliente && cliente.tipo_evento) {
+        // Solo cargar si el campo está vacío (sugerencia, no forzado)
         // Si el tipo de evento no está en la lista, es un valor personalizado
         if (tiposEvento.includes(cliente.tipo_evento)) {
           setTipoEvento(cliente.tipo_evento);
@@ -444,6 +446,7 @@ function CrearOferta() {
         setTipoEventoOtro('');
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.cliente_id, clientes]);
 
   // Sincronizar filtros del calendario con el salón seleccionado
@@ -1205,7 +1208,22 @@ function CrearOferta() {
         if (grupoExcluyente.length > 1) {
           // Es un grupo excluyente, tomar solo el seleccionado
           const grupoKey = `grupo_${grupoIdx}`;
-          const seleccionadoId = serviciosExcluyentesSeleccionados[grupoKey] || grupoExcluyente[0].servicio_id;
+          // Para Sidra/Champaña, usar el que está en el paquete como valor por defecto si no hay selección
+          let valorPorDefecto = grupoExcluyente[0].servicio_id;
+          const esSidraChampana = grupoExcluyente.some(gps => gps.servicios?.nombre === 'Sidra' || gps.servicios?.nombre === 'Champaña');
+          if (esSidraChampana) {
+            // Si es el grupo Sidra/Champaña, usar el que está en el paquete como valor por defecto
+            const sidraEnPaquete = paqueteSeleccionado.paquetes_servicios.some(ps => ps.servicios?.nombre === 'Sidra');
+            const champanaEnPaquete = paqueteSeleccionado.paquetes_servicios.some(ps => ps.servicios?.nombre === 'Champaña');
+            if (sidraEnPaquete) {
+              const sidraServicio = grupoExcluyente.find(gps => gps.servicios?.nombre === 'Sidra');
+              valorPorDefecto = sidraServicio?.servicio_id || grupoExcluyente[0].servicio_id;
+            } else if (champanaEnPaquete) {
+              const champanaServicio = grupoExcluyente.find(gps => gps.servicios?.nombre === 'Champaña');
+              valorPorDefecto = champanaServicio?.servicio_id || grupoExcluyente[0].servicio_id;
+            }
+          }
+          const seleccionadoId = serviciosExcluyentesSeleccionados[grupoKey] || valorPorDefecto;
           const servicioSeleccionado = grupoExcluyente.find(gps => gps.servicio_id === seleccionadoId);
           
           if (servicioSeleccionado) {
@@ -1263,6 +1281,18 @@ function CrearOferta() {
       if (sidraServicio && champanaServicio) {
         const grupoKey = `grupo_${grupoSidraChampanaIndex}`;
         const seleccionadoId = serviciosExcluyentesSeleccionados[grupoKey];
+        
+        console.log('🍾 Procesando Sidra/Champaña en getServiciosPaqueteSeleccionados:', {
+          grupoKey,
+          seleccionadoId,
+          sidraId: sidraServicio.id,
+          champanaId: champanaServicio.id,
+          tieneSidra,
+          tieneChampana,
+          seleccionadoEsChampana: seleccionadoId === champanaServicio.id,
+          seleccionadoEsSidra: seleccionadoId === sidraServicio.id,
+          serviciosExcluyentesSeleccionados: serviciosExcluyentesSeleccionados
+        });
         
         // Si Champaña está seleccionada y el paquete tiene Sidra, reemplazar
         if (seleccionadoId === champanaServicio.id && tieneSidra) {
@@ -1647,6 +1677,63 @@ function CrearOferta() {
 
   // Función para enviar la oferta (separada para reutilizar)
   const enviarOferta = () => {
+    // Obtener la selección de Sidra/Champaña del paquete
+    let seleccionSidraChampana = null;
+    if (paqueteSeleccionado) {
+      const tieneSidra = paqueteSeleccionado.paquetes_servicios.some(ps => ps.servicios?.nombre === 'Sidra');
+      const tieneChampana = paqueteSeleccionado.paquetes_servicios.some(ps => ps.servicios?.nombre === 'Champaña');
+      
+      if (tieneSidra || tieneChampana) {
+        // Contar grupos excluyentes existentes para encontrar el índice del grupo Sidra/Champaña
+        let gruposExistentes = 0;
+        const serviciosProcesadosGrupo = new Set();
+        
+        paqueteSeleccionado.paquetes_servicios.forEach((ps) => {
+          if (serviciosProcesadosGrupo.has(ps.servicio_id)) return;
+          
+          const nombreServicio = ps.servicios?.nombre;
+          const excluyentes = serviciosExcluyentes[nombreServicio];
+          
+          if (excluyentes && (nombreServicio === 'Photobooth 360' || nombreServicio === 'Photobooth Print')) {
+            const grupoExcluyente = paqueteSeleccionado.paquetes_servicios.filter(
+              (otroPs) => {
+                const otroNombre = otroPs.servicios?.nombre;
+                return otroNombre === nombreServicio || excluyentes.includes(otroNombre);
+              }
+            );
+            
+            if (grupoExcluyente.length > 1) {
+              gruposExistentes++;
+              grupoExcluyente.forEach(gps => serviciosProcesadosGrupo.add(gps.servicio_id));
+            }
+          }
+        });
+        
+        const grupoKey = `grupo_${gruposExistentes}`;
+        const seleccionadoId = serviciosExcluyentesSeleccionados[grupoKey];
+        
+        if (seleccionadoId) {
+          const sidraServicio = servicios?.find(s => s.nombre === 'Sidra');
+          const champanaServicio = servicios?.find(s => s.nombre === 'Champaña');
+          
+          if (seleccionadoId === sidraServicio?.id) {
+            seleccionSidraChampana = 'Sidra';
+          } else if (seleccionadoId === champanaServicio?.id) {
+            seleccionSidraChampana = 'Champaña';
+          }
+        } else {
+          // Si no hay selección explícita, usar el que viene en el paquete por defecto
+          if (tieneSidra) {
+            seleccionSidraChampana = 'Sidra';
+          } else if (tieneChampana) {
+            seleccionSidraChampana = 'Champaña';
+          }
+        }
+      }
+    }
+    
+    console.log('📤 Enviando oferta con selección Sidra/Champaña:', seleccionSidraChampana);
+    
     const dataToSubmit = {
       cliente_id: parseInt(formData.cliente_id),
       paquete_id: parseInt(formData.paquete_id),
@@ -1659,6 +1746,8 @@ function CrearOferta() {
       salon_id: formData.salon_id === 'otro' ? null : parseInt(formData.salon_id),
       lugar_evento: formData.salon_id === 'otro' ? lugarPersonalizado : formData.lugar_evento,
       homenajeado: formData.homenajeado || null,
+      tipo_evento: tipoEvento === 'Otro' ? tipoEventoOtro : (tipoEvento || null), // Incluir tipo de evento de la oferta
+      seleccion_sidra_champana: seleccionSidraChampana, // Incluir selección de Sidra/Champaña
       descuento: parseFloat(formData.descuento_porcentaje) || 0,
       notas_vendedor: formData.notas_internas || null,
       // Incluir ajustes personalizados para que el backend los use al calcular
@@ -2565,22 +2654,13 @@ function CrearOferta() {
                       <Label htmlFor="tipo_evento">Tipo de Evento</Label>
                       <Select 
                         value={tipoEvento} 
-                        onValueChange={async (value) => {
+                        onValueChange={(value) => {
                           setTipoEvento(value);
                           if (value !== 'Otro') {
                             setTipoEventoOtro('');
-                            // Actualizar el cliente con el tipo de evento
-                            if (formData.cliente_id && value) {
-                              try {
-                                await updateClienteTipoEvento.mutateAsync({
-                                  clienteId: parseInt(formData.cliente_id),
-                                  tipoEvento: value
-                                });
-                                toast.success('Tipo de evento actualizado');
-                              } catch (error) {
-                                toast.error('Error al actualizar tipo de evento');
-                              }
-                            }
+                            // NO actualizar el cliente automáticamente
+                            // Cada oferta tiene su propio tipo_evento independiente
+                            // El tipo_evento se guardará en la oferta, no en el cliente
                           }
                         }}
                         disabled={!formData.cliente_id}
@@ -2601,25 +2681,13 @@ function CrearOferta() {
                             value={tipoEventoOtro}
                             onChange={(e) => setTipoEventoOtro(e.target.value)}
                             placeholder="Especifique el tipo de evento..."
-                            onBlur={async () => {
-                              // Actualizar el cliente cuando se termine de escribir
-                              if (formData.cliente_id && tipoEventoOtro.trim()) {
-                                try {
-                                  await updateClienteTipoEvento.mutateAsync({
-                                    clienteId: parseInt(formData.cliente_id),
-                                    tipoEvento: tipoEventoOtro.trim()
-                                  });
-                                  toast.success('Tipo de evento actualizado');
-                                } catch (error) {
-                                  toast.error('Error al actualizar tipo de evento');
-                                }
-                              }
-                            }}
+                            // NO actualizar el cliente automáticamente
+                            // Cada oferta tiene su propio tipo_evento independiente
                           />
                         </div>
                       )}
                       <p className="text-xs text-muted-foreground">
-                        Seleccione el tipo de evento para este cliente
+                        Seleccione el tipo de evento para esta oferta
                       </p>
                     </div>
 
@@ -3524,42 +3592,52 @@ function CrearOferta() {
                     
                     const grupoSidraChampana = [];
                     
-                    // Agregar Sidra al grupo (del paquete o crear uno temporal)
-                    if (sidraPaquete) {
+                    // IMPORTANTE: Agregar primero el que está en el paquete para que sea el valor por defecto
+                    // Si el paquete tiene Sidra, agregar Sidra primero; si tiene Champaña, agregar Champaña primero
+                    if (tieneSidra && sidraPaquete) {
+                      // El paquete tiene Sidra, agregar Sidra primero
                       grupoSidraChampana.push(sidraPaquete);
                       serviciosProcesados.add(sidraPaquete.servicio_id);
-                    } else if (sidraServicio && tieneChampana) {
-                      // Si el paquete tiene Champaña pero no Sidra, crear un objeto temporal para Sidra
-                      const sidraTemporal = {
-                        id: `sidra_${sidraServicio.id}`,
-                        paquete_id: champanaPaquete?.paquete_id,
-                        servicio_id: sidraServicio.id,
-                        cantidad: champanaPaquete?.cantidad || 10,
-                        incluido_gratis: true,
-                        notas: 'Opción alternativa a Champaña',
-                        servicios: sidraServicio
-                      };
-                      grupoSidraChampana.push(sidraTemporal);
-                      serviciosProcesados.add(sidraServicio.id);
-                    }
-                    
-                    // Agregar Champaña al grupo (del paquete o crear uno temporal)
-                    if (champanaPaquete) {
+                      
+                      // Luego agregar Champaña (temporal si no está en el paquete)
+                      if (champanaPaquete) {
+                        grupoSidraChampana.push(champanaPaquete);
+                        serviciosProcesados.add(champanaPaquete.servicio_id);
+                      } else if (champanaServicio) {
+                        const champanaTemporal = {
+                          id: `champana_${champanaServicio.id}`,
+                          paquete_id: sidraPaquete?.paquete_id,
+                          servicio_id: champanaServicio.id,
+                          cantidad: sidraPaquete?.cantidad || 10,
+                          incluido_gratis: true,
+                          notas: 'Opción alternativa a Sidra',
+                          servicios: champanaServicio
+                        };
+                        grupoSidraChampana.push(champanaTemporal);
+                        serviciosProcesados.add(champanaServicio.id);
+                      }
+                    } else if (tieneChampana && champanaPaquete) {
+                      // El paquete tiene Champaña, agregar Champaña primero
                       grupoSidraChampana.push(champanaPaquete);
                       serviciosProcesados.add(champanaPaquete.servicio_id);
-                    } else if (champanaServicio && tieneSidra) {
-                      // Si el paquete tiene Sidra pero no Champaña, crear un objeto temporal para Champaña
-                      const champanaTemporal = {
-                        id: `champana_${champanaServicio.id}`,
-                        paquete_id: sidraPaquete?.paquete_id,
-                        servicio_id: champanaServicio.id,
-                        cantidad: sidraPaquete?.cantidad || 10,
-                        incluido_gratis: true,
-                        notas: 'Opción alternativa a Sidra',
-                        servicios: champanaServicio
-                      };
-                      grupoSidraChampana.push(champanaTemporal);
-                      serviciosProcesados.add(champanaServicio.id);
+                      
+                      // Luego agregar Sidra (temporal si no está en el paquete)
+                      if (sidraPaquete) {
+                        grupoSidraChampana.push(sidraPaquete);
+                        serviciosProcesados.add(sidraPaquete.servicio_id);
+                      } else if (sidraServicio) {
+                        const sidraTemporal = {
+                          id: `sidra_${sidraServicio.id}`,
+                          paquete_id: champanaPaquete?.paquete_id,
+                          servicio_id: sidraServicio.id,
+                          cantidad: champanaPaquete?.cantidad || 10,
+                          incluido_gratis: true,
+                          notas: 'Opción alternativa a Champaña',
+                          servicios: sidraServicio
+                        };
+                        grupoSidraChampana.push(sidraTemporal);
+                        serviciosProcesados.add(sidraServicio.id);
+                      }
                     }
                     
                     // Si tenemos ambas opciones, crear el grupo excluyente
@@ -3643,7 +3721,25 @@ function CrearOferta() {
                       {/* Grupos de servicios excluyentes (con selector) */}
                       {gruposExcluyentes.map((grupo, idx) => {
                         const grupoKey = `grupo_${idx}`;
-                        const seleccionado = serviciosExcluyentesSeleccionados[grupoKey] || grupo[0].servicio_id;
+                        // Determinar valor por defecto: si el grupo contiene Sidra/Champaña, usar el que está en el paquete
+                        let valorPorDefecto = grupo[0].servicio_id;
+                        if (grupo.length === 2) {
+                          const tieneSidra = grupo.some(ps => ps.servicios?.nombre === 'Sidra');
+                          const tieneChampana = grupo.some(ps => ps.servicios?.nombre === 'Champaña');
+                          if (tieneSidra && tieneChampana) {
+                            // Si el paquete tiene Sidra, usar Sidra por defecto; si tiene Champaña, usar Champaña
+                            const sidraEnPaquete = paqueteSeleccionado?.paquetes_servicios?.some(ps => ps.servicios?.nombre === 'Sidra');
+                            const champanaEnPaquete = paqueteSeleccionado?.paquetes_servicios?.some(ps => ps.servicios?.nombre === 'Champaña');
+                            if (sidraEnPaquete) {
+                              const sidraServicio = grupo.find(ps => ps.servicios?.nombre === 'Sidra');
+                              valorPorDefecto = sidraServicio?.servicio_id || grupo[0].servicio_id;
+                            } else if (champanaEnPaquete) {
+                              const champanaServicio = grupo.find(ps => ps.servicios?.nombre === 'Champaña');
+                              valorPorDefecto = champanaServicio?.servicio_id || grupo[0].servicio_id;
+                            }
+                          }
+                        }
+                        const seleccionado = serviciosExcluyentesSeleccionados[grupoKey] || valorPorDefecto;
                         
                         return (
                           <div key={grupoKey} className="p-4 rounded-lg border border-primary/20 bg-primary/5">
@@ -3669,9 +3765,17 @@ function CrearOferta() {
                                     value={ps.servicio_id}
                                     checked={seleccionado === ps.servicio_id}
                                     onChange={(e) => {
+                                      const nuevoValor = parseInt(e.target.value);
+                                      const servicioSeleccionado = grupo.find(ps => ps.servicio_id === nuevoValor);
+                                      console.log('🔵 Selección cambiada:', {
+                                        grupoKey,
+                                        nuevoValor,
+                                        servicioNombre: servicioSeleccionado?.servicios?.nombre,
+                                        grupo: grupo.map(ps => ({ id: ps.servicio_id, nombre: ps.servicios?.nombre }))
+                                      });
                                       setServiciosExcluyentesSeleccionados({
                                         ...serviciosExcluyentesSeleccionados,
-                                        [grupoKey]: parseInt(e.target.value)
+                                        [grupoKey]: nuevoValor
                                       });
                                     }}
                                     className="mt-0.5 w-4 h-4 text-primary"
