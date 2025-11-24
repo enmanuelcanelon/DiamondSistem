@@ -1,0 +1,50 @@
+﻿Actualizaci├â┬│n de rutas, templates y documentaci├â┬│n
+Optimizaci├│n y limpieza: Eliminaci├│n de console.logs, correcci├│n de bugs, ajustes UI y mejoras de rendimiento
+Optimizaci├│n de rendimiento para Supabase: Eliminaci├│n de queries N+1, reducci├│n de refetchInterval, ├¡ndices compuestos, connection pooling optimizado, endpoint batch para mensajes y cach├⌐ en backend
+Mejora dise├â┬▒o Paso 3: Actividades Especiales - Reorganizaci├â┬│n de columnas y alineaci├â┬│n de t├â┬¡tulos
+Mejoras de dise├â┬▒o frontend-gerente: estilo serio y neutro sin colores vibrantes
+Mejoras en frontend-cliente: wizard para ajustes de evento, dise├â┬▒o shadcn/ui y historial de contratos
+feat: Consolidaci├â┬│n de tablas de usuarios en una sola tabla con sistema de roles
+fix: Eliminar c├â┬│digo duplicado que causaba m├â┬║ltiples queries pesadas en Dashboard - Eliminar c├â┬│digo antiguo que ejecutaba queries manuales - Solo usar endpoint optimizado /vendedores/:id/stats/mes
+perf: Eliminar c├â┬│digo duplicado en Dashboard que causaba m├â┬║ltiples queries pesadas - Eliminar c├â┬│digo antiguo que hac├â┬¡a queries manuales en frontend - Usar solo endpoint optimizado /vendedores/:id/stats/mes del backend - Reducir significativamente el tiempo de carga inicial
+perf: Implementar lazy loading y optimizar carga inicial - Lazy loading para todas las p├â┬íginas excepto Dashboard y Login - Suspense boundaries para mejor UX durante carga - Optimizar queries del Layout y Dashboard para no bloquear inicio - Code splitting con manual chunks para mejor cach├â┬⌐
+perf: Eliminar refresco autom├â┬ítico de leads y calendario - Eliminar refetchInterval autom├â┬ítico de LeaksDisponibles, CalendarioMensual y Leaks - Los datos solo se refrescan manualmente con botones - Mejora significativa del rendimiento al evitar queries innecesarias
+perf: Optimizar queries del backend para mejorar rendimiento - Usar aggregate SQL en lugar de traer todos los registros para sumar - Eliminar queries N+1 en pagos e historial usando batch queries - Reducir significativamente el tiempo de respuesta de estad├â┬¡sticas
+perf: Optimizar React Query para mejorar rendimiento - Aumentar staleTime en queries de datos est├â┬íticos (salones, servicios, temporadas) - Reducir refetchInterval en calendario (10s -> 2min) y chat (5s -> 10s) - Deshabilitar refetchOnWindowFocus para reducir carga - Optimizar queries de leaks y dashboard
+feat: Agregar scripts para crear managers y administradores (usuarios inventario)
+feat: Agregar script para crear gerentes y corregir script inicializador BD
+feat: Agregar script maestro para inicializar BD completa con todos los datos
+fix: Corregir precios de paquetes por sal├â┬│n seg├â┬║n migration_salones.sql
+feat: Agregar script para crear relaciones paquetes-salones
+feat: Agregar script para crear/actualizar salones en la base de datos
+fix: Agregar .trim() a CORS_ORIGINS para evitar problemas con espacios - Mejora la robustez del parsing de CORS_ORIGINS - Consistente con el c├â┬│digo de producci├â┬│n - Resuelve problemas de CORS en Mac
+docs: Simplificar secciones de inventario opcional en README
+docs: Actualizar README con pasos correctos de instalaci├â┬│n - Agregar opciones claras para PostgreSQL local vs Supabase - Actualizar Paso 5/6 para usar scripts Node.js en lugar de psql - Actualizar credenciales de ADMIN001 a PRUEBA001/prueba123 - Agregar instrucciones para crear usuario de prueba - Simplificar pasos de inventario opcional - Corregir rutas @shared en vite.config.js para desarrollo local
+fix: Corregir rutas de @shared en vite.config.js para desarrollo local - Cambiar de ruta absoluta Docker a ruta relativa en desarrollo - Agregar script crear_usuario_prueba.js para crear usuario PRUEBA001 - Frontends ahora funcionan correctamente en desarrollo local
+feat: Agregar GUIA_SUPABASE.md y correcciones de seeds
+feat: Agregar soporte para Supabase (PostgreSQL en la nube) - Crear GUIA_SUPABASE.md con instrucciones completas - Actualizar backend/.env con connection string de Supabase - Corregir ruta de seeds.sql en ejecutar_seeds.js - Actualizar README.md con referencia a Supabase - Permite trabajar desde cualquier ordenador con la misma BD
+docs: Agregar advertencia sobre Docker en README y corregir VITE_API_URL
+docs: Documentar problemas conocidos de Docker y recomendar instalaci├â┬│n local - Agregar advertencias en README y GUIA_DOCKER.md sobre problemas de Docker - Corregir VITE_API_URL en docker-compose.yml para incluir /api - Actualizar documentaci├â┬│n para indicar que instalaci├â┬│n local es m├â┬⌐todo recomendado - Docker queda documentado pero no se recomienda su uso
+fix: Actualizar Dockerfiles de frontends a Node.js 20 para compatibilidad con Vite - Cambiar de node:18-alpine a node:20-alpine en todos los frontends - Soluciona error 'Vite requires Node.js version 20.19+ or 22.12+' - Frontends ahora funcionan correctamente con Vite 7.2.2
+fix: Corregir problemas de Docker - Eliminar version obsoleto de docker-compose.yml - Mover ejecuci├â┬│n de seeds despu├â┬⌐s de crear tablas con Prisma - Crear script ejecutar_seeds.js para ejecutar seeds en orden correcto - Agregar volumen de database para acceso a seeds.sql - Soluciona error de seeds ejecut├â┬índose antes de que existan las tablas
+feat: Agregar configuraci├â┬│n completa de Docker para facilitar instalaci├â┬│n en Mac y Windows - Incluye docker-compose.yml con todos los servicios - Dockerfiles para backend y 5 frontends - Gu├â┬¡as completas de instalaci├â┬│n (GUIA_DOCKER.md y DOCKER_QUICKSTART.md) - Soluciona problemas de CORS y dependencias - Configuraci├â┬│n lista para desarrollo con hot reload
+Actualizar README: gu├â┬¡as completas de instalaci├â┬│n Windows y Mac, cambios recientes de PDFs y scripts de limpieza
+Corregir layout p├â┬ígina 1 contratos Revolution: ajustar tama├â┬▒os y espaciados para que todo quepa en una p├â┬ígina
+Ajustar PDF de contratos Diamond: texto blanco con fuente Poppins igual que ofertas
+Ajustar PDF de ofertas Diamond: texto blanco con fuente Poppins y fondo original
+Mejoras en dise├â┬▒o de PDFs de ofertas: portada elegante, reorganizaci├â┬│n de extras, y ajustes de formato
+Agregar imagen de fondo general para p├â┬íginas de servicios
+Mejoras en dise├â┬▒o del PDF de contratos: ajustes de espaciado, tama├â┬▒os de fuente, fondo de imagen, y correcci├â┬│n de superposiciones
+Fix: Corregir c├â┬ílculo y visualizaci├â┬│n de servicios adicionales en PDF de contratos - Asegurar que todos los servicios adicionales se muestren correctamente - Corregir c├â┬ílculo del total para que coincida entre tabla y desglose - Filtrar servicios del paquete con precio 0 de servicios adicionales - Incluir servicios extras del paquete con precio > 0
+Mejoras en dise├â┬▒o del PDF de ofertas: header azul marino con degradado, texto centrado, bordes negros, cajas transparentes
+feat: mejoras en dashboard, leads y calendario de Google
+Cambiar 'Leaks' a 'Leads' en textos visibles; agregar bot├â┬│n para guardar leads interesados en Google Calendar; limpiar base de datos contratos/clientes/ofertas; resetear filtro de estado a 'nuevos' por defecto
+Agregar tipo de evento en frontend: calendario, contratos y ofertas; agregar precio total en comisiones; eliminar bot├â┬│n agregar a Google Calendar
+Agregar tipo de evento en calendario, contratos y ofertas; agregar precio total en comisiones; actualizar precios paquete personalizado; mejorar actualizaci├â┬│n de calendario
+Fix: Mejoras en validaci├â┬│n de horarios y filtros de calendario - Agregado calendario para sede externa (Otros) con filtro de Otros activado por defecto - Corregido bug donde horas seleccionadas no se limpiaban al cambiar de sal├â┬│n si estaban ocupadas - Mejorada actualizaci├â┬│n de precios de paquetes al cambiar de sal├â┬│n - Ajuste de temporada = 0 para sede externa - Solo mostrar paquete Personalizado para sede externa
+Fix: Filtrar servicios exclusivos de Diamond en servicios incluidos del paquete - Lounge Set + Coctel Dream y Terraza decorada solo visibles en Diamond - Filtro aplicado en servicios normales y grupos excluyentes
+Fix: Resetear secuencias de IDs despu├â┬⌐s de limpiar datos - Script para resetear todas las secuencias - Verificaci├â┬│n de clientes - Mejora del script de limpieza
+Fix: Servicios de decoraci├â┬│n exclusivos de Diamond - Lounge Set + Coctel Dream y Terraza decorada solo disponibles en Diamond - Limpieza autom├â┬ítica al cambiar de sal├â┬│n
+Add: Script para limpiar todos los datos (clientes, contratos, ofertas, leaks asignados) - Resetea IDs y mantiene estructura de BD
+Fix: Bloquear horas ocupadas en selectores cuando hay eventos en el sal├â┬│n seleccionado - Los eventos de Google Calendar con sal├â┬│n asignado ahora bloquean horas - Sincronizaci├â┬│n autom├â┬ítica de filtros del calendario con sal├â┬│n seleccionado - Limpieza de logs de debugging
+Mejoras en calendario de Crear Oferta: navegaci├â┬│n por mes/a├â┬▒o, filtros mejorados y panel de eventos en sidebar

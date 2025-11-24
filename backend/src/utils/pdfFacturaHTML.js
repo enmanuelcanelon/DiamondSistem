@@ -95,15 +95,49 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
   let html = fs.readFileSync(templatePath, 'utf8');
 
   // Calcular precios
-  const precioPaquete = parseFloat(datos.subtotal || datos.precio_base || datos.precio_paquete_base || 0);
+  const precioPaquete = parseFloat(datos.precio_paquete_base || datos.precio_base || 0);
   const ajusteTemporada = parseFloat(datos.ajuste_temporada || datos.ajuste_temporada_custom || 0);
   const precioTemporada = precioPaquete + ajusteTemporada;
   const descuento = parseFloat(datos.descuento || 0);
-  const precioEspecial = precioTemporada - descuento;
-  const impuesto = parseFloat(datos.impuesto_monto || 0);
-  const serviceFee = parseFloat(datos.tarifa_servicio_monto || 0);
-  const serviceFeePorcentaje = parseFloat(datos.tarifa_servicio_porcentaje || 18);
+  
+  // Obtener subtotal base (incluye paquete + servicios adicionales + invitados adicionales)
+  const subtotalBase = parseFloat(datos.subtotal || 0);
+  const subtotalConDescuento = subtotalBase - descuento;
+  
+  // Obtener total final y porcentajes
   const total = parseFloat(datos.total_final || 0);
+  const impuestoPorcentaje = parseFloat(datos.impuesto_porcentaje || 7);
+  const serviceFeePorcentaje = parseFloat(datos.tarifa_servicio_porcentaje || 18);
+  
+  // Recalcular impuestos y tarifa de servicio basándose en el subtotal con descuento
+  // para asegurar que la suma coincida con el total
+  let impuesto, serviceFee, precioEspecial;
+  
+  if (total > 0 && subtotalConDescuento > 0) {
+    // Calcular impuestos basándose en el subtotal con descuento
+    impuesto = (subtotalConDescuento * impuestoPorcentaje) / 100;
+    serviceFee = (subtotalConDescuento * serviceFeePorcentaje) / 100;
+    
+    // Verificar que la suma coincida con el total
+    const sumaCalculada = subtotalConDescuento + impuesto + serviceFee;
+    const diferencia = Math.abs(total - sumaCalculada);
+    
+    // Si hay diferencia, ajustar para que coincida exactamente con el total
+    if (diferencia > 0.01) {
+      // Ajustar proporcionalmente los impuestos para que la suma sea exacta
+      const factorAjuste = (total - subtotalConDescuento) / (impuesto + serviceFee);
+      impuesto = impuesto * factorAjuste;
+      serviceFee = serviceFee * factorAjuste;
+    }
+    
+    // El precio especial mostrado será el subtotal con descuento
+    precioEspecial = subtotalConDescuento;
+  } else {
+    // Fallback: usar valores de la base de datos
+    precioEspecial = precioTemporada - descuento;
+    impuesto = parseFloat(datos.impuesto_monto || 0);
+    serviceFee = parseFloat(datos.tarifa_servicio_monto || 0);
+  }
   
   // Obtener primer pago
   const primerPago = datos.pagos && datos.pagos.length > 0 
@@ -432,9 +466,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     // Determinar cuántas columnas tienen contenido
     const columnasConContenido = [col1.length > 0, col2.length > 0, col3.length > 0].filter(Boolean).length;
     
-    // Aplicar estilos para usar esquinas primero
+    // Aplicar estilos: columna 1 izquierda, columna 2 centrada, columna 3 derecha
     let htmlCol1 = '<div class="package-col" style="justify-self: start;">';
-    let htmlCol2 = '<div class="package-col" style="justify-self: ' + (columnasConContenido === 2 ? 'end;' : (columnasConContenido === 1 ? 'start;' : 'center;')) + '">';
+    let htmlCol2 = '<div class="package-col" style="justify-self: center;">';
     let htmlCol3 = '<div class="package-col" style="justify-self: end;">';
 
     const generarCategoriaHTML = (cat, items) => {
@@ -474,15 +508,19 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     });
     htmlCol2 += '</div>';
 
-    // Columna 3
-    col3.forEach(key => {
-      const cat = categorias.find(c => c.key === key);
-      if (cat) {
-        const items = serviciosOrganizados[cat.key] || [];
-        htmlCol3 += generarCategoriaHTML(cat, items);
-      }
-    });
-    htmlCol3 += '</div>';
+    // Columna 3 - si hay 2 columnas, dejar vacía para que la columna 2 se centre
+    if (columnasConContenido === 2) {
+      htmlCol3 = '<div class="package-col"></div>';
+    } else {
+      col3.forEach(key => {
+        const cat = categorias.find(c => c.key === key);
+        if (cat) {
+          const items = serviciosOrganizados[cat.key] || [];
+          htmlCol3 += generarCategoriaHTML(cat, items);
+        }
+      });
+      htmlCol3 += '</div>';
+    }
 
     // Determinar el estilo del grid según el número de columnas
     let gridStyle = '';
@@ -490,8 +528,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       // Si solo hay 1 columna, usar solo la primera columna (izquierda)
       gridStyle = 'grid-template-columns: 1fr; justify-content: start;';
     } else if (columnasConContenido === 2) {
-      // Si hay 2 columnas, usar esquinas (izquierda y derecha)
-      gridStyle = 'grid-template-columns: 1fr 1fr; justify-content: space-between;';
+      // Si hay 2 columnas, posicionar la segunda columna ligeramente más a la izquierda del centro
+      // Usar grid de 3 columnas: izquierda (max-content), centro (1.2fr para un toque a la izquierda), derecha (1fr)
+      gridStyle = 'grid-template-columns: max-content 1.2fr 1fr; justify-content: start; gap: 0px;';
     } else {
       // Si hay 3 columnas, usar las 3 normalmente
       gridStyle = 'grid-template-columns: 1fr 1fr 1fr;';
@@ -612,10 +651,10 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       <div class="page page-2b">
         <div class="page-content" style="padding: 0; height: 100%;">
           <div class="package-card">
-            <div style="padding: 10px 50px 15px 50px; text-align: left; flex-shrink: 0;">
+            <div style="padding: 75px 50px 15px 50px; text-align: left; flex-shrink: 0;">
               <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
             </div>
-            <div class="package-content" style="flex: 1; padding-top: 8px; overflow: hidden; ${gridStyleExtras}">
+            <div class="package-content" style="flex: 1; padding-top: 20px; overflow: hidden; ${gridStyleExtras}">
               ${htmlServiciosAdicionales}
             </div>
           </div>
@@ -720,10 +759,10 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     <div class="page page-2">
         <div class="page-content" style="padding: 0; height: 100%;">
             <div class="package-card">
-                <div style="padding: 5px 50px 15px 50px; text-align: left; flex-shrink: 0;">
+                <div style="padding: 75px 50px 15px 50px; text-align: left; flex-shrink: 0;">
                     <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">PAQUETE ${nombrePaqueteLimpio}</h2>
                 </div>
-                <div class="package-content" style="flex: 1; padding-top: 8px; overflow: hidden; ${gridStylePaquete}">
+                <div class="package-content" style="flex: 1; padding-top: 20px; overflow: hidden; ${gridStylePaquete}">
                     ${htmlServiciosPaqueteFinal}
                 </div>
             </div>
@@ -849,7 +888,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
 function organizarServiciosPorCategoria(datos) {
   const serviciosAdicionales = datos.ofertas_servicios_adicionales || datos.contratos_servicios || [];
   const serviciosPaquete = datos.paquetes?.paquetes_servicios || [];
-  
+
   // Extraer todos los servicios disponibles de los servicios adicionales para buscar IDs correctos
   const todosServiciosDisponibles = serviciosAdicionales.map(os => os.servicios || os);
 
@@ -998,7 +1037,7 @@ function organizarServiciosPorCategoria(datos) {
   
   console.log('🍾 IDs de servicios en el paquete (después de selección):', Array.from(serviciosPaqueteIds));
   console.log('🍾 Servicios adicionales recibidos:', serviciosAdicionales.map(os => {
-    const servicio = os.servicios || os;
+      const servicio = os.servicios || os;
     return { id: servicio.id, nombre: servicio.nombre };
   }));
 
