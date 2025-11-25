@@ -207,13 +207,27 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
     };
 
     // Filtrar contratos que se solapan con el horario solicitado
+    // Función auxiliar para extraer hora en formato HH:mm de un campo Time de Prisma
+    const extraerHora = (hora) => {
+      if (typeof hora === 'string') {
+        return hora.slice(0, 5);
+      } else if (hora instanceof Date) {
+        // Para campos Time de Prisma (fecha 1970-01-01), usar UTC para evitar problemas de zona horaria
+        if (hora.getFullYear() === 1970 && hora.getMonth() === 0 && hora.getDate() === 1) {
+          const horas = hora.getUTCHours();
+          const minutos = hora.getUTCMinutes();
+          return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+        } else {
+          return hora.toTimeString().slice(0, 5);
+        }
+      } else {
+        return hora.toTimeString().slice(0, 5);
+      }
+    };
+
     const contratosOcupados = todosContratos.filter(contrato => {
-      const horaInicioContrato = typeof contrato.hora_inicio === 'string'
-        ? contrato.hora_inicio.slice(0, 5)
-        : contrato.hora_inicio.toTimeString().slice(0, 5);
-      const horaFinContrato = typeof contrato.hora_fin === 'string'
-        ? contrato.hora_fin.slice(0, 5)
-        : contrato.hora_fin.toTimeString().slice(0, 5);
+      const horaInicioContrato = extraerHora(contrato.hora_inicio);
+      const horaFinContrato = extraerHora(contrato.hora_fin);
       
       return haySolapamiento(horaInicioStr, horaFinStr, horaInicioContrato, horaFinContrato);
     });
@@ -246,12 +260,8 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
 
     // Filtrar ofertas que se solapan con el horario solicitado
     const ofertasOcupadas = todasOfertas.filter(oferta => {
-      const horaInicioOferta = typeof oferta.hora_inicio === 'string'
-        ? oferta.hora_inicio.slice(0, 5)
-        : oferta.hora_inicio.toTimeString().slice(0, 5);
-      const horaFinOferta = typeof oferta.hora_fin === 'string'
-        ? oferta.hora_fin.slice(0, 5)
-        : oferta.hora_fin.toTimeString().slice(0, 5);
+      const horaInicioOferta = extraerHora(oferta.hora_inicio);
+      const horaFinOferta = extraerHora(oferta.hora_fin);
       
       return haySolapamiento(horaInicioStr, horaFinStr, horaInicioOferta, horaFinOferta);
     });
@@ -374,9 +384,21 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
 
     // Función para convertir hora a minutos desde medianoche
     const toMinutes = (hora) => {
-      const horaStr = typeof hora === 'string' 
-        ? hora.slice(0, 5)
-        : hora.toTimeString().slice(0, 5);
+      let horaStr;
+      if (typeof hora === 'string') {
+        horaStr = hora.slice(0, 5);
+      } else if (hora instanceof Date) {
+        // Para campos Time de Prisma (fecha 1970-01-01), usar UTC para evitar problemas de zona horaria
+        if (hora.getFullYear() === 1970 && hora.getMonth() === 0 && hora.getDate() === 1) {
+          const horas = hora.getUTCHours();
+          const minutos = hora.getUTCMinutes();
+          horaStr = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+        } else {
+          horaStr = hora.toTimeString().slice(0, 5);
+        }
+      } else {
+        horaStr = hora.toTimeString().slice(0, 5);
+      }
       const [h, m] = horaStr.split(':').map(Number);
       return h * 60 + m;
     };
@@ -388,48 +410,52 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
-    // Obtener todos los rangos ocupados (con buffer de 1 hora)
+    // Obtener todos los rangos ocupados - SOLO las horas exactas del evento, sin buffers
     const rangosOcupados = [];
-    const bufferMinutos = 60; // 1 hora de buffer
+
+    // Función para procesar un evento (contrato u oferta)
+    const procesarEvento = (horaInicio, horaFin) => {
+      const inicioMin = toMinutes(horaInicio);
+      const finMin = toMinutes(horaFin);
+      
+      // Determinar si cruza medianoche
+      const cruzaMedianoche = finMin < inicioMin;
+      
+      if (cruzaMedianoche) {
+        // Evento cruza medianoche (ej: 8 PM a 12 AM)
+        // Solo ocupamos desde inicio hasta 23:59 del mismo día (NO el día siguiente)
+        const inicioMinAjustado = Math.max(0, inicioMin);
+        const finMinAjustado = 1439; // 23:59 del mismo día
+        
+        rangosOcupados.push({
+          inicio: inicioMinAjustado,
+          fin: finMinAjustado,
+          inicioHora: toHora(inicioMinAjustado),
+          finHora: toHora(finMinAjustado)
+        });
+      } else {
+        // Evento NO cruza medianoche (ej: 12 PM a 4 PM)
+        // Solo ocupamos las horas exactas del evento
+        const inicioMinAjustado = Math.max(0, inicioMin);
+        const finMinAjustado = Math.min(1439, finMin);
+        
+        rangosOcupados.push({
+          inicio: inicioMinAjustado,
+          fin: finMinAjustado,
+          inicioHora: toHora(inicioMinAjustado),
+          finHora: toHora(finMinAjustado)
+        });
+      }
+    };
 
     // Procesar contratos
     todosContratos.forEach(contrato => {
-      const inicioMin = toMinutes(contrato.hora_inicio);
-      const finMin = toMinutes(contrato.hora_fin);
-      
-      // Ajustar si cruza medianoche
-      const finAjustado = finMin < inicioMin ? finMin + 1440 : finMin;
-      
-      // Agregar buffer: el rango ocupado incluye 1 hora antes del inicio y 1 hora después del fin
-      const inicioConBuffer = Math.max(0, inicioMin - bufferMinutos);
-      const finConBuffer = Math.min(1439, finAjustado + bufferMinutos);
-      
-      rangosOcupados.push({
-        inicio: inicioConBuffer,
-        fin: finConBuffer,
-        inicioHora: toHora(inicioConBuffer),
-        finHora: toHora(finConBuffer)
-      });
+      procesarEvento(contrato.hora_inicio, contrato.hora_fin);
     });
 
     // Procesar ofertas
     todasOfertas.forEach(oferta => {
-      const inicioMin = toMinutes(oferta.hora_inicio);
-      const finMin = toMinutes(oferta.hora_fin);
-      
-      // Ajustar si cruza medianoche
-      const finAjustado = finMin < inicioMin ? finMin + 1440 : finMin;
-      
-      // Agregar buffer
-      const inicioConBuffer = Math.max(0, inicioMin - bufferMinutos);
-      const finConBuffer = Math.min(1439, finAjustado + bufferMinutos);
-      
-      rangosOcupados.push({
-        inicio: inicioConBuffer,
-        fin: finConBuffer,
-        inicioHora: toHora(inicioConBuffer),
-        finHora: toHora(finConBuffer)
-      });
+      procesarEvento(oferta.hora_inicio, oferta.hora_fin);
     });
 
     // Generar lista de horas ocupadas (cada hora completa que esté dentro de un rango)
@@ -437,9 +463,16 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     
     rangosOcupados.forEach(rango => {
       // Agregar cada hora completa dentro del rango
-      for (let min = rango.inicio; min <= rango.fin; min += 60) {
-        const hora = Math.floor(min / 60) % 24;
-        horasOcupadas.add(hora);
+      // IMPORTANTE: Solo procesar minutos dentro del mismo día (0-1439)
+      const inicioMin = Math.max(0, rango.inicio);
+      const finMin = Math.min(1439, rango.fin); // Máximo 23:59 del mismo día
+      
+      for (let min = inicioMin; min <= finMin; min += 60) {
+        const hora = Math.floor(min / 60);
+        // Asegurar que la hora esté en el rango 0-23
+        if (hora >= 0 && hora < 24) {
+          horasOcupadas.add(hora);
+        }
       }
     });
 

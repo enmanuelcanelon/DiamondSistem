@@ -183,9 +183,9 @@ function ContratosGerente() {
                         </span>
                       </div>
                     </div>
-                    {contrato.vendedores && (
+                    {(contrato.usuarios || contrato.vendedores) && (
                       <div className="mt-2 text-xs text-gray-500">
-                        Vendedor: {contrato.vendedores.nombre_completo} ({contrato.vendedores.codigo_vendedor})
+                        Vendedor: {(contrato.usuarios || contrato.vendedores)?.nombre_completo} ({(contrato.usuarios || contrato.vendedores)?.codigo_usuario || (contrato.usuarios || contrato.vendedores)?.codigo_vendedor})
                       </div>
                     )}
                   </div>

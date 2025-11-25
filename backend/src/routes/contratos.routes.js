@@ -27,9 +27,15 @@ router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next
 
     // Si es vendedor, solo ver sus contratos. Si es inventario, ver todos
     const where = {};
-    if (req.user.tipo === 'vendedor') {
-      where.vendedor_id = req.user.id; // Solo contratos del vendedor autenticado
-    }
+    
+    // Construir filtro de vendedor (si aplica)
+    const filtroVendedor = req.user.tipo === 'vendedor' ? {
+      OR: [
+        { usuario_id: req.user.id },
+        { vendedor_id: req.user.id }
+      ]
+    } : null;
+    
     // Si es inventario y no se especifica estado, mostrar solo activos por defecto
     if (req.user.tipo === 'inventario' && !estado) {
       where.estado = 'activo';
@@ -79,11 +85,25 @@ router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next
     }
 
     // Búsqueda por código de contrato o nombre de cliente
-    if (search) {
-      where.OR = [
+    const filtroBusqueda = search ? {
+      OR: [
         { codigo_contrato: { contains: search, mode: 'insensitive' } },
         { clientes: { nombre_completo: { contains: search, mode: 'insensitive' } } }
-      ];
+      ]
+    } : null;
+
+    // Combinar filtros usando AND si hay filtro de vendedor o búsqueda
+    if (filtroVendedor || filtroBusqueda) {
+      const condicionesAND = [];
+      if (filtroVendedor) {
+        condicionesAND.push(filtroVendedor);
+      }
+      if (filtroBusqueda) {
+        condicionesAND.push(filtroBusqueda);
+      }
+      if (condicionesAND.length > 0) {
+        where.AND = condicionesAND;
+      }
     }
 
     const { getPaginationParams, createPaginationResponse } = require('../utils/pagination');
@@ -116,13 +136,13 @@ router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next
               capacidad_maxima: true
             }
           },
-          vendedores: {
+          usuarios: {
             select: {
               id: true,
-            nombre_completo: true,
-            codigo_vendedor: true
-          }
-        },
+              nombre_completo: true,
+              codigo_usuario: true
+            }
+          },
         eventos: {
           select: {
             id: true,
@@ -193,11 +213,11 @@ router.get('/:id', authenticate, async (req, res, next) => {
       where: { id }, // Ya sanitizado
       include: {
         clientes: true,
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true,
+            codigo_usuario: true,
             email: true,
             telefono: true
           }
@@ -240,7 +260,8 @@ router.get('/:id', authenticate, async (req, res, next) => {
       }
     } else if (req.user.tipo === 'vendedor') {
       // CRÍTICO: Vendedor solo puede ver SUS contratos
-      if (contrato.vendedor_id !== req.user.id) {
+      // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+      if (!(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
         throw new ValidationError('No tienes acceso a este contrato');
       }
     }
@@ -295,7 +316,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       where: { id: ofertaIdSanitizado },
       include: {
         clientes: true,
-        vendedores: true,
+        usuarios: true,
         paquetes: true,
         salones: {
           select: {
@@ -351,13 +372,134 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       throw new ValidationError('Este pago ya está vinculado a otro contrato');
     }
 
-    if (pagoReserva.registrado_por !== oferta.vendedor_id) {
+    // Verificar que el pago pertenece al vendedor de la oferta
+    // Comparar usuario_id (nuevo) o registrado_por/vendedor_id (compatibilidad)
+    const pagoPerteneceAlVendedor = 
+      (pagoReserva.usuario_id && pagoReserva.usuario_id === oferta.usuario_id) ||
+      (pagoReserva.registrado_por && pagoReserva.registrado_por === oferta.vendedor_id) ||
+      (pagoReserva.usuario_id && pagoReserva.usuario_id === oferta.vendedor_id) ||
+      (pagoReserva.registrado_por && pagoReserva.registrado_por === oferta.usuario_id);
+
+    if (!pagoPerteneceAlVendedor) {
       throw new ValidationError('El pago de reserva no pertenece al vendedor de esta oferta');
     }
 
     const montoReserva = parseFloat(pagoReserva.monto_total || 0);
     if (montoReserva < 500) {
       throw new ValidationError('El pago de reserva debe ser de al menos $500');
+    }
+
+    // NUEVO: Validar disponibilidad del salón antes de crear el contrato
+    // Verificar que no haya conflictos con otros contratos u ofertas aceptadas en el mismo horario
+    if (oferta.salon_id) {
+      const fechaEvento = new Date(oferta.fecha_evento);
+      const fechaInicio = new Date(fechaEvento);
+      fechaInicio.setHours(0, 0, 0, 0);
+      const fechaFin = new Date(fechaEvento);
+      fechaFin.setHours(23, 59, 59, 999);
+
+      // Función helper para convertir hora a minutos
+      const toMinutes = (hora) => {
+        const horaStr = typeof hora === 'string' 
+          ? hora.slice(0, 5)
+          : hora.toTimeString().slice(0, 5);
+        const [h, m] = horaStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+
+      // Verificar conflictos con contratos existentes
+      const contratosConflictivos = await prisma.contratos.findMany({
+        where: {
+          salon_id: oferta.salon_id,
+          fecha_evento: {
+            gte: fechaInicio,
+            lte: fechaFin
+          },
+          estado: {
+            in: ['activo', 'completado']
+          },
+          id: { not: contratoExistente?.id || -1 } // Excluir el contrato actual si existe
+        },
+        select: {
+          id: true,
+          codigo_contrato: true,
+          hora_inicio: true,
+          hora_fin: true,
+          clientes: {
+            select: {
+              nombre_completo: true
+            }
+          }
+        }
+      });
+
+      // Verificar conflictos con ofertas aceptadas (que aún no tienen contrato)
+      const ofertasConflictivas = await prisma.ofertas.findMany({
+        where: {
+          salon_id: oferta.salon_id,
+          fecha_evento: {
+            gte: fechaInicio,
+            lte: fechaFin
+          },
+          estado: 'aceptada',
+          id: { not: ofertaIdSanitizado } // Excluir la oferta actual
+        },
+        select: {
+          id: true,
+          codigo_oferta: true,
+          hora_inicio: true,
+          hora_fin: true,
+          clientes: {
+            select: {
+              nombre_completo: true
+            }
+          }
+        }
+      });
+
+      // Verificar si hay solapamiento de horarios
+      const horaInicioOferta = toMinutes(oferta.hora_inicio);
+      const horaFinOferta = toMinutes(oferta.hora_fin);
+      const finAjustadoOferta = horaFinOferta < horaInicioOferta ? horaFinOferta + 1440 : horaFinOferta;
+      const bufferMinutos = 60; // 1 hora de buffer
+
+      // Verificar conflictos con contratos
+      for (const contrato of contratosConflictivos) {
+        const inicioContrato = toMinutes(contrato.hora_inicio);
+        const finContrato = toMinutes(contrato.hora_fin);
+        const finAjustadoContrato = finContrato < inicioContrato ? finContrato + 1440 : finContrato;
+
+        // Verificar solapamiento (con buffer)
+        const haySolapamiento = 
+          (horaInicioOferta < finAjustadoContrato + bufferMinutos && finAjustadoOferta + bufferMinutos > inicioContrato) ||
+          (inicioContrato < finAjustadoOferta + bufferMinutos && finAjustadoContrato + bufferMinutos > horaInicioOferta);
+
+        if (haySolapamiento) {
+          throw new ValidationError(
+            `El salón no está disponible en este horario. Ya existe un contrato (${contrato.codigo_contrato}) ` +
+            `para ${contrato.clientes?.nombre_completo || 'cliente'} en el mismo horario.`
+          );
+        }
+      }
+
+      // Verificar conflictos con ofertas aceptadas
+      for (const ofertaConflictiva of ofertasConflictivas) {
+        const inicioOfertaConflictiva = toMinutes(ofertaConflictiva.hora_inicio);
+        const finOfertaConflictiva = toMinutes(ofertaConflictiva.hora_fin);
+        const finAjustadoOfertaConflictiva = finOfertaConflictiva < inicioOfertaConflictiva ? finOfertaConflictiva + 1440 : finOfertaConflictiva;
+
+        // Verificar solapamiento (con buffer)
+        const haySolapamiento = 
+          (horaInicioOferta < finAjustadoOfertaConflictiva + bufferMinutos && finAjustadoOferta + bufferMinutos > inicioOfertaConflictiva) ||
+          (inicioOfertaConflictiva < finAjustadoOferta + bufferMinutos && finAjustadoOfertaConflictiva + bufferMinutos > horaInicioOferta);
+
+        if (haySolapamiento) {
+          throw new ValidationError(
+            `El salón no está disponible en este horario. Ya existe una oferta aceptada (${ofertaConflictiva.codigo_oferta}) ` +
+            `para ${ofertaConflictiva.clientes?.nombre_completo || 'cliente'} en el mismo horario.`
+          );
+        }
+      }
     }
 
     // La fecha de creación del contrato será la fecha del pago de reserva
@@ -404,7 +546,8 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           codigo_contrato,
           oferta_id: oferta.id,
           cliente_id: oferta.cliente_id,
-          vendedor_id: oferta.vendedor_id,
+          usuario_id: oferta.usuario_id, // Usar usuario_id en lugar de vendedor_id (deprecated)
+          vendedor_id: oferta.vendedor_id, // Mantener para compatibilidad
           paquete_id: oferta.paquete_id,
           salon_id: oferta.salon_id || null,
           lugar_salon: oferta.lugar_salon || null,
@@ -550,7 +693,7 @@ router.get('/:id/pagos', authenticate, async (req, res, next) => {
     // Verificar que el contrato existe y el usuario tiene acceso
     const contrato = await prisma.contratos.findUnique({
       where: { id: parseInt(id) },
-      select: { cliente_id: true, vendedor_id: true }
+      select: { cliente_id: true, usuario_id: true, vendedor_id: true }
     });
 
     if (!contrato) {
@@ -605,6 +748,25 @@ router.get('/:id/pagos', authenticate, async (req, res, next) => {
 router.get('/:id/servicios', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Verificar que el contrato existe y el usuario tiene acceso
+    const contrato = await prisma.contratos.findUnique({
+      where: { id: parseInt(id) },
+      select: { cliente_id: true, usuario_id: true, vendedor_id: true }
+    });
+
+    if (!contrato) {
+      throw new NotFoundError('Contrato no encontrado');
+    }
+
+    // Verificar permisos
+    if (req.user.tipo === 'cliente' && contrato.cliente_id !== req.user.id) {
+      throw new ValidationError('No tienes acceso a este contrato');
+    }
+    
+    if (req.user.tipo === 'vendedor' && !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
+      throw new ValidationError('No tienes acceso a este contrato');
+    }
 
     const servicios = await prisma.contratos_servicios.findMany({
       where: { contrato_id: parseInt(id) },
@@ -701,11 +863,11 @@ router.get('/:id/pdf-contrato', authenticate, async (req, res, next) => {
       where: { id: parseInt(id) },
       include: {
         clientes: true,
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         },
         paquetes: {
@@ -744,6 +906,10 @@ router.get('/:id/pdf-contrato', authenticate, async (req, res, next) => {
     if (req.user.tipo === 'cliente' && contrato.cliente_id !== req.user.id) {
       throw new ValidationError('No tienes acceso a este contrato');
     }
+    
+    if (req.user.tipo === 'vendedor' && !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
+      throw new ValidationError('No tienes acceso a este contrato');
+    }
 
     // Generar PDF usando HTML + Puppeteer con el idioma seleccionado
     const { generarContratoHTML } = require('../utils/pdfContratoHTML');
@@ -776,11 +942,11 @@ router.get('/:id/pdf-factura', authenticate, async (req, res, next) => {
       where: { id: parseInt(id) },
       include: {
         clientes: true,
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         },
         paquetes: {
@@ -814,6 +980,10 @@ router.get('/:id/pdf-factura', authenticate, async (req, res, next) => {
     if (req.user.tipo === 'cliente' && contrato.cliente_id !== req.user.id) {
       throw new ValidationError('No tienes acceso a este contrato');
     }
+    
+    if (req.user.tipo === 'vendedor' && !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
+      throw new ValidationError('No tienes acceso a este contrato');
+    }
 
     // Generar PDF usando HTML + Puppeteer
     const pdfBuffer = await generarFacturaProformaHTML(contrato, 'contrato');
@@ -844,6 +1014,7 @@ router.get('/:id/historial', authenticate, async (req, res, next) => {
       where: { id: parseInt(id) },
       select: {
         id: true,
+        usuario_id: true,
         vendedor_id: true,
         cliente_id: true,
       },
@@ -854,7 +1025,7 @@ router.get('/:id/historial', authenticate, async (req, res, next) => {
     }
 
     // Verificar permisos
-    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
+    if (req.user.tipo === 'vendedor' && !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
@@ -915,6 +1086,7 @@ router.get('/:id/versiones', authenticate, async (req, res, next) => {
       where: { id: parseInt(id) },
       select: {
         id: true,
+        usuario_id: true,
         vendedor_id: true,
         cliente_id: true,
         codigo_contrato: true,
@@ -926,7 +1098,7 @@ router.get('/:id/versiones', authenticate, async (req, res, next) => {
     }
 
     // Verificar permisos
-    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
+    if (req.user.tipo === 'vendedor' && !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
@@ -940,10 +1112,10 @@ router.get('/:id/versiones', authenticate, async (req, res, next) => {
         contrato_id: parseInt(id),
       },
       include: {
-        vendedores: {
+        usuarios: {
           select: {
             nombre_completo: true,
-            codigo_vendedor: true,
+            codigo_usuario: true,
           },
         },
       },
@@ -981,7 +1153,7 @@ router.post('/:id/versiones', authenticate, requireVendedor, async (req, res, ne
       where: { id: parseInt(id) },
       include: {
         clientes: true,
-        vendedores: true,
+        usuarios: true,
         paquetes: true,
         ofertas: {
           include: {
@@ -1000,8 +1172,8 @@ router.post('/:id/versiones', authenticate, requireVendedor, async (req, res, ne
       throw new NotFoundError('Contrato no encontrado');
     }
 
-    // Verificar permisos
-    if (contrato.vendedor_id !== req.user.id) {
+    // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+    if (!(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
@@ -1042,10 +1214,10 @@ router.post('/:id/versiones', authenticate, requireVendedor, async (req, res, ne
           generado_por: req.user.id,
         },
         include: {
-          vendedores: {
+          usuarios: {
             select: {
               nombre_completo: true,
-              codigo_vendedor: true,
+              codigo_usuario: true,
             },
           },
         },
@@ -1077,6 +1249,7 @@ router.get('/:id/versiones/:version_numero/pdf', authenticate, async (req, res, 
       where: { id: parseInt(id) },
       select: {
         id: true,
+        usuario_id: true,
         vendedor_id: true,
         cliente_id: true,
         codigo_contrato: true,
@@ -1088,7 +1261,7 @@ router.get('/:id/versiones/:version_numero/pdf', authenticate, async (req, res, 
     }
 
     // Verificar permisos
-    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
+    if (req.user.tipo === 'vendedor' && !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
@@ -1123,7 +1296,7 @@ router.get('/:id/versiones/:version_numero/pdf', authenticate, async (req, res, 
       where: { id: parseInt(id) },
       include: {
         clientes: true,
-        vendedores: true,
+        usuarios: true,
         paquetes: true,
         ofertas: {
           include: {
@@ -1178,7 +1351,8 @@ router.put('/:id/notas', authenticate, requireVendedor, async (req, res, next) =
     }
 
     // Verificar que el vendedor es el propietario del contrato
-    if (contrato.vendedor_id !== req.user.id) {
+    // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+    if (!(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes permiso para actualizar las notas de este contrato');
     }
 

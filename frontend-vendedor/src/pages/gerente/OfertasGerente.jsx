@@ -183,9 +183,9 @@ function OfertasGerente() {
                         </span>
                       </div>
                     </div>
-                    {oferta.vendedores && (
+                    {(oferta.usuarios || oferta.vendedores) && (
                       <div className="mt-2 text-xs text-gray-500">
-                        Vendedor: {oferta.vendedores.nombre_completo} ({oferta.vendedores.codigo_vendedor})
+                        Vendedor: {(oferta.usuarios || oferta.vendedores)?.nombre_completo} ({(oferta.usuarios || oferta.vendedores)?.codigo_usuario || (oferta.usuarios || oferta.vendedores)?.codigo_vendedor})
                       </div>
                     )}
                   </div>

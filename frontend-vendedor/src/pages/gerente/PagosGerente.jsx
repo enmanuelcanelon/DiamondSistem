@@ -167,7 +167,7 @@ function PagosGerente() {
                       {pago.contratos?.clientes?.nombre_completo || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {pago.contratos?.vendedores?.nombre_completo || '-'}
+                      {(pago.contratos?.usuarios || pago.contratos?.vendedores)?.nombre_completo || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
                       ${parseFloat(pago.monto || 0).toLocaleString()}

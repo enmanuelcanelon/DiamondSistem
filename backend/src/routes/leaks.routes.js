@@ -41,8 +41,12 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const { estado, salon, fuente, fecha_desde, fecha_hasta, search } = req.query;
 
+    // Buscar leaks asignados al usuario (usuario_id) o al vendedor (vendedor_id deprecated para compatibilidad)
     const where = {
-      vendedor_id: req.user.id
+      OR: [
+        { usuario_id: req.user.id },
+        { vendedor_id: req.user.id }
+      ]
     };
 
     if (estado) {
@@ -111,15 +115,18 @@ router.get('/stats', authenticate, requireVendedor, async (req, res, next) => {
     // Debe coincidir con el filtro de /api/leaks/disponibles
     const totalDisponibles = await prisma.leaks.count({
       where: {
-        vendedor_id: null, // Solo leaks sin asignar
+        usuario_id: null, // Solo leaks sin asignar (usar usuario_id en lugar de vendedor_id deprecated)
         estado: { not: 'convertido' } // Excluir convertidos
       }
     });
 
-    // Total mis leaks
+    // Total mis leaks (usuario_id o vendedor_id para compatibilidad)
     const totalMios = await prisma.leaks.count({
       where: {
-        vendedor_id: vendedorId
+        OR: [
+          { usuario_id: vendedorId },
+          { vendedor_id: vendedorId }
+        ]
       }
     });
 
@@ -127,7 +134,10 @@ router.get('/stats', authenticate, requireVendedor, async (req, res, next) => {
     const leaksPorEstado = await prisma.leaks.groupBy({
       by: ['estado'],
       where: {
-        vendedor_id: vendedorId
+        OR: [
+          { usuario_id: vendedorId },
+          { vendedor_id: vendedorId }
+        ]
       },
       _count: {
         id: true
@@ -138,7 +148,10 @@ router.get('/stats', authenticate, requireVendedor, async (req, res, next) => {
     const leaksPorSalon = await prisma.leaks.groupBy({
       by: ['salon_preferido'],
       where: {
-        vendedor_id: vendedorId
+        OR: [
+          { usuario_id: vendedorId },
+          { vendedor_id: vendedorId }
+        ]
       },
       _count: {
         id: true
@@ -148,7 +161,10 @@ router.get('/stats', authenticate, requireVendedor, async (req, res, next) => {
     // Leaks convertidos a clientes
     const leaksConvertidos = await prisma.leaks.count({
       where: {
-        vendedor_id: vendedorId,
+        OR: [
+          { usuario_id: vendedorId },
+          { vendedor_id: vendedorId }
+        ],
         estado: 'convertido'
       }
     });
@@ -158,15 +174,15 @@ router.get('/stats', authenticate, requireVendedor, async (req, res, next) => {
       ? ((leaksConvertidos / totalMios) * 100).toFixed(2)
       : '0.00';
 
-    // Leaks pendientes de contacto (con fecha_proximo_contacto <= hoy)
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    // Leaks pendientes de contacto
+    // Incluye: contactado_llamar_luego, no_contesta_llamar_luego
+    // Cuenta todos los leaks con estos estados (requieren seguimiento)
     const pendientesContacto = await prisma.leaks.count({
       where: {
-        vendedor_id: vendedorId,
-        fecha_proximo_contacto: {
-          lte: hoy
-        },
+        OR: [
+          { usuario_id: vendedorId },
+          { vendedor_id: vendedorId }
+        ],
         estado: {
           in: ['contactado_llamar_luego', 'no_contesta_llamar_luego']
         }
@@ -180,7 +196,10 @@ router.get('/stats', authenticate, requireVendedor, async (req, res, next) => {
 
     const leaksPorFecha = await prisma.leaks.findMany({
       where: {
-        vendedor_id: vendedorId,
+        OR: [
+          { usuario_id: vendedorId },
+          { vendedor_id: vendedorId }
+        ],
         fecha_recepcion: {
           gte: fechaInicio
         }
@@ -244,7 +263,7 @@ router.get('/disponibles', authenticate, requireVendedor, async (req, res, next)
     // Esto permite que todos los vendedores vean los mismos leaks disponibles
     // Cuando un vendedor toma un leak, desaparece de esta lista para todos
     const where = {
-      vendedor_id: null, // Solo leaks sin asignar
+      usuario_id: null, // Solo leaks sin asignar (usar usuario_id en lugar de vendedor_id deprecated)
       estado: { not: 'convertido' } // Excluir convertidos
     };
 
@@ -485,7 +504,10 @@ router.get('/pendientes-contacto', authenticate, requireVendedor, async (req, re
 
     const leaks = await prisma.leaks.findMany({
       where: {
-        vendedor_id: req.user.id,
+        OR: [
+          { usuario_id: req.user.id },
+          { vendedor_id: req.user.id }
+        ],
         estado: {
           in: ['no_contesta', 'contactado_llamar_otra_vez']
         },
@@ -519,11 +541,11 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
     const leak = await prisma.leaks.findUnique({
       where: { id: parseInt(id) },
       include: {
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         },
         clientes: {
@@ -540,7 +562,9 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
       throw new NotFoundError('Leak no encontrado');
     }
 
-    if (leak.vendedor_id && leak.vendedor_id !== req.user.id) {
+    // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+    if ((leak.vendedor_id || leak.usuario_id) && 
+        !(leak.usuario_id === req.user.id || leak.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes permiso para ver este leak');
     }
 
@@ -571,7 +595,7 @@ router.post('/:id/tomar', authenticate, requireVendedor, async (req, res, next) 
       throw new NotFoundError('Leak no encontrado');
     }
 
-    if (leak.vendedor_id) {
+    if (leak.vendedor_id || leak.usuario_id) {
       throw new ValidationError('Este leak ya está asignado a otro vendedor');
     }
 
@@ -582,15 +606,15 @@ router.post('/:id/tomar', authenticate, requireVendedor, async (req, res, next) 
     const leakActualizado = await prisma.leaks.update({
       where: { id: parseInt(id) },
       data: {
-        vendedor_id: req.user.id,
+        usuario_id: req.user.id, // Usar usuario_id en lugar de vendedor_id (deprecated)
         fecha_asignacion: new Date()
       },
       include: {
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         }
       }
@@ -631,7 +655,9 @@ router.put('/:id/estado', authenticate, requireVendedor, async (req, res, next) 
       throw new NotFoundError('Leak no encontrado');
     }
 
-    if (leak.vendedor_id && leak.vendedor_id !== req.user.id) {
+    // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+    if ((leak.vendedor_id || leak.usuario_id) && 
+        !(leak.usuario_id === req.user.id || leak.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes permiso para modificar este leak');
     }
 
@@ -684,11 +710,11 @@ router.put('/:id/estado', authenticate, requireVendedor, async (req, res, next) 
       where: { id: parseInt(id) },
       data: dataUpdate,
       include: {
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         }
       }
@@ -724,7 +750,9 @@ router.post('/:id/convertir-cliente', authenticate, requireVendedor, async (req,
       throw new NotFoundError('Leak no encontrado');
     }
 
-    if (leak.vendedor_id && leak.vendedor_id !== req.user.id) {
+    // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+    if ((leak.vendedor_id || leak.usuario_id) && 
+        !(leak.usuario_id === req.user.id || leak.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes permiso para convertir este leak');
     }
 
@@ -753,7 +781,8 @@ router.post('/:id/convertir-cliente', authenticate, requireVendedor, async (req,
           telefono: leak.telefono,
           tipo_evento: leak.tipo_evento,
           como_nos_conocio: leak.fuente || 'Leak',
-          vendedor_id: req.user.id
+          usuario_id: req.user.id, // Usar usuario_id en lugar de vendedor_id (deprecated)
+          vendedor_id: null // Mantener null para compatibilidad
         }
       });
     }
@@ -797,7 +826,7 @@ router.delete('/disponibles', authenticate, requireVendedor, async (req, res, ne
   try {
     const resultado = await prisma.leaks.deleteMany({
       where: {
-        vendedor_id: null, // Solo leaks sin asignar
+        usuario_id: null, // Solo leaks sin asignar (usar usuario_id en lugar de vendedor_id deprecated)
         estado: { not: 'convertido' } // Excluir convertidos
       }
     });
@@ -822,7 +851,10 @@ router.delete('/mios', authenticate, requireVendedor, async (req, res, next) => 
   try {
     const resultado = await prisma.leaks.deleteMany({
       where: {
-        vendedor_id: req.user.id,
+        OR: [
+          { usuario_id: req.user.id },
+          { vendedor_id: req.user.id }
+        ],
         estado: { not: 'convertido' } // Excluir convertidos
       }
     });
@@ -856,7 +888,9 @@ router.delete('/:id', authenticate, requireVendedor, async (req, res, next) => {
     }
 
     // Solo puede eliminar si es su leak o si es un leak disponible (sin asignar)
-    if (leak.vendedor_id && leak.vendedor_id !== req.user.id) {
+    // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+    if ((leak.vendedor_id || leak.usuario_id) && 
+        !(leak.usuario_id === req.user.id || leak.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes permiso para eliminar este leak');
     }
 

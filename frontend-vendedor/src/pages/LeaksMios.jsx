@@ -96,10 +96,10 @@ function LeaksMios() {
     },
     staleTime: 10 * 60 * 1000, // Los datos se consideran frescos por 10 minutos (aumentado)
     gcTime: 30 * 60 * 1000, // Mantener en caché por 30 minutos (aumentado)
-    refetchInterval: false, // Sin refresco automático - solo manual
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
-    refetchOnMount: false, // No refetch al montar si los datos están frescos
+    refetchInterval: 30 * 1000, // Refrescar cada 30 segundos
+    refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
+    refetchOnWindowFocus: true, // Refetch al cambiar de pestaña para mantener datos actualizados
+    refetchOnMount: true, // Refetch al montar para asegurar datos actualizados
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit)
       if (error?.response?.status === 429) return false;
@@ -180,6 +180,7 @@ function LeaksMios() {
       <Table className="w-full">
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[50px] text-center">#</TableHead>
             <TableHead className="w-[80px]">Fecha Rec.</TableHead>
             <TableHead className="w-[140px]">Nombre</TableHead>
             <TableHead className="w-[110px]">Teléfono</TableHead>
@@ -194,11 +195,14 @@ function LeaksMios() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {leaks.map((leak) => {
+          {leaks.map((leak, index) => {
             const estadoInfo = getEstadoBadge(leak.estado);
             const EstadoIcon = estadoInfo.icon;
             return (
               <TableRow key={leak.id}>
+                <TableCell className="text-center text-sm font-medium text-muted-foreground">
+                  {index + 1}
+                </TableCell>
                 <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                   {leak.fecha_recepcion ? format(parsearFechaLocal(leak.fecha_recepcion), 'yyyy-MM-dd') : '-'}
                 </TableCell>

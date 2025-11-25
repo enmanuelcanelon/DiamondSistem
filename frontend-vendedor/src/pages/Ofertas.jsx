@@ -546,9 +546,9 @@ function Ofertas() {
                         </span>
                       )}
                     </p>
-                    {oferta.clientes?.tipo_evento && (
+                    {oferta.tipo_evento && (
                       <p className="text-xs text-muted-foreground mb-1">
-                        Tipo de evento: <span className="font-medium text-foreground capitalize">{oferta.clientes.tipo_evento}</span>
+                        Tipo de evento: <span className="font-medium text-foreground capitalize">{oferta.tipo_evento}</span>
                       </p>
                     )}
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">

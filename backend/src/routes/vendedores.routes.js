@@ -143,6 +143,14 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
     }
 
     // Obtener estadísticas - Optimizado: usar agregaciones SQL en lugar de traer todos los registros
+    // Usar usuario_id o vendedor_id para compatibilidad
+    const filtroVendedor = {
+      OR: [
+        { usuario_id: parseInt(id) },
+        { vendedor_id: parseInt(id) }
+      ]
+    };
+    
     const [
       totalClientes,
       totalOfertas,
@@ -154,17 +162,17 @@ router.get('/:id/stats', authenticate, requireVendedor, async (req, res, next) =
       contratosPagados,
       totalVentasResult
     ] = await Promise.all([
-      prisma.clientes.count({ where: { vendedor_id: parseInt(id) } }),
-      prisma.ofertas.count({ where: { vendedor_id: parseInt(id) } }),
-      prisma.ofertas.count({ where: { vendedor_id: parseInt(id), estado: 'aceptada' } }),
-      prisma.ofertas.count({ where: { vendedor_id: parseInt(id), estado: 'pendiente' } }),
-      prisma.ofertas.count({ where: { vendedor_id: parseInt(id), estado: 'rechazada' } }),
-      prisma.contratos.count({ where: { vendedor_id: parseInt(id) } }),
-      prisma.contratos.count({ where: { vendedor_id: parseInt(id), estado: 'activo' } }),
-      prisma.contratos.count({ where: { vendedor_id: parseInt(id), estado_pago: 'completado' } }),
+      prisma.clientes.count({ where: filtroVendedor }),
+      prisma.ofertas.count({ where: filtroVendedor }),
+      prisma.ofertas.count({ where: { ...filtroVendedor, estado: 'aceptada' } }),
+      prisma.ofertas.count({ where: { ...filtroVendedor, estado: 'pendiente' } }),
+      prisma.ofertas.count({ where: { ...filtroVendedor, estado: 'rechazada' } }),
+      prisma.contratos.count({ where: filtroVendedor }),
+      prisma.contratos.count({ where: { ...filtroVendedor, estado: 'activo' } }),
+      prisma.contratos.count({ where: { ...filtroVendedor, estado_pago: 'completado' } }),
       // Usar agregación SQL en lugar de traer todos los registros
       prisma.contratos.aggregate({
-        where: { vendedor_id: parseInt(id) },
+        where: filtroVendedor,
         _sum: {
           total_contrato: true
         }
@@ -250,7 +258,13 @@ router.get('/:id/clientes', authenticate, requireVendedor, async (req, res, next
     const { page, limit, skip } = getPaginationParams(req.query);
     
     // Construir where clause con filtro de fecha si se proporciona
-    const where = { vendedor_id: parseInt(id) };
+    // Usar usuario_id o vendedor_id para compatibilidad
+    const where = {
+      OR: [
+        { usuario_id: parseInt(id) },
+        { vendedor_id: parseInt(id) }
+      ]
+    };
     if (fecha_desde || fecha_hasta) {
       where.fecha_registro = {};
       if (fecha_desde) {
@@ -300,8 +314,16 @@ router.get('/:id/contratos', authenticate, requireVendedor, async (req, res, nex
       throw new ValidationError('No tienes permiso para ver contratos de otro vendedor');
     }
 
+    // Usar usuario_id o vendedor_id para compatibilidad
+    const filtroVendedorContratos = {
+      OR: [
+        { usuario_id: parseInt(id) },
+        { vendedor_id: parseInt(id) }
+      ]
+    };
+    
     const contratos = await prisma.contratos.findMany({
-      where: { vendedor_id: parseInt(id) },
+      where: filtroVendedorContratos,
       include: {
         clientes: {
           select: {
@@ -385,6 +407,14 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
     const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
 
     // Estadísticas del mes
+    // Usar usuario_id o vendedor_id para compatibilidad
+    const filtroVendedor = {
+      OR: [
+        { usuario_id: parseInt(id) },
+        { vendedor_id: parseInt(id) }
+      ]
+    };
+    
     const [
       clientesMes,
       ofertasMes,
@@ -399,7 +429,7 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       // Clientes creados en el mes
       prisma.clientes.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           fecha_registro: {
             gte: fechaInicio,
             lte: fechaFin
@@ -409,7 +439,7 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       // Ofertas creadas en el mes
       prisma.ofertas.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           fecha_creacion: {
             gte: fechaInicio,
             lte: fechaFin
@@ -418,7 +448,7 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       }),
       prisma.ofertas.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado: 'aceptada',
           fecha_creacion: {
             gte: fechaInicio,
@@ -428,7 +458,7 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       }),
       prisma.ofertas.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado: 'pendiente',
           fecha_creacion: {
             gte: fechaInicio,
@@ -438,7 +468,7 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       }),
       prisma.ofertas.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado: 'rechazada',
           fecha_creacion: {
             gte: fechaInicio,
@@ -449,7 +479,7 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       // Contratos creados en el mes
       prisma.contratos.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           fecha_actualizacion: {
             gte: fechaInicio,
             lte: fechaFin
@@ -458,7 +488,7 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       }),
       prisma.contratos.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado: 'activo',
           fecha_actualizacion: {
             gte: fechaInicio,
@@ -468,7 +498,7 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       }),
       prisma.contratos.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado_pago: 'completado',
           fecha_actualizacion: {
             gte: fechaInicio,
@@ -479,7 +509,7 @@ router.get('/:id/stats/mes', authenticate, requireVendedor, async (req, res, nex
       // Contratos con eventos en el mes (para calcular ventas) - Optimizado: usar agregación SQL
       prisma.contratos.aggregate({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           fecha_evento: {
             gte: fechaInicio,
             lte: fechaFin
@@ -582,9 +612,17 @@ router.get('/:id/contratos/mes/:mes/:año', authenticate, requireVendedor, async
     const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
     const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
 
+    // Usar usuario_id o vendedor_id para compatibilidad
+    const filtroVendedorContratos = {
+      OR: [
+        { usuario_id: parseInt(id) },
+        { vendedor_id: parseInt(id) }
+      ]
+    };
+    
     const contratos = await prisma.contratos.findMany({
       where: {
-        vendedor_id: parseInt(id),
+        ...filtroVendedorContratos,
         fecha_evento: {
           gte: fechaInicio,
           lte: fechaFin
@@ -657,9 +695,17 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
     const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
 
     // Obtener eventos de contratos
+    // Usar usuario_id o vendedor_id para compatibilidad
+    const filtroVendedorEventos = {
+      OR: [
+        { usuario_id: parseInt(id) },
+        { vendedor_id: parseInt(id) }
+      ]
+    };
+    
     const eventosContratos = await prisma.contratos.findMany({
       where: {
-        vendedor_id: parseInt(id),
+        ...filtroVendedorEventos,
         fecha_evento: {
           gte: fechaInicio,
           lte: fechaFin
@@ -872,6 +918,14 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
     const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
 
     // Calcular estadísticas del mes (similar al endpoint de stats/mes)
+    // Usar usuario_id o vendedor_id para compatibilidad
+    const filtroVendedor = {
+      OR: [
+        { usuario_id: parseInt(id) },
+        { vendedor_id: parseInt(id) }
+      ]
+    };
+    
     const [
       clientesMes,
       ofertasMes,
@@ -885,7 +939,7 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
     ] = await Promise.all([
       prisma.clientes.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           fecha_registro: {
             gte: fechaInicio,
             lte: fechaFin
@@ -894,7 +948,7 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
       }),
       prisma.ofertas.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           fecha_creacion: {
             gte: fechaInicio,
             lte: fechaFin
@@ -903,7 +957,7 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
       }),
       prisma.ofertas.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado: 'aceptada',
           fecha_creacion: {
             gte: fechaInicio,
@@ -913,7 +967,7 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
       }),
       prisma.ofertas.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado: 'pendiente',
           fecha_creacion: {
             gte: fechaInicio,
@@ -923,7 +977,7 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
       }),
       prisma.ofertas.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado: 'rechazada',
           fecha_creacion: {
             gte: fechaInicio,
@@ -933,7 +987,7 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
       }),
       prisma.contratos.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           fecha_evento: {
             gte: fechaInicio,
             lte: fechaFin
@@ -942,7 +996,7 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
       }),
       prisma.contratos.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado: 'activo',
           fecha_evento: {
             gte: fechaInicio,
@@ -952,7 +1006,7 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
       }),
       prisma.contratos.count({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           estado_pago: 'completado',
           fecha_actualizacion: {
             gte: fechaInicio,
@@ -962,7 +1016,7 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
       }),
       prisma.contratos.findMany({
         where: {
-          vendedor_id: parseInt(id),
+          ...filtroVendedor,
           fecha_evento: {
             gte: fechaInicio,
             lte: fechaFin
@@ -1008,9 +1062,17 @@ router.get('/:id/reporte-mensual/:mes/:año', authenticate, requireVendedor, asy
     };
 
     // Obtener contratos del mes
+    // Usar usuario_id o vendedor_id para compatibilidad
+    const filtroVendedorContratos = {
+      OR: [
+        { usuario_id: parseInt(id) },
+        { vendedor_id: parseInt(id) }
+      ]
+    };
+    
     const contratos = await prisma.contratos.findMany({
       where: {
-        vendedor_id: parseInt(id),
+        ...filtroVendedorContratos,
         fecha_evento: {
           gte: fechaInicio,
           lte: fechaFin

@@ -463,7 +463,7 @@ router.post('/pagar', authenticate, requireInventario, async (req, res, next) =>
     const contrato = await prisma.contratos.findUnique({
       where: { id: parseInt(contrato_id) },
       include: {
-        vendedores: true
+        usuarios: true
       }
     });
 
@@ -584,7 +584,7 @@ router.post('/revertir', authenticate, requireInventario, async (req, res, next)
     const contrato = await prisma.contratos.findUnique({
       where: { id: parseInt(contrato_id) },
       include: {
-        vendedores: true
+        usuarios: true
       }
     });
 

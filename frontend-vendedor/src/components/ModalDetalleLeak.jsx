@@ -56,38 +56,20 @@ const parsearFechaLocal = (fecha) => {
 const parsearFechaConHora = (fecha) => {
   if (!fecha) return null;
   
-  // Si es un string ISO con hora (formato: YYYY-MM-DDTHH:mm:ss o YYYY-MM-DD HH:mm:ss)
-  if (typeof fecha === 'string') {
-    // Intentar parsear como ISO completo
-    const isoMatch = fecha.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
-    if (isoMatch) {
-      const [, year, month, day, hour, minute, second] = isoMatch;
-      return new Date(
-        parseInt(year),
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hour),
-        parseInt(minute),
-        second ? parseInt(second) : 0
-      );
-    }
-    
-    // Si solo tiene fecha, usar parsearFechaLocal
-    const datePart = fecha.split('T')[0].split(' ')[0];
-    if (datePart.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      return parsearFechaLocal(fecha);
-    }
-  }
-  
   // Si es un objeto Date, devolverlo directamente
   if (fecha instanceof Date) {
     return fecha;
   }
   
-  // Último recurso: parsear normalmente
-  const date = new Date(fecha);
-  if (!isNaN(date.getTime())) {
-    return date;
+  // Si es un string, parsearlo con new Date()
+  // JavaScript maneja automáticamente la conversión de UTC a hora local
+  if (typeof fecha === 'string') {
+    // Si la fecha viene en formato ISO con 'Z' (UTC), new Date() la convertirá a hora local
+    // Si viene sin 'Z', se asume que es hora local
+    const date = new Date(fecha);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
   }
   
   return null;

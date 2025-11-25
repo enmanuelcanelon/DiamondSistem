@@ -784,6 +784,7 @@ router.post('/leaks/:leakId/agregar', authenticate, requireVendedor, async (req,
         fecha_cita_salon: true,
         estado: true,
         vendedor_id: true,
+        usuario_id: true,
         detalles_interesado: true,
         notas_vendedor: true
       }
@@ -796,8 +797,8 @@ router.post('/leaks/:leakId/agregar', authenticate, requireVendedor, async (req,
       });
     }
 
-    // Verificar que el lead pertenece al vendedor
-    if (leak.vendedor_id !== vendedorId) {
+    // Verificar que el lead pertenece al vendedor (usuario_id o vendedor_id para compatibilidad)
+    if (leak.usuario_id !== vendedorId && leak.vendedor_id !== vendedorId) {
       return res.status(403).json({
         success: false,
         error: 'No tienes permiso para acceder a este lead'

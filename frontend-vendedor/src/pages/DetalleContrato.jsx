@@ -794,9 +794,9 @@ function DetalleContrato() {
                           {pago.numero_referencia && (
                             <p className="text-xs text-muted-foreground">Ref: {pago.numero_referencia}</p>
                           )}
-                          {pago.vendedores && (
+                          {(pago.usuarios || pago.vendedores) && (
                             <p className="text-xs text-muted-foreground">
-                              Por: {pago.vendedores.nombre_completo}
+                              Por: {(pago.usuarios || pago.vendedores)?.nombre_completo}
                             </p>
                           )}
                         </div>

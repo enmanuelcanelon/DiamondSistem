@@ -25,7 +25,10 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
     // CRÍTICO: Filtrar pagos solo de contratos del vendedor autenticado
     const where = {
       contratos: {
-        vendedor_id: req.user.id // Solo pagos de contratos del vendedor
+        OR: [
+          { usuario_id: req.user.id },
+          { vendedor_id: req.user.id }
+        ]
       }
     };
 
@@ -33,10 +36,11 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
       // Verificar que el contrato pertenece al vendedor
       const contrato = await prisma.contratos.findUnique({
         where: { id: parseInt(contrato_id) },
-        select: { vendedor_id: true }
+        select: { usuario_id: true, vendedor_id: true }
       });
 
-      if (!contrato || contrato.vendedor_id !== req.user.id) {
+      // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+      if (!contrato || !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
         throw new ValidationError('No tienes acceso a este contrato');
       }
 
@@ -76,11 +80,11 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
               }
             }
           },
-          vendedores: {
+          usuarios: {
             select: {
               id: true,
               nombre_completo: true,
-              codigo_vendedor: true
+              codigo_usuario: true
             }
           }
         },
@@ -122,11 +126,11 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
             }
           }
         },
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         }
       }
@@ -239,7 +243,7 @@ router.post('/', authenticate, async (req, res, next) => {
         where: { id: contratoIdSanitizado }, // Ya sanitizado
         include: {
           clientes: true,
-          vendedores: true,
+          usuarios: true,
           paquetes: true,
           ofertas: {
             include: {
@@ -386,7 +390,7 @@ router.post('/reserva', authenticate, requireVendedor, async (req, res, next) =>
       where: { id: ofertaIdSanitizado },
       include: {
         clientes: true,
-        vendedores: true
+        usuarios: true
       }
     });
 
@@ -394,7 +398,8 @@ router.post('/reserva', authenticate, requireVendedor, async (req, res, next) =>
       throw new NotFoundError('Oferta no encontrada');
     }
 
-    if (oferta.vendedor_id !== req.user.id) {
+    // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+    if (!(oferta.usuario_id === req.user.id || oferta.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes permiso para registrar pagos de esta oferta');
     }
 

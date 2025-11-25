@@ -55,8 +55,22 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   const fechaCreacionOferta = datos.fecha_creacion 
     ? new Date(datos.fecha_creacion).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
     : new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  // Debug temporal para ver qué formato tienen las horas
+  console.log('🔍 Debug horas PDF:', {
+    hora_inicio_raw: datos.hora_inicio,
+    hora_inicio_type: typeof datos.hora_inicio,
+    hora_inicio_isDate: datos.hora_inicio instanceof Date,
+    hora_fin_raw: datos.hora_fin,
+    hora_fin_type: typeof datos.hora_fin,
+    hora_fin_isDate: datos.hora_fin instanceof Date,
+    hora_fin_UTC: datos.hora_fin instanceof Date ? datos.hora_fin.getUTCHours() : 'N/A',
+    hora_fin_local: datos.hora_fin instanceof Date ? datos.hora_fin.getHours() : 'N/A'
+  });
+  
   const horaInicio = formatearHora(datos.hora_inicio);
   const horaFin = formatearHora(datos.hora_fin);
+  
+  console.log('🔍 Horas formateadas:', { horaInicio, horaFin });
   const cantidadInvitados = datos.cantidad_invitados || 0;
   const emailCliente = datos.clientes?.email || '';
   // Obtener teléfono del cliente - asegurar que no sea undefined, vacío o 0000000000
@@ -1491,27 +1505,68 @@ function formatearHora(hora) {
     } 
     // Si es un objeto Date - usar UTC para evitar problemas de zona horaria
     else if (hora instanceof Date) {
-      // Si la fecha es 1970-01-01, es un objeto Time de Prisma, usar getHours/getMinutes directamente
+      // IMPORTANTE: Para campos Time de Prisma, siempre usar UTC
+      // Prisma devuelve Time como Date con fecha 1970-01-01
+      // Si usamos getHours() en lugar de getUTCHours(), la zona horaria local puede cambiar la hora
       if (hora.getFullYear() === 1970 && hora.getMonth() === 0 && hora.getDate() === 1) {
+        // Es un campo Time de Prisma, usar UTC siempre
         horas = hora.getUTCHours();
         minutos = hora.getUTCMinutes();
       } else {
+        // Para otras fechas, usar hora local
         horas = hora.getHours();
         minutos = hora.getMinutes();
       }
     }
     // Si es un objeto con métodos getHours/getMinutes (como objetos Time de Prisma)
-    else if (typeof hora === 'object' && hora.getHours) {
-      horas = hora.getHours();
-      minutos = hora.getMinutes();
+    else if (typeof hora === 'object' && hora !== null) {
+      // Intentar convertir a Date primero
+      const fecha = new Date(hora);
+      if (!isNaN(fecha.getTime())) {
+        if (fecha.getFullYear() === 1970 && fecha.getMonth() === 0 && fecha.getDate() === 1) {
+          horas = fecha.getUTCHours();
+          minutos = fecha.getUTCMinutes();
+        } else {
+          horas = fecha.getHours();
+          minutos = fecha.getMinutes();
+        }
+      } else if (typeof hora.getHours === 'function') {
+        // Si tiene método getHours pero no es Date válido, intentar usar directamente
+        // Pero primero verificar si es un objeto Time de Prisma (fecha 1970-01-01)
+        if (typeof hora.getFullYear === 'function' && hora.getFullYear() === 1970) {
+          if (typeof hora.getUTCHours === 'function') {
+            horas = hora.getUTCHours();
+            minutos = hora.getUTCMinutes();
+          } else {
+            horas = hora.getHours();
+            minutos = hora.getMinutes();
+          }
+        } else {
+          horas = hora.getHours();
+          minutos = hora.getMinutes();
+        }
+      } else {
+        // Intentar parsear como string o número
+        const fecha = new Date(hora);
+        if (isNaN(fecha.getTime())) {
+          return '8:00PM';
+        }
+        if (fecha.getFullYear() === 1970 && fecha.getMonth() === 0 && fecha.getDate() === 1) {
+          horas = fecha.getUTCHours();
+          minutos = fecha.getUTCMinutes();
+        } else {
+          horas = fecha.getHours();
+          minutos = fecha.getMinutes();
+        }
+      }
     }
     // Intentar parsear como Date
     else {
-    const fecha = new Date(hora);
+      const fecha = new Date(hora);
       if (isNaN(fecha.getTime())) {
         return '8:00PM';
       }
-      // Si es una fecha de 1970-01-01, usar UTC
+      // Si es una fecha de 1970-01-01, usar UTC siempre para evitar problemas de zona horaria
       if (fecha.getFullYear() === 1970 && fecha.getMonth() === 0 && fecha.getDate() === 1) {
         horas = fecha.getUTCHours();
         minutos = fecha.getUTCMinutes();
@@ -1521,11 +1576,18 @@ function formatearHora(hora) {
       }
     }
     
+    // Asegurar que las horas estén en el rango 0-23
+    // Si por alguna razón se obtiene un valor fuera de rango, ajustarlo
+    if (horas < 0 || horas > 23) {
+      horas = horas % 24;
+      if (horas < 0) horas += 24;
+    }
+    
     const periodo = horas >= 12 ? 'PM' : 'AM';
     const horas12 = horas > 12 ? horas - 12 : (horas === 0 ? 12 : horas);
     return `${horas12}:${minutos.toString().padStart(2, '0')}${periodo}`;
   } catch (e) {
-    console.error('Error formateando hora:', e, 'Hora recibida:', hora);
+    console.error('Error formateando hora:', e, 'Hora recibida:', hora, 'Tipo:', typeof hora);
     return '8:00PM';
   }
 }

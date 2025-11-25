@@ -58,6 +58,7 @@ function CrearOferta() {
   const [errorFecha, setErrorFecha] = useState('');
   const [excedeCapacidad, setExcedeCapacidad] = useState(false);
   const [mostrarModalCapacidad, setMostrarModalCapacidad] = useState(false);
+  const [excesoCapacidadConfirmado, setExcesoCapacidadConfirmado] = useState(false);
   const [errorHorario, setErrorHorario] = useState('');
   const [mostrarModalHorasExtras, setMostrarModalHorasExtras] = useState(false);
   const [horasExtrasFaltantes, setHorasExtrasFaltantes] = useState(0);
@@ -79,7 +80,7 @@ function CrearOferta() {
     'Graduación',
     'Baby Shower',
     'Fiesta Infantil',
-    'Sweet 16',
+    'Dulces 16',
     'Otro'
   ];
   
@@ -744,6 +745,114 @@ function CrearOferta() {
     setConflictosDisponibilidad(null);
 
     try {
+      // PRIMERO: Verificar conflictos con horas ocupadas del calendario (frontend)
+      const horasOcupadasCalendario = await obtenerHorasOcupadas(salonId, fechaEvento);
+      const hayConflictoCalendario = verificarRangoOcupadoConHoras(horaInicio, horaFin, horasOcupadasCalendario);
+      
+      if (hayConflictoCalendario) {
+        // Obtener detalles del conflicto desde el calendario
+        const fechaSeleccionada = fechaEvento.split('T')[0];
+        const [año, mes, dia] = fechaSeleccionada.split('-').map(Number);
+        const diaCalendario = diaSeleccionadoCalendario || (mes === mesCalendario && año === añoCalendario ? dia : null);
+        
+        if (diaCalendario && eventosCalendario?.eventos_por_dia?.[diaCalendario]) {
+          const eventosDelDia = eventosCalendario.eventos_por_dia[diaCalendario];
+          const salonSeleccionado = salones?.find(s => {
+            const salonIdNum = typeof salonId === 'string' ? parseInt(salonId) : salonId;
+            const sIdNum = typeof s.id === 'string' ? parseInt(s.id) : s.id;
+            return sIdNum === salonIdNum;
+          });
+          const nombreSalonSeleccionado = salonSeleccionado?.nombre?.toLowerCase().trim() || '';
+          
+          // Buscar eventos conflictivos
+          const eventosConflictivos = eventosDelDia.filter(evento => {
+            // Verificar si pertenece al salón
+            let nombreSalonEvento = '';
+            if (evento.salones?.nombre) {
+              nombreSalonEvento = String(evento.salones.nombre).toLowerCase().trim();
+            } else if (evento.salon) {
+              nombreSalonEvento = String(evento.salon).toLowerCase().trim();
+            } else if (evento.ubicacion) {
+              nombreSalonEvento = String(evento.ubicacion).toLowerCase().trim();
+            }
+            
+            let perteneceAlSalon = false;
+            if (evento.salones?.id) {
+              const eventoSalonIdNum = typeof evento.salones.id === 'string' ? parseInt(evento.salones.id) : evento.salones.id;
+              const salonIdNum = typeof salonId === 'string' ? parseInt(salonId) : salonId;
+              perteneceAlSalon = eventoSalonIdNum === salonIdNum;
+            }
+            
+            if (!perteneceAlSalon && nombreSalonSeleccionado && nombreSalonEvento) {
+              const nombreBaseSeleccionado = nombreSalonSeleccionado.replace(/\s+\d+$/, '').trim();
+              const nombreBaseEvento = nombreSalonEvento.replace(/\s+\d+$/, '').trim();
+              
+              if (nombreBaseSeleccionado.includes('diamond')) {
+                perteneceAlSalon = nombreBaseEvento.includes('diamond');
+              } else if (nombreBaseSeleccionado.includes('doral') && !nombreBaseSeleccionado.includes('diamond')) {
+                perteneceAlSalon = nombreBaseEvento.includes('doral') && !nombreBaseEvento.includes('diamond');
+              } else if (nombreBaseSeleccionado.includes('kendall') || nombreBaseSeleccionado.includes('kendal')) {
+                perteneceAlSalon = nombreBaseEvento.includes('kendall') || nombreBaseEvento.includes('kendal') || nombreBaseEvento.includes('kentall');
+              }
+            }
+            
+            if (!perteneceAlSalon) return false;
+            
+            // Verificar solapamiento de horarios
+            const extraerHora = (hora) => {
+              if (!hora) return null;
+              try {
+                let fechaHora;
+                if (hora instanceof Date) {
+                  fechaHora = hora;
+                } else if (typeof hora === 'string' && hora.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
+                  const partes = hora.split(':');
+                  return parseInt(partes[0]);
+                } else {
+                  fechaHora = new Date(hora);
+                  if (isNaN(fechaHora.getTime())) return null;
+                }
+                if (fechaHora) {
+                  const fechaMiami = new Date(fechaHora.toLocaleString("en-US", {timeZone: "America/New_York"}));
+                  return fechaMiami.getHours();
+                }
+              } catch (error) {}
+              return null;
+            };
+            
+            const eventoHoraInicio = extraerHora(evento.hora_inicio);
+            const eventoHoraFin = extraerHora(evento.hora_fin);
+            const [horaInicioNum] = horaInicio.split(':').map(Number);
+            let [horaFinNum] = horaFin.split(':').map(Number);
+            const cruzaMedianoche = horaFinNum < horaInicioNum;
+            if (cruzaMedianoche) horaFinNum += 24;
+            
+            if (eventoHoraInicio !== null && eventoHoraFin !== null) {
+              const eventoFinAjustado = eventoHoraFin < eventoHoraInicio ? eventoHoraFin + 24 : eventoHoraFin;
+              return (horaInicioNum < eventoFinAjustado + 1 && horaFinNum + 1 > eventoHoraInicio);
+            }
+            return false;
+          });
+          
+          if (eventosConflictivos.length > 0) {
+            let mensaje = `⚠️ El salón no está disponible en este horario.\n\n`;
+            mensaje += `Eventos del calendario:\n`;
+            eventosConflictivos.forEach(e => {
+              const nombreEvento = e.nombre_evento || e.titulo || e.summary || 'Evento';
+              const horaInicioEvento = e.hora_inicio ? (typeof e.hora_inicio === 'string' ? e.hora_inicio : e.hora_inicio.toTimeString().slice(0, 5)) : 'N/A';
+              const horaFinEvento = e.hora_fin ? (typeof e.hora_fin === 'string' ? e.hora_fin : e.hora_fin.toTimeString().slice(0, 5)) : 'N/A';
+              mensaje += `- ${nombreEvento}: ${horaInicioEvento} - ${horaFinEvento}\n`;
+            });
+            
+            setErrorDisponibilidad(mensaje);
+            setConflictosDisponibilidad({ calendario: eventosConflictivos });
+            setVerificandoDisponibilidad(false);
+            return;
+          }
+        }
+      }
+      
+      // SEGUNDO: Verificar disponibilidad en el backend (contratos y ofertas aceptadas)
       const response = await api.post('/salones/disponibilidad', {
         salon_id: parseInt(salonId),
         fecha_evento: fechaEvento,
@@ -930,6 +1039,8 @@ function CrearOferta() {
   useEffect(() => {
     if (formData.salon_id && formData.salon_id !== 'otro' && formData.fecha_evento) {
       const timeoutId = setTimeout(async () => {
+        // Forzar recálculo de horas ocupadas, especialmente importante cuando es el mismo día
+        // Usar una marca de tiempo para forzar recálculo incluso si las dependencias no cambian
         const horasOcupadasNuevas = await obtenerHorasOcupadas(formData.salon_id, formData.fecha_evento);
         
         // Si hay horas seleccionadas, verificar si están ocupadas en el nuevo salón
@@ -950,13 +1061,13 @@ function CrearOferta() {
             toast.error('Las horas seleccionadas no están disponibles en el nuevo salón');
           }
         }
-      }, 500);
+      }, 300); // Reducido a 300ms para respuesta más rápida
 
       return () => clearTimeout(timeoutId);
     } else {
       setHorasOcupadas([]);
     }
-  }, [formData.salon_id, formData.fecha_evento, diaSeleccionadoCalendario, eventosCalendario]);
+  }, [formData.salon_id, formData.fecha_evento, diaSeleccionadoCalendario, eventosCalendario, mesCalendario, añoCalendario]);
 
   // Effect para verificar disponibilidad cuando cambian fecha, hora o salón
   // Solo verificar cuando hay salón, fecha Y horas completas
@@ -1797,7 +1908,12 @@ function CrearOferta() {
   // Confirmar y enviar con exceso de capacidad
   const confirmarExcesoCapacidad = () => {
     setMostrarModalCapacidad(false);
-    enviarOferta();
+    setExcesoCapacidadConfirmado(true); // Marcar que el usuario ya confirmó el exceso
+    // Solo avanzar al siguiente paso, no crear la oferta
+    // El usuario debe completar todos los pasos antes de crear la oferta
+    if (pasoActual < 5) {
+      setPasoActual(pasoActual + 1);
+    }
   };
 
   // ============================================
@@ -1899,8 +2015,8 @@ function CrearOferta() {
       }
     }
 
-    // Si excede la capacidad, mostrar modal de confirmación
-    if (excedeCapacidad) {
+    // Si excede la capacidad, mostrar modal de confirmación solo si no se ha confirmado antes
+    if (excedeCapacidad && !excesoCapacidadConfirmado) {
       setMostrarModalCapacidad(true);
       return false;
     }
@@ -2133,12 +2249,15 @@ function CrearOferta() {
     let eventos = eventosCalendario.eventos_por_dia[dia] || [];
     
     // Filtrar eventos pasados - solo considerar eventos de hoy en adelante (hora Miami)
+    // IMPORTANTE: Para eventos del mismo día, considerar la hora actual, no solo la fecha
     const ahoraMiami = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}));
     const hoyMiami = new Date(ahoraMiami.getFullYear(), ahoraMiami.getMonth(), ahoraMiami.getDate());
     hoyMiami.setHours(0, 0, 0, 0);
     
     eventos = eventos.filter(evento => {
       let fechaEvento;
+      
+      // Obtener la fecha del evento
       if (evento.fecha_evento) {
         fechaEvento = new Date(evento.fecha_evento);
       } else if (evento.fecha_inicio) {
@@ -2157,6 +2276,19 @@ function CrearOferta() {
         return fechaEventoSolo >= hoyMiami;
       }
       
+      // Para eventos con hora específica, verificar fecha y hora
+      const fechaEventoSolo = new Date(fechaEventoMiami.getFullYear(), fechaEventoMiami.getMonth(), fechaEventoMiami.getDate());
+      fechaEventoSolo.setHours(0, 0, 0, 0);
+      const esMismoDia = fechaEventoSolo.getTime() === hoyMiami.getTime();
+      
+      if (esMismoDia) {
+        // Si es el mismo día, INCLUIR todos los eventos del día (no filtrar por hora)
+        // Esto es importante porque necesitamos bloquear las horas ocupadas incluso si el evento es más tarde
+        // La lógica de bloquear horas se hace después, aquí solo filtramos eventos pasados de otros días
+        return true; // Incluir todos los eventos del mismo día
+      }
+      
+      // Para otros días, solo verificar que la fecha sea mayor o igual a hoy
       return fechaEventoMiami >= hoyMiami;
     });
     
@@ -2288,27 +2420,29 @@ function CrearOferta() {
       const horaFin = extraerHora(evento.hora_fin);
       
       if (horaInicio !== null && horaFin !== null) {
-        // Agregar todas las horas desde inicio hasta fin (incluyendo ambas)
-        for (let h = horaInicio; h <= horaFin; h++) {
-          if (h >= 0 && h < 24) {
+        // Determinar si el evento cruza medianoche
+        const cruzaMedianoche = horaFin < horaInicio;
+        
+        if (cruzaMedianoche) {
+          // Evento cruza medianoche (ej: 8 PM a 12 AM)
+          // SOLO bloquear desde horaInicio hasta 23 (11:59 PM del mismo día)
+          // NO bloquear el día siguiente, NO buffers
+          for (let h = horaInicio; h < 24; h++) {
             horasOcupadas.add(h);
           }
-        }
-        
-        // Agregar 1 hora de buffer DESPUÉS del evento (no se puede seleccionar la hora siguiente)
-        // Esto da 1 hora de plazo para el siguiente evento
-        if (horaFin >= 0 && horaFin < 23) {
-          horasOcupadas.add(horaFin + 1);
+        } else {
+          // Evento NO cruza medianoche (ej: 12 PM a 4 PM)
+          // SOLO bloquear las horas exactas del evento, sin buffers
+          for (let h = horaInicio; h <= horaFin; h++) {
+            if (h >= 0 && h < 24) {
+              horasOcupadas.add(h);
+            }
+          }
         }
       } else if (horaInicio !== null) {
-        // Solo tenemos hora de inicio
+        // Solo tenemos hora de inicio - bloquear solo esa hora
         if (horaInicio >= 0 && horaInicio < 24) {
-          // Hora del evento
           horasOcupadas.add(horaInicio);
-          // Buffer de 1 hora después (1 hora de plazo para el siguiente evento)
-          if (horaInicio < 23) {
-            horasOcupadas.add(horaInicio + 1);
-          }
         }
       }
     });
@@ -2401,11 +2535,26 @@ function CrearOferta() {
           key={dia}
           onClick={() => {
             if (esFechaValida(dia)) {
-              setDiaSeleccionadoCalendario(dia === diaSeleccionadoCalendario ? null : dia);
               const fechaStr = formatearFechaParaInput(dia);
-              handleChange({ target: { name: 'fecha_evento', value: fechaStr } });
-              if (formData.salon_id && formData.salon_id !== 'otro') {
-                obtenerHorasOcupadas(formData.salon_id, fechaStr);
+              // Si se hace click en el mismo día ya seleccionado, deseleccionar
+              if (dia === diaSeleccionadoCalendario) {
+                setDiaSeleccionadoCalendario(null);
+                // No limpiar la fecha del evento, solo el día del calendario
+              } else {
+                // Seleccionar el nuevo día
+                setDiaSeleccionadoCalendario(dia);
+                // Establecer la fecha inmediatamente para desbloquear los campos
+                setFormData(prev => ({
+                  ...prev,
+                  fecha_evento: fechaStr
+                }));
+                // Forzar recálculo de horas ocupadas cuando se selecciona un día
+                if (formData.salon_id && formData.salon_id !== 'otro') {
+                  // Usar setTimeout para asegurar que el estado se actualice primero
+                  setTimeout(() => {
+                    obtenerHorasOcupadas(formData.salon_id, fechaStr);
+                  }, 100);
+                }
               }
             }
           }}

@@ -33,9 +33,9 @@ function Leaks() {
     },
     staleTime: 5 * 60 * 1000, // Los datos se consideran frescos por 5 minutos
     gcTime: 10 * 60 * 1000, // Mantener en caché por 10 minutos
-    refetchInterval: false, // Sin refresco automático - solo manual
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
+    refetchInterval: 30 * 1000, // Refrescar cada 30 segundos
+    refetchIntervalInBackground: false, // No refetch cuando la pestaña está en background
+    refetchOnWindowFocus: true, // Refetch al cambiar de pestaña para mantener datos actualizados
     retry: (failureCount, error) => {
       // No reintentar si es error 429 (rate limit)
       if (error?.response?.status === 429) return false;
