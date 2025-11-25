@@ -1283,18 +1283,6 @@ function CrearOferta() {
         const grupoKey = `grupo_${grupoSidraChampanaIndex}`;
         const seleccionadoId = serviciosExcluyentesSeleccionados[grupoKey];
         
-        console.log('🍾 Procesando Sidra/Champaña en getServiciosPaqueteSeleccionados:', {
-          grupoKey,
-          seleccionadoId,
-          sidraId: sidraServicio.id,
-          champanaId: champanaServicio.id,
-          tieneSidra,
-          tieneChampana,
-          seleccionadoEsChampana: seleccionadoId === champanaServicio.id,
-          seleccionadoEsSidra: seleccionadoId === sidraServicio.id,
-          serviciosExcluyentesSeleccionados: serviciosExcluyentesSeleccionados
-        });
-        
         // Si Champaña está seleccionada y el paquete tiene Sidra, reemplazar
         if (seleccionadoId === champanaServicio.id && tieneSidra) {
           const sidraPaquete = paqueteSeleccionado.paquetes_servicios.find(ps => ps.servicios?.nombre === 'Sidra');
@@ -1686,6 +1674,37 @@ function CrearOferta() {
 
   // Función para enviar la oferta (separada para reutilizar)
   const enviarOferta = () => {
+    // Obtener la selección de Photobooth del paquete
+    let seleccionPhotobooth = null;
+    if (paqueteSeleccionado) {
+      const tienePhotobooth360 = paqueteSeleccionado.paquetes_servicios.some(ps => ps.servicios?.nombre === 'Photobooth 360');
+      const tienePhotoboothPrint = paqueteSeleccionado.paquetes_servicios.some(ps => ps.servicios?.nombre === 'Photobooth Print');
+      
+      if (tienePhotobooth360 || tienePhotoboothPrint) {
+        // El grupo Photobooth es el primero (grupo_0)
+        const grupoKey = 'grupo_0';
+        const seleccionadoId = serviciosExcluyentesSeleccionados[grupoKey];
+        
+        if (seleccionadoId) {
+          const photobooth360Servicio = servicios?.find(s => s.nombre === 'Photobooth 360');
+          const photoboothPrintServicio = servicios?.find(s => s.nombre === 'Photobooth Print');
+          
+          if (seleccionadoId === photobooth360Servicio?.id) {
+            seleccionPhotobooth = 'Photobooth 360';
+          } else if (seleccionadoId === photoboothPrintServicio?.id) {
+            seleccionPhotobooth = 'Photobooth Print';
+          }
+        } else {
+          // Si no hay selección explícita, usar el que viene en el paquete por defecto
+          if (tienePhotobooth360) {
+            seleccionPhotobooth = 'Photobooth 360';
+          } else if (tienePhotoboothPrint) {
+            seleccionPhotobooth = 'Photobooth Print';
+          }
+        }
+      }
+    }
+    
     // Obtener la selección de Sidra/Champaña del paquete
     let seleccionSidraChampana = null;
     if (paqueteSeleccionado) {
@@ -1741,7 +1760,6 @@ function CrearOferta() {
       }
     }
     
-    console.log('📤 Enviando oferta con selección Sidra/Champaña:', seleccionSidraChampana);
     
     const dataToSubmit = {
       cliente_id: parseInt(formData.cliente_id),
@@ -1757,6 +1775,7 @@ function CrearOferta() {
       homenajeado: formData.homenajeado || null,
       tipo_evento: tipoEvento === 'Otro' ? tipoEventoOtro : (tipoEvento || null), // Incluir tipo de evento de la oferta
       seleccion_sidra_champana: seleccionSidraChampana, // Incluir selección de Sidra/Champaña
+      photobooth_tipo: seleccionPhotobooth, // Incluir selección de Photobooth
       descuento: parseFloat(formData.descuento_porcentaje) || 0,
       notas_vendedor: formData.notas_internas || null,
       // Incluir ajustes personalizados para que el backend los use al calcular
@@ -3775,13 +3794,6 @@ function CrearOferta() {
                                     checked={seleccionado === ps.servicio_id}
                                     onChange={(e) => {
                                       const nuevoValor = parseInt(e.target.value);
-                                      const servicioSeleccionado = grupo.find(ps => ps.servicio_id === nuevoValor);
-                                      console.log('🔵 Selección cambiada:', {
-                                        grupoKey,
-                                        nuevoValor,
-                                        servicioNombre: servicioSeleccionado?.servicios?.nombre,
-                                        grupo: grupo.map(ps => ({ id: ps.servicio_id, nombre: ps.servicios?.nombre }))
-                                      });
                                       setServiciosExcluyentesSeleccionados({
                                         ...serviciosExcluyentesSeleccionados,
                                         [grupoKey]: nuevoValor

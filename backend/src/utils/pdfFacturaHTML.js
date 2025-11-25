@@ -983,13 +983,103 @@ function organizarServiciosPorCategoria(datos) {
 
   // Obtener la selección de Sidra/Champaña de la oferta
   const seleccionSidraChampana = datos.seleccion_sidra_champana || null;
+  
+  // Obtener la selección de Photobooth de la oferta
+  // Puede venir como string o como objeto con nombre
+  let seleccionPhotobooth = datos.photobooth_tipo || null;
+  if (seleccionPhotobooth && typeof seleccionPhotobooth === 'object') {
+    seleccionPhotobooth = seleccionPhotobooth.nombre || seleccionPhotobooth.value || null;
+  }
+  
+  // Si photobooth_tipo es null, intentar inferir la selección basándose en los servicios del paquete y adicionales
+  // Estrategia: Si ambos Photobooth están en el paquete, el que NO está en extras es el seleccionado
+  if (!seleccionPhotobooth) {
+    // Obtener nombres de servicios del paquete
+    const serviciosPaqueteNombres = serviciosPaquete.map(ps => {
+      const servicio = ps.servicios || ps;
+      return (servicio.nombre || '').toLowerCase();
+    });
+    
+    // Obtener nombres de servicios adicionales
+    const serviciosAdicionalesNombres = (serviciosAdicionales || []).map(os => {
+      const servicio = os.servicios || os;
+      return (servicio.nombre || '').toLowerCase();
+    });
+    
+    // Verificar qué Photobooth están en el paquete
+    const tienePhotobooth360EnPaquete = serviciosPaqueteNombres.some(nombre => 
+      nombre.includes('photobooth 360') || nombre.includes('cabina 360') || 
+      (nombre.includes('360') && (nombre.includes('photobooth') || nombre.includes('cabina')))
+    );
+    const tienePhotoboothPrintEnPaquete = serviciosPaqueteNombres.some(nombre => 
+      nombre.includes('photobooth print') || 
+      (nombre.includes('photobooth') && (nombre.includes('print') || nombre.includes('impresión') || nombre.includes('impresion'))) ||
+      (nombre.includes('cabina') && (nombre.includes('impresión') || nombre.includes('impresion')))
+    );
+    
+    // Verificar qué Photobooth están en extras
+    const tienePhotobooth360EnExtras = serviciosAdicionalesNombres.some(nombre => 
+      nombre.includes('photobooth 360') || nombre.includes('cabina 360') || 
+      (nombre.includes('360') && (nombre.includes('photobooth') || nombre.includes('cabina')))
+    );
+    const tienePhotoboothPrintEnExtras = serviciosAdicionalesNombres.some(nombre => 
+      nombre.includes('photobooth print') || 
+      (nombre.includes('photobooth') && (nombre.includes('print') || nombre.includes('impresión') || nombre.includes('impresion'))) ||
+      (nombre.includes('cabina') && (nombre.includes('impresión') || nombre.includes('impresion')))
+    );
+    
+    // Si ambos están en el paquete, el que NO está en extras es el seleccionado
+    if (tienePhotobooth360EnPaquete && tienePhotoboothPrintEnPaquete) {
+      if (!tienePhotobooth360EnExtras && tienePhotoboothPrintEnExtras) {
+        seleccionPhotobooth = 'Photobooth 360';
+      } else if (tienePhotobooth360EnExtras && !tienePhotoboothPrintEnExtras) {
+        seleccionPhotobooth = 'Photobooth Print';
+      } else if (!tienePhotobooth360EnExtras && !tienePhotoboothPrintEnExtras) {
+        // Ambos están en el paquete y ninguno en extras - usar el orden de aparición en el paquete
+        // El primero que aparece en paquetes_servicios es el seleccionado por defecto
+        const photobooth360Index = serviciosPaquete.findIndex(ps => {
+          const nombre = (ps.servicios?.nombre || '').toLowerCase();
+          return nombre.includes('photobooth 360') || nombre.includes('cabina 360') || 
+                 (nombre.includes('360') && (nombre.includes('photobooth') || nombre.includes('cabina')));
+        });
+        const photoboothPrintIndex = serviciosPaquete.findIndex(ps => {
+          const nombre = (ps.servicios?.nombre || '').toLowerCase();
+          return nombre.includes('photobooth print') || 
+                 (nombre.includes('photobooth') && (nombre.includes('print') || nombre.includes('impresión') || nombre.includes('impresion'))) ||
+                 (nombre.includes('cabina') && (nombre.includes('impresión') || nombre.includes('impresion')));
+        });
+        
+        // Usar el que aparece primero en el paquete (índice menor)
+        if (photobooth360Index !== -1 && photoboothPrintIndex !== -1) {
+          if (photobooth360Index < photoboothPrintIndex) {
+            seleccionPhotobooth = 'Photobooth 360';
+          } else {
+            seleccionPhotobooth = 'Photobooth Print';
+          }
+        } else if (photobooth360Index !== -1) {
+          seleccionPhotobooth = 'Photobooth 360';
+        } else if (photoboothPrintIndex !== -1) {
+          seleccionPhotobooth = 'Photobooth Print';
+        }
+      }
+    }
+    // Si solo uno está en el paquete, ese es el seleccionado
+    else if (tienePhotobooth360EnPaquete && !tienePhotoboothPrintEnPaquete) {
+      seleccionPhotobooth = 'Photobooth 360';
+    }
+    else if (tienePhotoboothPrintEnPaquete && !tienePhotobooth360EnPaquete) {
+      seleccionPhotobooth = 'Photobooth Print';
+    }
+  }
 
-  // Servicios del paquete - Aplicar selección de Sidra/Champaña PRIMERO
+  // Servicios del paquete - Aplicar selección de Sidra/Champaña y Photobooth PRIMERO
   const serviciosPaqueteList = serviciosPaquete
     .map(ps => {
       const nombreServicio = (ps.servicios?.nombre || '').toLowerCase();
       const esSidra = nombreServicio.includes('sidra') || nombreServicio.includes('cider');
       const esChampana = nombreServicio.includes('champaña') || nombreServicio.includes('champagne');
+      const esPhotobooth360 = nombreServicio.includes('photobooth 360') || nombreServicio.includes('cabina 360') || (nombreServicio.includes('360') && (nombreServicio.includes('photobooth') || nombreServicio.includes('cabina')));
+      const esPhotoboothPrint = nombreServicio.includes('photobooth print') || (nombreServicio.includes('photobooth') && (nombreServicio.includes('print') || nombreServicio.includes('impresión') || nombreServicio.includes('impresion'))) || (nombreServicio.includes('cabina') && (nombreServicio.includes('impresión') || nombreServicio.includes('impresion')));
       
       // Si hay una selección de Sidra/Champaña, aplicar el reemplazo
       if (seleccionSidraChampana) {
@@ -1081,7 +1171,98 @@ function organizarServiciosPorCategoria(datos) {
         }
       }
       
-      // Si no hay selección o el servicio no es Sidra/Champaña, mantenerlo tal cual
+      // Si hay una selección de Photobooth, aplicar el reemplazo
+      if (seleccionPhotobooth) {
+        // Normalizar la selección para comparar
+        const seleccionNormalizada = seleccionPhotobooth.toLowerCase();
+        const esSeleccion360 = seleccionNormalizada.includes('360');
+        const esSeleccionPrint = seleccionNormalizada.includes('print') || seleccionNormalizada.includes('impresión') || seleccionNormalizada.includes('impresion');
+        
+        // Si el servicio coincide con la selección, mantenerlo (caso más común)
+        if ((esPhotobooth360 && esSeleccion360) || 
+            (esPhotoboothPrint && esSeleccionPrint)) {
+          return {
+            ...ps.servicios,
+            categoria: ps.servicios?.categoria,
+            esPaquete: true,
+            descripcion: ps.servicios?.descripcion || ps.servicios?.nombre
+          };
+        }
+        
+        // Si se seleccionó Photobooth 360 y el paquete tiene Photobooth Print, reemplazar
+        if (esPhotoboothPrint && esSeleccion360) {
+          // Buscar el servicio de Photobooth 360 en todos los servicios disponibles
+          const photobooth360Servicio = todosServiciosDisponibles.find(servicio => {
+            const nombre = (servicio.nombre || '').toLowerCase();
+            return (nombre.includes('photobooth 360') || nombre.includes('cabina 360') || (nombre.includes('360') && (nombre.includes('photobooth') || nombre.includes('cabina')))) && servicio.id !== ps.servicios?.id;
+          });
+          
+          if (photobooth360Servicio) {
+            // Usar el servicio de Photobooth 360 con su ID real
+            return {
+              ...photobooth360Servicio,
+              categoria: photobooth360Servicio?.categoria || ps.servicios?.categoria,
+              esPaquete: true,
+              descripcion: photobooth360Servicio?.descripcion || photobooth360Servicio?.nombre || 'Photobooth 360'
+            };
+          } else {
+            // Si no se encuentra, crear un objeto temporal
+            const servicioTemporal = {
+              ...ps.servicios,
+              id: null,
+              nombre: 'Photobooth 360',
+              categoria: ps.servicios?.categoria || 'fotografia',
+              esPaquete: true,
+              descripcion: 'Photobooth 360',
+              servicios: {
+                ...ps.servicios,
+                id: null,
+                nombre: 'Photobooth 360',
+                descripcion: 'Photobooth 360'
+              }
+            };
+            return servicioTemporal;
+          }
+        }
+        
+        // Si se seleccionó Photobooth Print y el paquete tiene Photobooth 360, reemplazar
+        if (esPhotobooth360 && esSeleccionPrint) {
+          // Buscar el servicio de Photobooth Print en todos los servicios disponibles
+          const photoboothPrintServicio = todosServiciosDisponibles.find(servicio => {
+            const nombre = (servicio.nombre || '').toLowerCase();
+            return (nombre.includes('photobooth print') || (nombre.includes('photobooth') && (nombre.includes('print') || nombre.includes('impresión') || nombre.includes('impresion'))) || (nombre.includes('cabina') && (nombre.includes('impresión') || nombre.includes('impresion')))) && servicio.id !== ps.servicios?.id;
+          });
+          
+          if (photoboothPrintServicio) {
+            // Usar el servicio de Photobooth Print con su ID real
+            return {
+              ...photoboothPrintServicio,
+              categoria: photoboothPrintServicio?.categoria || ps.servicios?.categoria,
+              esPaquete: true,
+              descripcion: photoboothPrintServicio?.descripcion || photoboothPrintServicio?.nombre || 'Photobooth Print'
+            };
+          } else {
+            // Si no se encuentra, crear un objeto temporal
+            const servicioTemporal = {
+              ...ps.servicios,
+              id: null,
+              nombre: 'Photobooth Print',
+              categoria: ps.servicios?.categoria || 'fotografia',
+              esPaquete: true,
+              descripcion: 'Photobooth Print',
+              servicios: {
+                ...ps.servicios,
+                id: null,
+                nombre: 'Photobooth Print',
+                descripcion: 'Photobooth Print'
+              }
+            };
+            return servicioTemporal;
+          }
+        }
+      }
+      
+      // Si no hay selección o el servicio no es Sidra/Champaña/Photobooth, mantenerlo tal cual
       return {
         ...ps.servicios,
         categoria: ps.servicios?.categoria,
@@ -1090,9 +1271,10 @@ function organizarServiciosPorCategoria(datos) {
       };
     })
     .filter(ps => {
-      // Filtrar: si hay selección, excluir el servicio que NO fue seleccionado
+      const nombreServicio = (ps.nombre || '').toLowerCase();
+      
+      // Filtrar: si hay selección de Sidra/Champaña, excluir el servicio que NO fue seleccionado
       if (seleccionSidraChampana) {
-        const nombreServicio = (ps.nombre || '').toLowerCase();
         const esSidra = nombreServicio.includes('sidra') || nombreServicio.includes('cider');
         const esChampana = nombreServicio.includes('champaña') || nombreServicio.includes('champagne');
         
@@ -1105,6 +1287,52 @@ function organizarServiciosPorCategoria(datos) {
           return false;
         }
       }
+      
+      // Filtrar: si hay selección de Photobooth, excluir el Photobooth que NO fue seleccionado
+      if (seleccionPhotobooth) {
+        const esPhotobooth360 = nombreServicio.includes('photobooth 360') || nombreServicio.includes('cabina 360') || (nombreServicio.includes('360') && (nombreServicio.includes('photobooth') || nombreServicio.includes('cabina')));
+        const esPhotoboothPrint = nombreServicio.includes('photobooth print') || (nombreServicio.includes('photobooth') && (nombreServicio.includes('print') || nombreServicio.includes('impresión') || nombreServicio.includes('impresion'))) || (nombreServicio.includes('cabina') && (nombreServicio.includes('impresión') || nombreServicio.includes('impresion')));
+        
+        // Normalizar la selección para comparar
+        const seleccionNormalizada = String(seleccionPhotobooth).toLowerCase();
+        const esSeleccion360 = seleccionNormalizada.includes('360');
+        const esSeleccionPrint = seleccionNormalizada.includes('print') || seleccionNormalizada.includes('impresión') || seleccionNormalizada.includes('impresion');
+        
+        // Si es Photobooth 360 pero se seleccionó Print, excluir
+        if (esPhotobooth360 && esSeleccionPrint) {
+          return false;
+        }
+        // Si es Photobooth Print pero se seleccionó 360, excluir
+        if (esPhotoboothPrint && esSeleccion360) {
+          return false;
+        }
+      }
+      
+      return true;
+    })
+    // Eliminar duplicados de Photobooth - solo mantener uno del tipo seleccionado
+    .filter((ps, index, array) => {
+      const nombreServicio = (ps.nombre || '').toLowerCase();
+      const esPhotobooth360 = nombreServicio.includes('photobooth 360') || nombreServicio.includes('cabina 360') || (nombreServicio.includes('360') && (nombreServicio.includes('photobooth') || nombreServicio.includes('cabina')));
+      const esPhotoboothPrint = nombreServicio.includes('photobooth print') || (nombreServicio.includes('photobooth') && (nombreServicio.includes('print') || nombreServicio.includes('impresión') || nombreServicio.includes('impresion'))) || (nombreServicio.includes('cabina') && (nombreServicio.includes('impresión') || nombreServicio.includes('impresion')));
+      
+      // Si es un Photobooth, verificar si ya hay uno antes en el array
+      if (esPhotobooth360 || esPhotoboothPrint) {
+        // Buscar si hay otro Photobooth del mismo tipo antes de este en el array
+        const yaExiste = array.slice(0, index).some(otroPs => {
+          const otroNombre = (otroPs.nombre || '').toLowerCase();
+          const otroEs360 = otroNombre.includes('photobooth 360') || otroNombre.includes('cabina 360') || (otroNombre.includes('360') && (otroNombre.includes('photobooth') || otroNombre.includes('cabina')));
+          const otroEsPrint = otroNombre.includes('photobooth print') || (otroNombre.includes('photobooth') && (otroNombre.includes('print') || otroNombre.includes('impresión') || otroNombre.includes('impresion'))) || (otroNombre.includes('cabina') && (otroNombre.includes('impresión') || otroNombre.includes('impresion')));
+          
+          // Si ambos son del mismo tipo (ambos 360 o ambos Print), es un duplicado
+          return (esPhotobooth360 && otroEs360) || (esPhotoboothPrint && otroEsPrint);
+        });
+        
+        if (yaExiste) {
+          return false; // Excluir este duplicado
+        }
+      }
+      
       return true;
     });
 
