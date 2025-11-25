@@ -473,11 +473,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     // Determinar cuántas columnas tienen contenido
     const columnasConContenido = [col1.length > 0, col2.length > 0, col3.length > 0].filter(Boolean).length;
     
-    // Aplicar estilos: columna 1 izquierda, columna 2 centrada, columna 3 derecha
-    let htmlCol1 = '<div class="package-col" style="justify-self: start;">';
-    let htmlCol2 = '<div class="package-col" style="justify-self: center;">';
-    let htmlCol3 = '<div class="package-col" style="justify-self: end;">';
-
+    // Función helper para generar HTML de categoría
     const generarCategoriaHTML = (cat, items) => {
       if (items.length > 0) {
         let html = `
@@ -494,6 +490,16 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
       }
       return '';
     };
+
+    // Determinar qué columnas tienen contenido
+    const tieneCol1 = col1.length > 0;
+    const tieneCol2 = col2.length > 0;
+    const tieneCol3 = col3.length > 0;
+    
+    // Construir HTML de columnas sin justify-self para que el grid las distribuya equitativamente
+    let htmlCol1 = '<div class="package-col">';
+    let htmlCol2 = '<div class="package-col">';
+    let htmlCol3 = '<div class="package-col">';
 
     // Columna 1
     col1.forEach(key => {
@@ -515,36 +521,46 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     });
     htmlCol2 += '</div>';
 
-    // Columna 3 - si hay 2 columnas, dejar vacía para que la columna 2 se centre
-    if (columnasConContenido === 2) {
-      htmlCol3 = '<div class="package-col"></div>';
-    } else {
-      col3.forEach(key => {
-        const cat = categorias.find(c => c.key === key);
-        if (cat) {
-          const items = serviciosOrganizados[cat.key] || [];
-          htmlCol3 += generarCategoriaHTML(cat, items);
-        }
-      });
-      htmlCol3 += '</div>';
-    }
+    // Columna 3
+    col3.forEach(key => {
+      const cat = categorias.find(c => c.key === key);
+      if (cat) {
+        const items = serviciosOrganizados[cat.key] || [];
+        htmlCol3 += generarCategoriaHTML(cat, items);
+      }
+    });
+    htmlCol3 += '</div>';
 
     // Determinar el estilo del grid según el número de columnas
+    // Reorganizar el orden de las columnas para que siempre empiecen desde la izquierda
+    let htmlFinal = '';
     let gridStyle = '';
+    
     if (columnasConContenido === 1) {
-      // Si solo hay 1 columna, usar solo la primera columna (izquierda)
-      gridStyle = 'grid-template-columns: 1fr; justify-content: start;';
+      // Si solo hay 1 columna, usar solo esa columna
+      if (tieneCol1) htmlFinal = htmlCol1;
+      else if (tieneCol2) htmlFinal = htmlCol2;
+      else if (tieneCol3) htmlFinal = htmlCol3;
+      gridStyle = 'grid-template-columns: 1fr;';
     } else if (columnasConContenido === 2) {
-      // Si hay 2 columnas, posicionar la segunda columna ligeramente más a la izquierda del centro
-      // Usar grid de 3 columnas: izquierda (max-content), centro (1.2fr para un toque a la izquierda), derecha (1fr)
-      gridStyle = 'grid-template-columns: max-content 1.2fr 1fr; justify-content: start; gap: 0px;';
+      // Si hay 2 columnas, reorganizar para que empiecen desde la izquierda
+      if (tieneCol1 && tieneCol2) {
+        htmlFinal = htmlCol1 + htmlCol2 + '<div class="package-col"></div>';
+      } else if (tieneCol1 && tieneCol3) {
+        htmlFinal = htmlCol1 + '<div class="package-col"></div>' + htmlCol3;
+      } else if (tieneCol2 && tieneCol3) {
+        // Cuando solo hay col2 y col3, ponerlas en las primeras 2 posiciones
+        htmlFinal = htmlCol2 + htmlCol3 + '<div class="package-col"></div>';
+      }
+      gridStyle = 'grid-template-columns: 1fr 1fr 1fr;';
     } else {
-      // Si hay 3 columnas, usar las 3 normalmente
+      // Si hay 3 columnas, usar todas normalmente
+      htmlFinal = htmlCol1 + htmlCol2 + htmlCol3;
       gridStyle = 'grid-template-columns: 1fr 1fr 1fr;';
     }
 
     return {
-      html: htmlCol1 + htmlCol2 + htmlCol3,
+      html: htmlFinal,
       gridStyle: gridStyle
     };
   };
@@ -655,18 +671,18 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   const tieneServiciosAdicionales = Object.values(serviciosAdicionalesProcesados).some(arr => arr.length > 0);
   const htmlSeccionAdicionales = tieneServiciosAdicionales
     ? `
-      <div class="page page-2b">
+    <div class="page page-2">
         <div class="page-content" style="padding: 0; height: 100%;">
-          <div class="package-card">
-            <div style="padding: 75px 50px 15px 50px; text-align: left; flex-shrink: 0;">
-              <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: ${esRevolution ? '#000000' : '#FFFFFF'}; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">${t(lang, 'extras')}</h2>
+            <div class="package-card">
+                <div style="padding: 75px 50px 15px 50px; text-align: left; flex-shrink: 0;">
+                    <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: ${esRevolution ? '#000' : '#FFFFFF'}; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">${t(lang, 'extras')}</h2>
+                </div>
+                <div class="package-content" style="flex: 1; padding-top: 20px; overflow: hidden; ${gridStyleExtras}">
+                    ${htmlServiciosAdicionales}
+                </div>
             </div>
-            <div class="package-content" style="flex: 1; padding-top: 20px; overflow: hidden; ${gridStyleExtras}">
-              ${htmlServiciosAdicionales}
-            </div>
-          </div>
         </div>
-      </div>
+    </div>
     `
     : '';
 

@@ -73,3 +73,6 @@ async function renombrarDecoracionLicor() {
 
 renombrarDecoracionLicor();
 
+
+
+
