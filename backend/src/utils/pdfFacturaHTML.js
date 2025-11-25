@@ -436,11 +436,12 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
         if (!serviciosOrganizados[mapeo.categoria]) {
           serviciosOrganizados[mapeo.categoria] = {};
         }
-        // Incrementar el contador para este servicio
+        // Usar la cantidad real del servicio si existe, de lo contrario incrementar en 1
+        const cantidadServicio = servicio.cantidad || 1;
         if (!serviciosOrganizados[mapeo.categoria][mapeo.item]) {
           serviciosOrganizados[mapeo.categoria][mapeo.item] = 0;
         }
-        serviciosOrganizados[mapeo.categoria][mapeo.item]++;
+        serviciosOrganizados[mapeo.categoria][mapeo.item] += cantidadServicio;
       }
     });
 
@@ -510,8 +511,8 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
             <ul>`;
         
           itemsArray.forEach(([item, cantidad]) => {
-            // Mostrar cantidad solo si es mayor a 1
-            const itemConCantidad = cantidad > 1 ? `${item} x${cantidad}` : item;
+            // Mostrar cantidad solo si es mayor a 1, usando formato (número)
+            const itemConCantidad = cantidad > 1 ? `${item} (${cantidad})` : item;
             html += `<li>${itemConCantidad}</li>`;
           });
         
@@ -1151,13 +1152,16 @@ function organizarServiciosPorCategoria(datos) {
       // Asegurar que el servicio tenga nombre y descripción
       const nombre = servicio.nombre || servicio.descripcion || 'Servicio';
       const descripcion = servicio.descripcion || servicio.nombre || 'Servicio';
+      // Preservar la cantidad del servicio adicional (viene de ofertas_servicios_adicionales.cantidad)
+      const cantidad = os.cantidad || 1; // Si no hay cantidad, asumir 1
       
       return {
         ...servicio,
         nombre: nombre, // Asegurar que siempre tenga nombre
         categoria: servicio?.categoria,
         esPaquete: false,
-        descripcion: descripcion
+        descripcion: descripcion,
+        cantidad: cantidad // Preservar la cantidad real
       };
     });
 
