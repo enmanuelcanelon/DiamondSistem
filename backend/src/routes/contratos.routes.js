@@ -694,6 +694,7 @@ router.get('/acceso/:codigo', async (req, res, next) => {
 router.get('/:id/pdf-contrato', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
+    const lang = req.query.lang || 'es'; // Idioma: 'es' o 'en', por defecto español
 
     // Obtener contrato con todas las relaciones necesarias
     const contrato = await prisma.contratos.findUnique({
@@ -744,9 +745,9 @@ router.get('/:id/pdf-contrato', authenticate, async (req, res, next) => {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
-    // Generar PDF usando HTML + Puppeteer
+    // Generar PDF usando HTML + Puppeteer con el idioma seleccionado
     const { generarContratoHTML } = require('../utils/pdfContratoHTML');
-    const pdfBuffer = await generarContratoHTML(contrato);
+    const pdfBuffer = await generarContratoHTML(contrato, lang);
 
     // Configurar headers para descarga
     res.setHeader('Content-Type', 'application/pdf');
@@ -768,6 +769,7 @@ router.get('/:id/pdf-contrato', authenticate, async (req, res, next) => {
 router.get('/:id/pdf-factura', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
+    const lang = req.query.lang || 'es'; // Idioma: 'es' o 'en', por defecto español
 
     // Obtener contrato con todas las relaciones necesarias
     const contrato = await prisma.contratos.findUnique({
@@ -1068,6 +1070,7 @@ router.post('/:id/versiones', authenticate, requireVendedor, async (req, res, ne
 router.get('/:id/versiones/:version_numero/pdf', authenticate, async (req, res, next) => {
   try {
     const { id, version_numero } = req.params;
+    const lang = req.query.lang || 'es'; // Idioma: 'es' o 'en', por defecto español
 
     // Verificar que el contrato existe
     const contrato = await prisma.contratos.findUnique({

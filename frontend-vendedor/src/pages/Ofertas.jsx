@@ -4,6 +4,7 @@ import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Loader2,
 import { Link } from 'react-router-dom';
 import api from '../config/api';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
+import { useLanguage } from '../contexts/LanguageContext';
 import ModalPlanPago from '../components/ModalPlanPago';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -16,6 +17,7 @@ import toast from 'react-hot-toast';
 
 function Ofertas() {
   const queryClient = useQueryClient();
+  const { language, t } = useLanguage();
   const fechaActual = new Date();
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('');
@@ -25,9 +27,12 @@ function Ofertas() {
   const [ofertaSeleccionada, setOfertaSeleccionada] = useState(null);
 
   // Nombres de los meses
-  const nombresMeses = [
+  const nombresMeses = language === 'es' ? [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ] : [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
   // Calcular fechas basadas en mes y año seleccionado
@@ -231,6 +236,7 @@ function Ofertas() {
   const handleDescargarPDF = async (ofertaId, codigoOferta) => {
     try {
       const response = await api.get(`/ofertas/${ofertaId}/pdf-factura`, {
+        params: { lang: language },
         responseType: 'blob'
       });
       
@@ -245,7 +251,7 @@ function Ofertas() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      toast.error('Error al descargar el PDF');
+      toast.error(t('messages.operationError'));
       console.error(error);
     }
   };
@@ -268,7 +274,7 @@ function Ofertas() {
       {/* Header */}
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Ofertas</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{t('offers.title')}</h2>
           <p className="text-muted-foreground">
             Gestiona tus propuestas comerciales
           </p>
@@ -276,7 +282,7 @@ function Ofertas() {
         <Button size="lg" asChild className="whitespace-nowrap">
           <Link to="/ofertas/nueva">
             <Plus className="h-5 w-5 mr-2" />
-            Nueva Oferta
+            {t('offers.newOffer')}
           </Link>
         </Button>
       </div>
@@ -287,7 +293,7 @@ function Ofertas() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Ofertas
+              {t('offers.title')}
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -303,7 +309,7 @@ function Ofertas() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{totalOfertas}</div>
-            <p className="text-xs text-muted-foreground mt-1">Ofertas totales</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('offers.title')}</p>
           </CardContent>
         </Card>
 
@@ -311,7 +317,7 @@ function Ofertas() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ofertas Pendientes
+              {t('offers.pending')}
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -327,7 +333,7 @@ function Ofertas() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{ofertasPendientes}</div>
-            <p className="text-xs text-muted-foreground mt-1">Ofertas en revisión</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('offers.pending')}</p>
           </CardContent>
         </Card>
 
@@ -335,7 +341,7 @@ function Ofertas() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ofertas Aceptadas
+              {t('offers.accepted')}
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -351,7 +357,7 @@ function Ofertas() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{ofertasAceptadas}</div>
-            <p className="text-xs text-muted-foreground mt-1">Ofertas aprobadas</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('offers.accepted')}</p>
           </CardContent>
         </Card>
 
@@ -359,7 +365,7 @@ function Ofertas() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ofertas Rechazadas
+              {t('offers.rejected')}
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -375,7 +381,7 @@ function Ofertas() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{ofertasRechazadas}</div>
-            <p className="text-xs text-muted-foreground mt-1">Ofertas rechazadas</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('offers.rejected')}</p>
           </CardContent>
         </Card>
       </div>
@@ -388,7 +394,7 @@ function Ofertas() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input
                 type="text"
-                placeholder="Buscar por código o cliente..."
+                placeholder={t('offers.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -396,13 +402,13 @@ function Ofertas() {
             </div>
             <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Todos los estados" />
+                <SelectValue placeholder={t('offers.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los estados</SelectItem>
-                <SelectItem value="pendiente">Pendiente</SelectItem>
-                <SelectItem value="aceptada">Aceptada</SelectItem>
-                <SelectItem value="rechazada">Rechazada</SelectItem>
+                <SelectItem value="">{t('offers.allStatuses')}</SelectItem>
+                <SelectItem value="pendiente">{t('offers.pending')}</SelectItem>
+                <SelectItem value="aceptada">{t('offers.accepted')}</SelectItem>
+                <SelectItem value="rechazada">{t('offers.rejected')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -496,16 +502,16 @@ function Ofertas() {
               <FileText className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              {searchTerm || estadoFiltro ? 'No se encontraron ofertas' : 'No hay ofertas'}
+              {searchTerm || estadoFiltro ? t('offers.noOffers') : t('offers.noOffers')}
             </h3>
             <p className="text-muted-foreground mb-6">
-              {searchTerm || estadoFiltro ? 'Intenta con otros filtros' : 'Crea tu primera oferta para un cliente'}
+              {searchTerm || estadoFiltro ? t('offers.search') : t('offers.newOffer')}
             </p>
             {!searchTerm && !estadoFiltro && (
               <Button asChild>
                 <Link to="/ofertas/nueva">
                   <Plus className="h-4 w-4 mr-2" />
-                  Crear Primera Oferta
+                  {t('offers.newOffer')}
                 </Link>
               </Button>
             )}
@@ -535,7 +541,7 @@ function Ofertas() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-1">
-                      Cliente: <span className="font-medium text-foreground">{oferta.clientes?.nombre_completo}</span>
+                      {t('offers.client')}: <span className="font-medium text-foreground">{oferta.clientes?.nombre_completo}</span>
                       {oferta.homenajeado && (
                         <span className="ml-2 text-foreground">
                           {oferta.homenajeado}
@@ -596,7 +602,7 @@ function Ofertas() {
                       )}
                       {oferta.paquetes?.nombre && (
                         <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">Paquete: {oferta.paquetes.nombre}</span>
+                          <span className="text-muted-foreground">{t('offers.package')}: {oferta.paquetes.nombre}</span>
                         </div>
                       )}
                     </div>
@@ -620,7 +626,7 @@ function Ofertas() {
                     className="whitespace-nowrap"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Descargar PDF
+                    {t('offers.downloadPDF')}
                   </Button>
 
                   {oferta.estado === 'pendiente' && (
@@ -631,7 +637,7 @@ function Ofertas() {
                         disabled={aceptarMutation.isPending}
                         className="!border-green-500 !text-green-600 hover:!bg-green-50 dark:!border-green-500 dark:!text-green-400 dark:hover:!bg-green-950/20 whitespace-nowrap"
                       >
-                        {aceptarMutation.isPending ? 'Aceptando...' : 'Aceptar Oferta'}
+                        {aceptarMutation.isPending ? t('offers.accepting') : t('offers.acceptOffer')}
                       </Button>
                       <Button 
                         variant="outline"
@@ -639,7 +645,7 @@ function Ofertas() {
                         disabled={rechazarMutation.isPending}
                         className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20 whitespace-nowrap"
                       >
-                        {rechazarMutation.isPending ? 'Rechazando...' : 'Rechazar'}
+                        {rechazarMutation.isPending ? t('offers.rejecting') : t('offers.rejectOffer')}
                       </Button>
                     </>
                   )}
@@ -680,7 +686,7 @@ function Ofertas() {
           {/* Indicador de fin */}
           {!hasNextPage && ofertas.length > 0 && (
             <div className="text-center py-4 text-muted-foreground text-sm">
-              Mostrando todas las {totalOfertas} oferta{totalOfertas !== 1 ? 's' : ''}
+              {t('offers.title')}: {totalOfertas}
             </div>
           )}
         </div>

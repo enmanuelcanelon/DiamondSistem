@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 
 function ComisionesVendedor() {
   const { user } = useAuthStore();
+  const { t, language } = useLanguage();
   const fechaActual = new Date();
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
   const [añoSeleccionado, setAñoSeleccionado] = useState(fechaActual.getFullYear());
@@ -23,9 +24,12 @@ function ComisionesVendedor() {
   const [tabActivoPagadas, setTabActivoPagadas] = useState('primera_mitad');
   const [mostrarDatos, setMostrarDatos] = useState(false);
 
-  const nombresMeses = [
+  const nombresMeses = language === 'es' ? [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ] : [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
   const cambiarMes = (direccion) => {
@@ -133,9 +137,9 @@ function ComisionesVendedor() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Mis Comisiones</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('commissions.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Visualiza y descarga el resumen de tus comisiones
+            {t('commissions.title')}
           </p>
         </div>
         <Button
@@ -151,7 +155,7 @@ function ComisionesVendedor() {
           ) : (
             <>
               <Download className="w-4 h-4 mr-2" />
-              Descargar PDF
+              {t('offers.downloadPDF')}
             </>
           )}
         </Button>

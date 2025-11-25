@@ -3,6 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { Search, FileCheck, Calendar, Clock, DollarSign, Eye, Download, X, Loader2, ChevronLeft, ChevronRight, CheckCircle, AlertCircle, TrendingUp, XCircle } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
+import { useLanguage } from '../contexts/LanguageContext';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Skeleton } from '../components/ui/skeleton';
 
 function Contratos() {
+  const { t, language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const clienteIdFromUrl = searchParams.get('cliente_id');
@@ -28,9 +30,12 @@ function Contratos() {
   const [ordenamiento, setOrdenamiento] = useState('fecha_creacion'); // 'fecha_creacion' | 'fecha_evento'
 
   // Nombres de los meses
-  const nombresMeses = [
+  const nombresMeses = language === 'es' ? [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ] : [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
   // Calcular fechas basadas en mes y año seleccionado
@@ -240,6 +245,7 @@ function Contratos() {
   const handleDescargarContrato = async (contratoId, codigoContrato) => {
     try {
       const response = await api.get(`/contratos/${contratoId}/pdf-contrato`, {
+        params: { lang: language },
         responseType: 'blob'
       });
       
@@ -253,7 +259,7 @@ function Contratos() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert('Error al descargar el contrato');
+      alert(t('messages.operationError'));
       console.error(error);
     }
   };
@@ -263,8 +269,8 @@ function Contratos() {
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Contratos</h1>
-        <p className="text-muted-foreground mt-1">Gestiona tus contratos y pagos</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('contracts.title')}</h1>
+        <p className="text-muted-foreground mt-1">{t('contracts.title')}</p>
       </div>
 
       {/* Panel de Métricas */}
@@ -273,7 +279,7 @@ function Contratos() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Contratos
+              {t('contracts.title')}
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -289,7 +295,7 @@ function Contratos() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{totalContratos}</div>
-            <p className="text-xs text-muted-foreground mt-1">Contratos totales</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('contracts.title')}</p>
           </CardContent>
         </Card>
 
@@ -297,7 +303,7 @@ function Contratos() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Contratos Activos
+              {t('contracts.active')}
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -313,7 +319,7 @@ function Contratos() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{contratosActivos}</div>
-            <p className="text-xs text-muted-foreground mt-1">Contratos en curso</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('contracts.active')}</p>
           </CardContent>
         </Card>
 
@@ -321,7 +327,7 @@ function Contratos() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Contratos Completados
+              {t('contracts.completed')}
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -337,7 +343,7 @@ function Contratos() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{contratosCompletados}</div>
-            <p className="text-xs text-muted-foreground mt-1">Contratos finalizados</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('contracts.completed')}</p>
           </CardContent>
         </Card>
 
@@ -386,14 +392,14 @@ function Contratos() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input
                 type="text"
-                placeholder="Buscar por código o cliente..."
+                placeholder={t('contracts.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Estado de pago:</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">{t('contracts.paymentStatus')}:</span>
               <Select value={filtroEstadoPago} onValueChange={setFiltroEstadoPago}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Todos">
@@ -401,14 +407,14 @@ function Contratos() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
-                  <SelectItem value="pagado_completo">Pagado Completo</SelectItem>
-                  <SelectItem value="pago_parcial">Pago Parcial</SelectItem>
+                  <SelectItem value="">{t('forms.select')}</SelectItem>
+                  <SelectItem value="pagado_completo">{t('contracts.paid')}</SelectItem>
+                  <SelectItem value="pago_parcial">{t('contracts.partial')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Estado del evento:</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">{t('contracts.status')}:</span>
               <Select value={filtroEstadoEvento} onValueChange={setFiltroEstadoEvento}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Todos">
@@ -416,9 +422,9 @@ function Contratos() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
-                  <SelectItem value="activo">Activo</SelectItem>
-                  <SelectItem value="finalizado">Finalizado</SelectItem>
+                  <SelectItem value="">{t('forms.select')}</SelectItem>
+                  <SelectItem value="activo">{t('contracts.active')}</SelectItem>
+                  <SelectItem value="finalizado">{t('contracts.completed')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -742,7 +748,7 @@ function Contratos() {
                   <Button asChild variant="outline" className="whitespace-nowrap">
                     <Link to={`/contratos/${contrato.id}`} className="flex items-center gap-2">
                       <Eye className="w-4 h-4" />
-                      <span>Ver Detalles</span>
+                      <span>{t('contracts.viewDetails')}</span>
                     </Link>
                   </Button>
                   <Button

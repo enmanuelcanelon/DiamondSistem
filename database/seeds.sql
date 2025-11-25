@@ -56,14 +56,14 @@ INSERT INTO paquetes (nombre, precio_base, duracion_horas, invitados_minimo, dia
 
 -- ENTRETENIMIENTO Y ANIMACIÓN
 INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, requiere_seleccion, activo) VALUES
-('Hora Loca', 'Animación con hora loca incluye accesorios y animador', 450.00, 'fijo', 'Entretenimiento', FALSE, TRUE),
+('Hora Loca', 'Hora loca', 450.00, 'fijo', 'Entretenimiento', FALSE, TRUE),
 ('Maestro de Ceremonia', 'Profesional para dirigir el evento', 350.00, 'fijo', 'Entretenimiento', FALSE, TRUE),
 ('Animador', 'Animador adicional para el evento', 350.00, 'fijo', 'Entretenimiento', FALSE, TRUE),
 ('DJ Profesional', 'DJ con equipo profesional de sonido', 300.00, 'fijo', 'Entretenimiento', FALSE, TRUE);
 
 -- LICORES Y BEBIDAS
 INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, requiere_seleccion, opciones_disponibles, activo) VALUES
-('Licor Básico', 'Ron, whisky, vodka y vino de la casa', 6.00, 'por_persona', 'Bebidas', TRUE, '["Ron", "Whisky", "Vodka", "Vino de la casa"]', TRUE),
+('Licor House', 'Ron, whisky, vodka y vino de la casa', 6.00, 'por_persona', 'Bebidas', TRUE, '["Ron", "Whisky", "Vodka", "Vino de la casa"]', TRUE),
 ('Licor Premium', 'Selección premium de licores importados', 18.00, 'por_persona', 'Bebidas', TRUE, '["Ron Premium", "Whisky Premium", "Vodka Premium", "Gin", "Tequila"]', TRUE),
 ('Champaña', 'Botellas de champaña', 8.00, 'por_unidad', 'Bebidas', FALSE, NULL, TRUE),
 ('Sidra', 'Botellas de sidra', 6.00, 'por_unidad', 'Bebidas', FALSE, NULL, TRUE),
@@ -71,7 +71,7 @@ INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, 
 
 -- DECORACIÓN
 INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, requiere_seleccion, activo) VALUES
-('Decoración Básica', 'Decoración estándar del salón', 380.00, 'fijo', 'Decoración', TRUE, TRUE),
+('Decoracion House', 'Decoración estándar del salón', 380.00, 'fijo', 'Decoración', TRUE, TRUE),
 ('Decoración Plus', 'Decoración premium personalizada', 380.00, 'fijo', 'Decoración', TRUE, TRUE),
 ('Lounge Set + Coctel Dream', 'Terraza decorada con cajas con letra baby', 100.00, 'fijo', 'Decoración', FALSE, TRUE),
 ('Número Lumínico', 'Número iluminado personalizado', 150.00, 'fijo', 'Decoración', TRUE, TRUE);
@@ -93,17 +93,17 @@ INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, 
 
 -- COMIDA Y CATERING
 INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, requiere_seleccion, opciones_disponibles, activo) VALUES
-('Comida', 'Primer y segundo plato a escoger', 0.00, 'fijo', 'Comida', TRUE, '["Primer plato: Ensalada César", "Primer plato: Crema de vegetales", "Segundo plato: Pollo al horno", "Segundo plato: Carne asada", "Segundo plato: Pescado a la plancha", "Segundo plato: Pasta"]', TRUE),
-('Mesa de Quesos', 'Mesa de quesos variados', 4.20, 'por_persona', 'Comida', FALSE, NULL, TRUE),
+('Comida / a Menu', 'Primer y segundo plato a escoger', 0.00, 'fijo', 'Comida', TRUE, '["Primer plato: Ensalada César", "Primer plato: Crema de vegetales", "Segundo plato: Pollo al horno", "Segundo plato: Carne asada", "Segundo plato: Pescado a la plancha", "Segundo plato: Pasta"]', TRUE),
+('Mesa de Quesos & Carnes frias', 'Mesa de quesos y carnes variados', 4.20, 'por_persona', 'Comida', FALSE, NULL, TRUE),
 ('Pasapalos', 'Variedad de pasapalos fríos y calientes', 6.00, 'por_persona', 'Comida', TRUE, '["Tequeños", "Mini empanadas", "Brochetas", "Canapés", "Mini hamburguesas"]', TRUE),
 ('Mini Dulces', 'Paquete de 12 mini dulces', 3.00, 'por_unidad', 'Comida', FALSE, NULL, TRUE),
-('Cake', 'Torta de 2 sabores', 0.00, 'fijo', 'Comida', TRUE, '["Marmoleado", "Vainilla"]', TRUE),
+('Cake', 'Cake (vainilla o marmoleado)', 0.00, 'fijo', 'Comida', TRUE, '["Marmoleado", "Vainilla"]', TRUE),
 ('Utensilios', 'Platos, cubiertos, vasos y servilletas', 0.00, 'fijo', 'Comida', FALSE, NULL, TRUE);
 
 -- PERSONAL Y SERVICIOS
 INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, requiere_seleccion, activo) VALUES
 ('Coordinador de Eventos', 'Coordinador profesional del evento', 150.00, 'fijo', 'Personal', FALSE, TRUE),
-('Personal de Servicio', 'Meseros y personal de atención', 120.00, 'por_unidad', 'Personal', FALSE, TRUE),
+('Personal de Atención', 'Meseros y personal de atención', 120.00, 'por_unidad', 'Personal', FALSE, TRUE),
 ('Bartender', 'Bartender profesional', 150.00, 'por_unidad', 'Personal', FALSE, TRUE);
 
 -- TRANSPORTE
@@ -111,10 +111,10 @@ INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, 
 ('Limosina', 'Servicio de limosina para el evento', 250.00, 'fijo', 'Transporte', FALSE, TRUE);
 
 -- EXTRAS
+-- NOTA: Los servicios de "Persona Adicional" se eliminaron porque el sistema calcula automáticamente
+-- el precio por invitado adicional según la temporada
 INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, requiere_seleccion, activo) VALUES
-('Hora Extra', 'Hora adicional de evento (máximo hasta 2 AM)', 800.00, 'fijo', 'Extras', FALSE, TRUE),
-('Persona Adicional Temporada Baja/Media', 'Invitado adicional en temporada baja o media', 52.00, 'por_persona', 'Extras', FALSE, TRUE),
-('Persona Adicional Temporada Alta', 'Invitado adicional en temporada alta', 80.00, 'por_persona', 'Extras', FALSE, TRUE);
+('Hora Extra', 'Hora adicional de evento (máximo hasta 2 AM)', 800.00, 'fijo', 'Extras', FALSE, TRUE);
 
 -- ============================================
 -- 5. RELACIÓN PAQUETES-SERVICIOS
@@ -124,13 +124,13 @@ INSERT INTO servicios (nombre, descripcion, precio_base, tipo_cobro, categoria, 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 1, id, 1, TRUE, 'Incluido en precio base'
 FROM servicios WHERE nombre IN (
-    'Licor Básico',
+    'Licor House',
     'Refrescos/Jugo/Agua',
-    'Decoración Básica',
+    'Decoracion House',
     'Utensilios',
     'Cake',
     'DJ Profesional',
-    'Comida',
+    'Comida / a Menu',
     'Pantalla LED',
     'Luces Stage',
     'Lounge Set + Coctel Dream'
@@ -138,7 +138,7 @@ FROM servicios WHERE nombre IN (
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 1, id, 3, TRUE, '3 personas de servicio incluidas'
-FROM servicios WHERE nombre = 'Personal de Servicio';
+FROM servicios WHERE nombre = 'Personal de Atención';
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 1, id, 1, TRUE, '1 bartender incluido'
@@ -148,10 +148,10 @@ FROM servicios WHERE nombre = 'Bartender';
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 2, id, 1, TRUE, 'Incluido en precio base'
 FROM servicios WHERE nombre IN (
-    'Licor Básico',
-    'Comida',
-    'Decoración Básica',
-    'Mesa de Quesos',
+    'Licor House',
+    'Comida / a Menu',
+    'Decoracion House',
+    'Mesa de Quesos & Carnes frias',
     'Utensilios',
     'Cake',
     'DJ Profesional',
@@ -167,7 +167,7 @@ FROM servicios WHERE nombre IN (
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 2, id, 4, TRUE, '4 personas de servicio incluidas'
-FROM servicios WHERE nombre = 'Personal de Servicio';
+FROM servicios WHERE nombre = 'Personal de Atención';
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 2, id, 1, TRUE, '1 bartender incluido'
@@ -182,11 +182,11 @@ INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_grat
 SELECT 3, id, 1, TRUE, 'Incluido en precio base'
 FROM servicios WHERE nombre IN (
     'Hora Loca',
-    'Licor Básico',
+    'Licor House',
     'Hora Extra',
     'Foto y Video 3 Horas',
-    'Comida',
-    'Mesa de Quesos',
+    'Comida / a Menu',
+    'Mesa de Quesos & Carnes frias',
     'Limosina',
     'Decoración Plus',
     'Utensilios',
@@ -210,7 +210,7 @@ FROM servicios WHERE nombre IN ('Photobooth 360', 'Photobooth Print');
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 3, id, 4, TRUE, '4 personas de servicio incluidas'
-FROM servicios WHERE nombre = 'Personal de Servicio';
+FROM servicios WHERE nombre = 'Personal de Atención';
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 3, id, 1, TRUE, '1 bartender incluido'
@@ -228,11 +228,11 @@ FROM servicios WHERE nombre IN (
     'Licor Premium',
     'Hora Extra',
     'Foto y Video 5 Horas',
-    'Comida',
+    'Comida / a Menu',
     'Limosina',
     'Pasapalos',
     'Decoración Plus',
-    'Mesa de Quesos',
+    'Mesa de Quesos & Carnes frias',
     'Utensilios',
     'Cake',
     'DJ Profesional',
@@ -255,7 +255,7 @@ FROM servicios WHERE nombre IN ('Photobooth 360', 'Photobooth Print');
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 4, id, 4, TRUE, '4 personas de servicio incluidas'
-FROM servicios WHERE nombre = 'Personal de Servicio';
+FROM servicios WHERE nombre = 'Personal de Atención';
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 4, id, 1, TRUE, '1 bartender incluido'

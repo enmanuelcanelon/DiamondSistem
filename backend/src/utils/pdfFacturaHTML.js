@@ -8,7 +8,10 @@ const path = require('path');
  * @param {String} tipo - 'oferta' o 'contrato'
  * @returns {Buffer} - PDF como buffer
  */
-async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
+async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
+  // Importar traducciones
+  const { t } = require('./translations');
+  
   // Leer el template HTML (se determinará cuál usar después de detectar la compañía)
 
   // Organizar servicios por categoría
@@ -232,7 +235,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
       return { categoria: 'comida', item: 'Menu : Entrada y Proteína (2 acompañantes)' };
     }
     if (texto.includes('mesa de queso') || texto.includes('cheese table') || texto.includes('quesos variados')) {
-      return { categoria: 'comida', item: 'Mesa de Quesos' };
+      return { categoria: 'comida', item: 'Mesa de Quesos & Carnes frias' };
     }
     if (texto.includes('mini dulce') || texto.includes('12 mini dulce') || texto.includes('paquete de 12')) {
       return { categoria: 'comida', item: 'Mini Dulces' };
@@ -246,8 +249,11 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
 
     // DECORACIÓN
     // Detectar variantes específicas primero
+    if (texto.includes('lounge set') || texto.includes('lounge') || (texto.includes('cocktail') && (texto.includes('lounge') || texto.includes('set')))) {
+      return { categoria: 'decoracion', item: 'Lounge Set + Cocktail' };
+    }
     if (texto.includes('decoración house') || texto.includes('decoracion house') || texto.includes('decoración básico') || texto.includes('decoracion basico') || texto.includes('table setting') || texto.includes('centerpiece') || texto.includes('runner') || texto.includes('charger')) {
-      return { categoria: 'decoracion', item: 'Decoración House' };
+      return { categoria: 'decoracion', item: 'Decoracion House' };
     }
     if (texto.includes('decoración plus') || texto.includes('decoracion plus') || texto.includes('decoración premium') || texto.includes('decoracion premium')) {
       return { categoria: 'decoracion', item: 'Decoración Plus' };
@@ -258,7 +264,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     // Detección genérica de decoración (debe ir después de las específicas)
     // Si solo dice "decoración" sin especificar, mostrar como "Decoración House"
     if (texto.includes('decoración') || texto.includes('decoracion') || texto.includes('decoration')) {
-      return { categoria: 'decoracion', item: 'Decoración House' };
+      return { categoria: 'decoracion', item: 'Decoracion House' };
     }
 
     // ENTRETENIMIENTO
@@ -315,8 +321,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     }
     // Pantalla - diferente según el salón
     if (texto.includes('pantalla') || texto.includes('led') || texto.includes('tv') || texto.includes('screen')) {
-      // En Kendall es "Pantalla LED", en Doral es "Pantalla TV"
-      if (esKendall) {
+      // En Kendall y Diamond es "Pantalla LED", en Doral (Revolution) es "Pantalla TV"
+      const esDiamond = !esRevolution;
+      if (esKendall || esDiamond) {
         return { categoria: 'equipos', item: 'Pantalla LED' };
       } else {
         return { categoria: 'equipos', item: 'Pantalla TV' };
@@ -359,10 +366,10 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     if (texto.includes('coordinador') || texto.includes('coordinator') || texto.includes('event coordinator')) {
       return { categoria: 'personal', item: 'Coordinador de Eventos' };
     }
-    // Personal de Servicio - excluir limosina explícitamente
-    if ((texto.includes('mesero') || texto.includes('waiter') || texto.includes('personal de servicio') || texto.includes('servicio')) &&
+    // Personal de Atención - excluir limosina explícitamente
+    if ((texto.includes('mesero') || texto.includes('waiter') || texto.includes('personal de servicio') || texto.includes('personal de atención') || texto.includes('servicio')) &&
         !texto.includes('limosina') && !texto.includes('limousine') && !texto.includes('limo')) {
-      return { categoria: 'personal', item: 'Personal de Servicio' };
+      return { categoria: 'personal', item: 'Personal de Atención' };
     }
 
     return null; // Si no coincide con ninguna categoría, no se muestra
@@ -652,7 +659,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
         <div class="page-content" style="padding: 0; height: 100%;">
           <div class="package-card">
             <div style="padding: 75px 50px 15px 50px; text-align: left; flex-shrink: 0;">
-              <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
+              <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: ${esRevolution ? '#000000' : '#FFFFFF'}; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">${t(lang, 'extras')}</h2>
             </div>
             <div class="package-content" style="flex: 1; padding-top: 20px; overflow: hidden; ${gridStyleExtras}">
               ${htmlServiciosAdicionales}
@@ -760,7 +767,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
         <div class="page-content" style="padding: 0; height: 100%;">
             <div class="package-card">
                 <div style="padding: 75px 50px 15px 50px; text-align: left; flex-shrink: 0;">
-                    <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: #000; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">PAQUETE ${nombrePaqueteLimpio}</h2>
+                    <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: ${esRevolution ? '#000' : '#FFFFFF'}; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">${t(lang, 'package')} ${nombrePaqueteLimpio}</h2>
                 </div>
                 <div class="package-content" style="flex: 1; padding-top: 20px; overflow: hidden; ${gridStylePaquete}">
                     ${htmlServiciosPaqueteFinal}
@@ -807,8 +814,29 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta') {
     '{{PACKAGE_CARD_BACKGROUND}}': packageCardBackground,
     '{{NOMBRE_COMPANIA}}': nombreCompania,
     '{{LOGO_HTML}}': logoHTML,
-    '{{FONDO_STYLE}}': fondoStyle,
-    '{{HAS_BACKGROUND_CLASS}}': hasBackground ? 'has-background' : ''
+    '{{FONDO_STYLE}}': esRevolution ? fondoStyle : '', // Solo fondo para Revolution, Diamond sin fondo
+    '{{HAS_BACKGROUND_CLASS}}': hasBackground ? 'has-background' : '',
+    // Traducciones
+    '{{TEXT_INVERSION_TERMINOS}}': t(lang, 'investment'),
+    '{{TEXT_DESGLOSE}}': t(lang, 'breakdown'),
+    '{{TEXT_PRECIO_PAQUETE}}': t(lang, 'packagePrice'),
+    '{{TEXT_IMPUESTO}}': t(lang, 'tax'),
+    '{{TEXT_TARIFA_SERVICIO}}': t(lang, 'serviceFee'),
+    '{{TEXT_TOTAL_PAGAR}}': t(lang, 'totalToPay'),
+    '{{TEXT_EVENT_PROPOSAL}}': lang === 'en' ? 'EVENT PROPOSAL FOR:' : 'PROPUESTA DE EVENTO PARA:',
+    '{{TEXT_PACKAGE}}': lang === 'en' ? 'PACKAGE' : 'PAQUETE',
+    '{{TEXT_EVENT_DETAILS}}': lang === 'en' ? 'Event Details' : 'Detalles del Evento',
+    '{{TEXT_NAME}}': lang === 'en' ? 'Name:' : 'Nombre:',
+    '{{TEXT_LOCATION}}': lang === 'en' ? 'Location:' : 'Ubicación:',
+    '{{TEXT_DATE}}': lang === 'en' ? 'Date:' : 'Fecha:',
+    '{{TEXT_TIME}}': lang === 'en' ? 'Time:' : 'Hora:',
+    '{{TEXT_GUESTS}}': lang === 'en' ? 'Number of Guests:' : 'Número de Invitados:',
+    '{{TEXT_SALES_REP}}': lang === 'en' ? 'Sales Representative:' : 'Representante de Ventas:',
+    '{{TEXT_EMAIL}}': lang === 'en' ? 'Email:' : 'Correo:',
+    '{{TEXT_PHONE}}': lang === 'en' ? 'Phone number:' : 'Teléfono:',
+    '{{TEXT_OFFER_DATE}}': lang === 'en' ? 'Offer Creation Date:' : 'Fecha de Creación de Oferta:',
+    '{{TEXT_NOTA_IMPORTANTE}}': lang === 'en' ? 'IMPORTANT NOTE:' : 'NOTA IMPORTANTE:',
+    '{{TEXT_VALID_24H}}': lang === 'en' ? 'THIS OFFER IS VALID FOR 24 HOURS AFTER BEING RECEIVED' : 'ESTA OFERTA ES VALIDA POR 24 HORAS DESPUES DE SER RECIBIDA'
   };
 
   Object.keys(replacements).forEach(key => {

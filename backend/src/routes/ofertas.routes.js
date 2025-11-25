@@ -166,10 +166,10 @@ router.post('/calcular', authenticate, requireVendedor, async (req, res, next) =
     // Solo para el servicio específicamente llamado "Comida", no para otros servicios relacionados
     const esPaquetePersonalizado = paquete.nombre?.toLowerCase().includes('personalizado');
     if (esPaquetePersonalizado) {
-      // Buscar si ya existe un servicio específicamente llamado "Comida" en los servicios adicionales
+      // Buscar si ya existe un servicio específicamente llamado "Comida / a Menu" en los servicios adicionales
       const tieneComidaEnServicios = servicios.some(s => {
         const nombre = s.nombre?.toLowerCase() || '';
-        return nombre === 'comida' || nombre.trim() === 'comida';
+        return nombre === 'comida' || nombre.includes('comida / a menu') || nombre.trim() === 'comida';
       });
 
       // Si no tiene comida en servicios adicionales, agregarla automáticamente
@@ -235,7 +235,7 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
 
     // CRÍTICO: Forzar que el vendedor solo vea SUS ofertas
     const where = {
-      vendedor_id: req.user.id // Solo ofertas del vendedor autenticado
+      usuario_id: req.user.id // Solo ofertas del vendedor autenticado
     };
 
     // Permitir filtros adicionales
@@ -289,11 +289,11 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
               precio_base: true
             }
           },
-          vendedores: {
+          usuarios: {
             select: {
               id: true,
               nombre_completo: true,
-              codigo_vendedor: true
+              codigo_usuario: true
             }
           },
           contratos: {
@@ -347,11 +347,11 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
       where: { id: parseInt(id) },
       include: {
         clientes: true,
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true,
+            codigo_usuario: true,
             email: true
           }
         },
@@ -370,7 +370,7 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
     }
 
     // CRÍTICO: Verificar que el vendedor solo vea SUS ofertas
-    if (oferta.vendedor_id !== req.user.id) {
+    if (oferta.usuario_id !== req.user.id) {
       throw new ValidationError('No tienes acceso a esta oferta');
     }
 
@@ -550,7 +550,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
          data: {
            codigo_oferta,
            cliente_id: parseInt(datos.cliente_id),
-           vendedor_id: req.user.id, // SIEMPRE usar el vendedor logueado
+           usuario_id: req.user.id, // Usar usuario_id (nueva relación con usuarios)
            paquete_id: parseInt(datos.paquete_id),
            salon_id: datos.salon_id ? parseInt(datos.salon_id) : null,
            fecha_evento: new Date(datos.fecha_evento),
@@ -979,6 +979,7 @@ router.put('/:id/rechazar', authenticate, requireVendedor, async (req, res, next
 router.get('/:id/pdf-factura', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const { id } = req.params;
+    const lang = req.query.lang || 'es'; // Idioma: 'es' o 'en', por defecto español
 
     // Obtener oferta con todas las relaciones necesarias
     const oferta = await prisma.ofertas.findUnique({
@@ -995,15 +996,15 @@ router.get('/:id/pdf-factura', authenticate, requireVendedor, async (req, res, n
           }
         },
         temporadas: true,
-        vendedores: {
-          select: {
-            id: true,
-            nombre_completo: true,
-            codigo_vendedor: true,
-            email: true,
-            telefono: true
-          }
-        },
+          usuarios: {
+            select: {
+              id: true,
+              nombre_completo: true,
+              codigo_usuario: true,
+              email: true,
+              telefono: true
+            }
+          },
         ofertas_servicios_adicionales: {
           include: {
             servicios: true
@@ -1022,8 +1023,8 @@ router.get('/:id/pdf-factura', authenticate, requireVendedor, async (req, res, n
       throw new NotFoundError('Oferta no encontrada');
     }
 
-    // Generar PDF usando HTML + Puppeteer
-    const pdfBuffer = await generarFacturaProformaHTML(oferta, 'oferta');
+    // Generar PDF usando HTML + Puppeteer con el idioma seleccionado
+    const pdfBuffer = await generarFacturaProformaHTML(oferta, 'oferta', lang);
 
     // Configurar headers para descarga
     res.setHeader('Content-Type', 'application/pdf');

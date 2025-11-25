@@ -3,6 +3,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { Plus, Search, Mail, Phone, Calendar, Users, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -13,6 +14,7 @@ import toast from 'react-hot-toast';
 
 function Clientes() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   
   // Scroll infinito con useInfiniteQuery
@@ -77,12 +79,12 @@ function Clientes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
-      toast.success('Cliente eliminado exitosamente');
+      toast.success(t('clients.deleteSuccess'));
       setDialogOpen(false);
       setClienteAEliminar(null);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al eliminar cliente');
+      toast.error(error.response?.data?.message || t('messages.deleteError'));
     },
   });
 
@@ -103,14 +105,14 @@ function Clientes() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar eliminación</DialogTitle>
+            <DialogTitle>{t('messages.confirmDelete')}</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de eliminar a {clienteAEliminar?.nombre}? Esta acción no se puede deshacer.
+              {t('messages.confirmDelete')}: {clienteAEliminar?.nombre}?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
+              {t('forms.cancel')}
             </Button>
             <Button 
               variant="destructive" 
@@ -120,10 +122,10 @@ function Clientes() {
               {eliminarMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Eliminando...
+                  {t('forms.loading')}
                 </>
               ) : (
-                'Eliminar'
+                t('forms.delete')
               )}
             </Button>
           </DialogFooter>
@@ -133,9 +135,9 @@ function Clientes() {
       {/* Header */}
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Clientes</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{t('clients.title')}</h2>
           <p className="text-muted-foreground">
-            Gestiona tu cartera de clientes
+            {t('clients.title')}
           </p>
         </div>
         <Link
@@ -143,7 +145,7 @@ function Clientes() {
           className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 rounded-md px-8 whitespace-nowrap gap-2"
         >
           <Plus className="h-5 w-5" />
-          <span>Nuevo Cliente</span>
+          <span>{t('clients.newClient')}</span>
         </Link>
       </div>
 
@@ -154,7 +156,7 @@ function Clientes() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
               type="text"
-              placeholder="Buscar por nombre o email..."
+              placeholder={t('clients.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -186,10 +188,10 @@ function Clientes() {
               <Users className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              {searchTerm ? 'No se encontraron clientes' : 'No hay clientes'}
+              {searchTerm ? t('clients.noClients') : t('clients.noClients')}
             </h3>
             <p className="text-muted-foreground mb-6">
-              {searchTerm ? 'Intenta con otro término de búsqueda' : 'Comienza agregando tu primer cliente'}
+              {searchTerm ? t('clients.search') : t('clients.noClients')}
             </p>
             {!searchTerm && (
               <Link
@@ -197,7 +199,7 @@ function Clientes() {
                 className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Crear Primer Cliente
+                {t('clients.newClient')}
               </Link>
             )}
           </CardContent>
@@ -242,13 +244,13 @@ function Clientes() {
                       className="text-xs text-muted-foreground hover:text-primary hover:underline transition cursor-pointer"
                       title={`Ver contratos de ${cliente.nombre_completo}`}
                     >
-                      {cliente._count?.contratos || 0} contrato{(cliente._count?.contratos || 0) !== 1 ? 's' : ''}
+                      {cliente._count?.contratos || 0} {t('contracts.title')}
                     </Link>
                     <Link
                       to={`/ofertas/nueva?cliente_id=${cliente.id}`}
                       className="text-sm text-primary hover:text-primary/80 font-medium"
                     >
-                      Crear Oferta →
+                      {t('offers.newOffer')} →
                     </Link>
                   </div>
                   <div className="flex gap-2">
@@ -257,7 +259,7 @@ function Clientes() {
                       className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 flex-1"
                     >
                       <Edit2 className="w-4 h-4 mr-2" />
-                      Editar
+                      {t('forms.edit')}
                     </Link>
                     <Button
                       variant="destructive"
@@ -266,7 +268,7 @@ function Clientes() {
                       disabled={eliminarMutation.isPending}
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Eliminar
+                      {t('forms.delete')}
                     </Button>
                   </div>
                 </div>
@@ -279,7 +281,7 @@ function Clientes() {
             {isFetchingNextPage && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm">Cargando más clientes...</span>
+                <span className="text-sm">{t('clients.loading')}</span>
               </div>
             )}
           </div>
@@ -287,7 +289,7 @@ function Clientes() {
           {/* Indicador de fin */}
           {!hasNextPage && clientes.length > 0 && (
             <div className="text-center py-4 text-muted-foreground text-sm col-span-full">
-              Mostrando todos los {totalClientes} cliente{totalClientes !== 1 ? 's' : ''}
+              {t('clients.title')}: {totalClientes}
             </div>
           )}
         </div>

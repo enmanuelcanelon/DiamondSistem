@@ -7,7 +7,10 @@ const path = require('path');
  * @param {Object} contrato - Datos del contrato con relaciones
  * @returns {Buffer} - PDF como buffer
  */
-async function generarContratoHTML(contrato) {
+async function generarContratoHTML(contrato, lang = 'es') {
+  // Importar traducciones
+  const { t } = require('./translations');
+  
   // Detectar compañía primero para saber qué template usar
   const salon = contrato.salones || null;
   const lugarSalon = contrato.lugar_salon || '';
@@ -20,10 +23,10 @@ async function generarContratoHTML(contrato) {
     }
   }
 
-  // Leer el template HTML según la compañía
+  // Leer el template HTML de ofertas (mismo diseño) según la compañía
   const templatePath = esRevolution 
-    ? path.join(__dirname, '../templates/pdf-contrato.html')
-    : path.join(__dirname, '../templates/pdf-contrato-diamond.html');
+    ? path.join(__dirname, '../templates/pdf-factura.html')
+    : path.join(__dirname, '../templates/pdf-factura-diamond.html');
   let html = fs.readFileSync(templatePath, 'utf8');
 
   // Organizar servicios por categoría (usar la misma función de ofertas)
@@ -38,16 +41,51 @@ async function generarContratoHTML(contrato) {
   
   const serviciosOrganizados = organizarServiciosPorCategoria(datosParaCategorizar);
 
-  // Separar servicios del paquete y adicionales
+  // Preparar servicios para usar la misma función generarHTMLServicios de ofertas
+  // Convertir la estructura antigua a la nueva estructura
   const serviciosPaquete = {
-    venue: serviciosOrganizados.venue.filter(s => s.esPaquete === true),
-    cake: serviciosOrganizados.cake.filter(s => s.esPaquete === true),
-    decoration: serviciosOrganizados.decoration.filter(s => s.esPaquete === true),
-    specials: serviciosOrganizados.specials.filter(s => s.esPaquete === true),
-    barService: serviciosOrganizados.barService.filter(s => s.esPaquete === true),
-    catering: serviciosOrganizados.catering.filter(s => s.esPaquete === true),
-    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === true)
+    bebidas: [],
+    comida: [],
+    decoracion: [],
+    entretenimiento: [],
+    equipos: [],
+    extras: [],
+    fotografia: [],
+    personal: [],
+    transporte: []
   };
+
+  // Mapear servicios del paquete a la nueva estructura
+  Object.values(serviciosOrganizados).flat().forEach(servicio => {
+    if (servicio.esPaquete === true) {
+      // Usar la misma lógica de mapeo que en pdfFacturaHTML
+      const nombre = (servicio.nombre || servicio.servicios?.nombre || '').toLowerCase();
+      const categoria = (servicio.categoria || servicio.servicios?.categoria || '').toLowerCase();
+      
+      // Mapear a las nuevas categorías (simplificado, se mejorará con la función real)
+      if (nombre.includes('bebida') || nombre.includes('bar') || nombre.includes('licor') || categoria.includes('bebida') || categoria.includes('bar')) {
+        serviciosPaquete.bebidas.push(servicio);
+      } else if (nombre.includes('comida') || nombre.includes('catering') || categoria.includes('comida') || categoria.includes('catering')) {
+        serviciosPaquete.comida.push(servicio);
+      } else if (nombre.includes('decor') || categoria.includes('decor')) {
+        serviciosPaquete.decoracion.push(servicio);
+      } else if (nombre.includes('entreten') || nombre.includes('animador') || nombre.includes('hora loca') || categoria.includes('entreten')) {
+        serviciosPaquete.entretenimiento.push(servicio);
+      } else if (nombre.includes('equipo') || categoria.includes('equipo')) {
+        serviciosPaquete.equipos.push(servicio);
+      } else if (nombre.includes('foto') || categoria.includes('foto')) {
+        serviciosPaquete.fotografia.push(servicio);
+      } else if (nombre.includes('personal') || nombre.includes('mesero') || nombre.includes('bartender') || categoria.includes('personal')) {
+        serviciosPaquete.personal.push(servicio);
+      } else if (nombre.includes('transporte') || nombre.includes('limo') || categoria.includes('transporte')) {
+        serviciosPaquete.transporte.push(servicio);
+      } else {
+        serviciosPaquete.extras.push(servicio);
+      }
+    }
+  });
+
+  // Los servicios adicionales se procesarán más adelante con la estructura antigua
 
   // Filtrar servicios adicionales
   // Un servicio es adicional si:
@@ -172,9 +210,182 @@ async function generarContratoHTML(contrato) {
 
   const serviciosAdicionales = serviciosAdicionalesOrganizados;
 
-  // Función para generar HTML de servicios por categoría
-  // Si esPaquete es true, usa el formato elegante de 3 columnas con barra lateral
-  // Si esPaquete es false, usa el formato de tarjetas para servicios adicionales
+  // Usar la misma función de mapeo que en pdfFacturaHTML
+  // Detectar si es Kendall o Doral para el mapeo correcto
+  const esKendall = nombreSalon.includes('kendall');
+  
+  const mapearServicioACategoria = (servicio) => {
+    const nombre = (servicio.nombre || servicio.descripcion || servicio.servicios?.nombre || servicio.servicios?.descripcion || '').toLowerCase();
+    const descripcion = (servicio.descripcion || servicio.servicios?.descripcion || '').toLowerCase();
+    const texto = `${nombre} ${descripcion}`;
+    const nombreExacto = nombre.trim();
+
+    // BEBIDAS
+    if (nombreExacto.includes('champaña') || nombreExacto.includes('champagne')) {
+      if (!nombreExacto.includes('sidra') && !nombreExacto.includes('cider')) {
+        return { categoria: 'bebidas', item: 'Champaña' };
+      }
+    }
+    if ((texto.includes('champaña') || texto.includes('champagne')) && !texto.includes('sidra') && !texto.includes('cider')) {
+      return { categoria: 'bebidas', item: 'Champaña' };
+    }
+    if (texto.includes('licor premium') || (texto.includes('premium') && (texto.includes('licor') || texto.includes('liquor')))) {
+      return { categoria: 'bebidas', item: 'Licor Premium' };
+    }
+    if (texto.includes('licor house') || texto.includes('licor básico') || texto.includes('licor basico') || (texto.includes('licor') && (texto.includes('house') || texto.includes('básico') || texto.includes('basico')))) {
+      return { categoria: 'bebidas', item: 'Licor House' };
+    }
+    if (texto.includes('refresco') || texto.includes('jugo') || texto.includes('agua') || texto.includes('bebida no alcohólica') || texto.includes('soft drink')) {
+      return { categoria: 'bebidas', item: 'Refrescos/Jugo/Agua' };
+    }
+    if (nombreExacto.includes('sidra') || nombreExacto.includes('cider')) {
+      if (!nombreExacto.includes('champaña') && !nombreExacto.includes('champagne')) {
+        return { categoria: 'bebidas', item: 'Sidra' };
+      }
+    }
+    if ((texto.includes('sidra') || texto.includes('cider')) && !texto.includes('champaña') && !texto.includes('champagne')) {
+      return { categoria: 'bebidas', item: 'Sidra' };
+    }
+
+    // COMIDA
+    if (texto.includes('cake') || texto.includes('torta') || texto.includes('vainilla') || texto.includes('marmoleado')) {
+      return { categoria: 'comida', item: 'Cake (Vainilla o Marmoleado)' };
+    }
+    if (texto.includes('menu') || texto.includes('menú') || 
+        texto.includes('ensalada') || texto.includes('proteína') || texto.includes('proteina') || 
+        texto.includes('acompañante') || texto.includes('acompanante') ||
+        (texto.includes('primer') && texto.includes('segundo')) ||
+        (texto.includes('primer') && texto.includes('plato')) ||
+        (texto.includes('segundo') && texto.includes('plato')) ||
+        (texto.includes('comida') && (texto.includes('primer') || texto.includes('segundo') || texto.includes('plato') || texto.includes('escoger')))) {
+      return { categoria: 'comida', item: 'Menu : Entrada y Proteína (2 acompañantes)' };
+    }
+    if (texto.includes('mesa de queso') || texto.includes('cheese table') || texto.includes('quesos variados')) {
+      return { categoria: 'comida', item: 'Mesa de Quesos & Carnes frias' };
+    }
+    if (texto.includes('mini dulce') || texto.includes('12 mini dulce') || texto.includes('paquete de 12')) {
+      return { categoria: 'comida', item: 'Mini Dulces' };
+    }
+    if (texto.includes('pasapalo') || texto.includes('appetizer')) {
+      return { categoria: 'comida', item: 'Pasapalos' };
+    }
+    if (texto.includes('utensilio') || texto.includes('plato') || texto.includes('cubierto') || texto.includes('vaso') || texto.includes('servilleta')) {
+      return { categoria: 'comida', item: 'Utensilios' };
+    }
+
+    // DECORACIÓN
+    // Detectar Lounge Set + Cocktail primero
+    if (texto.includes('lounge set') || texto.includes('lounge') || (texto.includes('cocktail') && (texto.includes('lounge') || texto.includes('set')))) {
+      return { categoria: 'decoracion', item: 'Lounge Set + Cocktail' };
+    }
+    if (texto.includes('decoración house') || texto.includes('decoracion house') || texto.includes('decoración básico') || texto.includes('decoracion basico') || texto.includes('table setting') || texto.includes('centerpiece') || texto.includes('runner') || texto.includes('charger')) {
+      return { categoria: 'decoracion', item: 'Decoracion House' };
+    }
+    if (texto.includes('decoración plus') || texto.includes('decoracion plus') || texto.includes('decoración premium') || texto.includes('decoracion premium')) {
+      return { categoria: 'decoracion', item: 'Decoración Plus' };
+    }
+    if (texto.includes('número lumínico') || texto.includes('numero luminico') || texto.includes('número iluminado') || texto.includes('numero iluminado') || texto.includes('number')) {
+      return { categoria: 'decoracion', item: 'Número Lumínico' };
+    }
+    if (texto.includes('decoración') || texto.includes('decoracion') || texto.includes('decoration')) {
+      return { categoria: 'decoracion', item: 'Decoracion House' };
+    }
+
+    // ENTRETENIMIENTO
+    if (nombreExacto.includes('hora loca') || 
+        texto.includes('hora loca') ||
+        (nombreExacto.includes('hora') && nombreExacto.includes('loca') && !nombreExacto.includes('extra'))) {
+      return { categoria: 'entretenimiento', item: 'Hora Loca' };
+    }
+    if (nombreExacto.includes('animador') || nombreExacto.includes('animación') || nombreExacto.includes('animacion')) {
+      if (!nombreExacto.includes('hora loca') && !nombreExacto.includes('adicional')) {
+        return { categoria: 'entretenimiento', item: 'Animador' };
+      }
+    }
+    if ((texto.includes('animador') || texto.includes('animación') || texto.includes('animacion')) &&
+        !texto.includes('hora loca') && !nombreExacto.includes('hora loca') &&
+        !texto.includes('adicional')) {
+      return { categoria: 'entretenimiento', item: 'Animador' };
+    }
+    if (texto.includes('dj') || texto.includes('disc jockey')) {
+      return { categoria: 'entretenimiento', item: 'DJ Profesional' };
+    }
+    if (texto.includes('maestro de ceremonia') || texto.includes('mc') || texto.includes('master of ceremony')) {
+      return { categoria: 'entretenimiento', item: 'Maestro de Ceremonia' };
+    }
+
+    // EQUIPOS
+    if (texto.includes('luce stage') || texto.includes('luces stage') || texto.includes('luz stage') || 
+        texto.includes('stage lighting') || texto.includes('stage light') || 
+        texto.includes('iluminación stage') || texto.includes('iluminacion stage') ||
+        texto.includes('iluminación del stage') || texto.includes('iluminacion del stage') ||
+        (texto.includes('stage') && (texto.includes('luz') || texto.includes('luce') || texto.includes('luces') || texto.includes('lighting') || texto.includes('iluminación') || texto.includes('iluminacion')))) {
+      return { categoria: 'equipos', item: 'Luces Stage' };
+    }
+    if (texto.includes('mapping') || texto.includes('proyección mapping') || texto.includes('proyeccion mapping')) {
+      return { categoria: 'equipos', item: 'Mapping' };
+    }
+    if (texto.includes('máquina de chispa') || texto.includes('maquina de chispa') || texto.includes('spark')) {
+      if (esKendall) {
+        return null;
+      }
+      return { categoria: 'equipos', item: 'Máquina de Chispas' };
+    }
+    if (texto.includes('máquina de humo') || texto.includes('maquina de humo') || texto.includes('smoke')) {
+      return { categoria: 'equipos', item: 'Máquina de Humo' };
+    }
+    if (texto.includes('pantalla') || texto.includes('led') || texto.includes('tv') || texto.includes('screen')) {
+      // En Kendall y Diamond es "Pantalla LED", en Doral (Revolution) es "Pantalla TV"
+      const esDiamond = !esRevolution;
+      if (esKendall || esDiamond) {
+        return { categoria: 'equipos', item: 'Pantalla LED' };
+      } else {
+        return { categoria: 'equipos', item: 'Pantalla TV' };
+      }
+    }
+
+    // EXTRAS
+    if (texto.includes('hora extra') || texto.includes('hora adicional')) {
+      return { categoria: 'extras', item: 'Hora Extra' };
+    }
+
+    // FOTOGRAFÍA
+    if ((texto.includes('foto') || texto.includes('photo')) && (texto.includes('video') || texto.includes('vídeo')) && (texto.includes('3 hora') || texto.includes('3h'))) {
+      return { categoria: 'fotografia', item: 'Foto y Video 3 Horas' };
+    }
+    if ((texto.includes('foto') || texto.includes('photo')) && (texto.includes('video') || texto.includes('vídeo')) && (texto.includes('5 hora') || texto.includes('5h'))) {
+      return { categoria: 'fotografia', item: 'Foto y Video 5 Horas' };
+    }
+    if (texto.includes('photobooth 360') || texto.includes('cabina 360') || (texto.includes('360') && (texto.includes('photobooth') || texto.includes('cabina') || texto.includes('fotográfica') || texto.includes('fotografica')))) {
+      return { categoria: 'fotografia', item: 'Photobooth 360' };
+    }
+    if (texto.includes('photobooth print') || (texto.includes('photobooth') && (texto.includes('print') || texto.includes('impresión') || texto.includes('impresion'))) || (texto.includes('cabina fotográfica') && (texto.includes('impresión') || texto.includes('impresion'))) || (texto.includes('cabina fotografica') && (texto.includes('impresión') || texto.includes('impresion')))) {
+      return { categoria: 'fotografia', item: 'Photobooth Print' };
+    }
+
+    // TRANSPORTE
+    if (texto.includes('limosina') || texto.includes('limousine') || texto.includes('limo') ||
+        nombreExacto.includes('limosina') || nombreExacto.includes('limousine') || nombreExacto.includes('limo')) {
+      return { categoria: 'transporte', item: 'Limosina (15 Millas)' };
+    }
+
+    // PERSONAL
+    if (texto.includes('bartender') || texto.includes('barman')) {
+      return { categoria: 'personal', item: 'Bartender' };
+    }
+    if (texto.includes('coordinador') || texto.includes('coordinator') || texto.includes('event coordinator')) {
+      return { categoria: 'personal', item: 'Coordinador de Eventos' };
+    }
+    if ((texto.includes('mesero') || texto.includes('waiter') || texto.includes('personal de servicio') || texto.includes('personal de atención') || texto.includes('servicio')) &&
+        !texto.includes('limosina') && !texto.includes('limousine') && !texto.includes('limo')) {
+      return { categoria: 'personal', item: 'Personal de Atención' };
+    }
+
+    return null;
+  };
+
+  // Función para generar HTML de servicios por categoría (mismo diseño que ofertas)
+  // Retorna un objeto con el HTML y el estilo del grid
   const generarHTMLServicios = (serviciosPorCategoria, esPaquete) => {
     const categorias = [
       { key: 'venue', titulo: 'VENUE', default: 'Elegant table setting with beautiful centerpieces, runners, charger plates napkins and rings.' },

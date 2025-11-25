@@ -17,8 +17,12 @@ const prisma = getPrismaClient();
  */
 async function getValidTokens(vendedorId) {
   try {
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId },
+    // Buscar en la tabla usuarios con rol 'vendedor' (nueva estructura)
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
       select: {
         google_access_token: true,
         google_refresh_token: true,
@@ -50,13 +54,13 @@ async function getValidTokens(vendedorId) {
       try {
         const nuevosTokens = await refreshAccessToken(refreshToken);
         
-        // Actualizar tokens en la base de datos
+        // Actualizar tokens en la base de datos (tabla usuarios)
         const nuevoAccessTokenEncriptado = encrypt(nuevosTokens.access_token);
         const nuevoExpiryDate = nuevosTokens.expiry_date 
           ? new Date(nuevosTokens.expiry_date) 
           : new Date(Date.now() + 3600 * 1000); // Por defecto 1 hora
 
-        await prisma.vendedores.update({
+        await prisma.usuarios.update({
           where: { id: vendedorId },
           data: {
             google_access_token: nuevoAccessTokenEncriptado,
@@ -93,8 +97,12 @@ async function getValidTokens(vendedorId) {
  */
 async function obtenerEventosCalendarioPrincipal(vendedorId, fechaInicio, fechaFin) {
   try {
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId },
+    // Buscar en la tabla usuarios con rol 'vendedor' (nueva estructura)
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
       select: {
         google_calendar_id: true,
         google_calendar_sync_enabled: true
@@ -214,8 +222,12 @@ async function crearEventoCitas(vendedorId, datosEvento) {
       return null;
     }
 
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId },
+    // Buscar en la tabla usuarios con rol 'vendedor' (nueva estructura)
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
       select: {
         google_calendar_sync_enabled: true
       }
@@ -300,8 +312,12 @@ async function crearEventoContrato(vendedorId, datosContrato) {
   try {
     // Para contratos/eventos, usar el calendario principal del vendedor (Revolution Party)
     // NO usar GOOGLE_CALENDAR_CITAS_ID que es solo para citas de leads
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId },
+    // Buscar en la tabla usuarios con rol 'vendedor' (nueva estructura)
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
       select: {
         google_calendar_sync_enabled: true,
         google_calendar_id: true
@@ -626,15 +642,17 @@ async function obtenerEventosTodosVendedores(fechaInicio, fechaFin) {
     const todosLosEventos = [];
 
     // 1. Obtener eventos de los calendarios principales de todos los vendedores
-    const vendedores = await prisma.vendedores.findMany({
+    // Buscar en la tabla usuarios con rol 'vendedor' (nueva estructura)
+    const vendedores = await prisma.usuarios.findMany({
       where: {
+        rol: 'vendedor',
         google_calendar_sync_enabled: true,
         google_calendar_id: { not: null }
       },
       select: {
         id: true,
         nombre_completo: true,
-        codigo_vendedor: true,
+        codigo_usuario: true,
         google_calendar_id: true
       }
     });
@@ -648,7 +666,7 @@ async function obtenerEventosTodosVendedores(fechaInicio, fechaFin) {
             ...evento,
             vendedor_id: vendedor.id,
             vendedor_nombre: vendedor.nombre_completo,
-            vendedor_codigo: vendedor.codigo_vendedor
+            vendedor_codigo: vendedor.codigo_usuario
           });
         });
       } catch (error) {

@@ -22,6 +22,7 @@ import {
   Mail,
 } from 'lucide-react';
 import api from '../config/api';
+import { useLanguage } from '../contexts/LanguageContext';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
 import toast, { Toaster } from 'react-hot-toast';
@@ -35,6 +36,7 @@ import { CheckCircle2 } from 'lucide-react';
 function DetalleContrato() {
   const { id } = useParams();
   const queryClient = useQueryClient();
+  const { language } = useLanguage();
   const [mostrarCodigoAcceso, setMostrarCodigoAcceso] = useState(false);
   
   // Estado para notas internas
@@ -97,6 +99,7 @@ function DetalleContrato() {
   const handleDescargarContrato = async () => {
     try {
       const response = await api.get(`/contratos/${id}/pdf-contrato`, {
+        params: { lang: language },
         responseType: 'blob'
       });
       
@@ -118,6 +121,7 @@ function DetalleContrato() {
   const handleDescargarVersion = async (versionNumero) => {
     try {
       const response = await api.get(`/contratos/${id}/versiones/${versionNumero}/pdf`, {
+        params: { lang: language },
         responseType: 'blob'
       });
       

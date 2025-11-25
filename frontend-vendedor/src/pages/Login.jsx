@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Loader2, Diamond, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -10,6 +11,7 @@ import { Label } from '../components/ui/label';
 function Login() {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     codigo_vendedor: '',
     password: '',
@@ -48,9 +50,9 @@ function Login() {
         {/* Formulario */}
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-semibold tracking-tight">Iniciar Sesión</CardTitle>
+            <CardTitle className="text-2xl font-semibold tracking-tight">{t('login.title')}</CardTitle>
             <CardDescription>
-              Ingresa tus credenciales de vendedor para acceder al sistema
+              {t('login.title')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -63,12 +65,12 @@ function Login() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="codigo_vendedor">Código de Vendedor</Label>
+                <Label htmlFor="codigo_vendedor">{t('login.email')}</Label>
                 <Input
                   id="codigo_vendedor"
                   name="codigo_vendedor"
                   type="text"
-                  placeholder="Ingresa tu código de vendedor"
+                  placeholder={t('login.email')}
                   value={formData.codigo_vendedor}
                   onChange={handleChange}
                   required
@@ -77,7 +79,7 @@ function Login() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">{t('login.password')}</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -119,7 +121,7 @@ function Login() {
                 ) : (
                   <>
                     <LogIn className="mr-2 h-4 w-4" />
-                    Iniciar Sesión
+                    {t('login.login')}
                   </>
                 )}
               </Button>

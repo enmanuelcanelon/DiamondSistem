@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import useAuthStore from './store/useAuthStore';
 import RateLimitAlert from './components/RateLimitAlert';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 // Pages - Vendedor (Lazy Loading para mejor rendimiento)
 import { lazy, Suspense } from 'react';
@@ -153,9 +154,10 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster position="top-right" />
-      <RateLimitAlert />
-      <Router>
+      <LanguageProvider>
+        <Toaster position="top-right" />
+        <RateLimitAlert />
+        <Router>
         <Routes>
           {/* Vendedor Routes */}
           <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
@@ -227,6 +229,7 @@ function App() {
           </Route> */}
         </Routes>
       </Router>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

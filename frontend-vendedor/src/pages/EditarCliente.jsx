@@ -3,6 +3,7 @@ import { useNavigate, Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -14,6 +15,7 @@ function EditarCliente() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     nombre_completo: '',
     email: '',
@@ -59,11 +61,11 @@ function EditarCliente() {
     onSuccess: () => {
       queryClient.invalidateQueries(['clientes']);
       queryClient.invalidateQueries(['cliente', id]);
-      toast.success('Cliente actualizado exitosamente');
+      toast.success(t('clients.updateSuccess'));
       navigate('/clientes');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al actualizar cliente');
+      toast.error(error.response?.data?.message || t('messages.operationError'));
     },
   });
 
@@ -113,9 +115,9 @@ function EditarCliente() {
           </Link>
         </Button>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Editar Cliente</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{t('clients.editClient')}</h2>
           <p className="text-muted-foreground">
-            Actualiza la información del cliente
+            {t('clients.editClient')}
           </p>
         </div>
       </div>
@@ -127,12 +129,12 @@ function EditarCliente() {
           {/* Información Personal */}
           <div>
             <CardHeader className="px-0 pt-0">
-              <CardTitle>Información Personal</CardTitle>
+              <CardTitle>{t('clients.clientName')}</CardTitle>
             </CardHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <Label htmlFor="nombre_completo">
-                  Nombre Completo *
+                  {t('clients.clientName')} *
                 </Label>
                 <Input
                   type="text"
@@ -147,7 +149,7 @@ function EditarCliente() {
 
               <div>
                 <Label htmlFor="email">
-                  Email *
+                  {t('clients.email')} *
                 </Label>
                 <Input
                   type="email"
@@ -162,7 +164,7 @@ function EditarCliente() {
 
               <div>
                 <Label htmlFor="telefono">
-                  Teléfono *
+                  {t('clients.phone')} *
                 </Label>
                 <Input
                   type="tel"
@@ -180,12 +182,12 @@ function EditarCliente() {
           {/* Información del Evento */}
           <div className="pt-6 border-t">
             <CardHeader className="px-0 pt-0">
-              <CardTitle>Información del Evento</CardTitle>
+              <CardTitle>{t('clients.eventType')}</CardTitle>
             </CardHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="como_nos_conocio">
-                  ¿Cómo nos conoció?
+                  {t('clients.howDidYouKnow')}
                 </Label>
                 <Select 
                   value={formData.como_nos_conocio} 
@@ -197,7 +199,7 @@ function EditarCliente() {
                   }}
                 >
                   <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Seleccionar..." />
+                    <SelectValue placeholder={t('forms.select')} />
                   </SelectTrigger>
                   <SelectContent>
                     {fuentesConocimiento.map((fuente) => (
@@ -228,18 +230,18 @@ function EditarCliente() {
               {mutation.isPending ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Guardando...
+                  {t('forms.loading')}
                 </>
               ) : (
                 <>
                   <Save className="w-5 h-5 mr-2" />
-                  Guardar Cambios
+                  {t('forms.saveChanges')}
                 </>
               )}
             </Button>
             <Button variant="outline" asChild>
               <Link to="/clientes">
-                Cancelar
+                {t('forms.cancel')}
               </Link>
             </Button>
           </div>

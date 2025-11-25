@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -13,6 +14,7 @@ import toast from 'react-hot-toast';
 function CrearCliente() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     nombre_completo: '',
     email: '',
@@ -28,11 +30,11 @@ function CrearCliente() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['clientes']);
-      toast.success('Cliente creado exitosamente');
+      toast.success(t('clients.createSuccess'));
       navigate('/clientes');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al crear cliente');
+      toast.error(error.response?.data?.message || t('messages.operationError'));
     },
   });
 
@@ -55,11 +57,11 @@ function CrearCliente() {
   };
 
   const fuentesConocimiento = [
-    'Facebook',
-    'Instagram',
-    'Google',
-    'Recomendación',
-    'Otro',
+    { value: 'Facebook', label: t('clients.sources.facebook') },
+    { value: 'Instagram', label: t('clients.sources.instagram') },
+    { value: 'Google', label: t('clients.sources.google') },
+    { value: 'Recomendación', label: t('clients.sources.recommendation') },
+    { value: 'Otro', label: t('clients.sources.other') },
   ];
 
   return (
@@ -72,9 +74,9 @@ function CrearCliente() {
           </Link>
         </Button>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Nuevo Cliente</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{t('clients.newClient')}</h2>
           <p className="text-muted-foreground">
-            Completa la información del cliente
+            {t('clients.addFirstClient')}
           </p>
         </div>
       </div>
@@ -86,12 +88,12 @@ function CrearCliente() {
           {/* Información Personal */}
           <div>
             <CardHeader className="px-0 pt-0">
-              <CardTitle>Información Personal</CardTitle>
+              <CardTitle>{t('clients.personalInfo')}</CardTitle>
             </CardHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <Label htmlFor="nombre_completo">
-                  Nombre Completo *
+                  {t('clients.fullName')} *
                 </Label>
                 <Input
                   type="text"
@@ -106,7 +108,7 @@ function CrearCliente() {
 
               <div>
                 <Label htmlFor="email">
-                  Email *
+                  {t('clients.email')} *
                 </Label>
                 <Input
                   type="email"
@@ -121,7 +123,7 @@ function CrearCliente() {
 
               <div>
                 <Label htmlFor="telefono">
-                  Teléfono *
+                  {t('clients.phone')} *
                 </Label>
                 <Input
                   type="tel"
@@ -139,12 +141,12 @@ function CrearCliente() {
           {/* Información del Evento */}
           <div className="pt-6 border-t">
             <CardHeader className="px-0 pt-0">
-              <CardTitle>Información del Evento</CardTitle>
+              <CardTitle>{t('clients.eventInfo')}</CardTitle>
             </CardHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="como_nos_conocio">
-                  ¿Cómo nos conoció?
+                  {t('clients.howDidYouKnow')}
                 </Label>
                 <Select 
                   value={formData.como_nos_conocio} 
@@ -156,11 +158,11 @@ function CrearCliente() {
                   }}
                 >
                   <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Seleccionar..." />
+                    <SelectValue placeholder={t('forms.select')} />
                   </SelectTrigger>
                   <SelectContent>
                     {fuentesConocimiento.map((fuente) => (
-                      <SelectItem key={fuente} value={fuente}>{fuente}</SelectItem>
+                      <SelectItem key={fuente.value} value={fuente.value}>{fuente.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -169,7 +171,7 @@ function CrearCliente() {
                     type="text"
                     value={comoNosConocioOtro}
                     onChange={(e) => setComoNosConocioOtro(e.target.value)}
-                    placeholder="Especifique cómo nos conoció..."
+                    placeholder={t('clients.specifyOther')}
                     className="mt-2"
                   />
                 )}
@@ -187,18 +189,18 @@ function CrearCliente() {
               {mutation.isPending ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Guardando...
+                  {t('clients.savingClient')}
                 </>
               ) : (
                 <>
                   <Save className="w-5 h-5 mr-2" />
-                  Guardar Cliente
+                  {t('clients.saveClient')}
                 </>
               )}
             </Button>
             <Button variant="outline" asChild>
-              <Link to="/clientes">
-                Cancelar
+                <Link to="/clientes">
+                {t('forms.cancel')}
               </Link>
             </Button>
           </div>

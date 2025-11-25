@@ -22,7 +22,7 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
 
     // CRÍTICO: Forzar que el vendedor solo vea SUS clientes
     const where = {
-      vendedor_id: req.user.id // Solo clientes del vendedor autenticado
+      usuario_id: req.user.id // Solo clientes del vendedor autenticado
     };
 
     // Filtro por tipo de evento
@@ -45,11 +45,11 @@ router.get('/', authenticate, requireVendedor, async (req, res, next) => {
       prisma.clientes.findMany({
         where,
         include: {
-          vendedores: {
+          usuarios: {
             select: {
               id: true,
               nombre_completo: true,
-              codigo_vendedor: true
+              codigo_usuario: true
             }
           },
           _count: {
@@ -85,11 +85,11 @@ router.get('/:id', authenticate, requireVendedor, async (req, res, next) => {
     const cliente = await prisma.clientes.findUnique({
       where: { id: parseInt(id) },
       include: {
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true,
+            codigo_usuario: true,
             email: true
           }
         },
@@ -178,14 +178,14 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         direccion: datos.direccion || null,
         como_nos_conocio: datos.como_nos_conocio || null,
         tipo_evento: datos.tipo_evento || null,
-        vendedor_id: datos.vendedor_id || req.user.id
+        usuario_id: datos.usuario_id || req.user.id
       },
       include: {
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         }
       }
@@ -267,11 +267,11 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
         tipo_evento: datos.tipo_evento
       },
       include: {
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         }
       }

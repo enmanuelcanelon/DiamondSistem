@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, ChevronRight, ChevronLeft, CheckCircle2, Calendar, Clock, MapPin, Mail, Phone, Users, Filter, FilterX, AlertCircle, XCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import { useLanguage } from '../contexts/LanguageContext';
 import ModalCrearCliente from '../components/ModalCrearCliente';
 import CalendarioSelector from '../components/CalendarioSelector';
 import { calcularDuracion, formatearHora } from '../utils/formatters';
@@ -20,6 +21,7 @@ function CrearOferta() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
+  const { t, language } = useLanguage();
   const [searchParams] = useSearchParams();
   const clienteIdFromUrl = searchParams.get('cliente_id');
   
@@ -70,17 +72,28 @@ function CrearOferta() {
   const [tipoEventoOtro, setTipoEventoOtro] = useState('');
   
   // Tipos de evento disponibles (definido antes de los useEffect)
-  const tiposEvento = [
-    'Boda',
-    'Quinceaños',
-    'Cumpleaños',
-    'Aniversario',
-    'Corporativo',
-    'Graduación',
+  const tiposEvento = language === 'es' ? [
+    t('offers.eventTypes.wedding'),
+    t('offers.eventTypes.quinceanera'),
+    t('offers.eventTypes.birthday'),
+    t('offers.eventTypes.anniversary'),
+    t('offers.eventTypes.corporate'),
+    t('offers.eventTypes.graduation'),
+    t('offers.eventTypes.babyShower'),
+    t('offers.eventTypes.kidsParty'),
+    t('offers.eventTypes.sweet16'),
+    t('offers.eventTypes.other')
+  ] : [
+    'Wedding',
+    'Quinceañera',
+    'Birthday',
+    'Anniversary',
+    'Corporate',
+    'Graduation',
     'Baby Shower',
     'Kids Party',
-    'Dulces 16',
-    'Otro'
+    'Sweet 16',
+    'Other'
   ];
   
   // Estado para servicios excluyentes del paquete (ej: Photobooth 360 o Print)
@@ -982,8 +995,8 @@ function CrearOferta() {
   const serviciosExcluyentes = {
     'Foto y Video 3 Horas': ['Foto y Video 5 Horas'],
     'Foto y Video 5 Horas': ['Foto y Video 3 Horas'],
-    'Licor Premium': ['Licor Básico'], // Premium excluye Básico (no downgrade)
-    'Decoración Plus': ['Decoración Básica'], // Plus excluye Básica (no downgrade)
+    'Licor Premium': ['Licor House'], // Premium excluye House (no downgrade)
+    'Decoración Plus': ['Decoracion House'], // Plus excluye House (no downgrade)
     'Photobooth 360': ['Photobooth Print'],
     'Photobooth Print': ['Photobooth 360'],
     'Sidra': ['Champaña'], // Sidra y Champaña son mutuamente excluyentes
@@ -1168,7 +1181,7 @@ function CrearOferta() {
     
     // Personal
     if (nombre.includes('coordinador') || nombre.includes('personal de servicio') || 
-        nombre.includes('bartender') || nombre.includes('mesero')) {
+        nombre.includes('personal de atención') || nombre.includes('bartender') || nombre.includes('mesero')) {
       return 'Personal';
     }
     
@@ -1408,7 +1421,7 @@ function CrearOferta() {
       });
       const tieneLicorBasicoEnAdicionales = serviciosSeleccionados.some(sel => {
         const sData = servicios?.find(srv => srv.id === parseInt(sel.servicio_id));
-        return sData?.nombre === 'Licor Básico';
+        return sData?.nombre === 'Licor House';
       });
       const tieneDecoracionPlusEnAdicionales = serviciosSeleccionados.some(sel => {
         const sData = servicios?.find(srv => srv.id === parseInt(sel.servicio_id));
@@ -1416,14 +1429,14 @@ function CrearOferta() {
       });
       const tieneDecoracionBasicaEnAdicionales = serviciosSeleccionados.some(sel => {
         const sData = servicios?.find(srv => srv.id === parseInt(sel.servicio_id));
-        return sData?.nombre === 'Decoración Básica';
+        return sData?.nombre === 'Decoracion House';
       });
       
       // Verificar en el paquete
       const tieneLicorPremiumEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor Premium');
-      const tieneLicorBasicoEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor Básico');
+      const tieneLicorBasicoEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor House');
       const tieneDecoracionPlusEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoración Plus');
-      const tieneDecoracionBasicaEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoración Básica');
+      const tieneDecoracionBasicaEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoracion House');
       
       // Combinar verificaciones (paquete O adicionales)
       const tieneLicorPremium = tieneLicorPremiumEnPaquete || tieneLicorPremiumEnAdicionales;
@@ -1432,19 +1445,19 @@ function CrearOferta() {
       const tieneDecoracionBasica = tieneDecoracionBasicaEnPaquete || tieneDecoracionBasicaEnAdicionales;
       
       if (servicioData.nombre === 'Licor Premium' && tieneLicorBasico) {
-        alert(`No puedes seleccionar "Licor Premium" porque ya tienes "Licor Básico" ${tieneLicorBasicoEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
+        alert(`No puedes seleccionar "Licor Premium" porque ya tienes "Licor House" ${tieneLicorBasicoEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
           return;
         }
-      if (servicioData.nombre === 'Licor Básico' && tieneLicorPremium) {
-        alert(`No puedes seleccionar "Licor Básico" porque ya tienes "Licor Premium" ${tieneLicorPremiumEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
+      if (servicioData.nombre === 'Licor House' && tieneLicorPremium) {
+        alert(`No puedes seleccionar "Licor House" porque ya tienes "Licor Premium" ${tieneLicorPremiumEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
         return;
       }
       if (servicioData.nombre === 'Decoración Plus' && tieneDecoracionBasica) {
-        alert(`No puedes seleccionar "Decoración Plus" porque ya tienes "Decoración Básica" ${tieneDecoracionBasicaEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
+        alert(`No puedes seleccionar "Decoración Plus" porque ya tienes "Decoracion House" ${tieneDecoracionBasicaEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
         return;
       }
-      if (servicioData.nombre === 'Decoración Básica' && tieneDecoracionPlus) {
-        alert(`No puedes seleccionar "Decoración Básica" porque ya tienes "Decoración Plus" ${tieneDecoracionPlusEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
+      if (servicioData.nombre === 'Decoracion House' && tieneDecoracionPlus) {
+        alert(`No puedes seleccionar "Decoracion House" porque ya tienes "Decoración Plus" ${tieneDecoracionPlusEnPaquete ? 'en el paquete' : 'en servicios adicionales'}. En el paquete Personalizado, estos servicios son excluyentes.`);
         return;
       }
     }
@@ -1456,14 +1469,21 @@ function CrearOferta() {
                                             paqueteSeleccionado?.nombre?.toLowerCase().includes('personalizado');
     const esSidraOChampana = servicioData?.nombre === 'Sidra' || servicioData?.nombre === 'Champaña';
     
+    // REGLA ESPECIAL: Photobooth 360 y Print NO se bloquean entre sí cuando están como extras
+    // Solo se bloquean si uno está en el paquete
+    const esPhotoboothEnToggle = servicioData?.nombre === 'Photobooth 360' || servicioData?.nombre === 'Photobooth Print';
+    const tienePhotoboothEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Photobooth 360' || ps.servicios?.nombre === 'Photobooth Print');
+    
     if (servicioData && serviciosExcluyentes[servicioData.nombre] && !(esPaqueteEspecialOPersonalizado && esSidraOChampana)) {
       const nombresExcluyentes = serviciosExcluyentes[servicioData.nombre];
       
       // Verificar en servicios adicionales seleccionados
-      const tieneExcluyenteEnAdicionales = serviciosSeleccionados.some(s => {
-        const sData = servicios?.find(srv => srv.id === parseInt(s.servicio_id));
-        return sData && nombresExcluyentes.includes(sData.nombre);
-      });
+      // EXCEPCIÓN: Photobooth NO se bloquea entre sí cuando están como extras (no en el paquete)
+      const tieneExcluyenteEnAdicionales = !(esPhotoboothEnToggle && !tienePhotoboothEnPaquete) && 
+        serviciosSeleccionados.some(s => {
+          const sData = servicios?.find(srv => srv.id === parseInt(s.servicio_id));
+          return sData && nombresExcluyentes.includes(sData.nombre);
+        });
       
       // Verificar en servicios incluidos en el paquete (solo los realmente seleccionados)
       // REGLA ESPECIAL: Para Photobooth y Sidra/Champaña, si uno está en el paquete, el otro DEBE estar disponible como adicional
@@ -1535,8 +1555,8 @@ function CrearOferta() {
       
       // Verificar si es un upgrade permitido según las reglas del paquete
       const esUpgradePermitido = 
-        (servicioData.nombre === 'Licor Premium' && reglasPaquete.permiteUpgradeLicor && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor Básico')) ||
-        (servicioData.nombre === 'Decoración Plus' && reglasPaquete.permiteUpgradeDecoracion && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoración Básica')) ||
+        (servicioData.nombre === 'Licor Premium' && reglasPaquete.permiteUpgradeLicor && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor House')) ||
+        (servicioData.nombre === 'Decoración Plus' && reglasPaquete.permiteUpgradeDecoracion && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoracion House')) ||
         (servicioData.nombre === 'Foto y Video 5 Horas' && reglasPaquete.permiteFotoVideo && !reglasPaquete.excluyeFoto5hSiTiene3h && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Foto y Video 3 Horas'));
       
       if (tieneExcluyenteEnAdicionales && !esUpgradePermitido) {
@@ -1566,6 +1586,7 @@ function CrearOferta() {
       // Si es paquete personalizado y el servicio es específicamente "Comida", usar $12 por persona
       const esPaquetePersonalizado = paqueteSeleccionado?.nombre?.toLowerCase().includes('personalizado');
       const esComida = servicioData?.nombre?.toLowerCase() === 'comida' || 
+                       servicioData?.nombre?.toLowerCase().includes('comida / a menu') ||
                        servicioData?.nombre?.toLowerCase().trim() === 'comida';
       
       let precioInicial = servicioData?.precio_base || 0;
@@ -2001,20 +2022,23 @@ function CrearOferta() {
   };
 
   const nombresPasos = [
-    'Información del Cliente',
-    'Detalles del Evento',
-    'Paquete y Temporada',
-    'Servicios Adicionales',
-    'Descuento'
+    t('offers.steps.clientInfo'),
+    t('offers.steps.eventDetails'),
+    t('offers.steps.packageSeason'),
+    t('offers.steps.additionalServices'),
+    t('offers.steps.discount')
   ];
 
   // ============================================
   // FUNCIONES DEL CALENDARIO - PASO 2
   // ============================================
   
-  const nombresMeses = [
+  const nombresMeses = language === 'es' ? [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ] : [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ];
   
   const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -2531,8 +2555,8 @@ function CrearOferta() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Nueva Oferta</h1>
-          <p className="text-muted-foreground mt-1">Crea una propuesta comercial para tu cliente</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('offers.newOffer')}</h1>
+          <p className="text-muted-foreground mt-1">{t('offers.createProposal')}</p>
         </div>
       </div>
 
@@ -2589,12 +2613,12 @@ function CrearOferta() {
           {pasoActual === 1 && (
             <Card>
               <CardHeader className="px-6 pt-6 pb-4">
-                <CardTitle>Información del Cliente</CardTitle>
+                <CardTitle>{t('offers.steps.clientInfo')}</CardTitle>
               </CardHeader>
               <CardContent className="px-6 pb-6">
                 <div className="space-y-2">
                   <Label htmlFor="cliente_id">
-                    Cliente <span className="text-destructive">*</span>
+                    {t('clients.title')} <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={formData.cliente_id || ""}
@@ -2603,7 +2627,7 @@ function CrearOferta() {
                     }}
                   >
                     <SelectTrigger id="cliente_id" className="w-full [&>span]:truncate">
-                      <SelectValue placeholder="Seleccionar cliente...">
+                      <SelectValue placeholder={t('forms.select')}>
                         {formData.cliente_id && clientes?.find(c => c.id.toString() === formData.cliente_id.toString()) 
                           ? `${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).nombre_completo} - ${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).email}`
                           : null
@@ -2632,26 +2656,26 @@ function CrearOferta() {
             {/* Formulario */}
             <Card>
               <CardHeader>
-                <CardTitle>Detalles del Evento</CardTitle>
+                <CardTitle>{t('offers.steps.eventDetails')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="homenajeado">Homenajeado/a</Label>
+                      <Label htmlFor="homenajeado">{t('offers.eventDetails.honoree')}</Label>
                       <Input
                         id="homenajeado"
                         type="text"
                         name="homenajeado"
                         value={formData.homenajeado}
                         onChange={handleChange}
-                        placeholder="Ej: María López, Juan Pérez"
+                        placeholder={t('offers.eventDetails.honoreePlaceholder')}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Nombre de la persona homenajeada en el evento (opcional)
+                        {t('offers.eventDetails.honoreeHelp')}
                       </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="tipo_evento">Tipo de Evento</Label>
+                      <Label htmlFor="tipo_evento">{t('offers.eventDetails.eventType')}</Label>
                       <Select 
                         value={tipoEvento} 
                         onValueChange={(value) => {
@@ -2666,7 +2690,7 @@ function CrearOferta() {
                         disabled={!formData.cliente_id}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar tipo de evento..." />
+                          <SelectValue placeholder={t('forms.select')} />
                         </SelectTrigger>
                         <SelectContent>
                           {tiposEvento.map((tipo) => (
@@ -2680,14 +2704,14 @@ function CrearOferta() {
                             type="text"
                             value={tipoEventoOtro}
                             onChange={(e) => setTipoEventoOtro(e.target.value)}
-                            placeholder="Especifique el tipo de evento..."
+                            placeholder={t('forms.select')}
                             // NO actualizar el cliente automáticamente
                             // Cada oferta tiene su propio tipo_evento independiente
                           />
                         </div>
                       )}
                       <p className="text-xs text-muted-foreground">
-                        Seleccione el tipo de evento para esta oferta
+                        {t('offers.eventDetails.eventTypeHelp')}
                       </p>
                     </div>
 
@@ -2695,7 +2719,7 @@ function CrearOferta() {
                       {/* Lugar del Evento */}
                       <div className="md:col-span-2 space-y-2">
                         <Label htmlFor="salon_id">
-                          Lugar del Evento <span className="text-destructive">*</span>
+                          {t('offers.eventDetails.eventLocation')} <span className="text-destructive">*</span>
                         </Label>
                         <select
                           id="salon_id"
@@ -2705,17 +2729,17 @@ function CrearOferta() {
                           required
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <option value="">Seleccione un lugar</option>
+                          <option value="">{t('offers.eventDetails.selectLocation')}</option>
                           {salones?.map((salon) => (
                             <option key={salon.id} value={salon.id}>
-                              {salon.nombre} - Capacidad: {salon.capacidad_maxima} invitados
+                              {salon.nombre} - {t('offers.eventDetails.maxCapacity')}: {salon.capacidad_maxima} {t('offers.eventDetails.guests')}
                             </option>
                           ))}
-                          <option value="otro">Otro (Sede Externa - Sin cargo de salón)</option>
+                          <option value="otro">{t('offers.eventDetails.externalVenue')}</option>
                         </select>
                         {salonSeleccionado && formData.salon_id !== 'otro' && (
                           <p className="text-xs text-muted-foreground">
-                            Capacidad máxima: {salonSeleccionado.capacidad_maxima} invitados
+                            {t('offers.eventDetails.maxCapacity')}: {salonSeleccionado.capacidad_maxima} {t('offers.eventDetails.guests')}
                           </p>
                         )}
                         
@@ -2771,7 +2795,7 @@ function CrearOferta() {
                                       className="h-8 text-xs"
                                       onClick={irAlMesActual}
                                     >
-                                      Hoy
+                                      {t('calendar.today')}
                                     </Button>
                                     <div className="flex items-center border border-gray-300 dark:border-gray-700 rounded">
                                       <Button
@@ -2855,7 +2879,7 @@ function CrearOferta() {
                       {/* Cantidad de Invitados */}
                       <div className="space-y-2">
                         <Label htmlFor="cantidad_invitados">
-                          Cantidad de Invitados <span className="text-destructive">*</span>
+                          {t('offers.eventDetails.numberOfGuests')} <span className="text-destructive">*</span>
                         </Label>
                         <Input
                           id="cantidad_invitados"
@@ -2866,7 +2890,7 @@ function CrearOferta() {
                           min="1"
                           step="1"
                           required
-                          placeholder="Ej: 50"
+                          placeholder={t('offers.eventDetails.numberOfGuestsPlaceholder')}
                           className={excedeCapacidad ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20' : ''}
                         />
                         {excedeCapacidad && salonSeleccionado ? (
@@ -2884,7 +2908,7 @@ function CrearOferta() {
                       {/* Hora Inicio */}
                       <div className="md:col-span-2">
                       <Label htmlFor="hora_inicio">
-                        Hora Inicio <span className="text-destructive">*</span>
+                        {t('offers.eventDetails.startTime')} <span className="text-destructive">*</span>
                       </Label>
                       <div className="flex gap-2">
                         <select
@@ -2921,7 +2945,7 @@ function CrearOferta() {
                       errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    <option value="">Hora</option>
+                    <option value="">{t('offers.eventDetails.hour')}</option>
                     {Array.from({ length: 15 }, (_, i) => {
                       const hora = 10 + i; // Desde las 10:00 AM hasta las 12:00 AM (medianoche)
                       const horaOcupada = horasOcupadas.includes(hora);
@@ -2973,7 +2997,7 @@ function CrearOferta() {
                 </div>
                 {(!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? (
                 <p className="text-xs text-gray-500 mt-1">
-                    ⚠️ Primero selecciona el lugar y la fecha del evento
+                    ⚠️ {t('offers.eventDetails.selectDateFirst')}
                   </p>
                 ) : cargandoHorasOcupadas && formData.salon_id !== 'otro' ? (
                   <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
@@ -3018,7 +3042,7 @@ function CrearOferta() {
                       errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento || !formData.hora_inicio) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    <option value="">Hora</option>
+                    <option value="">{t('offers.eventDetails.hour')}</option>
                     {(() => {
                       // Obtener hora de inicio para comparar
                       let horaInicioNum = null;
@@ -3186,7 +3210,7 @@ function CrearOferta() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Máximo permitido: 2:00 AM (restricción legal)
+                  {t('offers.eventDetails.maxTimeAllowed')}
                 </p>
                 {/* Mostrar duración del evento */}
                 {formData.hora_inicio && formData.hora_fin && !errorHorario && (() => {
@@ -3205,7 +3229,7 @@ function CrearOferta() {
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Duración del evento: <span className="font-bold">{formatearHora(formData.hora_inicio)} / {formatearHora(formData.hora_fin)} = {duracionTexto}</span>
+                        {t('offers.eventDetails.eventDuration')}: <span className="font-bold">{formatearHora(formData.hora_inicio)} / {formatearHora(formData.hora_fin)} = {duracionTexto}</span>
                       </p>
                     );
                   }
@@ -3262,7 +3286,7 @@ function CrearOferta() {
                       <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                         <p className="text-sm text-green-600 flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>✓ El salón está disponible en este horario</span>
+                          <span>{t('offers.eventDetails.salonAvailable')}</span>
                         </p>
                       </div>
                     )}
@@ -3279,13 +3303,13 @@ function CrearOferta() {
           <>
           <Card>
             <CardHeader>
-              <CardTitle>Paquete y Temporada</CardTitle>
+              <CardTitle>{t('offers.packageSeason.title')}</CardTitle>
             </CardHeader>
             <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Paquete *
+                  {t('offers.packageSeason.packageRequired')}
                 </label>
                 <select
                   name="paquete_id"
@@ -3296,7 +3320,7 @@ function CrearOferta() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">
-                    {!formData.salon_id ? 'Primero seleccione un salón' : 'Seleccionar paquete...'}
+                    {!formData.salon_id ? t('offers.packageSeason.selectPackage') : t('offers.packageSeason.selectPackage')}
                   </option>
                   {paquetes?.filter(p => {
                     // Si es sede externa (otro), solo mostrar paquete personalizado
@@ -3360,7 +3384,7 @@ function CrearOferta() {
                   if (estaFueraDelRango) {
                     return (
                       <p className="text-xs text-blue-600 mt-1">
-                        ℹ️ El paquete "Especial" solo está disponible entre las <strong>10:00 AM y las 5:00 PM</strong>
+                        ℹ️ {t('offers.packageSeason.specialPackageNote')}
                       </p>
                     );
                   }
@@ -3432,14 +3456,14 @@ function CrearOferta() {
                         <span className="text-green-600 font-medium">✓</span>
                         <div className="flex-1">
                           <p className="font-medium text-gray-900">
-                            Temporada {temporadas.find(t => t.id === parseInt(formData.temporada_id))?.nombre || 'N/A'}
+                            {t('offers.packageSeason.season')} {temporadas.find(t => t.id === parseInt(formData.temporada_id))?.nombre || 'N/A'}
                           </p>
                           <p className="text-xs text-gray-600">
-                            Ajuste: +${formData.salon_id === 'otro' ? 0 : (temporadas.find(t => t.id === parseInt(formData.temporada_id))?.ajuste_precio || 0)}
+                            {t('offers.packageSeason.adjustment')}: +${formData.salon_id === 'otro' ? 0 : (temporadas.find(t => t.id === parseInt(formData.temporada_id))?.ajuste_precio || 0)}
                             {formData.salon_id === 'otro' && ' (Sede externa: sin ajuste de temporada)'}
                           </p>
                           <p className="text-xs text-green-600 mt-1">
-                            💡 Auto-detectada según la fecha del evento
+                            💡 {t('offers.packageSeason.autoDetected')}
                           </p>
                         </div>
                         <button
@@ -3958,19 +3982,32 @@ function CrearOferta() {
                   return false;
                 }
                 
+                // Filtrar servicios de "Persona Adicional" (el sistema lo calcula automáticamente)
+                if (s.nombre?.includes('Persona Adicional Temporada Alta') || s.nombre?.includes('Persona Adicional Temporada Baja/Media')) {
+                  return false;
+                }
+                
                 // EXCEPCIÓN: "Hora Extra" siempre debe estar disponible (se puede contratar múltiples veces)
                 if (s.nombre === 'Hora Extra') return true;
                 
+                // EXCEPCIÓN: Personal (Bartender y Personal de Atención) siempre debe estar disponible como extra
+                // Incluso si ya está en el paquete, se puede agregar más personal
+                if (s.nombre === 'Bartender' || s.nombre === 'Personal de Atención' || s.nombre === 'Personal de Servicio') {
+                  return true;
+                }
+                
                 // REGLA ESPECIAL: Si el paquete tiene Photobooth 360 o Print seleccionado, NO mostrar el seleccionado en servicios adicionales
                 // Solo mostrar la alternativa (la que NO está seleccionada)
+                // IMPORTANTE: Cuando están como extras (no en el paquete), NO se bloquean entre sí
                 if (s.nombre === 'Photobooth 360' || s.nombre === 'Photobooth Print') {
+                  // Solo bloquear si el servicio está en el paquete
                   if (servicioPhotoboothSeleccionado === 'Photobooth 360' && s.nombre === 'Photobooth 360') {
                     return false; // NO mostrar Photobooth 360 si ya está seleccionado en el paquete
                   }
                   if (servicioPhotoboothSeleccionado === 'Photobooth Print' && s.nombre === 'Photobooth Print') {
                     return false; // NO mostrar Photobooth Print si ya está seleccionado en el paquete
                   }
-                  // Si no está seleccionado, sí mostrarlo (es la alternativa)
+                  // Si no está seleccionado en el paquete, sí mostrarlo (puede seleccionarse como extra)
                   return true;
                 }
                 
@@ -4016,7 +4053,7 @@ function CrearOferta() {
                 });
                 
                 if (tienePremiumEnPaquete) {
-                  if (s.nombre === 'Licor Básico' || s.nombre === 'Decoración Básica') {
+                  if (s.nombre === 'Licor House' || s.nombre === 'Decoracion House') {
                     return false;
                   }
                 }
@@ -4030,7 +4067,7 @@ function CrearOferta() {
                   });
                   const tieneLicorBasicoEnAdicionales = serviciosSeleccionados.some(sel => {
                     const sData = servicios?.find(srv => srv.id === parseInt(sel.servicio_id));
-                    return sData?.nombre === 'Licor Básico';
+                    return sData?.nombre === 'Licor House';
                   });
                   const tieneDecoracionPlusEnAdicionales = serviciosSeleccionados.some(sel => {
                     const sData = servicios?.find(srv => srv.id === parseInt(sel.servicio_id));
@@ -4038,14 +4075,14 @@ function CrearOferta() {
                   });
                   const tieneDecoracionBasicaEnAdicionales = serviciosSeleccionados.some(sel => {
                     const sData = servicios?.find(srv => srv.id === parseInt(sel.servicio_id));
-                    return sData?.nombre === 'Decoración Básica';
+                    return sData?.nombre === 'Decoracion House';
                   });
                   
                   // Verificar en el paquete
                   const tieneLicorPremiumEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor Premium');
-                  const tieneLicorBasicoEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor Básico');
+                  const tieneLicorBasicoEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor House');
                   const tieneDecoracionPlusEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoración Plus');
-                  const tieneDecoracionBasicaEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoración Básica');
+                  const tieneDecoracionBasicaEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoracion House');
                   
                   // Combinar verificaciones (paquete O adicionales)
                   const tieneLicorPremium = tieneLicorPremiumEnPaquete || tieneLicorPremiumEnAdicionales;
@@ -4056,13 +4093,13 @@ function CrearOferta() {
                   if (s.nombre === 'Licor Premium' && tieneLicorBasico) {
                     return false; // NO mostrar Premium si tiene Básico (excluyentes)
                   }
-                  if (s.nombre === 'Licor Básico' && tieneLicorPremium) {
+                  if (s.nombre === 'Licor House' && tieneLicorPremium) {
                     return false; // NO mostrar Básico si tiene Premium (excluyentes)
                   }
                   if (s.nombre === 'Decoración Plus' && tieneDecoracionBasica) {
                     return false; // NO mostrar Plus si tiene Básica (excluyentes)
                   }
-                  if (s.nombre === 'Decoración Básica' && tieneDecoracionPlus) {
+                  if (s.nombre === 'Decoracion House' && tieneDecoracionPlus) {
                     return false; // NO mostrar Básica si tiene Plus (excluyentes)
                   }
                 }
@@ -4092,8 +4129,8 @@ function CrearOferta() {
                 
                 // REGLA: Permitir mostrar upgrades según reglas del paquete
                 const esUpgradeDisponible = 
-                  (s.nombre === 'Licor Premium' && reglasPaquete.permiteUpgradeLicor && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Licor Básico')) ||
-                  (s.nombre === 'Decoración Plus' && reglasPaquete.permiteUpgradeDecoracion && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Decoración Básica')) ||
+                  (s.nombre === 'Licor Premium' && reglasPaquete.permiteUpgradeLicor && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Licor House')) ||
+                  (s.nombre === 'Decoración Plus' && reglasPaquete.permiteUpgradeDecoracion && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Decoracion House')) ||
                   (s.nombre === 'Foto y Video 5 Horas' && reglasPaquete.permiteFotoVideo && !reglasPaquete.excluyeFoto5hSiTiene3h && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Foto y Video 3 Horas'));
                 
                 if (!estaEnPaquete) return true; // Si no está en el paquete, está disponible
@@ -4147,7 +4184,10 @@ function CrearOferta() {
                             const esSidraOChampana = servicio.nombre === 'Sidra' || servicio.nombre === 'Champaña';
                             const esPhotobooth = servicio.nombre === 'Photobooth 360' || servicio.nombre === 'Photobooth Print';
                             
+                            // REGLA ESPECIAL: Photobooth 360 y Print NO se bloquean entre sí cuando están como extras
+                            // Solo se bloquean si uno está en el paquete
                             const tieneExcluyenteEnAdicionales = !(esPaqueteEspecialOPersonalizado && esSidraOChampana) && 
+                              !(esPhotobooth) && // Photobooth NO se bloquea entre sí cuando están como extras
                               serviciosExcluyentes[servicio.nombre] && 
                               serviciosSeleccionados.some(s => {
                                 const sData = servicios?.find(srv => srv.id === parseInt(s.servicio_id));
@@ -4159,6 +4199,7 @@ function CrearOferta() {
                             const reglasPaquete = obtenerReglasExclusionPorPaquete(paqueteSeleccionado?.nombre);
                             
                             // REGLA ESPECIAL: Para Photobooth, si uno está en el paquete, el otro DEBE estar disponible como adicional
+                            // IMPORTANTE: Cuando están como extras (no en el paquete), NO se bloquean entre sí
                             let tieneExcluyenteEnPaquete = false;
                             if (esPhotobooth && servicioPhotoboothSeleccionado) {
                               // Si el servicio actual es la alternativa (la que NO está seleccionada en el paquete), NO es excluyente
@@ -4170,6 +4211,10 @@ function CrearOferta() {
                                 // Si es el mismo servicio que está en el paquete, sí es excluyente
                                 tieneExcluyenteEnPaquete = true;
                               }
+                            } else if (esPhotobooth && !servicioPhotoboothSeleccionado) {
+                              // Si NO hay Photobooth en el paquete, NO son excluyentes entre sí cuando están como extras
+                              // Permitir seleccionar ambos Photobooth como extras
+                              tieneExcluyenteEnPaquete = false;
                             } else if (esSidraOChampana && servicioSidraChampanaSeleccionado) {
                               // REGLA ESPECIAL: Para Sidra/Champaña, si una está en el paquete, la otra DEBE estar disponible como adicional
                               // Si el servicio actual es la alternativa (la que NO está seleccionada en el paquete), NO es excluyente
@@ -4192,8 +4237,8 @@ function CrearOferta() {
                             
                             // NUEVA LÓGICA: Permitir upgrade según reglas del paquete
                             const esUpgradePermitido = 
-                              (servicio.nombre === 'Licor Premium' && reglasPaquete.permiteUpgradeLicor && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor Básico')) ||
-                              (servicio.nombre === 'Decoración Plus' && reglasPaquete.permiteUpgradeDecoracion && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoración Básica')) ||
+                              (servicio.nombre === 'Licor Premium' && reglasPaquete.permiteUpgradeLicor && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor House')) ||
+                              (servicio.nombre === 'Decoración Plus' && reglasPaquete.permiteUpgradeDecoracion && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoracion House')) ||
                               (servicio.nombre === 'Foto y Video 5 Horas' && reglasPaquete.permiteFotoVideo && !reglasPaquete.excluyeFoto5hSiTiene3h && serviciosPaquete.some(ps => ps.servicios?.nombre === 'Foto y Video 3 Horas'));
                             
                             // Verificar exclusiones específicas del paquete Personalizado
@@ -4206,7 +4251,7 @@ function CrearOferta() {
                               });
                               const tieneLicorBasicoEnAdicionales = serviciosSeleccionados.some(sel => {
                                 const sData = servicios?.find(srv => srv.id === parseInt(sel.servicio_id));
-                                return sData?.nombre === 'Licor Básico';
+                                return sData?.nombre === 'Licor House';
                               });
                               const tieneDecoracionPlusEnAdicionales = serviciosSeleccionados.some(sel => {
                                 const sData = servicios?.find(srv => srv.id === parseInt(sel.servicio_id));
@@ -4214,14 +4259,14 @@ function CrearOferta() {
                               });
                               const tieneDecoracionBasicaEnAdicionales = serviciosSeleccionados.some(sel => {
                                 const sData = servicios?.find(srv => srv.id === parseInt(sel.servicio_id));
-                                return sData?.nombre === 'Decoración Básica';
+                                return sData?.nombre === 'Decoracion House';
                               });
                               
                               // Verificar en el paquete
                               const tieneLicorPremiumEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor Premium');
-                              const tieneLicorBasicoEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor Básico');
+                              const tieneLicorBasicoEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Licor House');
                               const tieneDecoracionPlusEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoración Plus');
-                              const tieneDecoracionBasicaEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoración Básica');
+                              const tieneDecoracionBasicaEnPaquete = serviciosPaquete.some(ps => ps.servicios?.nombre === 'Decoracion House');
                               
                               // Combinar verificaciones (paquete O adicionales)
                               const tieneLicorPremium = tieneLicorPremiumEnPaquete || tieneLicorPremiumEnAdicionales;
@@ -4232,13 +4277,13 @@ function CrearOferta() {
                               if (servicio.nombre === 'Licor Premium' && tieneLicorBasico) {
                                 esExcluyenteSegunPaquete = true;
                               }
-                              if (servicio.nombre === 'Licor Básico' && tieneLicorPremium) {
+                              if (servicio.nombre === 'Licor House' && tieneLicorPremium) {
                                 esExcluyenteSegunPaquete = true;
                               }
                               if (servicio.nombre === 'Decoración Plus' && tieneDecoracionBasica) {
                                 esExcluyenteSegunPaquete = true;
                               }
-                              if (servicio.nombre === 'Decoración Básica' && tieneDecoracionPlus) {
+                              if (servicio.nombre === 'Decoracion House' && tieneDecoracionPlus) {
                                 esExcluyenteSegunPaquete = true;
                               }
                             }
@@ -4268,7 +4313,7 @@ function CrearOferta() {
                                 <div className="flex flex-col h-full">
                                   {necesitaHoraExtra && (
                                     <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg z-10">
-                                      ¡REQUERIDO!
+                                      {t('offers.additionalServices.required')}
                                     </div>
                                   )}
                                   <div className="flex-1 mb-3">
@@ -4285,12 +4330,13 @@ function CrearOferta() {
                                         // Si es paquete personalizado y el servicio es específicamente "Comida", mostrar $12 por persona
                                         const esPaquetePersonalizado = paqueteSeleccionado?.nombre?.toLowerCase().includes('personalizado');
                                         const esComida = servicio.nombre?.toLowerCase() === 'comida' || 
+                                                         servicio.nombre?.toLowerCase().includes('comida / a menu') ||
                                                          servicio.nombre?.toLowerCase().trim() === 'comida';
                                         
                                         if (esPaquetePersonalizado && esComida) {
                                           const cantidadInvitados = parseInt(formData.cantidad_invitados) || 0;
                                           const precioPorPersona = 12.00;
-                                          return `$${precioPorPersona.toLocaleString()} por persona (${cantidadInvitados} × $${precioPorPersona.toLocaleString()} = $${(precioPorPersona * cantidadInvitados).toLocaleString()})`;
+                                          return `$${precioPorPersona.toLocaleString()} ${t('offers.additionalServices.perPerson')} (${cantidadInvitados} × $${precioPorPersona.toLocaleString()} = $${(precioPorPersona * cantidadInvitados).toLocaleString()})`;
                                         } else {
                                           // Precio normal
                                           return `$${parseFloat(servicio.precio_base || 0).toLocaleString()}`;
@@ -4299,17 +4345,17 @@ function CrearOferta() {
                                     </p>
                                     {necesitaHoraExtra && (
                                       <p className="text-xs text-red-700 mt-2 font-bold bg-red-100 px-2 py-1 rounded">
-                                        👉 Agregar {necesarias - cantidad} {necesarias - cantidad === 1 ? 'hora' : 'horas'}
+                                        👉 {t('offers.additionalServices.addHours')} {necesarias - cantidad} {necesarias - cantidad === 1 ? t('offers.additionalServices.hour') : t('offers.additionalServices.hours')}
                                       </p>
                                     )}
                                     {mostrarYaIncluido && !necesitaHoraExtra && (
                                       <p className="text-xs text-red-600 mt-1 font-medium">
-                                        ⚠️ Ya incluido en paquete
+                                        ⚠️ {t('offers.additionalServices.alreadyIncluded')}
                                       </p>
                                     )}
                                     {esUpgradePermitido && !necesitaHoraExtra && (
                                       <p className="text-xs text-green-600 mt-1 font-medium">
-                                        ⬆️ Upgrade disponible desde el paquete
+                                        ⬆️ {t('offers.additionalServices.upgradeAvailable')}
                                       </p>
                                     )}
                                   </div>
@@ -4351,7 +4397,7 @@ function CrearOferta() {
                                         }`}
                                       >
                                         <Plus className="w-4 h-4" />
-                                        {esUpgradePermitido ? 'Agregar Upgrade' : mostrarYaIncluido ? 'En paquete' : tieneExcluyenteSeleccionado ? 'No disponible' : 'Agregar'}
+                                        {esUpgradePermitido ? t('offers.additionalServices.add') + ' Upgrade' : mostrarYaIncluido ? t('offers.additionalServices.alreadyIncluded') : tieneExcluyenteSeleccionado ? t('offers.additionalServices.add') : t('offers.additionalServices.add')}
                                       </button>
                                     )}
                                   </div>
@@ -4452,11 +4498,11 @@ function CrearOferta() {
           {pasoActual === 5 && (
           <Card>
             <CardHeader>
-              <CardTitle>Descuento</CardTitle>
+              <CardTitle>{t('offers.discount.title')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="descuento_porcentaje">Descuento ($)</Label>
+                <Label htmlFor="descuento_porcentaje">{t('offers.discount.discountAmount')}</Label>
                 <Input
                   id="descuento_porcentaje"
                   type="number"
@@ -4490,13 +4536,13 @@ function CrearOferta() {
                 />
                 {precioCalculado?.desglose?.subtotalBase && (
                   <p className="text-xs text-muted-foreground">
-                    Descuento máximo permitido: ${precioCalculado.desglose.subtotalBase.toLocaleString()}
+                    {t('offers.discount.maxDiscountAllowed')}: ${precioCalculado.desglose.subtotalBase.toLocaleString()}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tarifa_servicio_custom">Service Fee (%)</Label>
+                <Label htmlFor="tarifa_servicio_custom">{t('offers.discount.serviceFee')}</Label>
                 <Input
                   id="tarifa_servicio_custom"
                   type="number"
@@ -4517,7 +4563,7 @@ function CrearOferta() {
                   placeholder={precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || "18.00"}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Porcentaje del Service Fee (15% - 18%). Por defecto: {precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || 18}%
+                  {t('offers.discount.serviceFeeHelp')}: {precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || 18}%
                 </p>
               </div>
             </CardContent>
@@ -4543,7 +4589,7 @@ function CrearOferta() {
                 onClick={retrocederPaso}
               >
                 <ChevronLeft className="h-4 w-4 mr-2" />
-                Anterior
+                {t('offers.previous')}
               </Button>
             )}
             <div className="flex-1" />
@@ -4552,7 +4598,7 @@ function CrearOferta() {
                 type="button"
                 onClick={avanzarPaso}
               >
-                Siguiente
+                {t('offers.next')}
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
@@ -4564,19 +4610,19 @@ function CrearOferta() {
                 {mutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creando oferta...
+                    {t('forms.loading')}
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Crear Oferta
+                    {t('offers.newOffer')}
                   </>
                 )}
               </Button>
             )}
             <Button variant="outline" asChild>
               <Link to="/ofertas">
-                Cancelar
+                {t('forms.cancel')}
               </Link>
             </Button>
           </div>
@@ -4591,7 +4637,7 @@ function CrearOferta() {
                 <div className="flex flex-col h-[calc(100vh-200px)]">
                   {/* Leyenda y Filtros */}
                   <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Filtros por Salón</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('offers.eventDetails.filtersBySalon')}</h3>
                     
                     {/* Filtros */}
                     <div className="space-y-2 mb-4">
@@ -4781,7 +4827,7 @@ function CrearOferta() {
                   {precioCalculado.desglose.invitados.adicionales > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {precioCalculado.desglose.invitados.adicionales} Invitados Adicionales 
+                        {precioCalculado.desglose.invitados.adicionales} {t('offers.eventDetails.additionalGuests')} 
                         (${precioCalculado.desglose.invitados.precioUnitario} c/u):
                       </span>
                       <span className="font-medium text-foreground">${parseFloat(precioCalculado.desglose.invitados.subtotal).toLocaleString()}</span>
@@ -4841,7 +4887,7 @@ function CrearOferta() {
                 <Separator className="my-4" />
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold">Total Final:</span>
+                    <span className="text-lg font-semibold">{t('offers.total')}:</span>
                     <span className="text-2xl font-bold text-primary">
                       ${parseFloat(precioCalculado.desglose.totalFinal || 0).toLocaleString()}
                     </span>
