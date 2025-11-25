@@ -3,7 +3,6 @@ import { useNavigate, Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -15,7 +14,6 @@ function EditarCliente() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     nombre_completo: '',
     email: '',
@@ -58,14 +56,17 @@ function EditarCliente() {
       const response = await api.put(`/clientes/${id}`, data);
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['clientes']);
-      queryClient.invalidateQueries(['cliente', id]);
-      toast.success(t('clients.updateSuccess'));
+    onSuccess: async () => {
+      // Invalidar y forzar refetch inmediato
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['clientes'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['cliente', id], refetchType: 'active' })
+      ]);
+      toast.success('Cliente actualizado exitosamente');
       navigate('/clientes');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || t('messages.operationError'));
+      toast.error(error.response?.data?.message || 'Error al completar la operación');
     },
   });
 
@@ -115,9 +116,9 @@ function EditarCliente() {
           </Link>
         </Button>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">{t('clients.editClient')}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Editar Cliente</h2>
           <p className="text-muted-foreground">
-            {t('clients.editClient')}
+            Editar Cliente
           </p>
         </div>
       </div>
@@ -129,12 +130,12 @@ function EditarCliente() {
           {/* Información Personal */}
           <div>
             <CardHeader className="px-0 pt-0">
-              <CardTitle>{t('clients.clientName')}</CardTitle>
+              <CardTitle>Nombre del Cliente</CardTitle>
             </CardHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <Label htmlFor="nombre_completo">
-                  {t('clients.clientName')} *
+                  Nombre del Cliente *
                 </Label>
                 <Input
                   type="text"
@@ -149,7 +150,7 @@ function EditarCliente() {
 
               <div>
                 <Label htmlFor="email">
-                  {t('clients.email')} *
+                  Email *
                 </Label>
                 <Input
                   type="email"
@@ -164,7 +165,7 @@ function EditarCliente() {
 
               <div>
                 <Label htmlFor="telefono">
-                  {t('clients.phone')} *
+                  Teléfono *
                 </Label>
                 <Input
                   type="tel"
@@ -182,12 +183,12 @@ function EditarCliente() {
           {/* Información del Evento */}
           <div className="pt-6 border-t">
             <CardHeader className="px-0 pt-0">
-              <CardTitle>{t('clients.eventType')}</CardTitle>
+              <CardTitle>Tipo de Evento</CardTitle>
             </CardHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="como_nos_conocio">
-                  {t('clients.howDidYouKnow')}
+                  ¿Cómo nos conoció?
                 </Label>
                 <Select 
                   value={formData.como_nos_conocio} 
@@ -199,7 +200,7 @@ function EditarCliente() {
                   }}
                 >
                   <SelectTrigger className="mt-2">
-                    <SelectValue placeholder={t('forms.select')} />
+                    <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
                   <SelectContent>
                     {fuentesConocimiento.map((fuente) => (
@@ -230,18 +231,18 @@ function EditarCliente() {
               {mutation.isPending ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  {t('forms.loading')}
+                  Cargando...
                 </>
               ) : (
                 <>
                   <Save className="w-5 h-5 mr-2" />
-                  {t('forms.saveChanges')}
+                  Guardar Cambios
                 </>
               )}
             </Button>
             <Button variant="outline" asChild>
               <Link to="/clientes">
-                {t('forms.cancel')}
+                Cancelar
               </Link>
             </Button>
           </div>

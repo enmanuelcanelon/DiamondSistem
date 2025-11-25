@@ -4,7 +4,6 @@ import { Users, FileText, FileCheck, DollarSign, TrendingUp, TrendingDown, Calen
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,7 +19,6 @@ import { es } from 'date-fns/locale';
 
 function Dashboard() {
   const { user } = useAuthStore();
-  const { t } = useLanguage();
   
   // Estado para el mes y año seleccionado
   const fechaActual = new Date();
@@ -287,30 +285,30 @@ function Dashboard() {
 
   const statCards = [
     {
-      name: t('dashboard.stats.clients'),
+      name: 'Clientes',
       value: stats?.estadisticas?.clientes?.total || 0,
       cambio: stats?.estadisticas?.clientes?.cambio || 0,
-      descripcion: t('dashboard.stats.clients'),
+      descripcion: 'Clientes',
     },
     {
-      name: t('offers.pending'),
+      name: 'Ofertas Pendientes',
       value: stats?.estadisticas?.ofertas?.pendientes || 0,
       cambio: stats?.estadisticas?.ofertas?.cambioPendientes || 0,
-      descripcion: t('offers.pending'),
+      descripcion: 'Ofertas Pendientes',
     },
     {
-      name: t('contracts.active'),
+      name: 'Contratos Activos',
       value: stats?.estadisticas?.contratos?.activos || 0,
       cambio: stats?.estadisticas?.contratos?.cambio || 0,
-      descripcion: t('contracts.active'),
+      descripcion: 'Contratos Activos',
     },
     {
-      name: t('dashboard.stats.sales'),
+      name: 'Ventas',
       value: mostrarDatos 
         ? `$${parseFloat(stats?.estadisticas?.finanzas?.total_ventas || 0).toLocaleString()}`
         : '••••••',
       cambio: stats?.estadisticas?.finanzas?.cambio || 0,
-      descripcion: t('dashboard.stats.sales'),
+      descripcion: 'Ventas',
     },
   ];
 
@@ -319,9 +317,9 @@ function Dashboard() {
       {/* Header mejorado */}
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground">
-            {t('calendar.summary')} {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
+            Resumen de {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -334,12 +332,12 @@ function Dashboard() {
             {mostrarDatos ? (
               <>
                 <EyeOff className="w-4 h-4" />
-                {t('dashboard.hideData')}
+                Ocultar Datos
               </>
             ) : (
               <>
                 <Eye className="w-4 h-4" />
-                {t('dashboard.showData')}
+                Mostrar Datos
               </>
             )}
           </Button>
@@ -505,7 +503,7 @@ function Dashboard() {
           <CardHeader>
             <div>
               <CardTitle>Estado de Ofertas</CardTitle>
-              <CardDescription>{t('calendar.summary')} {t('offers.title')}</CardDescription>
+              <CardDescription>Resumen de Ofertas</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -617,7 +615,7 @@ function Dashboard() {
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Comisiones</CardTitle>
-            <CardDescription>{t('calendar.summary')} {t('commissions.title')}</CardDescription>
+            <CardDescription>Resumen de Comisiones</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -729,7 +727,7 @@ function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Contratos</CardTitle>
-              <CardDescription>{t('calendar.summary')} {t('contracts.title')}</CardDescription>
+              <CardDescription>Resumen de Contratos</CardDescription>
             </div>
             <Link
               to="/contratos"

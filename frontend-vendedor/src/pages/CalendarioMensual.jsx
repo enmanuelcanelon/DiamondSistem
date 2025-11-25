@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import api from '../config/api';
 import useAuthStore from '../store/useAuthStore';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -34,7 +33,6 @@ function CalendarioMensual() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { t, language } = useLanguage();
 
   const fechaActual = new Date();
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
@@ -476,7 +474,7 @@ function CalendarioMensual() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Calendar className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <h1 className="text-2xl font-normal text-gray-900 dark:text-gray-100">{t('calendar.title')}</h1>
+              <h1 className="text-2xl font-normal text-gray-900 dark:text-gray-100">Calendario</h1>
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
               {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}

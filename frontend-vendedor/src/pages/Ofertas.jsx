@@ -4,7 +4,6 @@ import { Plus, Search, Calendar, DollarSign, Clock, FileText, Download, Loader2,
 import { Link } from 'react-router-dom';
 import api from '../config/api';
 import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
-import { useLanguage } from '../contexts/LanguageContext';
 import ModalPlanPago from '../components/ModalPlanPago';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -17,7 +16,6 @@ import toast from 'react-hot-toast';
 
 function Ofertas() {
   const queryClient = useQueryClient();
-  const { language, t } = useLanguage();
   const fechaActual = new Date();
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('');
@@ -27,12 +25,9 @@ function Ofertas() {
   const [ofertaSeleccionada, setOfertaSeleccionada] = useState(null);
 
   // Nombres de los meses
-  const nombresMeses = language === 'es' ? [
+  const nombresMeses = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ] : [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
   // Calcular fechas basadas en mes y año seleccionado
@@ -163,9 +158,9 @@ function Ofertas() {
       setOfertaSeleccionada(ofertaActualizada);
       setModalPlanPagoOpen(true);
       
-      // Invalidar queries después de abrir el modal
-      setTimeout(() => {
-        queryClient.invalidateQueries(['ofertas']);
+      // Invalidar queries después de abrir el modal y forzar refetch
+      setTimeout(async () => {
+        await queryClient.invalidateQueries({ queryKey: ['ofertas'], refetchType: 'active' });
       }, 100);
     },
   });
@@ -176,8 +171,9 @@ function Ofertas() {
       const response = await api.put(`/ofertas/${ofertaId}/rechazar`);
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ofertas'] });
+    onSuccess: async () => {
+      // Invalidar y forzar refetch inmediato
+      await queryClient.invalidateQueries({ queryKey: ['ofertas'], refetchType: 'active' });
     },
   });
 
@@ -196,16 +192,18 @@ function Ofertas() {
       });
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['ofertas']);
-      queryClient.invalidateQueries(['contratos']);
-      // Invalidar queries del calendario para que se actualice automáticamente
-      queryClient.invalidateQueries({ queryKey: ['calendario-todos'] });
-      queryClient.invalidateQueries({ queryKey: ['calendario-mensual'] });
-      queryClient.invalidateQueries({ queryKey: ['calendario-citas'] });
+    onSuccess: async () => {
+      // Invalidar y forzar refetch inmediato de todas las queries relacionadas
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['ofertas'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['contratos'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['calendario-todos'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['calendario-mensual'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['calendario-citas'], refetchType: 'active' })
+      ]);
       setModalPlanPagoOpen(false);
       setOfertaSeleccionada(null);
-      toast.success('¡Contrato creado exitosamente!');
+      toast.success('Contrato creado exitosamente');
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Error al crear contrato');
@@ -218,7 +216,7 @@ function Ofertas() {
 
   const handleRechazar = (ofertaId) => {
     rechazarMutation.mutate(ofertaId);
-    toast.success('Oferta rechazada');
+    toast.success('Oferta rechazada exitosamente');
   };
 
   const handleCrearContrato = (oferta) => {
@@ -236,7 +234,7 @@ function Ofertas() {
   const handleDescargarPDF = async (ofertaId, codigoOferta) => {
     try {
       const response = await api.get(`/ofertas/${ofertaId}/pdf-factura`, {
-        params: { lang: language },
+        params: { lang: 'es' },
         responseType: 'blob'
       });
       
@@ -251,7 +249,7 @@ function Ofertas() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      toast.error(t('messages.operationError'));
+      toast.error('Error al completar la operación');
       console.error(error);
     }
   };
@@ -274,7 +272,7 @@ function Ofertas() {
       {/* Header */}
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">{t('offers.title')}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Ofertas</h2>
           <p className="text-muted-foreground">
             Gestiona tus propuestas comerciales
           </p>
@@ -282,7 +280,7 @@ function Ofertas() {
         <Button size="lg" asChild className="whitespace-nowrap">
           <Link to="/ofertas/nueva">
             <Plus className="h-5 w-5 mr-2" />
-            {t('offers.newOffer')}
+            Nueva Oferta
           </Link>
         </Button>
       </div>
@@ -293,7 +291,7 @@ function Ofertas() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('offers.title')}
+              Ofertas
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -309,7 +307,7 @@ function Ofertas() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{totalOfertas}</div>
-            <p className="text-xs text-muted-foreground mt-1">{t('offers.title')}</p>
+            <p className="text-xs text-muted-foreground mt-1">Ofertas</p>
           </CardContent>
         </Card>
 
@@ -317,7 +315,7 @@ function Ofertas() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('offers.pending')}
+              Pendiente
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -333,7 +331,7 @@ function Ofertas() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{ofertasPendientes}</div>
-            <p className="text-xs text-muted-foreground mt-1">{t('offers.pending')}</p>
+            <p className="text-xs text-muted-foreground mt-1">Pendiente</p>
           </CardContent>
         </Card>
 
@@ -341,7 +339,7 @@ function Ofertas() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('offers.accepted')}
+              Aceptada
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -357,7 +355,7 @@ function Ofertas() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{ofertasAceptadas}</div>
-            <p className="text-xs text-muted-foreground mt-1">{t('offers.accepted')}</p>
+            <p className="text-xs text-muted-foreground mt-1">Aceptada</p>
           </CardContent>
         </Card>
 
@@ -365,7 +363,7 @@ function Ofertas() {
         <Card className="bg-card relative">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('offers.rejected')}
+              Rechazada
             </CardTitle>
             <Badge 
               variant="outline" 
@@ -381,7 +379,7 @@ function Ofertas() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">{ofertasRechazadas}</div>
-            <p className="text-xs text-muted-foreground mt-1">{t('offers.rejected')}</p>
+            <p className="text-xs text-muted-foreground mt-1">Rechazada</p>
           </CardContent>
         </Card>
       </div>
@@ -394,7 +392,7 @@ function Ofertas() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input
                 type="text"
-                placeholder={t('offers.search')}
+                placeholder="Buscar oferta..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -402,13 +400,13 @@ function Ofertas() {
             </div>
             <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder={t('offers.allStatuses')} />
+                <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{t('offers.allStatuses')}</SelectItem>
-                <SelectItem value="pendiente">{t('offers.pending')}</SelectItem>
-                <SelectItem value="aceptada">{t('offers.accepted')}</SelectItem>
-                <SelectItem value="rechazada">{t('offers.rejected')}</SelectItem>
+                <SelectItem value="">Todos los estados</SelectItem>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
+                <SelectItem value="aceptada">Aceptada</SelectItem>
+                <SelectItem value="rechazada">Rechazada</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -502,16 +500,16 @@ function Ofertas() {
               <FileText className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              {searchTerm || estadoFiltro ? t('offers.noOffers') : t('offers.noOffers')}
+              {searchTerm || estadoFiltro ? 'No hay ofertas registradas' : 'No hay ofertas registradas'}
             </h3>
             <p className="text-muted-foreground mb-6">
-              {searchTerm || estadoFiltro ? t('offers.search') : t('offers.newOffer')}
+              {searchTerm || estadoFiltro ? 'Buscar oferta...' : 'Nueva Oferta'}
             </p>
             {!searchTerm && !estadoFiltro && (
               <Button asChild>
                 <Link to="/ofertas/nueva">
                   <Plus className="h-4 w-4 mr-2" />
-                  {t('offers.newOffer')}
+                  Nueva Oferta
                 </Link>
               </Button>
             )}
@@ -541,7 +539,7 @@ function Ofertas() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-1">
-                      {t('offers.client')}: <span className="font-medium text-foreground">{oferta.clientes?.nombre_completo}</span>
+                      Cliente: <span className="font-medium text-foreground">{oferta.clientes?.nombre_completo}</span>
                       {oferta.homenajeado && (
                         <span className="ml-2 text-foreground">
                           {oferta.homenajeado}
@@ -602,7 +600,7 @@ function Ofertas() {
                       )}
                       {oferta.paquetes?.nombre && (
                         <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">{t('offers.package')}: {oferta.paquetes.nombre}</span>
+                          <span className="text-muted-foreground">Paquete: {oferta.paquetes.nombre}</span>
                         </div>
                       )}
                     </div>
@@ -626,7 +624,7 @@ function Ofertas() {
                     className="whitespace-nowrap"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    {t('offers.downloadPDF')}
+                    Descargar PDF
                   </Button>
 
                   {oferta.estado === 'pendiente' && (
@@ -637,7 +635,7 @@ function Ofertas() {
                         disabled={aceptarMutation.isPending}
                         className="!border-green-500 !text-green-600 hover:!bg-green-50 dark:!border-green-500 dark:!text-green-400 dark:hover:!bg-green-950/20 whitespace-nowrap"
                       >
-                        {aceptarMutation.isPending ? t('offers.accepting') : t('offers.acceptOffer')}
+                        {aceptarMutation.isPending ? 'Aceptando...' : 'Aceptar Oferta'}
                       </Button>
                       <Button 
                         variant="outline"
@@ -645,7 +643,7 @@ function Ofertas() {
                         disabled={rechazarMutation.isPending}
                         className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20 whitespace-nowrap"
                       >
-                        {rechazarMutation.isPending ? t('offers.rejecting') : t('offers.rejectOffer')}
+                        {rechazarMutation.isPending ? 'Rechazando...' : 'Rechazar'}
                       </Button>
                     </>
                   )}
@@ -686,7 +684,7 @@ function Ofertas() {
           {/* Indicador de fin */}
           {!hasNextPage && ofertas.length > 0 && (
             <div className="text-center py-4 text-muted-foreground text-sm">
-              {t('offers.title')}: {totalOfertas}
+              Ofertas: {totalOfertas}
             </div>
           )}
         </div>

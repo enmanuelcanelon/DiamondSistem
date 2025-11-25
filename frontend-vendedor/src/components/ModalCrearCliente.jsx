@@ -8,7 +8,6 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import toast from 'react-hot-toast';
-
 function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -25,8 +24,8 @@ function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
       const response = await api.post('/clientes', data);
       return response.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['clientes']);
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['clientes'], refetchType: 'active' });
       toast.success('Cliente creado exitosamente');
       // Cerrar modal y notificar al padre
       onClienteCreado(data.cliente);
@@ -60,14 +59,14 @@ function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
 
   const tiposEvento = [
     'Boda',
-    'Quinceaños',
+    'Quinceañera',
     'Cumpleaños',
     'Aniversario',
     'Corporativo',
     'Graduación',
     'Baby Shower',
-    'Kids Party',
-    'Dulces 16',
+    'Fiesta Infantil',
+    'Sweet 16',
     'Otro',
   ];
 
@@ -92,7 +91,7 @@ function ModalCrearCliente({ isOpen, onClose, onClienteCreado }) {
             </div>
             <div>
               <h2 className="text-xl font-semibold">Nuevo Cliente</h2>
-              <p className="text-sm text-muted-foreground">Completa la información del cliente</p>
+              <p className="text-sm text-muted-foreground">Información Personal</p>
             </div>
           </div>
           <button

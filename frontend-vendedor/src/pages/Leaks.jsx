@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
 import api from '../config/api';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -25,7 +24,6 @@ import { Link } from 'react-router-dom';
 
 function Leaks() {
   const queryClient = useQueryClient();
-  const { t } = useLanguage();
   // Query para estadísticas de leaks
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
     queryKey: ['leaks-stats'],
@@ -49,13 +47,13 @@ function Leaks() {
 
   const getEstadoBadge = (estado) => {
     const estados = {
-      nuevo: { label: t('leaks.new'), variant: 'default', icon: UserPlus },
-      interesado: { label: t('leaks.interested'), variant: 'default', icon: CheckCircle },
-      contactado_llamar_luego: { label: t('leaks.contactLater'), variant: 'secondary', icon: Clock },
-      no_contesta_llamar_luego: { label: t('leaks.noAnswer'), variant: 'secondary', icon: AlertCircle },
-      contactado_no_interesado: { label: t('leaks.notInterested'), variant: 'destructive', icon: XCircle },
+      nuevo: { label: 'Nuevo', variant: 'default', icon: UserPlus },
+      interesado: { label: 'Interesado', variant: 'default', icon: CheckCircle },
+      contactado_llamar_luego: { label: 'Contactado - Llamar Luego', variant: 'secondary', icon: Clock },
+      no_contesta_llamar_luego: { label: 'No Contesta - Llamar Luego', variant: 'secondary', icon: AlertCircle },
+      contactado_no_interesado: { label: 'Contactado - No Interesado', variant: 'destructive', icon: XCircle },
     };
-    return estados[estado] || { label: estado || t('leaks.status'), variant: 'outline', icon: AlertCircle };
+    return estados[estado] || { label: estado || 'Estado', variant: 'outline', icon: AlertCircle };
   };
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -65,20 +63,20 @@ function Leaks() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">{t('leaks.title')}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
           <p className="text-muted-foreground">
-            {t('leaks.description')}
+            Gestiona tus leads y oportunidades de negocio
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline">
-            <Link to="/leaks/disponibles">
-              {t('leaks.viewAvailable')}
+            <Link to="/leads/disponibles">
+              Ver Disponibles
             </Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/leaks/misleaks">
-              {t('leaks.viewMyLeads')}
+            <Link to="/leads/misleads">
+              Mis Leads
             </Link>
           </Button>
         </div>

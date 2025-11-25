@@ -25,7 +25,6 @@ import { Input } from '../components/ui/input';
 
 function GestionEventos() {
   const { user } = useAuthStore();
-  const { t } = useLanguage();
   const [filtroEstado, setFiltroEstado] = useState('pendiente');
   const [busqueda, setBusqueda] = useState('');
 
@@ -150,9 +149,9 @@ function GestionEventos() {
       {/* Header */}
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">{t('eventos.title')}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Gestión de Eventos</h2>
           <p className="text-muted-foreground">
-            {t('eventos.description')}
+            Administra tus eventos activos y solicitudes de clientes
           </p>
         </div>
       </div>
@@ -162,14 +161,14 @@ function GestionEventos() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('contracts.active')}
+              Activo
             </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{eventosActivos.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {t('contracts.active')}
+              Activo
             </p>
           </CardContent>
         </Card>
@@ -177,14 +176,14 @@ function GestionEventos() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('leaks.pendingContact')}
+              Pendiente de Contacto
             </CardTitle>
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{estadisticas?.pendientes || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {t('leaks.pendingContact')}
+              Pendiente de Contacto
             </p>
           </CardContent>
         </Card>
@@ -192,7 +191,7 @@ function GestionEventos() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('contracts.active')}
+              Activo
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -392,9 +391,9 @@ function GestionEventos() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>{t('contracts.active')}</CardTitle>
+              <CardTitle>Activo</CardTitle>
               <CardDescription>
-                {t('contracts.active')}
+                Activo
               </CardDescription>
             </div>
           </CardHeader>

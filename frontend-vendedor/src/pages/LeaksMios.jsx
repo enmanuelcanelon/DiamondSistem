@@ -114,9 +114,11 @@ function LeaksMios() {
       const response = await api.delete(`/leaks/${leakId}`);
       return response.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['leaks-mios']);
-      queryClient.invalidateQueries(['leaks-stats']);
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leaks-mios'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-stats'], refetchType: 'active' })
+      ]);
       toast.success(data.message || 'Leak eliminado exitosamente');
     },
     onError: (error) => {
@@ -292,7 +294,7 @@ function LeaksMios() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-            <Link to="/leaks" title="Volver al Dashboard">
+            <Link to="/leads" title="Volver al Dashboard">
               <ArrowLeft className="w-4 h-4" />
             </Link>
           </Button>
@@ -384,8 +386,8 @@ function LeaksMios() {
             setLeakSeleccionado(null);
           }}
           leak={leakSeleccionado}
-          onSuccess={() => {
-            queryClient.invalidateQueries(['leaks-mios']);
+          onSuccess={async () => {
+            await queryClient.invalidateQueries({ queryKey: ['leaks-mios'], refetchType: 'active' });
           }}
         />
       )}

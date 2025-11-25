@@ -25,9 +25,11 @@ import api from '../../config/api';
 import SeccionDecoracion from '../../components/SeccionDecoracion';
 import ImagenSeleccion from '../../components/ImagenSeleccion';
 import { obtenerImagenTorta, obtenerImagenDecoracion, obtenerImagenMenu, obtenerImagenBar } from '../../utils/mapeoImagenes';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 function AjustesEvento() {
   const { user } = useAuthStore();
+  const { t } = useLanguage();
   const contratoId = user?.contrato_id;
   const queryClient = useQueryClient();
   
@@ -176,12 +178,12 @@ function AjustesEvento() {
               document.body.appendChild(link);
               link.click();
               link.remove();
-              toast.success('PDF descargado exitosamente', {
+              toast.success(t('toast.success.pdfDownloaded'), {
                 duration: 3000,
                 icon: '✅',
               });
             } catch (error) {
-              toast.error('Error al descargar el PDF', {
+              toast.error(t('toast.error.pdfDownload'), {
                 duration: 4000,
                 icon: '❌',
               });

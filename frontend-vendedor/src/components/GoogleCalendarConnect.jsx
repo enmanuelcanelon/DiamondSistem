@@ -6,7 +6,6 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import toast from 'react-hot-toast';
-
 function GoogleCalendarConnect() {
   const queryClient = useQueryClient();
   const [authUrl, setAuthUrl] = useState(null);
@@ -48,10 +47,10 @@ function GoogleCalendarConnect() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['google-calendar-status']);
-      toast.success('Google Calendar desconectado exitosamente');
+      toast.success('Desconectado de Google Calendar exitosamente');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al desconectar Google Calendar');
+      toast.error(error.response?.data?.message || 'Error al desconectar de Google Calendar');
     },
   });
 
@@ -62,7 +61,7 @@ function GoogleCalendarConnect() {
   };
 
   const handleDisconnect = () => {
-    if (window.confirm('¿Estás seguro de que quieres desconectar tu cuenta de Google Calendar?')) {
+    if (window.confirm('¿Estás seguro de que deseas desconectar tu cuenta de Google Calendar?')) {
       disconnectMutation.mutate();
     }
   };
@@ -74,16 +73,16 @@ function GoogleCalendarConnect() {
     const error = urlParams.get('google_calendar_error');
 
     if (success === 'true') {
-      toast.success('Google Calendar conectado exitosamente');
+      toast.success('Conectado a Google Calendar exitosamente');
       queryClient.invalidateQueries(['google-calendar-status']);
       // Limpiar URL
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (error) {
       const errorMessages = {
-        'missing_params': 'Faltan parámetros en la respuesta de Google',
-        'invalid_state': 'Solicitud inválida',
+        'missing_params': 'Faltan parámetros en la solicitud',
+        'invalid_state': 'Estado de autorización inválido',
         'vendedor_not_found': 'Vendedor no encontrado',
-        'access_denied': 'Acceso denegado por el usuario'
+        'access_denied': 'Acceso denegado'
       };
       toast.error(errorMessages[error] || `Error: ${error}`);
       // Limpiar URL

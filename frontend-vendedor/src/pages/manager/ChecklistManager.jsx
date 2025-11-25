@@ -72,7 +72,7 @@ function ChecklistManager() {
       setEditingItem(null);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al actualizar checklist');
+      toast.error(error.response?.data?.message || 'Error al completar la operación');
     }
   });
 

@@ -23,7 +23,7 @@ function ResumenManager() {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-        <p className="ml-3 text-gray-600">Cargando resumen...</p>
+        <p className="ml-3 text-gray-600">Cargando...</p>
       </div>
     );
   }

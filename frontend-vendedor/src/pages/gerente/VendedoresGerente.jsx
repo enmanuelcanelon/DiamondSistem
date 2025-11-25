@@ -79,7 +79,7 @@ function VendedoresGerente() {
       setVendedorEditando(null);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al cambiar contraseña');
+      toast.error(error.response?.data?.message || 'Error al actualizar contraseña');
     },
   });
 
@@ -142,9 +142,9 @@ function VendedoresGerente() {
         activo: !vendedor.activo
       });
       queryClient.invalidateQueries(['gerente-vendedores']);
-      toast.success(`Vendedor ${!vendedor.activo ? 'activado' : 'desactivado'}`);
+      toast.success(!vendedor.activo ? 'Vendedor activado exitosamente' : 'Vendedor desactivado exitosamente');
     } catch (error) {
-      toast.error('Error al cambiar estado del vendedor');
+      toast.error('Error al cambiar el estado del vendedor');
     }
   };
 

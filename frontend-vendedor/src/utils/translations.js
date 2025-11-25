@@ -318,7 +318,7 @@ const translations = {
     // Login
     login: {
       title: 'Iniciar Sesión',
-      email: 'Email',
+      email: 'Código',
       password: 'Contraseña',
       login: 'Iniciar Sesión',
       loading: 'Iniciando sesión...',
@@ -334,6 +334,233 @@ const translations = {
       language: 'Idioma',
       save: 'Guardar Cambios',
       saved: 'Cambios guardados exitosamente'
+    },
+
+    // Mensajes Toast - Éxito
+    toast: {
+      success: {
+        clientCreated: 'Cliente creado exitosamente',
+        clientUpdated: 'Cliente actualizado exitosamente',
+        clientDeleted: 'Cliente eliminado exitosamente',
+        offerCreated: 'Oferta creada exitosamente',
+        offerUpdated: 'Oferta actualizada exitosamente',
+        offerDeleted: 'Oferta eliminada exitosamente',
+        offerRejected: 'Oferta rechazada',
+        contractCreated: '¡Contrato creado exitosamente!',
+        contractUpdated: 'Contrato actualizado exitosamente',
+        statusUpdated: 'Estado actualizado exitosamente',
+        googleCalendarConnected: 'Google Calendar conectado exitosamente',
+        googleCalendarDisconnected: 'Google Calendar desconectado exitosamente',
+        changesSaved: 'Cambios guardados exitosamente',
+        leadAssigned: 'Lead asignado exitosamente',
+        leadStatusUpdated: 'Estado del lead actualizado exitosamente',
+        settingsSaved: 'Configuración guardada exitosamente',
+        pdfDownloaded: 'PDF descargado exitosamente',
+        emailSent: 'Email enviado exitosamente'
+      },
+      error: {
+        general: 'Ocurrió un error',
+        clientCreate: 'Error al crear cliente',
+        clientUpdate: 'Error al actualizar cliente',
+        clientDelete: 'Error al eliminar cliente',
+        offerCreate: 'Error al crear oferta',
+        offerUpdate: 'Error al actualizar oferta',
+        offerDelete: 'Error al eliminar oferta',
+        contractCreate: 'Error al crear contrato',
+        contractUpdate: 'Error al actualizar contrato',
+        statusUpdate: 'Error al actualizar estado',
+        googleCalendarConnect: 'Error al conectar Google Calendar',
+        googleCalendarDisconnect: 'Error al desconectar Google Calendar',
+        saveChanges: 'Error al guardar cambios',
+        leadAssign: 'Error al asignar lead',
+        leadStatusUpdate: 'Error al actualizar estado del lead',
+        settingsSave: 'Error al guardar configuración',
+        pdfDownload: 'Error al descargar el PDF',
+        pdfGenerate: 'Error al generar el PDF',
+        emailSend: 'Error al enviar el email',
+        loadData: 'Error al cargar los datos',
+        invalidData: 'Datos inválidos',
+        requiredFields: 'Por favor complete todos los campos requeridos',
+        unauthorized: 'No está autorizado para realizar esta acción',
+        networkError: 'Error de red. Por favor revise su conexión'
+      },
+      warning: {
+        unsavedChanges: 'Tienes cambios sin guardar',
+        confirmDelete: '¿Estás seguro de que deseas eliminar esto?',
+        cannotUndo: 'Esta acción no se puede deshacer',
+        limitReached: 'Has alcanzado el límite',
+        checkData: 'Por favor revisa los datos ingresados'
+      }
+    },
+
+    // Mensajes de Validación
+    validation: {
+      required: {
+        field: 'Este campo es requerido',
+        clientName: 'El nombre del cliente es requerido',
+        email: 'El email es requerido',
+        phone: 'El teléfono es requerido',
+        eventType: 'El tipo de evento es requerido',
+        eventDate: 'La fecha del evento es requerida',
+        eventLocation: 'El lugar del evento es requerido',
+        numberOfGuests: 'El número de invitados es requerido',
+        package: 'El paquete es requerido',
+        viewDate: 'La fecha para ver el salón es requerida',
+        notInterestedReason: 'El motivo de por qué no está interesado es requerido',
+        contactLaterDate: 'La fecha para contactar nuevamente es requerida',
+        startTime: 'La hora de inicio es requerida',
+        endTime: 'La hora de fin es requerida'
+      },
+      invalid: {
+        email: 'Email inválido',
+        phone: 'Teléfono inválido',
+        date: 'Fecha inválida',
+        time: 'Hora inválida',
+        number: 'Número inválido',
+        url: 'URL inválida'
+      },
+      timeConflict: {
+        hoursNotAvailable: 'Las horas seleccionadas no están disponibles. Ya existe un evento programado en ese horario.',
+        salonNotAvailable: 'El salón no está disponible para la fecha y hora seleccionada',
+        selectDifferentTime: 'Por favor selecciona otro horario'
+      }
+    },
+
+    // Estados de Carga
+    loading: {
+      general: 'Cargando...',
+      clients: 'Cargando clientes...',
+      client: 'Cargando cliente...',
+      offers: 'Cargando ofertas...',
+      offer: 'Cargando oferta...',
+      contracts: 'Cargando contratos...',
+      contract: 'Cargando contrato...',
+      leads: 'Cargando leads...',
+      commissions: 'Cargando comisiones...',
+      calendar: 'Cargando calendario...',
+      statistics: 'Cargando estadísticas...',
+      settings: 'Cargando configuración...',
+      profile: 'Cargando perfil...',
+      venues: 'Cargando salones...',
+      packages: 'Cargando paquetes...',
+      services: 'Cargando servicios...',
+      contractDetails: 'Cargando detalles del contrato...',
+      gallery: 'Cargando galería...',
+      photos: 'Cargando fotos...',
+      saving: 'Guardando...',
+      deleting: 'Eliminando...',
+      updating: 'Actualizando...',
+      creating: 'Creando...',
+      processing: 'Procesando...',
+      downloading: 'Descargando...',
+      uploading: 'Subiendo...',
+      connecting: 'Conectando...'
+    },
+
+    // Google Calendar
+    googleCalendar: {
+      title: 'Google Calendar',
+      connect: 'Conectar Google Calendar',
+      disconnect: 'Desconectar Google Calendar',
+      connected: 'Conectado',
+      notConnected: 'No conectado',
+      sync: 'Sincronizar con Google Calendar',
+      syncing: 'Sincronizando...',
+      lastSync: 'Última sincronización',
+      connectSuccess: 'Google Calendar conectado exitosamente',
+      disconnectSuccess: 'Google Calendar desconectado exitosamente',
+      syncSuccess: 'Sincronizado exitosamente',
+      connectError: 'Error al conectar Google Calendar',
+      disconnectError: 'Error al desconectar Google Calendar',
+      syncError: 'Error al sincronizar',
+      confirmDisconnect: '¿Estás seguro de que quieres desconectar tu cuenta de Google Calendar?',
+      errors: {
+        missingParams: 'Faltan parámetros en la respuesta de Google',
+        invalidState: 'Solicitud inválida',
+        vendedorNotFound: 'Vendedor no encontrado',
+        accessDenied: 'Acceso denegado por el usuario'
+      }
+    },
+
+    // Actualizaciones de Estado de Leads
+    leadStatus: {
+      updateSuccess: 'Estado del lead actualizado exitosamente',
+      updateError: 'Error al actualizar estado del lead',
+      assignSuccess: 'Lead asignado exitosamente',
+      assignError: 'Error al asignar lead',
+      contactSuccess: 'Lead contactado exitosamente',
+      contactError: 'Error al contactar lead',
+      convertedToClient: 'Lead convertido en cliente exitosamente',
+      rateLimitError: 'Demasiadas solicitudes. El sistema se pausará automáticamente. Por favor espera un momento.'
+    },
+
+    // Galería/Fotos
+    gallery: {
+      title: 'Galería',
+      photos: 'Fotos',
+      uploadPhoto: 'Subir Foto',
+      deletePhoto: 'Eliminar Foto',
+      viewPhoto: 'Ver Foto',
+      noPhotos: 'No hay fotos disponibles',
+      uploadSuccess: 'Foto subida exitosamente',
+      uploadError: 'Error al subir foto',
+      deleteSuccess: 'Foto eliminada exitosamente',
+      deleteError: 'Error al eliminar foto',
+      loading: 'Cargando',
+      loadingError: 'Error al cargar'
+    },
+
+    // Validaciones específicas
+    specialValidation: {
+      specialPackageTimeRestriction: 'El paquete "Especial" solo está disponible entre las 10:00 AM y las 5:00 PM. Por favor, selecciona otro paquete.',
+      hoursNotAvailableNewVenue: 'Las horas seleccionadas no están disponibles en el nuevo salón. Por favor, selecciona otras horas.',
+      minAdditionalGuests: 'Debes agregar al menos 1 invitado adicional',
+      maxGuestsExceeded: 'La cantidad de invitados no puede exceder 500',
+      selectService: 'Selecciona un servicio',
+      serviceQuantityMin: 'La cantidad del servicio debe ser al menos 1',
+      calculatedCostMinimum: 'El costo calculado debe ser mayor a $0',
+      venueMaxCapacity: (max, current, requested, total, available) =>
+        `La capacidad máxima del salón es ${max} invitados\n\n` +
+        `Invitados actuales: ${current}\n` +
+        `Invitados solicitados: ${requested}\n` +
+        `Total: ${total}\n\n` +
+        `Solo puedes solicitar hasta ${available} invitado(s) adicional(es).`
+    },
+
+    // Notas y cambios
+    notes: {
+      saved: 'Notas guardadas exitosamente',
+      requestSent: 'Solicitud enviada exitosamente'
+    },
+
+    // Dashboard
+    dashboardErrors: {
+      loadError: 'Error al cargar el dashboard',
+      summaryLoadError: 'Error al cargar el resumen'
+    },
+
+    // Login messages
+    auth: {
+      loginSuccess: 'Inicio de sesión exitoso',
+      loginError: 'Error al iniciar sesión'
+    },
+
+    // Vendedores (Gerente)
+    sellers: {
+      created: 'Vendedor creado exitosamente',
+      updated: 'Vendedor actualizado exitosamente',
+      passwordUpdated: 'Contraseña actualizada exitosamente',
+      statusChangeError: 'Error al cambiar estado del vendedor',
+      createError: 'Error al crear vendedor',
+      updateError: 'Error al actualizar vendedor',
+      passwordUpdateError: 'Error al cambiar contraseña',
+      activated: 'Vendedor activado',
+      deactivated: 'Vendedor desactivado'
+    },
+
+    // Checklist
+    checklist: {
+      updated: 'Checklist actualizado exitosamente'
     }
   },
   
@@ -661,7 +888,7 @@ const translations = {
     // Login
     login: {
       title: 'Login',
-      email: 'Email',
+      email: 'Code',
       password: 'Password',
       login: 'Log In',
       loading: 'Logging in...',
@@ -677,6 +904,233 @@ const translations = {
       language: 'Language',
       save: 'Save Changes',
       saved: 'Changes saved successfully'
+    },
+
+    // Toast Messages - Success
+    toast: {
+      success: {
+        clientCreated: 'Client created successfully',
+        clientUpdated: 'Client updated successfully',
+        clientDeleted: 'Client deleted successfully',
+        offerCreated: 'Offer created successfully',
+        offerUpdated: 'Offer updated successfully',
+        offerDeleted: 'Offer deleted successfully',
+        offerRejected: 'Offer rejected',
+        contractCreated: 'Contract created successfully!',
+        contractUpdated: 'Contract updated successfully',
+        statusUpdated: 'Status updated successfully',
+        googleCalendarConnected: 'Google Calendar connected successfully',
+        googleCalendarDisconnected: 'Google Calendar disconnected successfully',
+        changesSaved: 'Changes saved successfully',
+        leadAssigned: 'Lead assigned successfully',
+        leadStatusUpdated: 'Lead status updated successfully',
+        settingsSaved: 'Settings saved successfully',
+        pdfDownloaded: 'PDF downloaded successfully',
+        emailSent: 'Email sent successfully'
+      },
+      error: {
+        general: 'An error occurred',
+        clientCreate: 'Error creating client',
+        clientUpdate: 'Error updating client',
+        clientDelete: 'Error deleting client',
+        offerCreate: 'Error creating offer',
+        offerUpdate: 'Error updating offer',
+        offerDelete: 'Error deleting offer',
+        contractCreate: 'Error creating contract',
+        contractUpdate: 'Error updating contract',
+        statusUpdate: 'Error updating status',
+        googleCalendarConnect: 'Error connecting Google Calendar',
+        googleCalendarDisconnect: 'Error disconnecting Google Calendar',
+        saveChanges: 'Error saving changes',
+        leadAssign: 'Error assigning lead',
+        leadStatusUpdate: 'Error updating lead status',
+        settingsSave: 'Error saving settings',
+        pdfDownload: 'Error downloading PDF',
+        pdfGenerate: 'Error generating PDF',
+        emailSend: 'Error sending email',
+        loadData: 'Error loading data',
+        invalidData: 'Invalid data',
+        requiredFields: 'Please fill in all required fields',
+        unauthorized: 'You are not authorized to perform this action',
+        networkError: 'Network error. Please check your connection'
+      },
+      warning: {
+        unsavedChanges: 'You have unsaved changes',
+        confirmDelete: 'Are you sure you want to delete this?',
+        cannotUndo: 'This action cannot be undone',
+        limitReached: 'You have reached the limit',
+        checkData: 'Please check the entered data'
+      }
+    },
+
+    // Validation Messages
+    validation: {
+      required: {
+        field: 'This field is required',
+        clientName: 'Client name is required',
+        email: 'Email is required',
+        phone: 'Phone is required',
+        eventType: 'Event type is required',
+        eventDate: 'Event date is required',
+        eventLocation: 'Event location is required',
+        numberOfGuests: 'Number of guests is required',
+        package: 'Package is required',
+        viewDate: 'View date is required',
+        notInterestedReason: 'Reason for not being interested is required',
+        contactLaterDate: 'Date to contact again is required',
+        startTime: 'Start time is required',
+        endTime: 'End time is required'
+      },
+      invalid: {
+        email: 'Invalid email',
+        phone: 'Invalid phone',
+        date: 'Invalid date',
+        time: 'Invalid time',
+        number: 'Invalid number',
+        url: 'Invalid URL'
+      },
+      timeConflict: {
+        hoursNotAvailable: 'The selected hours are not available. There is already an event scheduled at that time.',
+        salonNotAvailable: 'The venue is not available for the selected date and time',
+        selectDifferentTime: 'Please select a different time'
+      }
+    },
+
+    // Loading States
+    loading: {
+      general: 'Loading...',
+      clients: 'Loading clients...',
+      client: 'Loading client...',
+      offers: 'Loading offers...',
+      offer: 'Loading offer...',
+      contracts: 'Loading contracts...',
+      contract: 'Loading contract...',
+      leads: 'Loading leads...',
+      commissions: 'Loading commissions...',
+      calendar: 'Loading calendar...',
+      statistics: 'Loading statistics...',
+      settings: 'Loading settings...',
+      profile: 'Loading profile...',
+      venues: 'Loading venues...',
+      packages: 'Loading packages...',
+      services: 'Loading services...',
+      contractDetails: 'Loading contract details...',
+      gallery: 'Loading gallery...',
+      photos: 'Loading photos...',
+      saving: 'Saving...',
+      deleting: 'Deleting...',
+      updating: 'Updating...',
+      creating: 'Creating...',
+      processing: 'Processing...',
+      downloading: 'Downloading...',
+      uploading: 'Uploading...',
+      connecting: 'Connecting...'
+    },
+
+    // Google Calendar
+    googleCalendar: {
+      title: 'Google Calendar',
+      connect: 'Connect Google Calendar',
+      disconnect: 'Disconnect Google Calendar',
+      connected: 'Connected',
+      notConnected: 'Not connected',
+      sync: 'Sync with Google Calendar',
+      syncing: 'Syncing...',
+      lastSync: 'Last sync',
+      connectSuccess: 'Google Calendar connected successfully',
+      disconnectSuccess: 'Google Calendar disconnected successfully',
+      syncSuccess: 'Synced successfully',
+      connectError: 'Error connecting Google Calendar',
+      disconnectError: 'Error disconnecting Google Calendar',
+      syncError: 'Error syncing',
+      confirmDisconnect: 'Are you sure you want to disconnect your Google Calendar account?',
+      errors: {
+        missingParams: 'Missing parameters in Google response',
+        invalidState: 'Invalid request',
+        vendedorNotFound: 'Seller not found',
+        accessDenied: 'Access denied by user'
+      }
+    },
+
+    // Lead Status Updates
+    leadStatus: {
+      updateSuccess: 'Lead status updated successfully',
+      updateError: 'Error updating lead status',
+      assignSuccess: 'Lead assigned successfully',
+      assignError: 'Error assigning lead',
+      contactSuccess: 'Lead contacted successfully',
+      contactError: 'Error contacting lead',
+      convertedToClient: 'Lead converted to client successfully',
+      rateLimitError: 'Too many requests. The system will pause automatically. Please wait a moment.'
+    },
+
+    // Gallery/Photos
+    gallery: {
+      title: 'Gallery',
+      photos: 'Photos',
+      uploadPhoto: 'Upload Photo',
+      deletePhoto: 'Delete Photo',
+      viewPhoto: 'View Photo',
+      noPhotos: 'No photos available',
+      uploadSuccess: 'Photo uploaded successfully',
+      uploadError: 'Error uploading photo',
+      deleteSuccess: 'Photo deleted successfully',
+      deleteError: 'Error deleting photo',
+      loading: 'Loading',
+      loadingError: 'Error loading'
+    },
+
+    // Special Validations
+    specialValidation: {
+      specialPackageTimeRestriction: 'The "Special" package is only available between 10:00 AM and 5:00 PM. Please select another package.',
+      hoursNotAvailableNewVenue: 'The selected hours are not available at the new venue. Please select different hours.',
+      minAdditionalGuests: 'You must add at least 1 additional guest',
+      maxGuestsExceeded: 'The number of guests cannot exceed 500',
+      selectService: 'Select a service',
+      serviceQuantityMin: 'The service quantity must be at least 1',
+      calculatedCostMinimum: 'The calculated cost must be greater than $0',
+      venueMaxCapacity: (max, current, requested, total, available) =>
+        `The venue's maximum capacity is ${max} guests\n\n` +
+        `Current guests: ${current}\n` +
+        `Requested guests: ${requested}\n` +
+        `Total: ${total}\n\n` +
+        `You can only request up to ${available} additional guest(s).`
+    },
+
+    // Notes and changes
+    notes: {
+      saved: 'Notes saved successfully',
+      requestSent: 'Request sent successfully'
+    },
+
+    // Dashboard
+    dashboardErrors: {
+      loadError: 'Error loading dashboard',
+      summaryLoadError: 'Error loading summary'
+    },
+
+    // Login messages
+    auth: {
+      loginSuccess: 'Login successful',
+      loginError: 'Login error'
+    },
+
+    // Sellers (Manager)
+    sellers: {
+      created: 'Seller created successfully',
+      updated: 'Seller updated successfully',
+      passwordUpdated: 'Password updated successfully',
+      statusChangeError: 'Error changing seller status',
+      createError: 'Error creating seller',
+      updateError: 'Error updating seller',
+      passwordUpdateError: 'Error changing password',
+      activated: 'Seller activated',
+      deactivated: 'Seller deactivated'
+    },
+
+    // Checklist
+    checklist: {
+      updated: 'Checklist updated successfully'
     }
   }
 };

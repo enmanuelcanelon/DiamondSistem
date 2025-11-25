@@ -14,13 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquare,
-  Settings,
-  Languages
+  Settings
 } from 'lucide-react';
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import useAuthStore from '../store/useAuthStore';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import api from '../config/api';
@@ -29,7 +27,6 @@ function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { language, toggleLanguage, isSpanish, t } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -69,23 +66,23 @@ function Layout() {
 
   const navigation = useMemo(() => ({
     principal: [
-      { name: t('nav.dashboard'), href: '/', icon: LayoutDashboard },
-      { name: t('nav.leads'), href: '/leaks', icon: MessageSquare },
-      { name: t('nav.clients'), href: '/clientes', icon: Users },
-      { name: t('nav.offers'), href: '/ofertas', icon: FileText },
-      { name: t('nav.contracts'), href: '/contratos', icon: FileCheck },
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { name: 'Leads', href: '/leads', icon: MessageSquare },
+      { name: 'Clientes', href: '/clientes', icon: Users },
+      { name: 'Ofertas', href: '/ofertas', icon: FileText },
+      { name: 'Contratos', href: '/contratos', icon: FileCheck },
     ],
     eventos: [
-      { name: t('nav.calendar'), href: '/calendario', icon: Calendar },
-      { name: t('nav.eventManagement'), href: '/eventos', icon: CalendarCheck },
+      { name: 'Calendario', href: '/calendario', icon: Calendar },
+      { name: 'Gestión de Eventos', href: '/eventos', icon: CalendarCheck },
     ],
     finanzas: [
-      { name: t('nav.commissions'), href: '/comisiones', icon: CreditCard },
+      { name: 'Comisiones', href: '/comisiones', icon: CreditCard },
     ],
     configuracion: [
-      { name: t('nav.settings'), href: '/configuracion', icon: Settings },
+      { name: 'Configuración', href: '/configuracion', icon: Settings },
     ],
-  }), [t]);
+  }), []);
 
   const isActive = useCallback((path) => {
     if (path === '/') {
@@ -118,7 +115,7 @@ function Layout() {
               <div className="space-y-1">
                 <div className="px-3 py-2">
                   <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {t('nav.principal')}
+                    Principal
                   </h2>
                 </div>
                 {navigation.principal.map((item) => {
@@ -215,7 +212,7 @@ function Layout() {
               {/* Configuración */}
               <div className="space-y-1">
                 <h2 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {t('nav.configuracion')}
+                  Configuración
                 </h2>
                 {navigation.configuracion.map((item) => {
                   const Icon = item.icon;
@@ -253,19 +250,11 @@ function Layout() {
                 </div>
               </div>
               <button
-                onClick={toggleLanguage}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground rounded-lg transition mb-2"
-                title={isSpanish ? 'Switch to English' : 'Cambiar a Español'}
-              >
-                <Languages className="h-4 w-4" />
-                <span>{t('nav.language')}</span>
-              </button>
-              <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition"
               >
                 <LogOut className="h-4 w-4" />
-                  <span>{t('nav.logout')}</span>
+                  <span>Cerrar Sesión</span>
               </button>
             </div>
           </div>
@@ -307,7 +296,7 @@ function Layout() {
               {!sidebarCollapsed && (
                 <div className="px-3 py-2">
                   <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {t('nav.principal')}
+                    Principal
                   </h2>
                 </div>
               )}
@@ -411,7 +400,7 @@ function Layout() {
               {!sidebarCollapsed && (
                 <div className="px-3 py-2">
                   <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {t('nav.configuracion')}
+                    Configuración
                   </h2>
                 </div>
               )}
@@ -455,19 +444,11 @@ function Layout() {
                   </div>
                 </div>
                 <button
-                  onClick={toggleLanguage}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground rounded-lg transition mb-2"
-                  title={isSpanish ? 'Switch to English' : 'Switch to English'}
-                >
-                  <Languages className="h-4 w-4" />
-                  <span>{t('nav.language')}</span>
-                </button>
-                <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>{t('nav.logout')}</span>
+                  <span>Cerrar Sesión</span>
                 </button>
               </>
             ) : (
@@ -478,16 +459,9 @@ function Layout() {
                   </span>
                 </div>
                 <button
-                  onClick={toggleLanguage}
-                  className="p-2 text-muted-foreground hover:bg-accent hover:text-foreground rounded-lg transition"
-                  title={isSpanish ? 'Switch to English' : 'Switch to English'}
-                >
-                  <Languages className="h-4 w-4" />
-                </button>
-                <button
                   onClick={handleLogout}
                   className="p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition"
-                  title={t('nav.logout')}
+                  title="Cerrar Sesión"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>

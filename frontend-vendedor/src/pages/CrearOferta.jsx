@@ -3,7 +3,6 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, ChevronRight, ChevronLeft, CheckCircle2, Calendar, Clock, MapPin, Mail, Phone, Users, Filter, FilterX, AlertCircle, XCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
-import { useLanguage } from '../contexts/LanguageContext';
 import ModalCrearCliente from '../components/ModalCrearCliente';
 import CalendarioSelector from '../components/CalendarioSelector';
 import { calcularDuracion, formatearHora } from '../utils/formatters';
@@ -21,7 +20,6 @@ function CrearOferta() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const { t, language } = useLanguage();
   const [searchParams] = useSearchParams();
   const clienteIdFromUrl = searchParams.get('cliente_id');
   
@@ -72,28 +70,17 @@ function CrearOferta() {
   const [tipoEventoOtro, setTipoEventoOtro] = useState('');
   
   // Tipos de evento disponibles (definido antes de los useEffect)
-  const tiposEvento = language === 'es' ? [
-    t('offers.eventTypes.wedding'),
-    t('offers.eventTypes.quinceanera'),
-    t('offers.eventTypes.birthday'),
-    t('offers.eventTypes.anniversary'),
-    t('offers.eventTypes.corporate'),
-    t('offers.eventTypes.graduation'),
-    t('offers.eventTypes.babyShower'),
-    t('offers.eventTypes.kidsParty'),
-    t('offers.eventTypes.sweet16'),
-    t('offers.eventTypes.other')
-  ] : [
-    'Wedding',
+  const tiposEvento = [
+    'Boda',
     'Quinceañera',
-    'Birthday',
-    'Anniversary',
-    'Corporate',
-    'Graduation',
+    'Cumpleaños',
+    'Aniversario',
+    'Corporativo',
+    'Graduación',
     'Baby Shower',
-    'Kids Party',
+    'Fiesta Infantil',
     'Sweet 16',
-    'Other'
+    'Otro'
   ];
   
   // Estado para servicios excluyentes del paquete (ej: Photobooth 360 o Print)
@@ -676,8 +663,8 @@ function CrearOferta() {
       const response = await api.put(`/clientes/${clienteId}`, { tipo_evento: tipoEvento });
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['clientes']);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['clientes'], refetchType: 'active' });
     },
   });
 
@@ -687,8 +674,9 @@ function CrearOferta() {
       const response = await api.post('/ofertas', data);
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['ofertas']);
+    onSuccess: async () => {
+      // Invalidar y forzar refetch inmediato
+      await queryClient.invalidateQueries({ queryKey: ['ofertas'], refetchType: 'active' });
       navigate('/ofertas');
     },
   });
@@ -840,7 +828,7 @@ function CrearOferta() {
               paquete_id: '',
               [name]: value,
             });
-            toast.error('El paquete "Especial" solo está disponible entre las 10:00 AM y las 5:00 PM. Por favor, selecciona otro paquete.');
+            toast.error('Los paquetes especiales solo están disponibles de 6:00 PM a 12:00 AM');
             return;
           }
         }
@@ -959,7 +947,7 @@ function CrearOferta() {
               hora_inicio: '',
               hora_fin: ''
             }));
-            toast.error('Las horas seleccionadas no están disponibles en el nuevo salón. Por favor, selecciona otras horas.');
+            toast.error('Las horas seleccionadas no están disponibles en el nuevo salón');
           }
         }
       }, 500);
@@ -2022,23 +2010,20 @@ function CrearOferta() {
   };
 
   const nombresPasos = [
-    t('offers.steps.clientInfo'),
-    t('offers.steps.eventDetails'),
-    t('offers.steps.packageSeason'),
-    t('offers.steps.additionalServices'),
-    t('offers.steps.discount')
+    'Información del Cliente',
+    'Detalles del Evento',
+    'Paquete y Temporada',
+    'Servicios Adicionales',
+    'Descuento'
   ];
 
   // ============================================
   // FUNCIONES DEL CALENDARIO - PASO 2
   // ============================================
   
-  const nombresMeses = language === 'es' ? [
+  const nombresMeses = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ] : [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
   ];
   
   const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -2555,8 +2540,8 @@ function CrearOferta() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('offers.newOffer')}</h1>
-          <p className="text-muted-foreground mt-1">{t('offers.createProposal')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">Nueva Oferta</h1>
+          <p className="text-muted-foreground mt-1">Crea una propuesta personalizada para tu cliente</p>
         </div>
       </div>
 
@@ -2613,12 +2598,12 @@ function CrearOferta() {
           {pasoActual === 1 && (
             <Card>
               <CardHeader className="px-6 pt-6 pb-4">
-                <CardTitle>{t('offers.steps.clientInfo')}</CardTitle>
+                <CardTitle>Información del Cliente</CardTitle>
               </CardHeader>
               <CardContent className="px-6 pb-6">
                 <div className="space-y-2">
                   <Label htmlFor="cliente_id">
-                    {t('clients.title')} <span className="text-destructive">*</span>
+                    Cliente <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={formData.cliente_id || ""}
@@ -2627,7 +2612,7 @@ function CrearOferta() {
                     }}
                   >
                     <SelectTrigger id="cliente_id" className="w-full [&>span]:truncate">
-                      <SelectValue placeholder={t('forms.select')}>
+                      <SelectValue placeholder="Seleccionar...">
                         {formData.cliente_id && clientes?.find(c => c.id.toString() === formData.cliente_id.toString()) 
                           ? `${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).nombre_completo} - ${clientes.find(c => c.id.toString() === formData.cliente_id.toString()).email}`
                           : null
@@ -2656,26 +2641,26 @@ function CrearOferta() {
             {/* Formulario */}
             <Card>
               <CardHeader>
-                <CardTitle>{t('offers.steps.eventDetails')}</CardTitle>
+                <CardTitle>Detalles del Evento</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="homenajeado">{t('offers.eventDetails.honoree')}</Label>
+                      <Label htmlFor="homenajeado">Homenajeado/a</Label>
                       <Input
                         id="homenajeado"
                         type="text"
                         name="homenajeado"
                         value={formData.homenajeado}
                         onChange={handleChange}
-                        placeholder={t('offers.eventDetails.honoreePlaceholder')}
+                        placeholder="Ej: María López, Juan Pérez"
                       />
                       <p className="text-xs text-muted-foreground">
-                        {t('offers.eventDetails.honoreeHelp')}
+                        Nombre de la persona homenajeada en el evento (opcional)
                       </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="tipo_evento">{t('offers.eventDetails.eventType')}</Label>
+                      <Label htmlFor="tipo_evento">Tipo de Evento</Label>
                       <Select 
                         value={tipoEvento} 
                         onValueChange={(value) => {
@@ -2690,7 +2675,7 @@ function CrearOferta() {
                         disabled={!formData.cliente_id}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={t('forms.select')} />
+                          <SelectValue placeholder="Seleccionar..." />
                         </SelectTrigger>
                         <SelectContent>
                           {tiposEvento.map((tipo) => (
@@ -2704,14 +2689,14 @@ function CrearOferta() {
                             type="text"
                             value={tipoEventoOtro}
                             onChange={(e) => setTipoEventoOtro(e.target.value)}
-                            placeholder={t('forms.select')}
+                            placeholder="Seleccionar..."
                             // NO actualizar el cliente automáticamente
                             // Cada oferta tiene su propio tipo_evento independiente
                           />
                         </div>
                       )}
                       <p className="text-xs text-muted-foreground">
-                        {t('offers.eventDetails.eventTypeHelp')}
+                        Seleccione el tipo de evento para esta oferta
                       </p>
                     </div>
 
@@ -2719,7 +2704,7 @@ function CrearOferta() {
                       {/* Lugar del Evento */}
                       <div className="md:col-span-2 space-y-2">
                         <Label htmlFor="salon_id">
-                          {t('offers.eventDetails.eventLocation')} <span className="text-destructive">*</span>
+                          Lugar del Evento <span className="text-destructive">*</span>
                         </Label>
                         <select
                           id="salon_id"
@@ -2729,17 +2714,17 @@ function CrearOferta() {
                           required
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <option value="">{t('offers.eventDetails.selectLocation')}</option>
+                          <option value="">Seleccione un lugar</option>
                           {salones?.map((salon) => (
                             <option key={salon.id} value={salon.id}>
-                              {salon.nombre} - {t('offers.eventDetails.maxCapacity')}: {salon.capacidad_maxima} {t('offers.eventDetails.guests')}
+                              {salon.nombre} - Capacidad máxima: {salon.capacidad_maxima} invitados
                             </option>
                           ))}
-                          <option value="otro">{t('offers.eventDetails.externalVenue')}</option>
+                          <option value="otro">Otro (Sede Externa - Sin cargo de salón)</option>
                         </select>
                         {salonSeleccionado && formData.salon_id !== 'otro' && (
                           <p className="text-xs text-muted-foreground">
-                            {t('offers.eventDetails.maxCapacity')}: {salonSeleccionado.capacidad_maxima} {t('offers.eventDetails.guests')}
+                            Capacidad máxima: {salonSeleccionado.capacidad_maxima} invitados
                           </p>
                         )}
                         
@@ -2795,7 +2780,7 @@ function CrearOferta() {
                                       className="h-8 text-xs"
                                       onClick={irAlMesActual}
                                     >
-                                      {t('calendar.today')}
+                                      Hoy
                                     </Button>
                                     <div className="flex items-center border border-gray-300 dark:border-gray-700 rounded">
                                       <Button
@@ -2879,7 +2864,7 @@ function CrearOferta() {
                       {/* Cantidad de Invitados */}
                       <div className="space-y-2">
                         <Label htmlFor="cantidad_invitados">
-                          {t('offers.eventDetails.numberOfGuests')} <span className="text-destructive">*</span>
+                          Cantidad de Invitados <span className="text-destructive">*</span>
                         </Label>
                         <Input
                           id="cantidad_invitados"
@@ -2890,7 +2875,7 @@ function CrearOferta() {
                           min="1"
                           step="1"
                           required
-                          placeholder={t('offers.eventDetails.numberOfGuestsPlaceholder')}
+                          placeholder="Ej: 50"
                           className={excedeCapacidad ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20' : ''}
                         />
                         {excedeCapacidad && salonSeleccionado ? (
@@ -2908,7 +2893,7 @@ function CrearOferta() {
                       {/* Hora Inicio */}
                       <div className="md:col-span-2">
                       <Label htmlFor="hora_inicio">
-                        {t('offers.eventDetails.startTime')} <span className="text-destructive">*</span>
+                        Hora Inicio <span className="text-destructive">*</span>
                       </Label>
                       <div className="flex gap-2">
                         <select
@@ -2945,7 +2930,7 @@ function CrearOferta() {
                       errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    <option value="">{t('offers.eventDetails.hour')}</option>
+                    <option value="">Hora</option>
                     {Array.from({ length: 15 }, (_, i) => {
                       const hora = 10 + i; // Desde las 10:00 AM hasta las 12:00 AM (medianoche)
                       const horaOcupada = horasOcupadas.includes(hora);
@@ -2997,7 +2982,7 @@ function CrearOferta() {
                 </div>
                 {(!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento) ? (
                 <p className="text-xs text-gray-500 mt-1">
-                    ⚠️ {t('offers.eventDetails.selectDateFirst')}
+                    ⚠️ Primero selecciona el lugar y la fecha del evento
                   </p>
                 ) : cargandoHorasOcupadas && formData.salon_id !== 'otro' ? (
                   <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
@@ -3042,7 +3027,7 @@ function CrearOferta() {
                       errorHorario ? 'border-red-400 bg-red-50' : (!formData.salon_id || formData.salon_id === '' || !formData.fecha_evento || !formData.hora_inicio) ? 'border-gray-200 bg-gray-100' : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    <option value="">{t('offers.eventDetails.hour')}</option>
+                    <option value="">Hora</option>
                     {(() => {
                       // Obtener hora de inicio para comparar
                       let horaInicioNum = null;
@@ -3210,7 +3195,7 @@ function CrearOferta() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {t('offers.eventDetails.maxTimeAllowed')}
+                  Máximo permitido: 2:00 AM (restricción legal)
                 </p>
                 {/* Mostrar duración del evento */}
                 {formData.hora_inicio && formData.hora_fin && !errorHorario && (() => {
@@ -3229,7 +3214,7 @@ function CrearOferta() {
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        {t('offers.eventDetails.eventDuration')}: <span className="font-bold">{formatearHora(formData.hora_inicio)} / {formatearHora(formData.hora_fin)} = {duracionTexto}</span>
+                        Duración del evento: <span className="font-bold">{formatearHora(formData.hora_inicio)} / {formatearHora(formData.hora_fin)} = {duracionTexto}</span>
                       </p>
                     );
                   }
@@ -3286,7 +3271,7 @@ function CrearOferta() {
                       <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                         <p className="text-sm text-green-600 flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>{t('offers.eventDetails.salonAvailable')}</span>
+                          <span>✓ El salón está disponible en este horario</span>
                         </p>
                       </div>
                     )}
@@ -3303,13 +3288,13 @@ function CrearOferta() {
           <>
           <Card>
             <CardHeader>
-              <CardTitle>{t('offers.packageSeason.title')}</CardTitle>
+              <CardTitle>Paquete y Temporada</CardTitle>
             </CardHeader>
             <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('offers.packageSeason.packageRequired')}
+                  Paquete *
                 </label>
                 <select
                   name="paquete_id"
@@ -3320,7 +3305,7 @@ function CrearOferta() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">
-                    {!formData.salon_id ? t('offers.packageSeason.selectPackage') : t('offers.packageSeason.selectPackage')}
+                    Seleccionar paquete...
                   </option>
                   {paquetes?.filter(p => {
                     // Si es sede externa (otro), solo mostrar paquete personalizado
@@ -3384,7 +3369,7 @@ function CrearOferta() {
                   if (estaFueraDelRango) {
                     return (
                       <p className="text-xs text-blue-600 mt-1">
-                        ℹ️ {t('offers.packageSeason.specialPackageNote')}
+                        ℹ️ El paquete "Especial" solo está disponible entre las 10:00 AM y las 5:00 PM
                       </p>
                     );
                   }
@@ -3456,14 +3441,14 @@ function CrearOferta() {
                         <span className="text-green-600 font-medium">✓</span>
                         <div className="flex-1">
                           <p className="font-medium text-gray-900">
-                            {t('offers.packageSeason.season')} {temporadas.find(t => t.id === parseInt(formData.temporada_id))?.nombre || 'N/A'}
+                            Temporada {temporadas.find(t => t.id === parseInt(formData.temporada_id))?.nombre || 'N/A'}
                           </p>
                           <p className="text-xs text-gray-600">
-                            {t('offers.packageSeason.adjustment')}: +${formData.salon_id === 'otro' ? 0 : (temporadas.find(t => t.id === parseInt(formData.temporada_id))?.ajuste_precio || 0)}
+                            Ajuste: +${formData.salon_id === 'otro' ? 0 : (temporadas.find(t => t.id === parseInt(formData.temporada_id))?.ajuste_precio || 0)}
                             {formData.salon_id === 'otro' && ' (Sede externa: sin ajuste de temporada)'}
                           </p>
                           <p className="text-xs text-green-600 mt-1">
-                            💡 {t('offers.packageSeason.autoDetected')}
+                            💡 Auto-detectada según la fecha del evento
                           </p>
                         </div>
                         <button
@@ -4313,7 +4298,7 @@ function CrearOferta() {
                                 <div className="flex flex-col h-full">
                                   {necesitaHoraExtra && (
                                     <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg z-10">
-                                      {t('offers.additionalServices.required')}
+                                      ¡REQUERIDO!
                                     </div>
                                   )}
                                   <div className="flex-1 mb-3">
@@ -4336,7 +4321,7 @@ function CrearOferta() {
                                         if (esPaquetePersonalizado && esComida) {
                                           const cantidadInvitados = parseInt(formData.cantidad_invitados) || 0;
                                           const precioPorPersona = 12.00;
-                                          return `$${precioPorPersona.toLocaleString()} ${t('offers.additionalServices.perPerson')} (${cantidadInvitados} × $${precioPorPersona.toLocaleString()} = $${(precioPorPersona * cantidadInvitados).toLocaleString()})`;
+                                          return `$${precioPorPersona.toLocaleString()} por persona (${cantidadInvitados} × $${precioPorPersona.toLocaleString()} = $${(precioPorPersona * cantidadInvitados).toLocaleString()})`;
                                         } else {
                                           // Precio normal
                                           return `$${parseFloat(servicio.precio_base || 0).toLocaleString()}`;
@@ -4345,17 +4330,17 @@ function CrearOferta() {
                                     </p>
                                     {necesitaHoraExtra && (
                                       <p className="text-xs text-red-700 mt-2 font-bold bg-red-100 px-2 py-1 rounded">
-                                        👉 {t('offers.additionalServices.addHours')} {necesarias - cantidad} {necesarias - cantidad === 1 ? t('offers.additionalServices.hour') : t('offers.additionalServices.hours')}
+                                        👉 Agregar {necesarias - cantidad} {necesarias - cantidad === 1 ? 'hora' : 'horas'}
                                       </p>
                                     )}
                                     {mostrarYaIncluido && !necesitaHoraExtra && (
                                       <p className="text-xs text-red-600 mt-1 font-medium">
-                                        ⚠️ {t('offers.additionalServices.alreadyIncluded')}
+                                        ⚠️ Ya incluido en paquete
                                       </p>
                                     )}
                                     {esUpgradePermitido && !necesitaHoraExtra && (
                                       <p className="text-xs text-green-600 mt-1 font-medium">
-                                        ⬆️ {t('offers.additionalServices.upgradeAvailable')}
+                                        ⬆️ Upgrade disponible desde el paquete
                                       </p>
                                     )}
                                   </div>
@@ -4397,7 +4382,7 @@ function CrearOferta() {
                                         }`}
                                       >
                                         <Plus className="w-4 h-4" />
-                                        {esUpgradePermitido ? t('offers.additionalServices.add') + ' Upgrade' : mostrarYaIncluido ? t('offers.additionalServices.alreadyIncluded') : tieneExcluyenteSeleccionado ? t('offers.additionalServices.add') : t('offers.additionalServices.add')}
+                                        {esUpgradePermitido ? 'Agregar Upgrade' : mostrarYaIncluido ? 'Ya incluido en paquete' : tieneExcluyenteSeleccionado ? 'Agregar' : 'Agregar'}
                                       </button>
                                     )}
                                   </div>
@@ -4498,11 +4483,11 @@ function CrearOferta() {
           {pasoActual === 5 && (
           <Card>
             <CardHeader>
-              <CardTitle>{t('offers.discount.title')}</CardTitle>
+              <CardTitle>Descuento</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="descuento_porcentaje">{t('offers.discount.discountAmount')}</Label>
+                <Label htmlFor="descuento_porcentaje">Descuento ($)</Label>
                 <Input
                   id="descuento_porcentaje"
                   type="number"
@@ -4536,13 +4521,13 @@ function CrearOferta() {
                 />
                 {precioCalculado?.desglose?.subtotalBase && (
                   <p className="text-xs text-muted-foreground">
-                    {t('offers.discount.maxDiscountAllowed')}: ${precioCalculado.desglose.subtotalBase.toLocaleString()}
+                    Descuento máximo permitido: ${precioCalculado.desglose.subtotalBase.toLocaleString()}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tarifa_servicio_custom">{t('offers.discount.serviceFee')}</Label>
+                <Label htmlFor="tarifa_servicio_custom">Service Fee (%)</Label>
                 <Input
                   id="tarifa_servicio_custom"
                   type="number"
@@ -4563,7 +4548,7 @@ function CrearOferta() {
                   placeholder={precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || "18.00"}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('offers.discount.serviceFeeHelp')}: {precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || 18}%
+                  Porcentaje del Service Fee (15% - 18%). Por defecto: {precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || 18}%
                 </p>
               </div>
             </CardContent>
@@ -4589,7 +4574,7 @@ function CrearOferta() {
                 onClick={retrocederPaso}
               >
                 <ChevronLeft className="h-4 w-4 mr-2" />
-                {t('offers.previous')}
+                Anterior
               </Button>
             )}
             <div className="flex-1" />
@@ -4598,7 +4583,7 @@ function CrearOferta() {
                 type="button"
                 onClick={avanzarPaso}
               >
-                {t('offers.next')}
+                Siguiente
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
@@ -4610,19 +4595,19 @@ function CrearOferta() {
                 {mutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t('forms.loading')}
+                    Cargando...
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    {t('offers.newOffer')}
+                    Nueva Oferta
                   </>
                 )}
               </Button>
             )}
             <Button variant="outline" asChild>
               <Link to="/ofertas">
-                {t('forms.cancel')}
+                Cancelar
               </Link>
             </Button>
           </div>
@@ -4637,7 +4622,7 @@ function CrearOferta() {
                 <div className="flex flex-col h-[calc(100vh-200px)]">
                   {/* Leyenda y Filtros */}
                   <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('offers.eventDetails.filtersBySalon')}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Filtros por Salón</h3>
                     
                     {/* Filtros */}
                     <div className="space-y-2 mb-4">
@@ -4827,7 +4812,7 @@ function CrearOferta() {
                   {precioCalculado.desglose.invitados.adicionales > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {precioCalculado.desglose.invitados.adicionales} {t('offers.eventDetails.additionalGuests')} 
+                        {precioCalculado.desglose.invitados.adicionales} Invitados Adicionales 
                         (${precioCalculado.desglose.invitados.precioUnitario} c/u):
                       </span>
                       <span className="font-medium text-foreground">${parseFloat(precioCalculado.desglose.invitados.subtotal).toLocaleString()}</span>
@@ -4887,7 +4872,7 @@ function CrearOferta() {
                 <Separator className="my-4" />
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold">{t('offers.total')}:</span>
+                    <span className="text-lg font-semibold">Total:</span>
                     <span className="text-2xl font-bold text-primary">
                       ${parseFloat(precioCalculado.desglose.totalFinal || 0).toLocaleString()}
                     </span>

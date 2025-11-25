@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import useAuthStore from './store/useAuthStore';
 import RateLimitAlert from './components/RateLimitAlert';
-import { LanguageProvider } from './contexts/LanguageContext';
 
 // Pages - Vendedor (Lazy Loading para mejor rendimiento)
 import { lazy, Suspense } from 'react';
@@ -67,14 +66,14 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      refetchOnMount: false, // No refetch al montar si los datos están frescos
+      refetchOnMount: true, // Refetch al montar si los datos están obsoletos (para actualización automática)
       refetchOnReconnect: false, // No refetch al reconectar
       retry: 1,
-      // staleTime: 10 minutos - los datos se consideran "frescos" durante este tiempo
-      // Evita refetch innecesario cuando el usuario navega entre páginas
-      staleTime: 10 * 60 * 1000, // 10 minutos en milisegundos (aumentado)
-      // gcTime: 30 minutos - tiempo que los datos permanecen en caché después de ser "viejos"
-      gcTime: 30 * 60 * 1000, // 30 minutos (aumentado para mejor caché)
+      // staleTime: 0 - los datos se consideran obsoletos inmediatamente cuando se invalidan
+      // Esto permite que las invalidaciones actualicen automáticamente las listas
+      staleTime: 0, // Los datos se consideran obsoletos inmediatamente
+      // gcTime: 5 minutos - tiempo que los datos permanecen en caché
+      gcTime: 5 * 60 * 1000, // 5 minutos
       // Usar estructura de datos más eficiente
       structuralSharing: true,
     },
@@ -154,7 +153,6 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
         <Toaster position="top-right" />
         <RateLimitAlert />
         <Router>
@@ -183,9 +181,9 @@ function App() {
             <Route path="eventos" element={<Suspense fallback={<PageLoader />}><GestionEventos /></Suspense>} />
             <Route path="calendario" element={<Suspense fallback={<PageLoader />}><CalendarioMensual /></Suspense>} />
             <Route path="comisiones" element={<Suspense fallback={<PageLoader />}><ComisionesVendedor /></Suspense>} />
-            <Route path="leaks" element={<Suspense fallback={<PageLoader />}><Leaks /></Suspense>} />
-            <Route path="leaks/disponibles" element={<Suspense fallback={<PageLoader />}><LeaksDisponibles /></Suspense>} />
-            <Route path="leaks/misleaks" element={<Suspense fallback={<PageLoader />}><LeaksMios /></Suspense>} />
+            <Route path="leads" element={<Suspense fallback={<PageLoader />}><Leaks /></Suspense>} />
+            <Route path="leads/disponibles" element={<Suspense fallback={<PageLoader />}><LeaksDisponibles /></Suspense>} />
+            <Route path="leads/misleads" element={<Suspense fallback={<PageLoader />}><LeaksMios /></Suspense>} />
             <Route path="configuracion" element={<Suspense fallback={<PageLoader />}><Configuracion /></Suspense>} />
             <Route path="solicitudes/:id" element={<Suspense fallback={<PageLoader />}><DetalleSolicitud /></Suspense>} />
             <Route path="chat/:contratoId" element={<Suspense fallback={<PageLoader />}><ChatVendedor /></Suspense>} />
@@ -229,7 +227,6 @@ function App() {
           </Route> */}
         </Routes>
       </Router>
-      </LanguageProvider>
     </QueryClientProvider>
   );
 }

@@ -94,7 +94,6 @@ const parsearFechaConHora = (fecha) => {
 };
 import api from '../config/api';
 import toast from 'react-hot-toast';
-
 function ModalDetalleLeak({ isOpen, onClose, leak }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -104,11 +103,13 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
       const response = await api.post(`/leaks/${leakId}/convertir-cliente`);
       return response.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['leaks-mios']);
-      queryClient.invalidateQueries(['leaks-disponibles']);
-      queryClient.invalidateQueries(['clientes']);
-      toast.success('Lead convertido en cliente exitosamente');
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leaks-mios'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-disponibles'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['clientes'], refetchType: 'active' })
+      ]);
+      toast.success('Lead convertido a cliente exitosamente');
       onClose();
       // Opcional: navegar a la página del cliente
       if (data.cliente) {
@@ -116,7 +117,7 @@ function ModalDetalleLeak({ isOpen, onClose, leak }) {
       }
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al convertir lead en cliente');
+      toast.error(error.response?.data?.message || 'Error al crear cliente');
     },
   });
 

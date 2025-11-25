@@ -10,7 +10,6 @@ import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
-
 function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
   const queryClient = useQueryClient();
   const [estado, setEstado] = useState(leak?.estado || 'nuevo');
@@ -30,17 +29,19 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
       const response = await api.put(`/leaks/${leak.id}/estado`, data);
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['leaks-mios']);
-      queryClient.invalidateQueries(['leaks-pendientes']);
-      queryClient.invalidateQueries(['leaks-pendientes-lista']);
-      queryClient.invalidateQueries(['leaks-stats']);
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leaks-mios'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-pendientes'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-pendientes-lista'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-stats'], refetchType: 'active' })
+      ]);
       toast.success('Estado actualizado exitosamente');
       onSuccess?.();
       onClose();
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al actualizar estado');
+      toast.error(error.response?.data?.message || 'Error al actualizar el estado');
     },
   });
 
@@ -54,7 +55,7 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
     }
 
     if (estado === 'contactado_no_interesado' && !motivoNoInteresado.trim()) {
-      toast.error('El motivo de por qué no está interesado es requerido');
+      toast.error('El motivo de no interés es requerido');
       return;
     }
 
@@ -64,7 +65,7 @@ function ModalCambiarEstadoLeak({ isOpen, onClose, leak, onSuccess }) {
     }
 
     if (estado === 'no_contesta_llamar_luego' && !fechaNoContactado) {
-      toast.error('La fecha y hora para llamar luego es requerida');
+      toast.error('La fecha para llamar es requerida');
       return;
     }
 

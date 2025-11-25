@@ -15,9 +15,9 @@ function LoginManager() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const result = await loginManager(formData.codigo_manager, formData.password);
-    
+
     if (result.success) {
       toast.success('Inicio de sesión exitoso');
       navigate('/manager');

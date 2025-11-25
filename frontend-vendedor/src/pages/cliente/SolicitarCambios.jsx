@@ -17,11 +17,13 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import api from '../../config/api';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 function SolicitarCambios() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const contratoId = user?.contrato_id;
 
   const [tipoSolicitud, setTipoSolicitud] = useState('invitados'); // 'invitados' o 'servicio'
@@ -151,13 +153,13 @@ function SolicitarCambios() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['solicitudes']);
-      toast.success('✅ Solicitud enviada exitosamente', {
+      toast.success(t('notes.requestSent'), {
         duration: 3000,
       });
       setTimeout(() => navigate('/cliente/solicitudes'), 1500);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al enviar la solicitud', {
+      toast.error(error.response?.data?.message || t('toast.error.general'), {
         duration: 4000,
       });
     },
@@ -165,14 +167,14 @@ function SolicitarCambios() {
 
   const handleSubmitInvitados = () => {
     const cantidad = parseInt(cantidadInvitados) || 0;
-    
+
     if (cantidad < 1) {
-      toast.error('⚠️ Debes agregar al menos 1 invitado adicional');
+      toast.error(t('specialValidation.minAdditionalGuests'));
       return;
     }
 
     if (cantidad > 500) {
-      toast.error('⚠️ La cantidad de invitados no puede exceder 500');
+      toast.error(t('specialValidation.maxGuestsExceeded'));
       return;
     }
 
@@ -184,11 +186,7 @@ function SolicitarCambios() {
       
       if (cantidadTotal > capacidadMaxima) {
         toast.error(
-          `⚠️ La capacidad máxima del salón es ${capacidadMaxima} invitados\n\n` +
-          `Invitados actuales: ${cantidadActual}\n` +
-          `Invitados solicitados: ${cantidad}\n` +
-          `Total: ${cantidadTotal}\n\n` +
-          `Solo puedes solicitar hasta ${capacidadMaxima - cantidadActual} invitado(s) adicional(es).`,
+          t('specialValidation.venueMaxCapacity', capacidadMaxima, cantidadActual, cantidad, cantidadTotal, capacidadMaxima - cantidadActual),
           { duration: 8000 }
         );
         return;
@@ -206,14 +204,14 @@ function SolicitarCambios() {
 
   const handleSubmitServicio = () => {
     if (!servicioSeleccionado) {
-      toast.error('⚠️ Selecciona un servicio');
+      toast.error(t('specialValidation.selectService'));
       return;
     }
 
     const cantidad = parseInt(cantidadServicio) || 0;
-    
+
     if (cantidad < 1) {
-      toast.error('⚠️ La cantidad del servicio debe ser al menos 1');
+      toast.error(t('specialValidation.serviceQuantityMin'));
       return;
     }
 
@@ -286,7 +284,7 @@ function SolicitarCambios() {
       : parseFloat(servicioSeleccionado.precio_base) * cantidad;
 
     if (costoTotal <= 0) {
-      toast.error('⚠️ El costo calculado debe ser mayor a $0');
+      toast.error(t('specialValidation.calculatedCostMinimum'));
       return;
     }
 

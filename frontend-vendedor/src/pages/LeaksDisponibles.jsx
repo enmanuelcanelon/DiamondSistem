@@ -185,27 +185,22 @@ function LeaksDisponibles() {
         }
       );
       
-      // Invalidar queries sin refetch inmediato (se refetchearán en el próximo intervalo)
-      // Esto evita múltiples requests simultáneos
-      queryClient.invalidateQueries(['leaks-disponibles'], { refetchType: 'none' });
-      queryClient.invalidateQueries(['leaks-mios'], { refetchType: 'none' });
-      queryClient.invalidateQueries(['leaks-stats'], { refetchType: 'none' });
-      
-      // NO hacer refetch inmediato - dejar que el refetchInterval lo maneje
-      // Esto previene acumulación de requests
-      
-      toast.success('Leak asignado exitosamente');
+      // Invalidar y forzar refetch inmediato para actualización automática
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leaks-disponibles'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-mios'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-stats'], refetchType: 'active' })
+      ]);
+
+      toast.success('Lead asignado exitosamente');
     },
-    onError: (error) => {
-      // Si hay error, solo invalidar sin refetch inmediato
-      queryClient.invalidateQueries(['leaks-disponibles'], { refetchType: 'none' });
-      
-      // NO hacer refetch automático - dejar que el refetchInterval lo maneje
-      // Esto previene acumulación de requests cuando hay rate limiting
-      
-      const errorMessage = error?.isRateLimit || error.response?.status === 429 
-        ? 'Demasiadas solicitudes. El sistema se pausará automáticamente. Por favor espera un momento.'
-        : error.response?.data?.message || 'Error al tomar el leak';
+    onError: async (error) => {
+      // Invalidar y forzar refetch para mantener datos actualizados
+      await queryClient.invalidateQueries({ queryKey: ['leaks-disponibles'], refetchType: 'active' });
+
+      const errorMessage = error?.isRateLimit || error.response?.status === 429
+        ? 'Demasiadas solicitudes. Por favor, espera un momento.'
+        : error.response?.data?.message || 'Error al asignar lead';
       toast.error(errorMessage);
     },
     retry: (failureCount, error) => {
@@ -222,9 +217,11 @@ function LeaksDisponibles() {
       const response = await api.delete('/leaks/disponibles');
       return response.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['leaks-disponibles']);
-      queryClient.invalidateQueries(['leaks-stats']);
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leaks-disponibles'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-stats'], refetchType: 'active' })
+      ]);
       toast.success(data.message || 'Leads disponibles eliminados exitosamente');
     },
     onError: (error) => {
@@ -238,9 +235,11 @@ function LeaksDisponibles() {
       const response = await api.delete(`/leaks/${leakId}`);
       return response.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['leaks-disponibles']);
-      queryClient.invalidateQueries(['leaks-stats']);
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leaks-disponibles'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-stats'], refetchType: 'active' })
+      ]);
       toast.success(data.message || 'Leak eliminado exitosamente');
     },
     onError: (error) => {
@@ -283,11 +282,12 @@ function LeaksDisponibles() {
       const response = await api.post('/leaks/sincronizar');
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setResultadoSincronizacion(data);
-      queryClient.invalidateQueries(['leaks-disponibles']);
-      queryClient.invalidateQueries(['leaks-stats']);
-      queryClient.refetchQueries(['leaks-disponibles']);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leaks-disponibles'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['leaks-stats'], refetchType: 'active' })
+      ]);
       toast.success(data.message || 'Sincronización completada');
     },
     onError: (error) => {
@@ -446,7 +446,7 @@ function LeaksDisponibles() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-            <Link to="/leaks" title="Volver al Dashboard">
+            <Link to="/leads" title="Volver al Dashboard">
               <ArrowLeft className="w-4 h-4" />
             </Link>
           </Button>
