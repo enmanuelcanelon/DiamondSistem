@@ -1508,7 +1508,8 @@ function formatearHora(hora) {
       // IMPORTANTE: Para campos Time de Prisma, siempre usar UTC
       // Prisma devuelve Time como Date con fecha 1970-01-01
       // Si usamos getHours() en lugar de getUTCHours(), la zona horaria local puede cambiar la hora
-      if (hora.getFullYear() === 1970 && hora.getMonth() === 0 && hora.getDate() === 1) {
+      // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969 para 1970-01-01T00:00:00.000Z
+      if (hora.getUTCFullYear() === 1970 && hora.getUTCMonth() === 0 && hora.getUTCDate() === 1) {
         // Es un campo Time de Prisma, usar UTC siempre
         horas = hora.getUTCHours();
         minutos = hora.getUTCMinutes();
@@ -1523,7 +1524,8 @@ function formatearHora(hora) {
       // Intentar convertir a Date primero
       const fecha = new Date(hora);
       if (!isNaN(fecha.getTime())) {
-        if (fecha.getFullYear() === 1970 && fecha.getMonth() === 0 && fecha.getDate() === 1) {
+        // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969
+        if (fecha.getUTCFullYear() === 1970 && fecha.getUTCMonth() === 0 && fecha.getUTCDate() === 1) {
           horas = fecha.getUTCHours();
           minutos = fecha.getUTCMinutes();
         } else {
@@ -1533,7 +1535,8 @@ function formatearHora(hora) {
       } else if (typeof hora.getHours === 'function') {
         // Si tiene método getHours pero no es Date válido, intentar usar directamente
         // Pero primero verificar si es un objeto Time de Prisma (fecha 1970-01-01)
-        if (typeof hora.getFullYear === 'function' && hora.getFullYear() === 1970) {
+        // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969
+        if (typeof hora.getUTCFullYear === 'function' && hora.getUTCFullYear() === 1970) {
           if (typeof hora.getUTCHours === 'function') {
             horas = hora.getUTCHours();
             minutos = hora.getUTCMinutes();
