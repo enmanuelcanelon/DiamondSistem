@@ -723,7 +723,7 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato, ofertaId, cl
                     {tipoPago === 'plazos' && (
                       <>
                         <li>Los pagos mensuales se realizarán el día {diaMesPago} de cada mes</li>
-                        <li>El pago completo debe estar al menos 15 días antes del evento</li>
+                        <li>El pago completo debe estar al menos 10 días antes del evento</li>
                       </>
                     )}
                     <li>Visa y MasterCard aceptadas hasta 30 días antes del evento (cargo 3.8%)</li>
@@ -736,7 +736,7 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato, ofertaId, cl
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5" />
                     <p className="text-sm text-amber-800 dark:text-amber-300">
-                      <strong>Importante:</strong> El pago completo debe estar al menos 15 días hábiles antes del evento.
+                      <strong>Importante:</strong> El pago completo debe estar al menos 10 días hábiles antes del evento.
                     </p>
                   </div>
                 </div>
