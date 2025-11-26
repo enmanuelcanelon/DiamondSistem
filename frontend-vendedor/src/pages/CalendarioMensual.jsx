@@ -27,7 +27,7 @@ import { Badge } from '../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../components/ui/dialog';
 import { Separator } from '../components/ui/separator';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
-import { formatearHora, calcularDuracion, formatearMoneda } from '../utils/formatters';
+import { formatearHora, calcularDuracion, formatearMoneda, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 
 function CalendarioMensual() {
   const { user } = useAuthStore();
@@ -209,12 +209,20 @@ function CalendarioMensual() {
     
     const eventos = eventosPorDia[dia] || [];
     
-    // IMPORTANTE: Solo mostrar eventos de Google Calendar (es_google_calendar: true)
-    // NO mostrar contratos ni ofertas de la base de datos porque tienen bugs
-    const eventosFiltrados = eventos.filter(evento => {
-      // Solo incluir eventos de Google Calendar
-      return evento.es_google_calendar === true || evento.calendario === 'principal' || evento.calendario === 'citas';
-    });
+    // Para el calendario vendedor, mostrar solo contratos de la base de datos
+    // Para otros tipos de calendario (leads), mostrar eventos de Google Calendar
+    let eventosFiltrados = eventos;
+    if (tipoCalendario === 'vendedor') {
+      // En calendario vendedor, mostrar solo contratos (NO Google Calendar)
+      eventosFiltrados = eventos.filter(evento => {
+        return !evento.es_google_calendar && evento.calendario === 'contratos';
+      });
+    } else {
+      // Para otros calendarios (leads), mostrar solo Google Calendar
+      eventosFiltrados = eventos.filter(evento => {
+        return evento.es_google_calendar === true || evento.calendario === 'principal' || evento.calendario === 'citas';
+      });
+    }
     
     // Filtrar eventos según los filtros de salones activos
     return eventosFiltrados.filter(evento => {
@@ -422,11 +430,21 @@ function CalendarioMensual() {
                   <div className="flex items-center gap-1">
                     <div className={`w-1.5 h-1.5 rounded-full ${color.dot} flex-shrink-0`} />
                     <span className="truncate">
-                      {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
-                      {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
-                      {evento.clientes?.tipo_evento && (
-                        <span className="text-xs opacity-75 ml-1">({evento.clientes.tipo_evento})</span>
-                      )}
+                      {(() => {
+                        // Calcular horas adicionales y hora fin con extras
+                        const horasAdicionales = evento.horas_adicionales || obtenerHorasAdicionales(evento.contratos_servicios || []);
+                        const horaFinConExtras = calcularHoraFinConExtras(evento.hora_fin, horasAdicionales);
+                        const tipoEvento = evento.tipo_evento_contrato || evento.ofertas?.tipo_evento || evento.clientes?.tipo_evento;
+                        return (
+                          <>
+                            {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
+                            {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
+                            {tipoEvento && (
+                              <span className="text-xs opacity-75 ml-1">({tipoEvento})</span>
+                            )}
+                          </>
+                        );
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -735,11 +753,21 @@ function CalendarioMensual() {
                                 <div className="flex items-center gap-1">
                                   <div className={`w-1.5 h-1.5 rounded-full ${color.dot} flex-shrink-0`} />
                                   <span className="truncate">
-                                    {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
-                                    {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
-                                    {evento.clientes?.tipo_evento && (
-                                      <span className="text-xs opacity-75 ml-1">({evento.clientes.tipo_evento})</span>
-                                    )}
+                                    {(() => {
+                                      // Calcular horas adicionales y hora fin con extras
+                                      const horasAdicionales = evento.horas_adicionales || obtenerHorasAdicionales(evento.contratos_servicios || []);
+                                      const horaFinConExtras = calcularHoraFinConExtras(evento.hora_fin, horasAdicionales);
+                                      const tipoEvento = evento.tipo_evento_contrato || evento.ofertas?.tipo_evento || evento.clientes?.tipo_evento;
+                                      return (
+                                        <>
+                                          {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
+                                          {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
+                                          {tipoEvento && (
+                                            <span className="text-xs opacity-75 ml-1">({tipoEvento})</span>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
                                   </span>
                                 </div>
                               </div>
@@ -778,7 +806,12 @@ function CalendarioMensual() {
                   {eventosDelDia.length > 0 ? (
                     eventosDelDia.map((evento, index) => {
                       const color = obtenerColorEvento(evento);
-                      const duracion = calcularDuracion(evento.hora_inicio, evento.hora_fin);
+                      // Calcular horas adicionales y hora fin con extras (igual que en contratos)
+                      const horasAdicionales = evento.horas_adicionales || obtenerHorasAdicionales(evento.contratos_servicios || []);
+                      const horaFinConExtras = calcularHoraFinConExtras(evento.hora_fin, horasAdicionales);
+                      const duracion = calcularDuracion(evento.hora_inicio, horaFinConExtras);
+                      // Usar tipo_evento de la oferta si está disponible, sino del cliente
+                      const tipoEvento = evento.tipo_evento_contrato || evento.ofertas?.tipo_evento || evento.clientes?.tipo_evento;
                       return (
                         <div
                           key={evento.id || index}
@@ -796,8 +829,8 @@ function CalendarioMensual() {
                             <div className="flex-1">
                               <div className="font-semibold text-base mb-2">
                                 {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
-                                {evento.clientes?.tipo_evento && (
-                                  <span className="text-sm font-normal text-gray-600 dark:text-gray-400 ml-2 capitalize">({evento.clientes.tipo_evento})</span>
+                                {tipoEvento && (
+                                  <span className="text-sm font-normal text-gray-600 dark:text-gray-400 ml-2 capitalize">({tipoEvento})</span>
                                 )}
                               </div>
                               <div className="space-y-1 text-sm">
@@ -811,7 +844,7 @@ function CalendarioMensual() {
                                     <Clock className="w-4 h-4" />
                                     <span>
                                       {formatearHora(evento.hora_inicio)}
-                                      {evento.hora_fin && ` - ${formatearHora(evento.hora_fin)}`}
+                                      {horaFinConExtras && ` - ${formatearHora(horaFinConExtras)}`}
                                       {duracion > 0 && ` (${Math.round(duracion * 10) / 10}h)`}
                                     </span>
                                   </div>
@@ -1015,7 +1048,12 @@ function CalendarioMensual() {
                     {eventosDiaSeleccionado.length > 0 ? (
                       eventosDiaSeleccionado.map((evento, index) => {
                         const color = obtenerColorEvento(evento);
-                        const duracion = calcularDuracion(evento.hora_inicio, evento.hora_fin);
+                        // Calcular horas adicionales y hora fin con extras (igual que en contratos)
+                        const horasAdicionales = evento.horas_adicionales || obtenerHorasAdicionales(evento.contratos_servicios || []);
+                        const horaFinConExtras = calcularHoraFinConExtras(evento.hora_fin, horasAdicionales);
+                        const duracion = calcularDuracion(evento.hora_inicio, horaFinConExtras);
+                        // Usar tipo_evento de la oferta si está disponible, sino del cliente
+                        const tipoEvento = evento.tipo_evento_contrato || evento.ofertas?.tipo_evento || evento.clientes?.tipo_evento;
                         return (
                           <div
                             key={evento.id || index}
@@ -1033,8 +1071,8 @@ function CalendarioMensual() {
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-sm mb-1 truncate">
                                   {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
-                                  {evento.clientes?.tipo_evento && (
-                                    <span className="text-xs font-normal text-gray-600 dark:text-gray-400 ml-1 capitalize">({evento.clientes.tipo_evento})</span>
+                                  {tipoEvento && (
+                                    <span className="text-xs font-normal text-gray-600 dark:text-gray-400 ml-1 capitalize">({tipoEvento})</span>
                                   )}
                                 </div>
                                 <div className="space-y-1 text-xs opacity-90">
@@ -1048,7 +1086,7 @@ function CalendarioMensual() {
                                       <Clock className="w-3 h-3" />
                                       <span>
                                         {formatearHora(evento.hora_inicio)}
-                                        {evento.hora_fin && ` - ${formatearHora(evento.hora_fin)}`}
+                                        {horaFinConExtras && ` - ${formatearHora(horaFinConExtras)}`}
                                         {duracion > 0 && ` (${Math.round(duracion * 10) / 10}h)`}
                                       </span>
                                     </div>
@@ -1154,10 +1192,12 @@ function CalendarioMensual() {
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Nombre:</span>
                           <span className="text-sm text-gray-900 dark:text-gray-100">{eventoSeleccionado.clientes.nombre_completo}</span>
                         </div>
-                        {eventoSeleccionado.clientes.tipo_evento && (
+                        {(eventoSeleccionado.tipo_evento_contrato || eventoSeleccionado.ofertas?.tipo_evento || eventoSeleccionado.clientes?.tipo_evento) && (
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Tipo de evento:</span>
-                            <span className="text-sm text-gray-900 dark:text-gray-100 capitalize">{eventoSeleccionado.clientes.tipo_evento}</span>
+                            <span className="text-sm text-gray-900 dark:text-gray-100 capitalize">
+                              {eventoSeleccionado.tipo_evento_contrato || eventoSeleccionado.ofertas?.tipo_evento || eventoSeleccionado.clientes?.tipo_evento}
+                            </span>
                           </div>
                         )}
                         {eventoSeleccionado.clientes.email && (
@@ -1237,16 +1277,20 @@ function CalendarioMensual() {
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-gray-400" />
                         <span className="text-sm text-gray-900 dark:text-gray-100">
-                          {formatearHora(eventoSeleccionado.hora_inicio || eventoSeleccionado.fecha_inicio)}
-                          {(eventoSeleccionado.hora_fin || eventoSeleccionado.fecha_fin) && ` - ${formatearHora(eventoSeleccionado.hora_fin || eventoSeleccionado.fecha_fin)}`}
                           {(() => {
+                            // Calcular horas adicionales y hora fin con extras (igual que en contratos)
+                            const horasAdicionales = eventoSeleccionado.horas_adicionales || obtenerHorasAdicionales(eventoSeleccionado.contratos_servicios || []);
+                            const horaFinConExtras = calcularHoraFinConExtras(eventoSeleccionado.hora_fin || eventoSeleccionado.fecha_fin, horasAdicionales);
                             const inicio = eventoSeleccionado.hora_inicio || eventoSeleccionado.fecha_inicio;
-                            const fin = eventoSeleccionado.hora_fin || eventoSeleccionado.fecha_fin;
-                            if (inicio && fin) {
-                              const duracion = calcularDuracion(inicio, fin);
-                              return duracion > 0 ? ` (${Math.round(duracion * 10) / 10} horas)` : '';
-                            }
-                            return '';
+                            const duracion = calcularDuracion(inicio, horaFinConExtras);
+                            
+                            return (
+                              <>
+                                {formatearHora(inicio)}
+                                {horaFinConExtras && ` - ${formatearHora(horaFinConExtras)}`}
+                                {duracion > 0 && ` (${Math.round(duracion * 10) / 10} horas)`}
+                              </>
+                            );
                           })()}
                         </span>
                       </div>
