@@ -878,7 +878,7 @@ function generarPDFContrato(contrato) {
     doc.fontSize(tamanosTexto.normal)
       .fillColor(colores.texto)
       .font(fuentes.normal)
-      .text('El pago total debe realizarse de una sola vez antes del evento. El pago completo debe estar liquidado al menos quince (15) días hábiles antes de la fecha del evento.', 50, undefined, { align: 'justify', width: 512 })
+      .text('El pago total debe realizarse de una sola vez antes del evento. El pago completo debe estar liquidado al menos diez (10) días hábiles antes de la fecha del evento.', 50, undefined, { align: 'justify', width: 512 })
       .moveDown(0.5);
 
   } else if (contrato.plan_pagos && (contrato.tipo_pago === 'plazos' || contrato.tipo_pago === 'financiado')) {
@@ -953,7 +953,7 @@ function generarPDFContrato(contrato) {
         .font(fuentes.bold)
         .text('IMPORTANTE: ', 50, undefined, { continued: true })
         .font(fuentes.normal)
-        .text('El pago completo debe estar liquidado al menos quince (15) días hábiles antes del evento. Todos los pagos son no reembolsables.', 50, undefined, { width: 512, align: 'justify' });
+        .text('El pago completo debe estar liquidado al menos diez (10) días hábiles antes del evento. Todos los pagos son no reembolsables.', 50, undefined, { width: 512, align: 'justify' });
 
       doc.moveDown(0.4);
     }
@@ -1031,7 +1031,7 @@ function generarPDFContrato(contrato) {
   const terminos = [
     {
       titulo: '1. RESERVA, DEPÓSITO Y CONDICIONES DE PAGO',
-      contenido: 'Se requiere un depósito no reembolsable de $500 para reservar la fecha del evento. Se deberá completar un pago de $1,000 dentro de los diez (10) días posteriores a la reserva. A partir de entonces, se requerirán pagos mensuales de al menos $500 hasta que se pague el saldo total. El pago total deberá completarse al menos quince (15) días hábiles antes del evento. Los pagos con Visa y MasterCard se aceptan solo hasta 30 días antes de la fecha del evento con una tarifa del 3.8%. No se acepta American Express. Todos los pagos no son reembolsables.'
+      contenido: 'Se requiere un depósito no reembolsable de $500 para reservar la fecha del evento. Se deberá completar un pago de $1,000 dentro de los diez (10) días posteriores a la reserva. A partir de entonces, se requerirán pagos mensuales de al menos $500 hasta que se pague el saldo total. El pago total deberá completarse al menos diez (10) días hábiles antes del evento. Los pagos con Visa y MasterCard se aceptan solo hasta 30 días antes de la fecha del evento con una tarifa del 3.8%. No se acepta American Express. Todos los pagos no son reembolsables.'
     },
     {
       titulo: '2. POLÍTICA DE CANCELACIÓN DEL EVENTO',
