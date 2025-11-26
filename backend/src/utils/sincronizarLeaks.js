@@ -270,6 +270,23 @@ async function sincronizarLeaksAutomaticamente() {
     const emails = [...new Set(emailsYTelefonos.map(e => e.email).filter(Boolean))];
     const telefonos = [...new Set(emailsYTelefonos.map(e => e.telefono).filter(Boolean))];
     
+    // Obtener exclusiones (leads eliminados permanentemente)
+    const exclusiones = await prisma.leaks_exclusiones.findMany({
+      where: {
+        OR: [
+          { email: { in: emails } },
+          { telefono: { in: telefonos } }
+        ]
+      }
+    });
+
+    // Crear un mapa de exclusiones para verificación rápida
+    const exclusionesMap = new Map();
+    exclusiones.forEach(exclusion => {
+      if (exclusion.email) exclusionesMap.set(`email:${exclusion.email.toLowerCase()}`, exclusion);
+      if (exclusion.telefono) exclusionesMap.set(`telefono:${exclusion.telefono}`, exclusion);
+    });
+    
     // Buscar todos los leaks existentes en una sola query
     const leaksExistentes = await prisma.leaks.findMany({
       where: {
@@ -296,6 +313,22 @@ async function sincronizarLeaksAutomaticamente() {
     // IMPORTANTE: Si un leak ya está asignado a un vendedor, NO crear duplicado ni actualizarlo
     for (const leakData of leaksParaImportar) {
       try {
+        // Verificar si el lead está en la lista de exclusiones (eliminado permanentemente)
+        const exclusion = exclusionesMap.get(`email:${leakData.email?.toLowerCase()}`) || 
+                         exclusionesMap.get(`telefono:${leakData.telefono}`);
+        
+        if (exclusion) {
+          leaksDuplicados.push({
+            id_existente: null,
+            nombre: leakData.nombre_completo,
+            email: leakData.email,
+            telefono: leakData.telefono,
+            accion: 'omitido_exclusion',
+            razon: 'Lead eliminado permanentemente - no se vuelve a sincronizar'
+          });
+          continue; // Saltar este lead, está en exclusiones
+        }
+
         // Buscar leak existente usando el mapa (más eficiente)
         const leakExistenteCualquiera = leaksMap.get(`email:${leakData.email.toLowerCase()}`) || 
                                         leaksMap.get(`telefono:${leakData.telefono}`);

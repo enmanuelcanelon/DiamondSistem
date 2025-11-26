@@ -20,9 +20,10 @@ import {
   Eye,
   EyeOff,
   Mail,
+  CalendarPlus,
 } from 'lucide-react';
 import api from '../config/api';
-import { formatearHora, calcularDuracion } from '../utils/formatters';
+import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
 import toast, { Toaster } from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -72,6 +73,31 @@ function DetalleContrato() {
     },
   });
 
+
+  // Mutation para agregar contrato a Google Calendar
+  const agregarCalendarioMutation = useMutation({
+    mutationFn: async () => {
+      if (!contrato?.id) {
+        throw new Error('No se puede agregar al calendario: el contrato no existe');
+      }
+      const response = await api.post(`/google-calendar/contratos/${contrato.id}/agregar`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      toast.success('Contrato agregado a Google Calendar exitosamente', {
+        duration: 4000,
+        icon: '📅',
+      });
+    },
+    onError: (error) => {
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || 'Error al agregar al calendario';
+      toast.error(errorMsg, { duration: 4000 });
+    },
+  });
+
+  const handleAgregarCalendario = () => {
+    agregarCalendarioMutation.mutate();
+  };
 
   // Mutation para actualizar notas internas
   const mutationNotasInternas = useMutation({
@@ -365,6 +391,17 @@ function DetalleContrato() {
               <Mail className="w-4 h-4 mr-2" />
               Enviar por Email
             </Button>
+            {contrato?.id && (
+              <Button 
+                onClick={handleAgregarCalendario}
+                disabled={agregarCalendarioMutation.isPending}
+                variant="outline"
+                className="flex-1 min-w-[200px] whitespace-nowrap"
+              >
+                <CalendarPlus className="w-4 h-4 mr-2" />
+                {agregarCalendarioMutation.isPending ? 'Agregando...' : 'Agregar a Calendario'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -399,13 +436,14 @@ function DetalleContrato() {
                     <p className="text-sm text-muted-foreground">Horario</p>
                     <p className="font-medium text-foreground">
                       {(() => {
-                        // Mostrar siempre la hora_fin de la BD, sin ajustar por horas extra
-                        // Las "Horas Extra" se muestran como servicio adicional por separado
-                        const duracion = calcularDuracion(contrato?.hora_inicio, contrato?.hora_fin);
+                        // Calcular horas adicionales y hora fin con extras (igual que en lista de contratos)
+                        const horasAdicionales = obtenerHorasAdicionales(contrato?.contratos_servicios || []);
+                        const horaFinConExtras = calcularHoraFinConExtras(contrato?.hora_fin, horasAdicionales);
+                        const duracion = calcularDuracion(contrato?.hora_inicio, horaFinConExtras);
 
                         return (
                           <>
-                            {formatearHora(contrato?.hora_inicio)} - {formatearHora(contrato?.hora_fin)}
+                            {formatearHora(contrato?.hora_inicio)} - {formatearHora(horaFinConExtras)}
                             {duracion > 0 && (() => {
                               const horasEnteras = Math.floor(duracion);
                               const minutos = Math.round((duracion - horasEnteras) * 60);
@@ -426,6 +464,16 @@ function DetalleContrato() {
                   <div>
                     <p className="text-sm text-muted-foreground">Lugar</p>
                     <p className="font-medium text-foreground">{contrato?.ofertas?.lugar_evento || contrato?.eventos?.nombre_evento || 'No especificado'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <FileText className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tipo de Evento</p>
+                    <p className="font-medium text-foreground capitalize">
+                      {contrato?.ofertas?.tipo_evento || contrato?.clientes?.tipo_evento || 'No especificado'}
+                    </p>
                   </div>
                 </div>
 

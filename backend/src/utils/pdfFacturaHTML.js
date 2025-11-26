@@ -68,9 +68,13 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   });
   
   const horaInicio = formatearHora(datos.hora_inicio);
-  const horaFin = formatearHora(datos.hora_fin);
   
-  console.log('🔍 Horas formateadas:', { horaInicio, horaFin });
+  // Calcular horas adicionales y hora fin con extras
+  const horasAdicionales = obtenerHorasAdicionales(datos.ofertas_servicios_adicionales || []);
+  const horaFinConExtras = calcularHoraFinConExtras(datos.hora_fin, horasAdicionales);
+  const horaFin = formatearHora(horaFinConExtras);
+  
+  console.log('🔍 Horas formateadas:', { horaInicio, horaFin, horasAdicionales, horaFinConExtras });
   const cantidadInvitados = datos.cantidad_invitados || 0;
   const emailCliente = datos.clientes?.email || '';
   // Obtener teléfono del cliente - asegurar que no sea undefined, vacío o 0000000000
@@ -88,22 +92,43 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   let nombreCompania = 'Diamond Venue';
   const nombreSalon = (salon?.nombre || lugarSalon || '').toLowerCase();
 
+  console.log('🔍 Detección de salón:', {
+    salon_nombre: salon?.nombre,
+    lugar_salon: lugarSalon,
+    nombreSalon_lowercase: nombreSalon,
+    salon_id: salon?.id
+  });
+
   if (nombreSalon) {
     if (nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Doral<br>8726 NW 26th St<br>Doral, FL 33172';
       esRevolution = true;
       nombreCompania = 'Revolution Party Venues';
+      console.log('✅ Detectado: Doral (Revolution)');
     } else if (nombreSalon.includes('kendall')) {
       direccionSalon = 'Salón Kendall<br>14271 Southwest 120th Street<br>Kendall, Miami, FL 33186';
       esRevolution = true;
       nombreCompania = 'Revolution Party Venues';
+      console.log('✅ Detectado: Kendall (Revolution)');
     } else if (nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
       esRevolution = false;
       esDiamond = true;
       nombreCompania = 'Diamond Venue';
+      console.log('✅ Detectado: Diamond');
+    } else {
+      console.warn('⚠️ Salón no reconocido:', nombreSalon);
     }
+  } else {
+    console.warn('⚠️ No se pudo determinar el salón. Usando valores por defecto (Diamond)');
   }
+
+  console.log('🔍 Configuración final:', {
+    esRevolution,
+    esDiamond,
+    nombreCompania,
+    direccionSalon
+  });
 
   // Leer el template HTML según la compañía
   const templatePath = esRevolution 
@@ -173,7 +198,8 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     specials: serviciosOrganizados.specials.filter(s => s.esPaquete === true),
     barService: serviciosOrganizados.barService.filter(s => s.esPaquete === true),
     catering: serviciosOrganizados.catering.filter(s => s.esPaquete === true),
-    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === true)
+    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === true),
+    personal: serviciosOrganizados.personal.filter(s => s.esPaquete === true)
   };
 
   const serviciosAdicionales = {
@@ -183,7 +209,8 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     specials: serviciosOrganizados.specials.filter(s => s.esPaquete === false),
     barService: serviciosOrganizados.barService.filter(s => s.esPaquete === false),
     catering: serviciosOrganizados.catering.filter(s => s.esPaquete === false),
-    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === false)
+    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === false),
+    personal: serviciosOrganizados.personal.filter(s => s.esPaquete === false)
   };
 
   // Obtener nombre del salón para filtrar equipos
@@ -638,18 +665,20 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
         specials: [],
         barService: [],
         catering: [],
-        serviceCoord: []
+        serviceCoord: [],
+        personal: []
       };
     }
     const procesados = {
-      venue: [...(servicios.venue || [])],
-      cake: [...(servicios.cake || [])],
-      decoration: [...(servicios.decoration || [])],
-      specials: [...(servicios.specials || [])],
-      barService: [...(servicios.barService || [])],
-      catering: [...(servicios.catering || [])],
-      serviceCoord: [...(servicios.serviceCoord || [])]
-    };
+        venue: [...(servicios.venue || [])],
+        cake: [...(servicios.cake || [])],
+        decoration: [...(servicios.decoration || [])],
+        specials: [...(servicios.specials || [])],
+        barService: [...(servicios.barService || [])],
+        catering: [...(servicios.catering || [])],
+        serviceCoord: [...(servicios.serviceCoord || [])],
+        personal: [...(servicios.personal || [])]
+      };
 
     // Buscar y mover "Animador adicional" de specials a serviceCoord
     // IMPORTANTE: Solo mover si dice "adicional" explícitamente, no todos los animadores
@@ -780,8 +809,14 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   let logoPath = '';
   if (esRevolution) {
     logoPath = path.join(__dirname, '../templates/assets/Logorevolution.png');
+    console.log('🔍 Intentando cargar logo Revolution desde:', logoPath);
+    console.log('🔍 Ruta absoluta:', path.resolve(logoPath));
+    console.log('🔍 Existe archivo:', fs.existsSync(logoPath));
   } else if (esDiamond) {
     logoPath = path.join(__dirname, '../../../7.png');
+    console.log('🔍 Intentando cargar logo Diamond desde:', logoPath);
+    console.log('🔍 Ruta absoluta:', path.resolve(logoPath));
+    console.log('🔍 Existe archivo:', fs.existsSync(logoPath));
   }
 
   let logoHTML = `<div style="font-size: 18px; font-weight: 100; color: #FFFFFF; letter-spacing: 2px;">${nombreCompania}</div>`;
@@ -790,9 +825,12 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
       const logoBuffer = fs.readFileSync(logoPath);
       const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
       logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 400px; height: auto; opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));">`;
+      console.log('✅ Logo cargado correctamente');
     } catch (error) {
-      console.error('Error al cargar logo:', error);
+      console.error('❌ Error al cargar logo:', error);
     }
+  } else {
+    console.warn('⚠️ Logo no encontrado en:', logoPath);
   }
 
   // Cargar fondo para portada/header
@@ -810,6 +848,10 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   if (esRevolution) {
     // Fondo para Revolution - img12.jpg
     const fondoRevolutionPath = path.join(__dirname, '../templates/assets/img12.jpg');
+    console.log('🔍 Intentando cargar fondo Revolution desde:', fondoRevolutionPath);
+    console.log('🔍 Ruta absoluta:', path.resolve(fondoRevolutionPath));
+    console.log('🔍 Existe archivo:', fs.existsSync(fondoRevolutionPath));
+    
     if (fs.existsSync(fondoRevolutionPath)) {
       try {
         const fondoBuffer = fs.readFileSync(fondoRevolutionPath);
@@ -821,8 +863,30 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
               opacity: 1;
               display: block;`;
         hasBackground = true;
+        console.log('✅ Fondo Revolution cargado correctamente');
       } catch (error) {
-        console.error('Error al cargar fondo Revolution:', error);
+        console.error('❌ Error al cargar fondo Revolution:', error);
+      }
+    } else {
+      console.warn('⚠️ Archivo img12.jpg no encontrado en:', fondoRevolutionPath);
+      // Intentar ruta alternativa desde la raíz del proyecto
+      const fondoRevolutionPathAlt = path.join(__dirname, '../../../fondoRevolutionGeneral.png');
+      console.log('🔍 Intentando ruta alternativa:', fondoRevolutionPathAlt);
+      if (fs.existsSync(fondoRevolutionPathAlt)) {
+        try {
+          const fondoBuffer = fs.readFileSync(fondoRevolutionPathAlt);
+          const fondoBase64 = `data:image/png;base64,${fondoBuffer.toString('base64')}`;
+          fondoStyle = `background-image: url("${fondoBase64}");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                opacity: 1;
+                display: block;`;
+          hasBackground = true;
+          console.log('✅ Fondo Revolution cargado desde ruta alternativa');
+        } catch (error) {
+          console.error('❌ Error al cargar fondo Revolution desde ruta alternativa:', error);
+        }
       }
     }
   } else if (usaTemplateDiamond) {
@@ -875,8 +939,12 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   let packageCardBackground = '';
 
   if (esRevolution) {
-    // Fondo para Revolution
+    // Fondo para Revolution - package-card
     const fondoGeneralPath = path.join(__dirname, '../templates/assets/fondoRevolutionGeneral.png');
+    console.log('🔍 Intentando cargar fondo general Revolution desde:', fondoGeneralPath);
+    console.log('🔍 Ruta absoluta:', path.resolve(fondoGeneralPath));
+    console.log('🔍 Existe archivo:', fs.existsSync(fondoGeneralPath));
+    
     if (fs.existsSync(fondoGeneralPath)) {
       try {
         const fondoGeneralBuffer = fs.readFileSync(fondoGeneralPath);
@@ -886,9 +954,30 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
               background-position: center;
               background-repeat: no-repeat;
               opacity: 1;`;
+        console.log('✅ Fondo general Revolution cargado correctamente');
       } catch (error) {
-        console.error('Error al cargar fondo general:', error);
+        console.error('❌ Error al cargar fondo general Revolution:', error);
         packageCardBackground = '';
+      }
+    } else {
+      console.warn('⚠️ Archivo fondoRevolutionGeneral.png no encontrado en:', fondoGeneralPath);
+      // Intentar ruta alternativa desde la raíz del proyecto
+      const fondoGeneralPathAlt = path.join(__dirname, '../../../fondoRevolutionGeneral.png');
+      console.log('🔍 Intentando ruta alternativa:', fondoGeneralPathAlt);
+      if (fs.existsSync(fondoGeneralPathAlt)) {
+        try {
+          const fondoGeneralBuffer = fs.readFileSync(fondoGeneralPathAlt);
+          const fondoGeneralBase64 = `data:image/png;base64,${fondoGeneralBuffer.toString('base64')}`;
+          packageCardBackground = `background-image: url("${fondoGeneralBase64}");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                opacity: 1;`;
+          console.log('✅ Fondo general Revolution cargado desde ruta alternativa');
+        } catch (error) {
+          console.error('❌ Error al cargar fondo general Revolution desde ruta alternativa:', error);
+          packageCardBackground = '';
+        }
       }
     }
   } else {
@@ -941,7 +1030,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     '{{OFFER_CREATION_DATE}}': fechaCreacionOferta,
     '{{HOMENAJEADO_ROW}}': homenajeadoRow,
     '{{EVENT_TYPE}}': tipoEvento,
-    '{{EVENT_DATE}}': fechaEvento.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+    '{{EVENT_DATE}}': fechaEvento.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
     '{{EVENT_TIME}}': `${horaInicio} to ${horaFin}`,
     '{{GUEST_COUNT}}': cantidadInvitados.toString(),
     '{{CLIENT_EMAIL}}': emailCliente,
@@ -961,10 +1050,12 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     '{{FIRST_PAYMENT_DATE}}': fechaPrimerPago,
     '{{FIRST_PAYMENT_AMOUNT}}': formatearMoneda(primerPago),
     '{{TOTAL_REMAINING}}': formatearMoneda(totalRestante),
-    '\\/\\*PACKAGE_CARD_BACKGROUND_PLACEHOLDER\\*\\/': packageCardBackground,
+    '{{PACKAGE_CARD_BACKGROUND}}': packageCardBackground || '', // Fondo para package-card (Paquete, Extras, Pago)
+    '\\/\\*PACKAGE_CARD_BACKGROUND_PLACEHOLDER\\*\\/': packageCardBackground, // Compatibilidad con formato anterior
     '{{NOMBRE_COMPANIA}}': nombreCompania,
     '{{LOGO_HTML}}': logoHTML,
-    '\\/\\*FONDO_STYLE_PLACEHOLDER\\*\\/': fondoStyle, // Fondo para Revolution y Diamond (ya se cargó según la compañía)
+    '{{FONDO_STYLE}}': fondoStyle, // Fondo para Revolution y Diamond (ya se cargó según la compañía)
+    '\\/\\*FONDO_STYLE_PLACEHOLDER\\*\\/': fondoStyle, // Compatibilidad con formato anterior
     '{{HAS_BACKGROUND_CLASS}}': hasBackground ? 'has-background' : '',
     // Traducciones
     '{{TEXT_INVERSION_TERMINOS}}': t(lang, 'investment'),
@@ -990,8 +1081,26 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   };
 
   Object.keys(replacements).forEach(key => {
-    html = html.replace(new RegExp(key, 'g'), replacements[key]);
+    const value = replacements[key];
+    if (key.includes('FONDO_STYLE') || key.includes('PACKAGE_CARD_BACKGROUND')) {
+      console.log('🔍 Reemplazando placeholder:', key);
+      console.log('🔍 Valor a insertar:', value ? value.substring(0, 100) + '...' : 'VACÍO');
+    }
+    html = html.replace(new RegExp(key, 'g'), value || '');
   });
+  
+  // Verificar que los reemplazos se hicieron correctamente
+  if (html.includes('{{FONDO_STYLE}}')) {
+    console.warn('⚠️ El placeholder {{FONDO_STYLE}} no fue reemplazado');
+  } else {
+    console.log('✅ Placeholder {{FONDO_STYLE}} reemplazado correctamente');
+  }
+  
+  if (html.includes('{{PACKAGE_CARD_BACKGROUND}}')) {
+    console.warn('⚠️ El placeholder {{PACKAGE_CARD_BACKGROUND}} no fue reemplazado');
+  } else {
+    console.log('✅ Placeholder {{PACKAGE_CARD_BACKGROUND}} reemplazado correctamente');
+  }
 
   // Generar PDF con Puppeteer
   const browser = await puppeteer.launch({
@@ -1505,7 +1614,8 @@ function organizarServiciosPorCategoria(datos) {
     specials: [],
     barService: [],
     catering: [],
-    serviceCoord: []
+    serviceCoord: [],
+    personal: []
   };
 
   todosServicios.forEach(servicio => {
@@ -1546,7 +1656,19 @@ function organizarServiciosPorCategoria(datos) {
                descripcion.includes('luce stage') || descripcion.includes('luces stage') || descripcion.includes('stage lighting') ||
                descripcion.includes('mapping') || descripcion.includes('máquina de chispa') || descripcion.includes('máquina de humo')) {
       organizados.specials.push(servicio); // Los equipos van a specials para ser procesados después
-    } else if (categoria.includes('coordinación') || categoria.includes('coordinador') || categoria.includes('mesero') || categoria.includes('bartender') || categoria.includes('service') || nombre.includes('coordinador') || nombre.includes('mesero') || nombre.includes('bartender') || nombre.includes('personal de servicio') || nombre.includes('waiters') || descripcion.includes('coordinator') || descripcion.includes('waiters') || descripcion.includes('bartender')) {
+    } else if (categoria.includes('personal') || 
+               nombre.includes('bartender') || nombre.includes('barman') ||
+               nombre.includes('personal de atención') || nombre.includes('personal de servicio') ||
+               nombre.includes('mesero') || nombre.includes('waiter') ||
+               nombre.includes('coordinador') || nombre.includes('coordinator') ||
+               descripcion.includes('bartender') || descripcion.includes('barman') ||
+               descripcion.includes('personal de atención') || descripcion.includes('personal de servicio') ||
+               descripcion.includes('mesero') || descripcion.includes('waiter') ||
+               descripcion.includes('coordinador') || descripcion.includes('coordinator')) {
+      // Servicios de personal van a la categoría 'personal', no a 'serviceCoord'
+      organizados.personal.push(servicio);
+    } else if (categoria.includes('coordinación') || categoria.includes('coordinador') || categoria.includes('service') || nombre.includes('waiters') || descripcion.includes('waiters')) {
+      // Solo coordinación y servicio general (sin personal específico) van a serviceCoord
       organizados.serviceCoord.push(servicio);
     } else if (categoria.includes('transporte') || categoria.includes('transport') ||
                nombre.includes('limosina') || nombre.includes('limousine') || nombre.includes('limo') ||
@@ -1677,6 +1799,111 @@ function formatearHora(hora) {
   } catch (e) {
     console.error('Error formateando hora:', e, 'Hora recibida:', hora, 'Tipo:', typeof hora);
     return '8:00PM';
+  }
+}
+
+/**
+ * Obtiene la cantidad de horas adicionales de un servicio "Hora Extra"
+ * @param {Array} serviciosAdicionales - Array de servicios adicionales
+ * @returns {number} Cantidad de horas adicionales
+ */
+function obtenerHorasAdicionales(serviciosAdicionales = []) {
+  if (!serviciosAdicionales || serviciosAdicionales.length === 0) {
+    return 0;
+  }
+
+  // Buscar el servicio "Hora Extra"
+  const horaExtra = serviciosAdicionales.find(
+    servicio => servicio.servicios?.nombre === 'Hora Extra' || 
+                servicio.servicio?.nombre === 'Hora Extra' ||
+                servicio.nombre === 'Hora Extra'
+  );
+
+  if (!horaExtra) {
+    return 0;
+  }
+
+  // Retornar la cantidad (puede estar en diferentes propiedades)
+  return horaExtra.cantidad || horaExtra.cantidad_servicio || 0;
+}
+
+/**
+ * Calcula la hora fin incluyendo horas adicionales
+ * @param {string|Date} horaFinOriginal - Hora fin original
+ * @param {number} horasAdicionales - Cantidad de horas adicionales
+ * @returns {string} Hora fin con extras en formato HH:MM
+ */
+function calcularHoraFinConExtras(horaFinOriginal, horasAdicionales = 0) {
+  if (!horaFinOriginal) {
+    return horaFinOriginal;
+  }
+
+  try {
+    // Extraer hora y minutos - siempre normalizar a formato HH:MM
+    let horaFinStr;
+    if (horaFinOriginal instanceof Date) {
+      // Para campos Time de Prisma, usar UTC
+      if (horaFinOriginal.getUTCFullYear() === 1970 && horaFinOriginal.getUTCMonth() === 0 && horaFinOriginal.getUTCDate() === 1) {
+        const h = horaFinOriginal.getUTCHours();
+        const m = horaFinOriginal.getUTCMinutes();
+        horaFinStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      } else {
+        const h = horaFinOriginal.getHours();
+        const m = horaFinOriginal.getMinutes();
+        horaFinStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+    } else if (typeof horaFinOriginal === 'string') {
+      if (horaFinOriginal.includes('T')) {
+        const match = horaFinOriginal.match(/(\d{2}):(\d{2})/);
+        if (match) {
+          horaFinStr = `${match[1]}:${match[2]}`;
+        } else {
+          horaFinStr = horaFinOriginal.slice(0, 5);
+        }
+      } else {
+        horaFinStr = horaFinOriginal.slice(0, 5);
+      }
+    } else {
+      return horaFinOriginal;
+    }
+    
+    // Si no hay horas adicionales, devolver la hora normalizada en formato HH:MM
+    if (horasAdicionales === 0) {
+      return horaFinStr;
+    }
+
+    const [horaFin, minutoFin] = horaFinStr.split(':').map(Number);
+
+    // Convertir a minutos desde medianoche para facilitar el cálculo
+    // Si la hora es 0-2 AM, asumimos que es del día siguiente (24-26 horas)
+    let minutosDesdeMedianoche = horaFin * 60 + minutoFin;
+    
+    // Si es 0, 1 o 2 AM, tratarlo como 24, 25 o 26 horas
+    if (horaFin <= 2) {
+      minutosDesdeMedianoche = (horaFin + 24) * 60 + minutoFin;
+    }
+
+    // Sumar las horas adicionales (convertir a minutos)
+    const minutosAdicionales = horasAdicionales * 60;
+    const nuevaHoraEnMinutos = minutosDesdeMedianoche + minutosAdicionales;
+
+    // Convertir de vuelta a horas y minutos
+    let nuevaHora = Math.floor(nuevaHoraEnMinutos / 60);
+    const nuevoMinuto = nuevaHoraEnMinutos % 60;
+
+    // Si la hora es >= 24, convertirla al formato correcto (0-2 AM del día siguiente)
+    // 24 = 0, 25 = 1, 26 = 2, etc.
+    if (nuevaHora >= 24) {
+      nuevaHora = nuevaHora % 24;
+    }
+
+    // Formatear la nueva hora
+    const nuevaHoraFormateada = `${String(nuevaHora).padStart(2, '0')}:${String(nuevoMinuto).padStart(2, '0')}`;
+
+    return nuevaHoraFormateada;
+  } catch (error) {
+    console.error('Error calculando hora fin con extras:', error);
+    return horaFinOriginal;
   }
 }
 

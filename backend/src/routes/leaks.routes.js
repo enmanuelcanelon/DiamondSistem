@@ -824,6 +824,39 @@ router.post('/:id/convertir-cliente', authenticate, requireVendedor, async (req,
  */
 router.delete('/disponibles', authenticate, requireVendedor, async (req, res, next) => {
   try {
+    // Obtener los leaks que se van a eliminar para guardarlos en exclusiones
+    const leaksAEliminar = await prisma.leaks.findMany({
+      where: {
+        usuario_id: null, // Solo leaks sin asignar (usar usuario_id en lugar de vendedor_id deprecated)
+        estado: { not: 'convertido' } // Excluir convertidos
+      },
+      select: {
+        email: true,
+        telefono: true,
+        nombre_completo: true
+      }
+    });
+
+    // Guardar en tabla de exclusiones antes de eliminar
+    if (leaksAEliminar.length > 0) {
+      const exclusionesData = leaksAEliminar
+        .filter(leak => leak.email || leak.telefono) // Solo los que tienen email o teléfono
+        .map(leak => ({
+          email: leak.email || null,
+          telefono: leak.telefono || null,
+          nombre_completo: leak.nombre_completo || null,
+          motivo: 'Eliminado permanentemente (limpieza masiva)',
+          eliminado_por: req.user.id
+        }));
+
+      if (exclusionesData.length > 0) {
+        await prisma.leaks_exclusiones.createMany({
+          data: exclusionesData,
+          skipDuplicates: true // Evitar duplicados si ya existe
+        });
+      }
+    }
+
     const resultado = await prisma.leaks.deleteMany({
       where: {
         usuario_id: null, // Solo leaks sin asignar (usar usuario_id en lugar de vendedor_id deprecated)
@@ -833,7 +866,7 @@ router.delete('/disponibles', authenticate, requireVendedor, async (req, res, ne
 
     res.json({
       success: true,
-      message: `Se eliminaron ${resultado.count} leaks disponibles`,
+      message: `Se eliminaron ${resultado.count} leaks disponibles permanentemente. No se volverán a sincronizar.`,
       eliminados: resultado.count
     });
 
@@ -899,13 +932,26 @@ router.delete('/:id', authenticate, requireVendedor, async (req, res, next) => {
       throw new ValidationError('No se puede eliminar un leak convertido');
     }
 
+    // Guardar en tabla de exclusiones antes de eliminar para evitar que se vuelva a sincronizar
+    if (leak.email || leak.telefono) {
+      await prisma.leaks_exclusiones.create({
+        data: {
+          email: leak.email || null,
+          telefono: leak.telefono || null,
+          nombre_completo: leak.nombre_completo || null,
+          motivo: 'Eliminado permanentemente por el usuario',
+          eliminado_por: req.user.id
+        }
+      });
+    }
+
     await prisma.leaks.delete({
       where: { id: parseInt(id) }
     });
 
     res.json({
       success: true,
-      message: 'Leak eliminado exitosamente'
+      message: 'Leak eliminado permanentemente. No se volverá a sincronizar.'
     });
 
   } catch (error) {

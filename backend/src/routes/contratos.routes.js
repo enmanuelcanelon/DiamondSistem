@@ -143,6 +143,13 @@ router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next
               codigo_usuario: true
             }
           },
+          ofertas: {
+            select: {
+              id: true,
+              tipo_evento: true,
+              codigo_oferta: true
+            }
+          },
         eventos: {
           select: {
             id: true,
@@ -435,7 +442,14 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     // NUEVO: Validar disponibilidad del salón antes de crear el contrato
     // Verificar que no haya conflictos con otros contratos u ofertas aceptadas en el mismo horario
     if (oferta.salon_id) {
-      const fechaEvento = new Date(oferta.fecha_evento);
+      // Normalizar fecha de evento para comparación exacta (solo fecha, sin hora)
+      const fechaEventoStr = oferta.fecha_evento instanceof Date 
+        ? oferta.fecha_evento.toISOString().split('T')[0]
+        : oferta.fecha_evento.includes('T') 
+          ? oferta.fecha_evento.split('T')[0]
+          : oferta.fecha_evento;
+      
+      const fechaEvento = new Date(fechaEventoStr + 'T00:00:00');
       const fechaInicio = new Date(fechaEvento);
       fechaInicio.setHours(0, 0, 0, 0);
       const fechaFin = new Date(fechaEvento);
@@ -450,7 +464,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         return h * 60 + m;
       };
 
-      // Verificar conflictos con contratos existentes
+      // Verificar conflictos con contratos existentes - SOLO en la misma fecha exacta
       const contratosConflictivos = await prisma.contratos.findMany({
         where: {
           salon_id: oferta.salon_id,
@@ -466,6 +480,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         select: {
           id: true,
           codigo_contrato: true,
+          fecha_evento: true,
           hora_inicio: true,
           hora_fin: true,
           clientes: {
@@ -476,7 +491,17 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         }
       });
 
-      // Verificar conflictos con ofertas aceptadas (que aún no tienen contrato)
+      // Filtrar solo contratos que están en la misma fecha exacta (comparación de fecha sin hora)
+      const contratosMismaFecha = contratosConflictivos.filter(contrato => {
+        const fechaContratoStr = contrato.fecha_evento instanceof Date
+          ? contrato.fecha_evento.toISOString().split('T')[0]
+          : contrato.fecha_evento.includes('T')
+            ? contrato.fecha_evento.split('T')[0]
+            : contrato.fecha_evento;
+        return fechaContratoStr === fechaEventoStr;
+      });
+
+      // Verificar conflictos con ofertas aceptadas (que aún no tienen contrato) - SOLO en la misma fecha exacta
       const ofertasConflictivas = await prisma.ofertas.findMany({
         where: {
           salon_id: oferta.salon_id,
@@ -490,6 +515,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         select: {
           id: true,
           codigo_oferta: true,
+          fecha_evento: true,
           hora_inicio: true,
           hora_fin: true,
           clientes: {
@@ -500,14 +526,24 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         }
       });
 
+      // Filtrar solo ofertas que están en la misma fecha exacta (comparación de fecha sin hora)
+      const ofertasMismaFecha = ofertasConflictivas.filter(ofertaConflictiva => {
+        const fechaOfertaStr = ofertaConflictiva.fecha_evento instanceof Date
+          ? ofertaConflictiva.fecha_evento.toISOString().split('T')[0]
+          : ofertaConflictiva.fecha_evento.includes('T')
+            ? ofertaConflictiva.fecha_evento.split('T')[0]
+            : ofertaConflictiva.fecha_evento;
+        return fechaOfertaStr === fechaEventoStr;
+      });
+
       // Verificar si hay solapamiento de horarios
       const horaInicioOferta = toMinutes(oferta.hora_inicio);
       const horaFinOferta = toMinutes(oferta.hora_fin);
       const finAjustadoOferta = horaFinOferta < horaInicioOferta ? horaFinOferta + 1440 : horaFinOferta;
       const bufferMinutos = 60; // 1 hora de buffer
 
-      // Verificar conflictos con contratos
-      for (const contrato of contratosConflictivos) {
+      // Verificar conflictos con contratos (solo los que están en la misma fecha)
+      for (const contrato of contratosMismaFecha) {
         const inicioContrato = toMinutes(contrato.hora_inicio);
         const finContrato = toMinutes(contrato.hora_fin);
         const finAjustadoContrato = finContrato < inicioContrato ? finContrato + 1440 : finContrato;
@@ -525,8 +561,8 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         }
       }
 
-      // Verificar conflictos con ofertas aceptadas
-      for (const ofertaConflictiva of ofertasConflictivas) {
+      // Verificar conflictos con ofertas aceptadas (solo las que están en la misma fecha)
+      for (const ofertaConflictiva of ofertasMismaFecha) {
         const inicioOfertaConflictiva = toMinutes(ofertaConflictiva.hora_inicio);
         const finOfertaConflictiva = toMinutes(ofertaConflictiva.hora_fin);
         const finAjustadoOfertaConflictiva = finOfertaConflictiva < inicioOfertaConflictiva ? finOfertaConflictiva + 1440 : finOfertaConflictiva;
@@ -658,11 +694,13 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       }
 
       // Crear evento asociado
+      // Usar tipo_evento de la oferta (específico de esta oferta) en lugar del tipo_evento del cliente
+      const tipoEventoOferta = oferta.tipo_evento || oferta.clientes?.tipo_evento || 'Evento';
       await prisma.eventos.create({
         data: {
           contrato_id: nuevoContrato.id,
           cliente_id: oferta.cliente_id,
-          nombre_evento: nombre_evento || `${oferta.clientes.tipo_evento || 'Evento'} - ${oferta.clientes.nombre_completo}`,
+          nombre_evento: nombre_evento || `${tipoEventoOferta} - ${oferta.clientes.nombre_completo}`,
           fecha_evento: oferta.fecha_evento,
           hora_inicio: oferta.hora_inicio,
           hora_fin: oferta.hora_fin,
@@ -690,13 +728,14 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       const eventoGoogleCalendar = await crearEventoContrato(oferta.vendedor_id, {
         codigoContrato: codigo_contrato,
         nombreCliente: oferta.clientes.nombre_completo,
-        tipoEvento: oferta.clientes.tipo_evento || 'Evento',
+        tipoEvento: oferta.tipo_evento || oferta.clientes?.tipo_evento || 'Evento',
         homenajeado: oferta.homenajeado || null,
         fechaEvento: oferta.fecha_evento,
         horaInicio: oferta.hora_inicio,
         horaFin: oferta.hora_fin,
         ubicacion: oferta.lugar_salon || oferta.salones?.nombre || null,
-        cantidadInvitados: oferta.cantidad_invitados
+        cantidadInvitados: oferta.cantidad_invitados,
+        paquete: oferta.paquetes?.nombre || null
       });
 
       if (eventoGoogleCalendar) {
@@ -933,8 +972,18 @@ router.get('/:id/pdf-contrato', authenticate, async (req, res, next) => {
           }
         },
         ofertas: {
-          include: {
-            temporadas: true
+          select: {
+            id: true,
+            tipo_evento: true,
+            codigo_oferta: true,
+            temporadas: {
+              select: {
+                id: true,
+                nombre: true,
+                meses: true,
+                ajuste_precio: true
+              }
+            }
           }
         },
         contratos_servicios: {
@@ -1352,9 +1401,19 @@ router.get('/:id/versiones/:version_numero/pdf', authenticate, async (req, res, 
         usuarios: true,
         paquetes: true,
         ofertas: {
-          include: {
-            temporadas: true,
-          },
+          select: {
+            id: true,
+            tipo_evento: true,
+            codigo_oferta: true,
+            temporadas: {
+              select: {
+                id: true,
+                nombre: true,
+                meses: true,
+                ajuste_precio: true
+              }
+            }
+          }
         },
         contratos_servicios: {
           include: {

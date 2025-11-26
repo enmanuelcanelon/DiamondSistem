@@ -554,8 +554,13 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
            paquete_id: parseInt(datos.paquete_id),
            salon_id: datos.salon_id ? parseInt(datos.salon_id) : null,
            fecha_evento: new Date(datos.fecha_evento),
-           hora_inicio: new Date(`1970-01-01T${datos.hora_inicio || '18:00'}:00Z`),
-           hora_fin: new Date(`1970-01-01T${datos.hora_fin || '23:00'}:00Z`),
+          // IMPORTANTE: Guardar horas con Z (UTC) para que Prisma las lea correctamente
+          // El usuario ingresa horas en formato hora local de Miami (ej: "18:00" = 6 PM hora de Miami)
+          // PostgreSQL TIME se almacena sin zona horaria, y Prisma siempre lo devuelve como UTC
+          // Por lo tanto, guardamos la hora directamente como UTC (sin conversión)
+          // Cuando Prisma lo lea con getUTCHours(), devolverá la hora correcta
+          hora_inicio: new Date(`1970-01-01T${datos.hora_inicio || '18:00'}:00Z`),
+          hora_fin: new Date(`1970-01-01T${datos.hora_fin || '23:00'}:00Z`),
            cantidad_invitados: parseInt(datos.cantidad_invitados),
            lugar_evento: datos.lugar_evento || null,
            lugar_salon: datos.lugar_evento || null,
@@ -805,6 +810,11 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
           cliente_id: parseInt(datos.cliente_id),
           paquete_id: parseInt(datos.paquete_id),
           fecha_evento: new Date(datos.fecha_evento),
+          // IMPORTANTE: Guardar horas con Z (UTC) para que Prisma las lea correctamente
+          // El usuario ingresa horas en formato hora local de Miami (ej: "18:00" = 6 PM hora de Miami)
+          // PostgreSQL TIME se almacena sin zona horaria, y Prisma siempre lo devuelve como UTC
+          // Por lo tanto, guardamos la hora directamente como UTC (sin conversión)
+          // Cuando Prisma lo lea con getUTCHours(), devolverá la hora correcta
           hora_inicio: new Date(`1970-01-01T${datos.hora_inicio || '18:00'}:00Z`),
           hora_fin: new Date(`1970-01-01T${datos.hora_fin || '23:00'}:00Z`),
           cantidad_invitados: parseInt(datos.cantidad_invitados),
@@ -1036,5 +1046,8 @@ router.get('/:id/pdf-factura', authenticate, requireVendedor, async (req, res, n
     next(error);
   }
 });
+
+// COMENTADO: No se pueden agregar ofertas al calendario, solo contratos
+// Cuando se acepta una oferta y se crea un contrato, el evento se agrega automáticamente a Google Calendar
 
 module.exports = router;

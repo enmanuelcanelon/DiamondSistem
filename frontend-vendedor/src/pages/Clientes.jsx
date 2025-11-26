@@ -6,7 +6,6 @@ import api from '../config/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Badge } from '../components/ui/badge';
 import { Skeleton } from '../components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import toast from 'react-hot-toast';
@@ -214,9 +213,6 @@ function Clientes() {
                       {cliente.nombre_completo.charAt(0)}
                     </span>
                   </div>
-                  <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                    {cliente.tipo_evento || 'General'}
-                  </Badge>
                 </div>
                 <CardTitle className="mt-4">{cliente.nombre_completo}</CardTitle>
               </CardHeader>

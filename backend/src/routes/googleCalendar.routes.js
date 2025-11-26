@@ -275,14 +275,19 @@ router.get('/eventos/citas/:mes/:año', authenticate, requireVendedor, async (re
 
     const { getPrismaClient } = require('../config/database');
     const prisma = getPrismaClient();
+    const { obtenerEventosCalendarioCitas } = require('../utils/googleCalendarService');
 
     const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
     const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
 
     // Obtener leaks con estado "interesado" y fecha_cita_salon en el mes especificado
+    // También verificar usuario_id para compatibilidad con nueva estructura
     const leaksCitas = await prisma.leaks.findMany({
       where: {
-        vendedor_id: vendedorId,
+        OR: [
+          { vendedor_id: vendedorId },
+          { usuario_id: vendedorId }
+        ],
         estado: 'interesado',
         fecha_cita_salon: {
           gte: fechaInicio,
@@ -305,6 +310,16 @@ router.get('/eventos/citas/:mes/:año', authenticate, requireVendedor, async (re
         fecha_cita_salon: 'asc'
       }
     });
+
+    // Obtener eventos de Google Calendar del calendario CITAS
+    let eventosGoogleCalendar = [];
+    try {
+      eventosGoogleCalendar = await obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin);
+      logger.info(`📅 Obtenidos ${eventosGoogleCalendar.length} eventos de Google Calendar CITAS para vendedor ${vendedorId}`);
+    } catch (error) {
+      logger.warn('⚠️ Error al obtener eventos de Google Calendar CITAS:', error);
+      // Continuar sin eventos de Google Calendar si hay error
+    }
 
     // Formatear leaks como eventos para el calendario
     const eventosFormateados = leaksCitas.map(leak => {
@@ -354,9 +369,87 @@ router.get('/eventos/citas/:mes/:año', authenticate, requireVendedor, async (re
       }
     }).filter(e => e !== null && e.fecha_evento.getMonth() + 1 === mesFiltro && e.fecha_evento.getFullYear() === añoFiltro);
 
+    // Formatear eventos de Google Calendar como eventos para el calendario
+    const eventosGoogleFormateados = eventosGoogleCalendar.map(eventoGC => {
+      try {
+        const fechaInicioGC = new Date(eventoGC.fecha_inicio);
+        const fechaFinGC = eventoGC.fecha_fin ? new Date(eventoGC.fecha_fin) : new Date(fechaInicioGC.getTime() + 60 * 60 * 1000); // 1 hora por defecto
+
+        // Extraer información del título y descripción
+        const titulo = eventoGC.titulo || 'Cita';
+        const descripcion = eventoGC.descripcion || '';
+        
+        // Intentar extraer nombre del cliente del título (formato: "Tipo - Nombre")
+        const partesTitulo = titulo.split(' - ');
+        const nombreCliente = partesTitulo.length > 1 ? partesTitulo[1] : partesTitulo[0];
+        
+        // Extraer información de la descripción
+        const lineasDescripcion = descripcion.split('\n');
+        let telefono = '';
+        let email = '';
+        let cantidadInvitados = null;
+        let tipoEvento = partesTitulo[0] || '';
+        
+        lineasDescripcion.forEach(linea => {
+          if (linea.startsWith('Teléfono:')) {
+            telefono = linea.replace('Teléfono:', '').trim();
+          } else if (linea.startsWith('Email:')) {
+            email = linea.replace('Email:', '').trim();
+          } else if (linea.startsWith('Invitados:')) {
+            const cantidad = parseInt(linea.replace('Invitados:', '').trim());
+            if (!isNaN(cantidad)) cantidadInvitados = cantidad;
+          }
+        });
+
+        return {
+          id: `google_${eventoGC.id}`,
+          codigo_contrato: null,
+          fecha_evento: fechaInicioGC,
+          hora_inicio: fechaInicioGC,
+          hora_fin: fechaFinGC,
+          cantidad_invitados: cantidadInvitados,
+          estado_pago: null,
+          clientes: {
+            nombre_completo: nombreCliente,
+            email: email || 'N/A',
+            telefono: telefono || 'N/A'
+          },
+          salones: {
+            nombre: eventoGC.ubicacion || 'CITAS'
+          },
+          eventos: null,
+          es_google_calendar: true,
+          es_citas: true,
+          es_leak: false,
+          leak_id: null,
+          descripcion: descripcion,
+          tipo: 'citas',
+          calendario: 'citas',
+          htmlLink: eventoGC.htmlLink || null
+        };
+      } catch (error) {
+        logger.warn('Error al procesar evento de Google Calendar como evento de CITAS:', error);
+        return null;
+      }
+    }).filter(e => {
+      if (!e) return false;
+      const fecha = new Date(e.fecha_evento);
+      return fecha.getMonth() + 1 === mesFiltro && fecha.getFullYear() === añoFiltro;
+    });
+
+    // Combinar eventos de leaks y eventos de Google Calendar
+    const todosLosEventos = [...eventosFormateados, ...eventosGoogleFormateados];
+    
+    // Ordenar por fecha
+    todosLosEventos.sort((a, b) => {
+      const fechaA = new Date(a.fecha_evento);
+      const fechaB = new Date(b.fecha_evento);
+      return fechaA - fechaB;
+    });
+
     // Agrupar eventos por día
     const eventosPorDia = {};
-    eventosFormateados.forEach(evento => {
+    todosLosEventos.forEach(evento => {
       const fecha = new Date(evento.fecha_evento);
       const dia = fecha.getDate();
       if (!eventosPorDia[dia]) {
@@ -365,7 +458,7 @@ router.get('/eventos/citas/:mes/:año', authenticate, requireVendedor, async (re
       eventosPorDia[dia].push(evento);
     });
 
-    logger.info(`📅 Eventos agrupados por día: ${Object.keys(eventosPorDia).length} días con eventos`);
+    logger.info(`📅 Eventos agrupados por día: ${Object.keys(eventosPorDia).length} días con eventos (${eventosFormateados.length} leaks + ${eventosGoogleFormateados.length} Google Calendar)`);
 
     res.json({
       success: true,
@@ -375,9 +468,13 @@ router.get('/eventos/citas/:mes/:año', authenticate, requireVendedor, async (re
         fecha_inicio: fechaInicio.toISOString(),
         fecha_fin: fechaFin.toISOString()
       },
-      total_eventos: eventosFormateados.length,
+      total_eventos: todosLosEventos.length,
       eventos_por_dia: eventosPorDia,
-      eventos: eventosFormateados
+      eventos: todosLosEventos,
+      estadisticas: {
+        eventos_leaks: eventosFormateados.length,
+        eventos_google_calendar: eventosGoogleFormateados.length
+      }
     });
 
   } catch (error) {
@@ -445,40 +542,9 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
     const fechaInicio = new Date(añoFiltro, mesFiltro - 1, 1);
     const fechaFin = new Date(añoFiltro, mesFiltro, 0, 23, 59, 59);
 
-    // Obtener todos los contratos del mes (sin detalles sensibles)
-    const contratos = await prisma.contratos.findMany({
-      where: {
-        fecha_evento: {
-          gte: fechaInicio,
-          lte: fechaFin
-        }
-      },
-      select: {
-        id: true,
-        fecha_evento: true,
-        hora_inicio: true,
-        hora_fin: true,
-        cantidad_invitados: true,
-        estado_pago: true,
-        clientes: {
-          select: {
-            nombre_completo: true,
-            email: true,
-            telefono: true,
-            tipo_evento: true
-          }
-        },
-        salones: {
-          select: {
-            id: true,
-            nombre: true
-          }
-        }
-      },
-      orderBy: {
-        fecha_evento: 'asc'
-      }
-    });
+    // COMENTADO: No incluir contratos de la base de datos porque tienen bugs
+    // El usuario quiere que solo se muestren eventos de Google Calendar
+    // const contratos = await prisma.contratos.findMany({...});
 
     // Obtener eventos de Google Calendar de todos los vendedores (sin detalles)
     let eventosGoogleCalendar = [];
@@ -488,30 +554,11 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
       logger.warn('Error al obtener eventos de Google Calendar:', error);
     }
 
-    // Combinar y formatear eventos con toda la información necesaria
+    // IMPORTANTE: Solo incluir eventos de Google Calendar
+    // NO incluir contratos ni ofertas de la base de datos porque tienen bugs
     const eventosCombinados = [
-      ...contratos.map(c => ({
-        id: `contrato_${c.id}`,
-        fecha_evento: c.fecha_evento,
-        hora_inicio: c.hora_inicio,
-        hora_fin: c.hora_fin,
-        cantidad_invitados: c.cantidad_invitados,
-        estado_pago: c.estado_pago,
-        clientes: c.clientes ? {
-          nombre_completo: c.clientes.nombre_completo,
-          email: c.clientes.email,
-          telefono: c.clientes.telefono,
-          tipo_evento: c.clientes.tipo_evento
-        } : null,
-        salones: c.salones ? {
-          id: c.salones.id,
-          nombre: c.salones.nombre
-        } : null,
-        salon: c.salones?.nombre || null,
-        ubicacion: c.salones?.nombre || null,
-        tipo: 'contrato',
-        es_google_calendar: false
-      })),
+      // COMENTADO: No incluir contratos de BD
+      // ...contratos.map(c => ({...})),
       ...eventosGoogleCalendar.map(e => {
         // Para eventos de todo el día, parsear la fecha correctamente
         let fechaEvento;
@@ -664,9 +711,20 @@ router.post('/contratos/:contratoId/agregar', authenticate, requireVendedor, asy
             nombre: true
           }
         },
+        paquetes: {
+          select: {
+            nombre: true
+          }
+        },
         ofertas: {
           select: {
-            homenajeado: true
+            homenajeado: true,
+            tipo_evento: true,
+            paquetes: {
+              select: {
+                nombre: true
+              }
+            }
           }
         }
       }
@@ -680,7 +738,9 @@ router.post('/contratos/:contratoId/agregar', authenticate, requireVendedor, asy
     }
 
     // Verificar que el contrato pertenece al vendedor
-    if (contrato.vendedor_id !== vendedorId) {
+    // Usar usuario_id o vendedor_id para compatibilidad
+    const perteneceAlVendedor = contrato.usuario_id === vendedorId || contrato.vendedor_id === vendedorId;
+    if (!perteneceAlVendedor) {
       return res.status(403).json({
         success: false,
         error: 'No tienes permiso para acceder a este contrato'
@@ -727,13 +787,14 @@ router.post('/contratos/:contratoId/agregar', authenticate, requireVendedor, asy
     const eventoGoogleCalendar = await crearEventoContrato(vendedorId, {
       codigoContrato: contrato.codigo_contrato,
       nombreCliente: contrato.clientes?.nombre_completo || 'Sin cliente',
-      tipoEvento: contrato.clientes?.tipo_evento || 'Evento',
+      tipoEvento: contrato.ofertas?.tipo_evento || contrato.clientes?.tipo_evento || 'Evento',
       homenajeado: contrato.homenajeado || contrato.ofertas?.homenajeado || null,
       fechaEvento: contrato.fecha_evento,
       horaInicio: contrato.hora_inicio,
       horaFin: contrato.hora_fin,
       ubicacion: contrato.lugar_salon || contrato.salones?.nombre || null,
-      cantidadInvitados: contrato.cantidad_invitados
+      cantidadInvitados: contrato.cantidad_invitados,
+      paquete: contrato.paquetes?.nombre || contrato.ofertas?.paquetes?.nombre || null
     });
 
     if (!eventoGoogleCalendar) {

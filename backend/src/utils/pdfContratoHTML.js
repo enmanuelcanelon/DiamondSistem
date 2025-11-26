@@ -23,71 +23,32 @@ async function generarContratoHTML(contrato, lang = 'es') {
     }
   }
 
-  // Leer el template HTML de ofertas (mismo diseño) según la compañía
+  // Leer el template HTML de contratos (mismo diseño que ofertas pero con secciones adicionales) según la compañía
   const templatePath = esRevolution 
-    ? path.join(__dirname, '../templates/pdf-factura.html')
-    : path.join(__dirname, '../templates/pdf-factura-diamond.html');
+    ? path.join(__dirname, '../templates/pdf-contrato.html')
+    : path.join(__dirname, '../templates/pdf-contrato-diamond.html');
   let html = fs.readFileSync(templatePath, 'utf8');
 
   // Organizar servicios por categoría (usar la misma función de ofertas)
-  const { organizarServiciosPorCategoria } = require('./pdfFacturaHTML');
+  const { organizarServiciosPorCategoria, generarFacturaProformaHTML } = require('./pdfFacturaHTML');
   
   // Adaptar estructura del contrato para la función de categorización
   // La función espera paquetes_servicios y ofertas_servicios_adicionales o contratos_servicios
   const datosParaCategorizar = {
     paquetes: contrato.paquetes,
-    contratos_servicios: contrato.contratos_servicios || []
+    contratos_servicios: contrato.contratos_servicios || [],
+    seleccion_sidra_champana: contrato.ofertas?.seleccion_sidra_champana || null,
+    photobooth_tipo: contrato.ofertas?.photobooth_tipo || null
   };
   
   const serviciosOrganizados = organizarServiciosPorCategoria(datosParaCategorizar);
 
-  // Preparar servicios para usar la misma función generarHTMLServicios de ofertas
-  // Convertir la estructura antigua a la nueva estructura
-  const serviciosPaquete = {
-    bebidas: [],
-    comida: [],
-    decoracion: [],
-    entretenimiento: [],
-    equipos: [],
-    extras: [],
-    fotografia: [],
-    personal: [],
-    transporte: []
-  };
-
-  // Mapear servicios del paquete a la nueva estructura
-  Object.values(serviciosOrganizados).flat().forEach(servicio => {
-    if (servicio.esPaquete === true) {
-      // Usar la misma lógica de mapeo que en pdfFacturaHTML
-      const nombre = (servicio.nombre || servicio.servicios?.nombre || '').toLowerCase();
-      const categoria = (servicio.categoria || servicio.servicios?.categoria || '').toLowerCase();
-      
-      // Mapear a las nuevas categorías (simplificado, se mejorará con la función real)
-      if (nombre.includes('bebida') || nombre.includes('bar') || nombre.includes('licor') || categoria.includes('bebida') || categoria.includes('bar')) {
-        serviciosPaquete.bebidas.push(servicio);
-      } else if (nombre.includes('comida') || nombre.includes('catering') || categoria.includes('comida') || categoria.includes('catering')) {
-        serviciosPaquete.comida.push(servicio);
-      } else if (nombre.includes('decor') || categoria.includes('decor')) {
-        serviciosPaquete.decoracion.push(servicio);
-      } else if (nombre.includes('entreten') || nombre.includes('animador') || nombre.includes('hora loca') || categoria.includes('entreten')) {
-        serviciosPaquete.entretenimiento.push(servicio);
-      } else if (nombre.includes('equipo') || categoria.includes('equipo')) {
-        serviciosPaquete.equipos.push(servicio);
-      } else if (nombre.includes('foto') || categoria.includes('foto')) {
-        serviciosPaquete.fotografia.push(servicio);
-      } else if (nombre.includes('personal') || nombre.includes('mesero') || nombre.includes('bartender') || categoria.includes('personal')) {
-        serviciosPaquete.personal.push(servicio);
-      } else if (nombre.includes('transporte') || nombre.includes('limo') || categoria.includes('transporte')) {
-        serviciosPaquete.transporte.push(servicio);
-      } else {
-        serviciosPaquete.extras.push(servicio);
-      }
-    }
-  });
-
-  // Los servicios adicionales se procesarán más adelante con la estructura antigua
-
-  // Filtrar servicios adicionales
+  // Preparar servicios del paquete y adicionales usando la misma estructura que ofertas
+  // Separar servicios del paquete y adicionales
+  const serviciosPaqueteList = Object.values(serviciosOrganizados).flat().filter(s => s.esPaquete === true);
+  const serviciosAdicionalesList = Object.values(serviciosOrganizados).flat().filter(s => s.esPaquete === false);
+  
+  // Filtrar servicios adicionales PRIMERO (antes de usarlos)
   // Un servicio es adicional si:
   // 1. NO está en el paquete, O
   // 2. Está en el paquete PERO también está en contratos_servicios con precio/cantidad diferente (servicio extra agregado)
@@ -124,6 +85,63 @@ async function generarContratoHTML(contrato, lang = 'es') {
     // Los servicios del paquete con precio 0 NO deben mostrarse como adicionales
     return precioUnitario > 0;
   });
+
+  // Crear un Set de IDs de servicios adicionales filtrados (solo los que tienen precio > 0)
+  const serviciosAdicionalesIds = new Set();
+  serviciosAdicionalesFiltrados.forEach(cs => {
+    const servicioId = cs.servicios?.id || cs.servicio_id;
+    if (servicioId) {
+      serviciosAdicionalesIds.add(servicioId);
+    }
+  });
+
+  // Preparar estructura para generarHTMLServicios (igual que ofertas)
+  const serviciosPaquete = {
+    venue: serviciosOrganizados.venue.filter(s => s.esPaquete === true),
+    cake: serviciosOrganizados.cake.filter(s => s.esPaquete === true),
+    decoration: serviciosOrganizados.decoration.filter(s => s.esPaquete === true),
+    specials: serviciosOrganizados.specials.filter(s => s.esPaquete === true),
+    barService: serviciosOrganizados.barService.filter(s => s.esPaquete === true),
+    catering: serviciosOrganizados.catering.filter(s => s.esPaquete === true),
+    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === true),
+    personal: serviciosOrganizados.personal ? serviciosOrganizados.personal.filter(s => s.esPaquete === true) : []
+  };
+
+  // Filtrar servicios adicionales: solo los que están en serviciosAdicionalesIds
+  const serviciosAdicionales = {
+    venue: serviciosOrganizados.venue.filter(s => {
+      const servicioId = s.id || s.servicios?.id;
+      return servicioId && serviciosAdicionalesIds.has(servicioId);
+    }),
+    cake: serviciosOrganizados.cake.filter(s => {
+      const servicioId = s.id || s.servicios?.id;
+      return servicioId && serviciosAdicionalesIds.has(servicioId);
+    }),
+    decoration: serviciosOrganizados.decoration.filter(s => {
+      const servicioId = s.id || s.servicios?.id;
+      return servicioId && serviciosAdicionalesIds.has(servicioId);
+    }),
+    specials: serviciosOrganizados.specials.filter(s => {
+      const servicioId = s.id || s.servicios?.id;
+      return servicioId && serviciosAdicionalesIds.has(servicioId);
+    }),
+    barService: serviciosOrganizados.barService.filter(s => {
+      const servicioId = s.id || s.servicios?.id;
+      return servicioId && serviciosAdicionalesIds.has(servicioId);
+    }),
+    catering: serviciosOrganizados.catering.filter(s => {
+      const servicioId = s.id || s.servicios?.id;
+      return servicioId && serviciosAdicionalesIds.has(servicioId);
+    }),
+    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => {
+      const servicioId = s.id || s.servicios?.id;
+      return servicioId && serviciosAdicionalesIds.has(servicioId);
+    }),
+    personal: serviciosOrganizados.personal ? serviciosOrganizados.personal.filter(s => {
+      const servicioId = s.id || s.servicios?.id;
+      return servicioId && serviciosAdicionalesIds.has(servicioId);
+    }) : []
+  };
 
   // Crear un mapa de servicios adicionales con sus datos de contrato (cantidad, precio, subtotal)
   const serviciosAdicionalesMap = new Map();
@@ -208,8 +226,6 @@ async function generarContratoHTML(contrato, lang = 'es') {
     }
   });
 
-  const serviciosAdicionales = serviciosAdicionalesOrganizados;
-
   // Usar la misma función de mapeo que en pdfFacturaHTML
   // Detectar si es Kendall o Doral para el mapeo correcto
   const esKendall = nombreSalon.includes('kendall');
@@ -219,6 +235,12 @@ async function generarContratoHTML(contrato, lang = 'es') {
     const descripcion = (servicio.descripcion || servicio.servicios?.descripcion || '').toLowerCase();
     const texto = `${nombre} ${descripcion}`;
     const nombreExacto = nombre.trim();
+
+    // Obtener nombre del salón para filtros específicos
+    const nombreSalonParaFiltro = nombreSalon;
+    const esKendallLocal = nombreSalonParaFiltro.includes('kendall');
+    const esDoralLocal = nombreSalonParaFiltro.includes('doral') && !nombreSalonParaFiltro.includes('diamond');
+    const esDiamondLocal = nombreSalonParaFiltro.includes('diamond') && !esDoralLocal;
 
     // BEBIDAS
     if (nombreExacto.includes('champaña') || nombreExacto.includes('champagne')) {
@@ -274,8 +296,16 @@ async function generarContratoHTML(contrato, lang = 'es') {
     }
 
     // DECORACIÓN
-    // Detectar Lounge Set + Cocktail primero
-    if (texto.includes('lounge set') || texto.includes('lounge') || (texto.includes('cocktail') && (texto.includes('lounge') || texto.includes('set')))) {
+    // Detectar variantes específicas primero - Lounge Set + Cocktail
+    // IMPORTANTE: Solo permitir en Diamond, NO en Doral ni Kendall
+    if (texto.includes('lounge set') || 
+        (texto.includes('lounge') && texto.includes('cocktail')) ||
+        (texto.includes('lounge') && texto.includes('set')) ||
+        (texto.includes('cocktail') && (texto.includes('lounge') || texto.includes('set')))) {
+      // Solo incluir si es Diamond, excluir en Doral y Kendall
+      if (esKendallLocal || esDoralLocal) {
+        return null; // No incluir en Kendall ni Doral
+      }
       return { categoria: 'decoracion', item: 'Lounge Set + Cocktail' };
     }
     if (texto.includes('decoración house') || texto.includes('decoracion house') || texto.includes('decoración básico') || texto.includes('decoracion basico') || texto.includes('table setting') || texto.includes('centerpiece') || texto.includes('runner') || texto.includes('charger')) {
@@ -384,244 +414,153 @@ async function generarContratoHTML(contrato, lang = 'es') {
     return null;
   };
 
-  // Función para generar HTML de servicios por categoría (mismo diseño que ofertas)
+  // Función para generar HTML de servicios por categoría (nuevo diseño organizado - igual que ofertas)
   // Retorna un objeto con el HTML y el estilo del grid
   const generarHTMLServicios = (serviciosPorCategoria, esPaquete) => {
-    const categorias = [
-      { key: 'venue', titulo: 'VENUE', default: 'Elegant table setting with beautiful centerpieces, runners, charger plates napkins and rings.' },
-      { key: 'cake', titulo: 'CAKE', default: 'Cake decorated with buttercream.' },
-      { key: 'specials', titulo: 'SPECIALS', default: '' },
-      { key: 'decoration', titulo: 'DECORATION', default: 'Stage Decor. Uplighting throughout venue. Centerpieces. Formal table setting (runners, chargers, cloth napkins, glassware).' },
-      { key: 'barService', titulo: 'BAR SERVICE', default: 'Premium selection of liquors (whiskey, rum, vodka and wines), cocktails and soft drinks.' },
-      { key: 'catering', titulo: 'CATERING', default: 'Gourmet dinner served. Cheese Table. Appetizers.' },
-      { key: 'serviceCoord', titulo: 'SERVICE COORD & DESIGN', default: 'Full set up & break down. Event Coordinator. Waiters & Bartender. Event planning & coordination are included.' }
-    ];
-
-    // Si es paquete, usar formato de 3 columnas
-    if (esPaquete) {
-      // Organizar categorías en 3 columnas
-      const col1 = ['venue', 'barService', 'cake'];
-      const col2 = ['catering', 'serviceCoord'];
-      const col3 = ['decoration', 'specials'];
-      
-      let htmlCol1 = '<div class="package-col">';
-      let htmlCol2 = '<div class="package-col">';
-      let htmlCol3 = '<div class="package-col">';
-
-      // Función auxiliar para generar HTML de una categoría
-      const generarCategoriaHTML = (cat, servicios) => {
-        if (servicios.length > 0 || cat.default) {
-          const items = servicios.length > 0
-            ? servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t)
-            : (cat.default ? [cat.default] : []);
-          
-          if (items.length > 0) {
-            let html = `
-              <div class="package-info-block">
-                <h3>${cat.titulo}</h3>`;
-            
-            // Si solo hay un item y es un default simple, usar <p>, sino usar lista
-            if (items.length === 1 && items[0].indexOf('.') === -1 && items[0].length < 100) {
-              html += `<p>${items[0]}</p>`;
-            } else {
-              html += `<ul>`;
-              items.forEach(item => {
-                // Si el item contiene puntos, dividirlo en múltiples items
-                if (item.includes('. ')) {
-                  const subItems = item.split('. ').filter(s => s.trim());
-                  subItems.forEach(subItem => {
-                    html += `<li>${subItem.trim()}</li>`;
-                  });
-                } else {
-                  html += `<li>${item}</li>`;
-                }
-              });
-              html += `</ul>`;
-            }
-            
-            html += `</div>`;
-            return html;
-          }
-        }
-        return '';
-      };
-
-      // Columna 1
-      col1.forEach(key => {
-        const cat = categorias.find(c => c.key === key);
-        if (cat) {
-          const servicios = serviciosPorCategoria[cat.key] || [];
-          htmlCol1 += generarCategoriaHTML(cat, servicios);
-        }
-      });
-      htmlCol1 += '</div>';
-
-      // Columna 2
-      col2.forEach(key => {
-        const cat = categorias.find(c => c.key === key);
-        if (cat) {
-          const servicios = serviciosPorCategoria[cat.key] || [];
-          htmlCol2 += generarCategoriaHTML(cat, servicios);
-        }
-      });
-      htmlCol2 += '</div>';
-
-      // Columna 3
-      col3.forEach(key => {
-        const cat = categorias.find(c => c.key === key);
-        if (cat) {
-          const servicios = serviciosPorCategoria[cat.key] || [];
-          htmlCol3 += generarCategoriaHTML(cat, servicios);
-        }
-      });
-      htmlCol3 += '</div>';
-
-      return htmlCol1 + htmlCol2 + htmlCol3;
-    } else {
-      // Formato antiguo para servicios adicionales
-      let html = '';
-      categorias.forEach(cat => {
-        const servicios = serviciosPorCategoria[cat.key] || [];
-        if (servicios.length > 0 || (esPaquete && cat.default)) {
-          const textos = servicios.length > 0
-            ? servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t).join('. ')
-            : cat.default;
-          
-          if (textos) {
-            html += `
-              <div class="service-card-clean">
-                <div class="service-card-title-clean">${cat.titulo}</div>
-                <div class="service-content-clean">${textos}</div>
-              </div>`;
-          }
-        }
-      });
-
-      return html;
-    }
-  };
-
-  // Generar HTML de servicios adicionales en formato elegante (mismo estilo que paquete)
-  // IMPORTANTE: Solo mostrar servicios que realmente son adicionales/extras, NO usar defaults del paquete
-  const generarHTMLServiciosAdicionales = () => {
-    if (!serviciosAdicionalesFiltrados || serviciosAdicionalesFiltrados.length === 0) {
-      return '';
-    }
-
-    // Organizar servicios adicionales por categoría
-    const serviciosAdicionalesPorCategoria = {
-      venue: [],
-      cake: [],
-      decoration: [],
-      specials: [],
-      barService: [],
-      catering: [],
-      serviceCoord: []
+    // Reorganizar servicios según las nuevas categorías
+    // Usar objetos en lugar de arrays para contar cantidades
+    const serviciosOrganizados = {
+      bebidas: {},
+      comida: {},
+      decoracion: {},
+      entretenimiento: {},
+      equipos: {},
+      extras: {},
+      fotografia: {},
+      personal: {},
+      transporte: {}
     };
 
-    serviciosAdicionalesFiltrados.forEach(cs => {
-      const servicio = cs.servicios || {};
-      const categoria = servicio.categoria?.toLowerCase() || '';
-      const nombre = servicio.nombre?.toLowerCase() || '';
-      const cantidad = cs.cantidad || 1;
-      
-      // Formatear descripción con cantidad si es mayor a 1
-      let descripcion = servicio.descripcion || servicio.nombre || '';
-      if (cantidad > 1) {
-        descripcion = `${servicio.nombre || descripcion} (x${cantidad})`;
-      }
-      
-      const servicioFormateado = {
-        ...servicio,
-        descripcion: descripcion,
-        nombre: servicio.nombre || '',
-        cantidad: cantidad,
-        precio_unitario: parseFloat(cs.precio_unitario || 0),
-        subtotal: parseFloat(cs.subtotal || cs.precio_unitario * cantidad)
-      };
+    // Procesar todos los servicios y mapearlos a las nuevas categorías
+    // IMPORTANTE: Solo procesar servicios que corresponden (esPaquete debe coincidir)
+    Object.values(serviciosPorCategoria).flat().forEach(servicio => {
+      // Verificar que el servicio corresponde al tipo (paquete o extra)
+      const servicioEsPaquete = servicio.esPaquete === true;
 
-      // Categorizar igual que en organizarServiciosPorCategoria
-      if (nombre.includes('cake') || nombre.includes('torta')) {
-        serviciosAdicionalesPorCategoria.cake.push(servicioFormateado);
-      } else if (categoria.includes('decoración') || categoria.includes('decoration') || nombre.includes('decoración') || nombre.includes('decoration')) {
-        serviciosAdicionalesPorCategoria.decoration.push(servicioFormateado);
-      } else if (categoria.includes('bar') || nombre.includes('bar') || nombre.includes('bebida') || nombre.includes('cocktail') || nombre.includes('sidra') || nombre.includes('champaña') || nombre.includes('champagne')) {
-        serviciosAdicionalesPorCategoria.barService.push(servicioFormateado);
-      } else if (categoria.includes('catering') || nombre.includes('catering') || nombre.includes('comida') || nombre.includes('dinner') || nombre.includes('cheese') || nombre.includes('pasapalo') || nombre.includes('pasapalos')) {
-        serviciosAdicionalesPorCategoria.catering.push(servicioFormateado);
-      } else if (categoria.includes('servicio') || categoria.includes('coordin') || nombre.includes('mesero') || nombre.includes('waiter') || nombre.includes('coordinator') || nombre.includes('animador') || nombre.includes('profesional')) {
-        serviciosAdicionalesPorCategoria.serviceCoord.push(servicioFormateado);
-      } else if (nombre.includes('venue') || nombre.includes('salón') || nombre.includes('lounge') || nombre.includes('furniture')) {
-        serviciosAdicionalesPorCategoria.venue.push(servicioFormateado);
-      } else {
-        // SPECIALS: incluye photobooth, hora extra, fotografía, dulces, etc.
-        serviciosAdicionalesPorCategoria.specials.push(servicioFormateado);
+      // EXCEPCIÓN: "Hora Extra" siempre debe aparecer en EXTRAS, nunca en PAQUETE
+      const nombreServicio = (servicio.nombre || servicio.servicios?.nombre || '').toLowerCase();
+      const esHoraExtra = nombreServicio.includes('hora extra') || nombreServicio.includes('hora adicional');
+
+      if (esHoraExtra) {
+        // Si es Hora Extra y estamos generando PAQUETE, saltarla (no mostrar en paquete)
+        if (esPaquete) return;
+        // Si es Hora Extra y estamos generando EXTRAS, siempre incluirla
+        // (continuar procesando)
+            } else {
+        // Para otros servicios, aplicar la lógica normal
+        if (esPaquete && !servicioEsPaquete) return; // Si es paquete, solo servicios del paquete
+        if (!esPaquete && servicioEsPaquete) return; // Si es extra, solo servicios adicionales
+      }
+
+      const mapeo = mapearServicioACategoria(servicio);
+      if (mapeo) {
+        // Contar servicios duplicados para mostrar cantidad
+        // Usar un objeto para contar en lugar de un array simple
+        if (!serviciosOrganizados[mapeo.categoria]) {
+          serviciosOrganizados[mapeo.categoria] = {};
+        }
+        // Usar la cantidad real del servicio si existe, de lo contrario incrementar en 1
+        const cantidadServicio = servicio.cantidad || 1;
+        if (!serviciosOrganizados[mapeo.categoria][mapeo.item]) {
+          serviciosOrganizados[mapeo.categoria][mapeo.item] = 0;
+        }
+        serviciosOrganizados[mapeo.categoria][mapeo.item] += cantidadServicio;
       }
     });
 
-    // Generar HTML usando el formato de 3 columnas pero SIN defaults (solo servicios reales)
+    // Verificar si hay servicios organizados (si no hay, retornar HTML vacío)
+    // Ahora serviciosOrganizados contiene objetos con cantidades, no arrays
+    const tieneServicios = Object.values(serviciosOrganizados).some(items => {
+      if (typeof items === 'object' && items !== null && !Array.isArray(items)) {
+        return Object.keys(items).length > 0;
+      }
+      return false;
+    });
+    if (!tieneServicios) {
+      return { html: '', gridStyle: '' }; // Retornar HTML vacío si no hay servicios
+    }
+
+    // Definir categorías con sus títulos
     const categorias = [
-      { key: 'venue', titulo: 'VENUE' },
-      { key: 'cake', titulo: 'CAKE' },
-      { key: 'specials', titulo: 'SPECIALS' },
-      { key: 'decoration', titulo: 'DECORATION' },
-      { key: 'barService', titulo: 'BAR SERVICE' },
-      { key: 'catering', titulo: 'CATERING' },
-      { key: 'serviceCoord', titulo: 'SERVICE COORD & DESIGN' }
+      { key: 'bebidas', titulo: 'BEBIDAS' },
+      { key: 'comida', titulo: 'COMIDA' },
+      { key: 'decoracion', titulo: 'DECORACIÓN' },
+      { key: 'entretenimiento', titulo: 'ENTRETENIMIENTO' },
+      { key: 'equipos', titulo: 'EQUIPOS' },
+      { key: 'extras', titulo: 'EXTRAS' },
+      { key: 'fotografia', titulo: 'FOTOGRAFÍA' },
+      { key: 'personal', titulo: 'PERSONAL' },
+      { key: 'transporte', titulo: 'TRANSPORTE' }
     ];
 
-    // Organizar categorías en 3 columnas
-    const col1 = ['venue', 'barService', 'cake'];
-    const col2 = ['catering', 'serviceCoord'];
-    const col3 = ['decoration', 'specials'];
+    // Distribuir en 3 columnas (solo las que tienen servicios)
+    // Ahora serviciosOrganizados contiene objetos con cantidades, no arrays
+    const categoriasConServicios = categorias.filter(cat => {
+      const items = serviciosOrganizados[cat.key];
+      return items && typeof items === 'object' && !Array.isArray(items) && Object.keys(items).length > 0;
+    });
     
-    let htmlCol1 = '<div class="package-col">';
-    let htmlCol2 = '<div class="package-col">';
-    let htmlCol3 = '<div class="package-col">';
+    // Función helper para verificar si una categoría tiene servicios
+    const tieneServiciosEnCategoria = (key) => {
+      const items = serviciosOrganizados[key];
+      return items && typeof items === 'object' && !Array.isArray(items) && Object.keys(items).length > 0;
+    };
+    
+    // Organizar columnas para usar esquinas primero
+    // Columna 1 (izquierda): bebidas, decoracion, equipos, transporte
+    const col1 = ['bebidas', 'decoracion', 'equipos', 'transporte'].filter(key => 
+      tieneServiciosEnCategoria(key)
+    );
+    // Columna 2 (centro): comida, entretenimiento, fotografia
+    const col2 = ['comida', 'entretenimiento', 'fotografia'].filter(key => 
+      tieneServiciosEnCategoria(key)
+    );
+    // Columna 3 (derecha): extras, personal
+    const col3 = ['extras', 'personal'].filter(key => 
+      tieneServiciosEnCategoria(key)
+    );
 
-    // Función auxiliar para generar HTML de una categoría (SIN defaults)
-    const generarCategoriaHTML = (cat, servicios) => {
-      // Solo mostrar si hay servicios reales, NO usar defaults
-      if (servicios.length > 0) {
-        const items = servicios.map(s => s.descripcion || s.servicios?.descripcion || s.servicios?.nombre || s.nombre || '').filter(t => t);
-        
-        if (items.length > 0) {
+    // Determinar cuántas columnas tienen contenido
+    const columnasConContenido = [col1.length > 0, col2.length > 0, col3.length > 0].filter(Boolean).length;
+    
+    // Función helper para generar HTML de categoría
+    // items ahora es un objeto con cantidades: { "Photobooth 360": 2, "Hora Loca": 2 }
+    const generarCategoriaHTML = (cat, items) => {
+      const itemsArray = Object.entries(items || {});
+      if (itemsArray.length > 0) {
           let html = `
             <div class="package-info-block">
-              <h3>${cat.titulo}</h3>`;
-          
-          // Si solo hay un item simple, usar <p>, sino usar lista
-          if (items.length === 1 && items[0].indexOf('.') === -1 && items[0].length < 100) {
-            html += `<p>${items[0]}</p>`;
-          } else {
-            html += `<ul>`;
-            items.forEach(item => {
-              // Si el item contiene puntos, dividirlo en múltiples items
-              if (item.includes('. ')) {
-                const subItems = item.split('. ').filter(s => s.trim());
-                subItems.forEach(subItem => {
-                  html += `<li>${subItem.trim()}</li>`;
-                });
-              } else {
-                html += `<li>${item}</li>`;
-              }
-            });
-            html += `</ul>`;
-          }
-          
-          html += `</div>`;
+            <h3>${cat.titulo}</h3>
+            <ul>`;
+        
+          itemsArray.forEach(([item, cantidad]) => {
+            // Mostrar cantidad solo si es mayor a 1, usando formato (número)
+            const itemConCantidad = cantidad > 1 ? `${item} (${cantidad})` : item;
+            html += `<li>${itemConCantidad}</li>`;
+          });
+        
+        html += `</ul></div>`;
           return html;
-        }
       }
       return '';
     };
+
+    // Determinar qué columnas tienen contenido
+    const tieneCol1 = col1.length > 0;
+    const tieneCol2 = col2.length > 0;
+    const tieneCol3 = col3.length > 0;
+    
+    // Construir HTML de columnas sin justify-self para que el grid las distribuya equitativamente
+    let htmlCol1 = '<div class="package-col">';
+    let htmlCol2 = '<div class="package-col">';
+    let htmlCol3 = '<div class="package-col">';
 
     // Columna 1
     col1.forEach(key => {
       const cat = categorias.find(c => c.key === key);
       if (cat) {
-        const servicios = serviciosAdicionalesPorCategoria[cat.key] || [];
-        htmlCol1 += generarCategoriaHTML(cat, servicios);
+        const items = serviciosOrganizados[cat.key] || {};
+        htmlCol1 += generarCategoriaHTML(cat, items);
       }
     });
     htmlCol1 += '</div>';
@@ -630,8 +569,8 @@ async function generarContratoHTML(contrato, lang = 'es') {
     col2.forEach(key => {
       const cat = categorias.find(c => c.key === key);
       if (cat) {
-        const servicios = serviciosAdicionalesPorCategoria[cat.key] || [];
-        htmlCol2 += generarCategoriaHTML(cat, servicios);
+        const items = serviciosOrganizados[cat.key] || {};
+        htmlCol2 += generarCategoriaHTML(cat, items);
       }
     });
     htmlCol2 += '</div>';
@@ -640,13 +579,108 @@ async function generarContratoHTML(contrato, lang = 'es') {
     col3.forEach(key => {
       const cat = categorias.find(c => c.key === key);
       if (cat) {
-        const servicios = serviciosAdicionalesPorCategoria[cat.key] || [];
-        htmlCol3 += generarCategoriaHTML(cat, servicios);
+        const items = serviciosOrganizados[cat.key] || {};
+        htmlCol3 += generarCategoriaHTML(cat, items);
       }
     });
     htmlCol3 += '</div>';
 
-    return htmlCol1 + htmlCol2 + htmlCol3;
+    // Determinar el estilo del grid según el número de columnas
+    // Reorganizar el orden de las columnas para que siempre empiecen desde la izquierda
+    let htmlFinal = '';
+    let gridStyle = '';
+    
+    if (columnasConContenido === 1) {
+      // Si solo hay 1 columna, usar solo esa columna y centrarla
+      if (tieneCol1) htmlFinal = htmlCol1;
+      else if (tieneCol2) htmlFinal = htmlCol2;
+      else if (tieneCol3) htmlFinal = htmlCol3;
+      gridStyle = 'grid-template-columns: 1fr; max-width: 100%;';
+    } else if (columnasConContenido === 2) {
+      // Si hay 2 columnas, usar solo 2 columnas para distribuir mejor el espacio
+      if (tieneCol1 && tieneCol2) {
+        htmlFinal = htmlCol1 + htmlCol2;
+        gridStyle = 'grid-template-columns: 1fr 1fr; max-width: 100%;';
+      } else if (tieneCol1 && tieneCol3) {
+        htmlFinal = htmlCol1 + htmlCol3;
+        gridStyle = 'grid-template-columns: 1fr 1fr; max-width: 100%;';
+      } else if (tieneCol2 && tieneCol3) {
+        // Cuando solo hay col2 y col3, usar solo 2 columnas
+        htmlFinal = htmlCol2 + htmlCol3;
+        gridStyle = 'grid-template-columns: 1fr 1fr; max-width: 100%;';
+      }
+    } else {
+      // Si hay 3 columnas, usar todas normalmente
+      htmlFinal = htmlCol1 + htmlCol2 + htmlCol3;
+      gridStyle = 'grid-template-columns: 1fr 1fr 1fr; max-width: 100%;';
+    }
+
+    return {
+      html: htmlFinal,
+      gridStyle: gridStyle
+    };
+  };
+
+  // Generar HTML de servicios adicionales en formato elegante (mismo estilo que ofertas, SIN precios)
+  // IMPORTANTE: Solo mostrar servicios que realmente son adicionales/extras, NO usar defaults del paquete
+  const generarHTMLServiciosAdicionales = () => {
+    // Usar solo servicios adicionales filtrados (con precio > 0 y no en el paquete)
+    // Convertir serviciosAdicionalesFiltrados a la estructura que espera generarHTMLServicios
+    if (!serviciosAdicionalesFiltrados || serviciosAdicionalesFiltrados.length === 0) {
+      return { html: '', gridStyle: '' };
+    }
+
+    // Crear estructura de servicios adicionales usando solo los filtrados
+    const serviciosAdicionalesParaHTML = {
+      venue: [],
+      cake: [],
+      decoration: [],
+      specials: [],
+      barService: [],
+      catering: [],
+      serviceCoord: [],
+      personal: []
+    };
+
+    // Mapear servicios filtrados a la estructura correcta
+    serviciosAdicionalesFiltrados.forEach(cs => {
+      const servicio = cs.servicios || {};
+      const servicioConDatos = {
+        ...servicio,
+        id: servicio.id || cs.servicio_id,
+        esPaquete: false, // Todos son adicionales
+        cantidad: cs.cantidad || 1,
+        precio_unitario: parseFloat(cs.precio_unitario || 0),
+        subtotal: parseFloat(cs.subtotal || cs.precio_unitario * (cs.cantidad || 1))
+      };
+
+      // Categorizar según la estructura de organizarServiciosPorCategoria
+      const categoria = (servicio.categoria || '').toLowerCase();
+      const nombre = (servicio.nombre || '').toLowerCase();
+      
+      if (nombre.includes('cake') || nombre.includes('torta')) {
+        serviciosAdicionalesParaHTML.cake.push(servicioConDatos);
+      } else if (categoria.includes('decoración') || categoria.includes('decoration') || nombre.includes('decoración') || nombre.includes('decoration')) {
+        serviciosAdicionalesParaHTML.decoration.push(servicioConDatos);
+      } else if (categoria.includes('bebida') || categoria.includes('bar') || categoria.includes('licor') || nombre.includes('bar') || nombre.includes('bebida') || nombre.includes('champaña') || nombre.includes('champagne')) {
+        serviciosAdicionalesParaHTML.barService.push(servicioConDatos);
+      } else if (categoria.includes('comida') || categoria.includes('catering') || categoria.includes('food') || nombre.includes('comida') || nombre.includes('catering') || nombre.includes('pasapalos') || nombre.includes('dulces') || nombre.includes('mini dulces') || nombre.includes('pasapalo')) {
+        serviciosAdicionalesParaHTML.catering.push(servicioConDatos);
+      } else if (categoria.includes('personal') || 
+                 nombre.includes('bartender') || nombre.includes('barman') ||
+                 nombre.includes('personal de atención') || nombre.includes('personal de servicio') ||
+                 nombre.includes('mesero') || nombre.includes('waiter') ||
+                 nombre.includes('coordinador') || nombre.includes('coordinator')) {
+        serviciosAdicionalesParaHTML.personal.push(servicioConDatos);
+      } else if (categoria.includes('coordinación') || categoria.includes('coordinacion') || categoria.includes('coordinador') || categoria.includes('service') || nombre.includes('waiters')) {
+        serviciosAdicionalesParaHTML.serviceCoord.push(servicioConDatos);
+      } else {
+        serviciosAdicionalesParaHTML.specials.push(servicioConDatos);
+      }
+    });
+
+    // Usar la misma función generarHTMLServicios pero con servicios adicionales filtrados
+    return generarHTMLServicios(serviciosAdicionalesParaHTML, false);
   };
 
   // Función auxiliar para calcular total de servicios adicionales (mantener para desglose)
@@ -674,20 +708,32 @@ async function generarContratoHTML(contrato, lang = 'es') {
     return total + subtotal;
   }, 0);
 
-  const htmlServiciosPaquete = generarHTMLServicios(serviciosPaquete, true);
-  const htmlServiciosAdicionales = generarHTMLServiciosAdicionales();
+  // Generar HTML de servicios usando la misma función que ofertas
+  const serviciosPaqueteHTML = generarHTMLServicios(serviciosPaquete, true);
+  const serviciosAdicionalesHTML = generarHTMLServiciosAdicionales();
+
+  const htmlServiciosPaqueteFinal = serviciosPaqueteHTML.html;
+  const gridStylePaquete = serviciosPaqueteHTML.gridStyle || 'grid-template-columns: 1fr 1fr 1fr;';
+
+  const htmlServiciosAdicionales = serviciosAdicionalesHTML.html;
+  const gridStyleExtras = serviciosAdicionalesHTML.gridStyle || 'grid-template-columns: 1fr 1fr 1fr;';
 
   // Preparar datos para reemplazar en el template
   const nombreCliente = contrato.clientes?.nombre_completo || 'N/A';
   const nombreClientePrimero = nombreCliente.split(' ')[0] || nombreCliente;
-  const nombreVendedor = contrato.vendedores?.nombre_completo || 'N/A';
+  const nombreVendedor = contrato.vendedores?.nombre_completo || contrato.vendedor?.nombre_completo || contrato.usuarios?.nombre_completo || 'N/A';
   const telefonoVendedor = '+1 (786) 332-7065';
   const emailVendedor = 'diamondvenueatdoral@gmail.com';
   const homenajeado = contrato.homenajeado || '';
-  const tipoEvento = contrato.clientes?.tipo_evento || 'Evento';
+  // Usar tipo_evento de la oferta (específico de esta oferta) en lugar del tipo_evento del cliente
+  const tipoEvento = contrato.ofertas?.tipo_evento || contrato.clientes?.tipo_evento || 'Evento';
   const fechaEvento = new Date(contrato.fecha_evento);
   const horaInicio = formatearHora(contrato.hora_inicio);
-  const horaFin = formatearHora(contrato.hora_fin);
+  
+  // Calcular horas adicionales y hora fin con extras
+  const horasAdicionales = obtenerHorasAdicionales(contrato.contratos_servicios || []);
+  const horaFinConExtras = calcularHoraFinConExtras(contrato.hora_fin, horasAdicionales);
+  const horaFin = formatearHora(horaFinConExtras);
   const cantidadInvitados = contrato.cantidad_invitados || 0;
   const emailCliente = contrato.clientes?.email || '';
   const telefonoCliente = contrato.clientes?.telefono || '';
@@ -713,6 +759,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
       direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
       esRevolution = false;
       nombreCompania = 'Diamond Venue';
+      logoPath = path.join(__dirname, '../../../7.png');
     }
   }
 
@@ -749,7 +796,50 @@ async function generarContratoHTML(contrato, lang = 'es') {
   const totalPagado = parseFloat(contrato.total_pagado || 0);
   const saldoPendiente = parseFloat(contrato.saldo_pendiente || 0);
 
-  // Generar HTML del desglose de inversión en formato serio y profesional
+  // Generar HTML del desglose de inversión en formato div (sin tablas, como ofertas)
+  // Usar colores según el template (blanco para Diamond, negro para Revolution)
+  const textColor = esRevolution ? '#333' : '#ffffff';
+  const borderColor = esRevolution ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.2)';
+  const fontFamily = esRevolution ? 'Montserrat' : 'Poppins';
+  
+  let investmentBreakdownDivs = '';
+  investmentBreakdownDivs += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColor};">
+    <span style="font-size: 15px; color: ${textColor}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Precio del Paquete</span>
+    <span style="font-size: 16px; color: ${textColor}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${precioPaquete.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+  </div>`;
+  if (ajusteTemporada !== 0) {
+    investmentBreakdownDivs += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColor};">
+      <span style="font-size: 15px; color: ${textColor}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Ajuste de Temporada</span>
+      <span style="font-size: 16px; color: ${textColor}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${ajusteTemporada.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+    </div>`;
+  }
+  if (subtotalServicios > 0) {
+    investmentBreakdownDivs += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColor};">
+      <span style="font-size: 15px; color: ${textColor}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Servicios Adicionales/Extras</span>
+      <span style="font-size: 16px; color: ${textColor}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${subtotalServicios.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+    </div>`;
+  }
+  if (descuento > 0) {
+    const descuentoColor = esRevolution ? '#d32f2f' : '#ff6b6b';
+    investmentBreakdownDivs += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColor};">
+      <span style="font-size: 15px; color: ${textColor}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Descuento</span>
+      <span style="font-size: 16px; color: ${descuentoColor}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">-$${descuento.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+    </div>`;
+  }
+  investmentBreakdownDivs += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColor};">
+    <span style="font-size: 15px; color: ${textColor}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Subtotal</span>
+    <span style="font-size: 16px; color: ${textColor}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${subtotalBase.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+  </div>`;
+  investmentBreakdownDivs += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColor};">
+    <span style="font-size: 15px; color: ${textColor}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Impuesto (${impuestoPorcentaje}%)</span>
+    <span style="font-size: 16px; color: ${textColor}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${impuestoMonto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+  </div>`;
+  investmentBreakdownDivs += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColor};">
+    <span style="font-size: 15px; color: ${textColor}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Tarifa de Servicio (${tarifaServicioPorcentaje}%)</span>
+    <span style="font-size: 16px; color: ${textColor}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${tarifaServicioMonto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+  </div>`;
+  
+  // Mantener también el formato de tabla para compatibilidad
   let investmentBreakdown = '';
   investmentBreakdown += `<tr class="info-table-row"><td class="info-table-label">Precio del Paquete</td><td class="info-table-value">$${precioPaquete.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td></tr>`;
   if (ajusteTemporada !== 0) {
@@ -765,44 +855,47 @@ async function generarContratoHTML(contrato, lang = 'es') {
   investmentBreakdown += `<tr class="info-table-row"><td class="info-table-label">Impuesto (${impuestoPorcentaje}%)</td><td class="info-table-value">$${impuestoMonto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td></tr>`;
   investmentBreakdown += `<tr class="info-table-row"><td class="info-table-label">Tarifa de Servicio (${tarifaServicioPorcentaje}%)</td><td class="info-table-value">$${tarifaServicioMonto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td></tr>`;
 
-  // Generar acuerdo de pago en formato serio y profesional
+  // Generar acuerdo de pago en formato div (sin tablas, como ofertas) - más compacto
+  const borderColorAgreement = esRevolution ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.2)';
+  const textColorAgreement = esRevolution ? '#333' : '#ffffff';
+  const textColorAgreementDark = esRevolution ? '#000' : '#ffffff';
+  
   let paymentAgreement = '';
   if (contrato.tipo_pago === 'unico') {
     paymentAgreement = `
-      <table class="info-table" style="margin-top: 20px;">
-        <tr class="info-table-row">
-          <td class="info-table-label" style="font-weight: 700;">Modalidad de Pago</td>
-          <td class="info-table-value">PAGO ÚNICO</td>
-        </tr>
-        <tr class="info-table-row">
-          <td class="info-table-label" style="font-weight: 700;">Condiciones</td>
-          <td class="info-table-value">El pago total debe realizarse de una sola vez antes del evento. El pago completo debe estar liquidado al menos quince (15) días hábiles antes de la fecha del evento.</td>
-        </tr>
-      </table>`;
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColorAgreement};">
+          <span style="font-size: 13px; color: ${textColorAgreement}; font-weight: 600; font-family: '${fontFamily}', sans-serif;">Modalidad de Pago</span>
+          <span style="font-size: 14px; color: ${textColorAgreementDark}; font-weight: 600; font-family: '${fontFamily}', sans-serif; text-align: right;">PAGO ÚNICO</span>
+        </div>
+        <div style="padding: 8px 0; border-bottom: 1px solid ${borderColorAgreement};">
+          <div style="font-size: 12px; color: ${textColorAgreement}; font-weight: 400; font-family: '${fontFamily}', sans-serif; line-height: 1.5;">El pago total debe realizarse de una sola vez antes del evento. El pago completo debe estar liquidado al menos diez (10) días hábiles antes de la fecha del evento.</div>
+        </div>
+      </div>`;
   } else if (contrato.plan_pagos) {
     const plan = typeof contrato.plan_pagos === 'string' ? JSON.parse(contrato.plan_pagos) : contrato.plan_pagos;
     if (plan) {
       paymentAgreement = `
-        <table class="info-table" style="margin-top: 20px;">
-          <tr class="info-table-row">
-            <td class="info-table-label" style="font-weight: 700;">Modalidad de Pago</td>
-            <td class="info-table-value">FINANCIAMIENTO EN ${contrato.meses_financiamiento || plan.pagos?.length || 'N/A'} CUOTAS</td>
-          </tr>`;
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColorAgreement};">
+            <span style="font-size: 13px; color: ${textColorAgreement}; font-weight: 600; font-family: '${fontFamily}', sans-serif;">Modalidad de Pago</span>
+            <span style="font-size: 14px; color: ${textColorAgreementDark}; font-weight: 600; font-family: '${fontFamily}', sans-serif; text-align: right;">FINANCIAMIENTO EN ${contrato.meses_financiamiento || plan.pagos?.length || 'N/A'} CUOTAS</span>
+          </div>`;
       
       if (plan.depositoReserva) {
         paymentAgreement += `
-          <tr class="info-table-row">
-            <td class="info-table-label">Depósito de Reserva</td>
-            <td class="info-table-value">$${plan.depositoReserva.toLocaleString('es-ES', { minimumFractionDigits: 2 })} (No reembolsable)</td>
-          </tr>`;
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColorAgreement};">
+            <span style="font-size: 12px; color: ${textColorAgreement}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Depósito de Reserva</span>
+            <span style="font-size: 13px; color: ${textColorAgreementDark}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${plan.depositoReserva.toLocaleString('es-ES', { minimumFractionDigits: 2 })} (No reembolsable)</span>
+          </div>`;
       }
       if (plan.segundoPago || plan.pagoInicial) {
         const segundoPago = plan.segundoPago || plan.pagoInicial || 0;
         paymentAgreement += `
-          <tr class="info-table-row">
-            <td class="info-table-label">Segundo Pago</td>
-            <td class="info-table-value">$${segundoPago.toLocaleString('es-ES', { minimumFractionDigits: 2 })} (10 días después de la reserva)</td>
-          </tr>`;
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColorAgreement};">
+            <span style="font-size: 12px; color: ${textColorAgreement}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Segundo Pago</span>
+            <span style="font-size: 13px; color: ${textColorAgreementDark}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${segundoPago.toLocaleString('es-ES', { minimumFractionDigits: 2 })} (10 días después de la reserva)</span>
+          </div>`;
       }
       if (plan.pagos && plan.pagos.length > 0) {
         plan.pagos.forEach((pago, index) => {
@@ -817,25 +910,34 @@ async function generarContratoHTML(contrato, lang = 'es') {
           }
           const metodo = pago.metodo || 'Efectivo/Zelle';
           paymentAgreement += `
-            <tr class="info-table-row">
-              <td class="info-table-label">Cuota #${index + 1}</td>
-              <td class="info-table-value">$${pago.monto.toLocaleString('es-ES', { minimumFractionDigits: 2 })} - Fecha: ${fechaVencimiento} - Método: ${metodo}</td>
-            </tr>`;
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColorAgreement};">
+              <span style="font-size: 12px; color: ${textColorAgreement}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Cuota #${index + 1}</span>
+              <span style="font-size: 13px; color: ${textColorAgreementDark}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${pago.monto.toLocaleString('es-ES', { minimumFractionDigits: 2 })} - ${fechaVencimiento} - ${metodo}</span>
+            </div>`;
         });
       }
+      const bgColorImportant = esRevolution ? '#fff9e6' : 'rgba(255, 249, 230, 0.2)';
+      const borderColorImportant = esRevolution ? '#000' : '#ffffff';
       paymentAgreement += `
-          <tr class="info-table-row">
-            <td class="info-table-label" style="font-weight: 700; color: #000000;">IMPORTANTE</td>
-            <td class="info-table-value" style="font-weight: 600;">El pago completo debe estar liquidado al menos quince (15) días hábiles antes del evento. Todos los pagos son no reembolsables.</td>
-          </tr>
-        </table>`;
+          <div style="padding: 10px; margin-top: 8px; background-color: ${bgColorImportant}; border: 2px solid ${borderColorImportant}; border-radius: 4px;">
+            <div style="font-size: 13px; color: ${textColorAgreementDark}; font-weight: 700; font-family: '${fontFamily}', sans-serif; margin-bottom: 6px; text-transform: uppercase;">IMPORTANTE</div>
+            <div style="font-size: 12px; color: ${textColorAgreement}; font-weight: 500; font-family: '${fontFamily}', sans-serif; line-height: 1.5;">El pago completo debe estar liquidado al menos diez (10) días hábiles antes del evento. Todos los pagos son no reembolsables.</div>
+          </div>
+        </div>`;
     }
   }
 
-  // Generar historial de pagos
+  // Generar historial de pagos en formato div (sin tablas) - más compacto
+  const borderColorHistory = esRevolution ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.2)';
+  const textColorHistory = esRevolution ? '#333' : '#ffffff';
+  const textColorHistoryDark = esRevolution ? '#000' : '#ffffff';
+  
   let paymentHistory = '';
   if (contrato.pagos && contrato.pagos.length > 0) {
-    paymentHistory = '<div class="section-title-corporate" style="margin-top: 40px;">Pagos Realizados</div><table class="info-table">';
+    paymentHistory = `
+      <div style="margin-top: 0;">
+        <h3 style="font-size: 1.4rem; font-weight: 400; text-transform: uppercase; letter-spacing: 2px; color: ${textColorHistoryDark}; font-family: '${fontFamily}', sans-serif; margin-bottom: 12px;">Historial de Pagos</h3>
+        <div style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;">`;
     contrato.pagos.forEach((pago) => {
       const fechaPago = new Date(pago.fecha_pago).toLocaleDateString('es-ES', {
         day: '2-digit',
@@ -845,9 +947,13 @@ async function generarContratoHTML(contrato, lang = 'es') {
       const monto = (parseFloat(pago.monto) || 0).toFixed(2);
       const metodo = pago.metodo_pago || 'N/A';
       const estadoPago = (pago.estado || 'completado').toUpperCase();
-      paymentHistory += `<tr class="info-table-row"><td class="info-table-label">${fechaPago}</td><td class="info-table-value">$${monto} - ${metodo} - ${estadoPago}</td></tr>`;
+      paymentHistory += `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid ${borderColorHistory};">
+            <span style="font-size: 12px; color: ${textColorHistory}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">${fechaPago}</span>
+            <span style="font-size: 13px; color: ${textColorHistoryDark}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${monto} - ${metodo} - ${estadoPago}</span>
+          </div>`;
     });
-    paymentHistory += '</table>';
+    paymentHistory += `</div></div>`;
   }
 
   // Generar términos y condiciones (compacto para que quepa en una página)
@@ -866,7 +972,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
 
       <div class="terms-article">
         <div class="terms-article-title">ARTÍCULO 2: PAGOS Y DEPÓSITOS</div>
-        <div class="terms-article-content">El Cliente se compromete a realizar los pagos según el plan de pagos acordado. Todos los depósitos son no reembolsables. El pago completo debe estar liquidado al menos quince (15) días hábiles antes del evento.</div>
+        <div class="terms-article-content">El Cliente se compromete a realizar los pagos según el plan de pagos acordado. Todos los depósitos son no reembolsables. El pago completo debe estar liquidado al menos diez (10) días hábiles antes del evento.</div>
       </div>
 
       <div class="terms-article">
@@ -927,42 +1033,79 @@ async function generarContratoHTML(contrato, lang = 'es') {
   const page4Number = tieneServiciosAdicionales ? 4 : 3;
   const page5Number = tieneServiciosAdicionales ? 5 : 4;
 
-  // Convertir logo a base64 si existe y generar HTML del logo
+  // Convertir logo a base64 si existe y generar HTML del logo (mismo tamaño que ofertas)
   let logoHTML = `<div style="font-size: 18px; font-weight: 100; color: #FFFFFF; letter-spacing: 2px;">${nombreCompania}</div>`;
   if (logoPath && fs.existsSync(logoPath)) {
     try {
       const logoBuffer = fs.readFileSync(logoPath);
       const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-      logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 180px; height: auto; opacity: 0.9; mix-blend-mode: screen;">`;
+      logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 400px; height: auto; opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));">`;
     } catch (error) {
       console.error('Error al cargar logo:', error);
     }
   }
 
-  // Cargar fondo para Revolution (Doral/Kendall) - Portada
-  const fondoPath = path.join(__dirname, '../templates/assets/img12.jpg');
-  const hasBackground = esRevolution && fs.existsSync(fondoPath);
-  
+  // Cargar fondo para portada (igual que ofertas)
   let fondoStyle = `background-image: 
                 radial-gradient(circle, rgba(212,175,55,0.2) 2px, transparent 2.5px),
                 radial-gradient(circle, rgba(212,175,55,0.2) 2px, transparent 2.5px);
             background-size: 30px 30px;
             background-position: 0 0, 15px 15px;
             display: block;`;
+  let hasBackground = false;
   
-  if (hasBackground) {
+  if (esRevolution) {
+    // Fondo para Revolution - img12.jpg
+    const fondoPath = path.join(__dirname, '../templates/assets/img12.jpg');
+    if (fs.existsSync(fondoPath)) {
     try {
       const fondoBuffer = fs.readFileSync(fondoPath);
       const fondoBase64 = `data:image/jpeg;base64,${fondoBuffer.toString('base64')}`;
-      // Usar formato más compatible para Puppeteer - reemplazar completamente el patrón
       fondoStyle = `background-image: url("${fondoBase64}");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             opacity: 1;
             display: block;`;
+        hasBackground = true;
     } catch (error) {
-      console.error('Error al cargar fondo:', error);
+        console.error('Error al cargar fondo Revolution:', error);
+      }
+    }
+  } else {
+    // Fondo para Diamond - fondoDiamond.png (igual que ofertas)
+    const fondoDiamondPath = path.join(__dirname, '../../../fondoDiamond.png');
+    if (fs.existsSync(fondoDiamondPath)) {
+      try {
+        const fondoBuffer = fs.readFileSync(fondoDiamondPath);
+        const fondoBase64 = `data:image/png;base64,${fondoBuffer.toString('base64')}`;
+        fondoStyle = `background-image: url("${fondoBase64}");
+              background-size: cover;
+              background-position: center;
+              background-repeat: no-repeat;
+              opacity: 1;
+              display: block;`;
+        hasBackground = true;
+      } catch (error) {
+        console.error('Error al cargar fondo Diamond:', error);
+        // Intentar ruta alternativa
+        const fondoDiamondPathAlt = path.join(__dirname, '../../../../fondoDiamond.png');
+        if (fs.existsSync(fondoDiamondPathAlt)) {
+          try {
+            const fondoBuffer = fs.readFileSync(fondoDiamondPathAlt);
+            const fondoBase64 = `data:image/png;base64,${fondoBuffer.toString('base64')}`;
+            fondoStyle = `background-image: url("${fondoBase64}");
+                  background-size: cover;
+                  background-position: center;
+                  background-repeat: no-repeat;
+                  opacity: 1;
+                  display: block;`;
+            hasBackground = true;
+          } catch (error) {
+            console.error('Error al cargar fondo Diamond desde ruta alternativa:', error);
+          }
+        }
+      }
     }
   }
 
@@ -1013,6 +1156,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
   const replacements = {
     '{{CONTRACT_CODE}}': contrato.codigo_contrato || 'N/A',
     '{{CLIENT_NAME}}': nombreCliente,
+    '{{CLIENT_NAME_FIRST}}': nombreCliente.split(' ')[0] || nombreCliente,
     '{{VENDEDOR_NAME}}': nombreVendedor,
     '{{VENDEDOR_PHONE}}': telefonoVendedor,
     '{{VENDEDOR_EMAIL}}': emailVendedor,
@@ -1020,7 +1164,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
     '{{HOMENAJEADO_COVER}}': homenajeadoCover,
     '{{EVENT_TYPE}}': tipoEvento,
     '{{EVENT_DATE}}': fechaEvento.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
-    '{{EVENT_TIME}}': `${horaInicio} - ${horaFin}`,
+    '{{EVENT_TIME}}': `${horaInicio} to ${horaFin}`,
     '{{GUEST_COUNT}}': cantidadInvitados,
     '{{CLIENT_EMAIL}}': emailCliente,
     '{{CLIENT_PHONE}}': telefonoCliente,
@@ -1032,15 +1176,28 @@ async function generarContratoHTML(contrato, lang = 'es') {
     '{{NOMBRE_COMPANIA}}': nombreCompania,
     '{{ES_REVOLUTION}}': esRevolution ? 'true' : 'false',
     '{{PACKAGE_CARD_BACKGROUND}}': packageCardBackground,
-    '{{SERVICIOS_PAQUETE}}': htmlServiciosPaquete,
-    '{{PAGE_3_SERVICIOS_ADICIONALES}}': tieneServiciosAdicionales ? `
+    '{{TEXT_EVENT_PROPOSAL}}': lang === 'en' ? 'EVENT CONTRACT FOR:' : 'CONTRATO DE EVENTO PARA:',
+    '{{TEXT_PACKAGE}}': lang === 'en' ? 'PACKAGE' : 'PAQUETE',
+    '{{TEXT_EVENT_DETAILS}}': lang === 'en' ? 'Event Details' : 'Detalles del Evento',
+    '{{TEXT_NAME}}': lang === 'en' ? 'Name:' : 'Nombre:',
+    '{{TEXT_LOCATION}}': lang === 'en' ? 'Location:' : 'Ubicación:',
+    '{{TEXT_DATE}}': lang === 'en' ? 'Date:' : 'Fecha:',
+    '{{TEXT_TIME}}': lang === 'en' ? 'Time:' : 'Hora:',
+    '{{TEXT_GUESTS}}': lang === 'en' ? 'Number of Guests:' : 'Número de Invitados:',
+    '{{TEXT_SALES_REP}}': lang === 'en' ? 'Sales Representative:' : 'Representante de Ventas:',
+    '{{TEXT_EMAIL}}': lang === 'en' ? 'Email:' : 'Correo:',
+    '{{TEXT_PHONE}}': lang === 'en' ? 'Phone number:' : 'Teléfono:',
+    '{{TEXT_CONTRACT_DATE}}': lang === 'en' ? 'Contract Signing Date:' : 'Fecha de Firma del Contrato:',
+    '{{SERVICIOS_PAQUETE}}': htmlServiciosPaqueteFinal,
+    '{{GRID_STYLE_PAQUETE}}': gridStylePaquete,
+    '{{PAGE_3_SERVICIOS_ADICIONALES}}': (htmlServiciosAdicionales && htmlServiciosAdicionales.length > 0) ? `
       <div class="page page-3">
         <div class="page-content" style="padding: 0; height: 100%;">
           <div class="package-card" style="display: block;">
-            <div style="padding: 30px 50px 25px 50px; text-align: left;">
-              <h2 style="font-size: 3rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: #ffffff; font-family: 'Poppins', sans-serif; margin: 0; line-height: 1.2;">Extras del Evento</h2>
+            <div style="padding: 40px 50px 10px 50px; text-align: left; flex-shrink: 0;">
+              <h2 style="font-size: 3.0rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px; color: ${esRevolution ? '#000' : '#FFFFFF'}; font-family: 'Montserrat', sans-serif; margin: 0; line-height: 1.2;">EXTRAS</h2>
             </div>
-            <div class="package-content" style="width: 100%; padding: 0 50px 50px 50px; grid-template-columns: 1fr 1fr 1fr; gap: 45px;">
+            <div class="package-content" style="flex: 1; padding: 20px 50px 30px 50px; overflow: visible; width: 100%; max-width: 100%; box-sizing: border-box; ${gridStyleExtras}">
               ${htmlServiciosAdicionales}
             </div>
           </div>
@@ -1051,6 +1208,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
     '{{PAGE_4_NUMBER}}': page4Number,
     '{{PAGE_5_NUMBER}}': page5Number,
     '{{INVESTMENT_BREAKDOWN}}': investmentBreakdown,
+    '{{INVESTMENT_BREAKDOWN_DIVS}}': investmentBreakdownDivs,
     '{{TOTAL_TO_PAY}}': `$${totalFinal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`,
     '{{TOTAL_CONTRACT}}': `$${totalContrato.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`,
     '{{TOTAL_PAID}}': `$${totalPagado.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`,
@@ -1135,17 +1293,215 @@ async function generarContratoHTML(contrato, lang = 'es') {
 }
 
 /**
- * Formatea hora
+ * Formatea hora (igual que en ofertas - formato 12 horas con AM/PM)
  */
 function formatearHora(hora) {
-  if (!hora) return 'Por definir';
-  if (hora instanceof Date) {
-    return hora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  if (!hora) return '8:00PM';
+  
+  try {
+    let horas, minutos;
+    
+    // Si es un string de hora (formato HH:MM:SS o HH:MM)
+    if (typeof hora === 'string' && hora.includes(':')) {
+      const partes = hora.split(':');
+      horas = parseInt(partes[0], 10);
+      minutos = parseInt(partes[1] || '0', 10);
+    } 
+    // Si es un objeto Date - usar UTC para evitar problemas de zona horaria
+    else if (hora instanceof Date) {
+      // IMPORTANTE: Para campos Time de Prisma, siempre usar UTC
+      // Prisma devuelve Time como Date con fecha 1970-01-01
+      // Si usamos getHours() en lugar de getUTCHours(), la zona horaria local puede cambiar la hora
+      // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969 para 1970-01-01T00:00:00.000Z
+      if (hora.getUTCFullYear() === 1970 && hora.getUTCMonth() === 0 && hora.getUTCDate() === 1) {
+        // Es un campo Time de Prisma, usar UTC siempre
+        horas = hora.getUTCHours();
+        minutos = hora.getUTCMinutes();
+      } else {
+        // Para otras fechas, usar hora local
+        horas = hora.getHours();
+        minutos = hora.getMinutes();
+      }
+    }
+    // Si es un objeto con métodos getHours/getMinutes (como objetos Time de Prisma)
+    else if (typeof hora === 'object' && hora !== null) {
+      // Intentar convertir a Date primero
+      const fecha = new Date(hora);
+      if (!isNaN(fecha.getTime())) {
+        // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969
+        if (fecha.getUTCFullYear() === 1970 && fecha.getUTCMonth() === 0 && fecha.getUTCDate() === 1) {
+          horas = fecha.getUTCHours();
+          minutos = fecha.getUTCMinutes();
+        } else {
+          horas = fecha.getHours();
+          minutos = fecha.getMinutes();
+        }
+      } else if (typeof hora.getHours === 'function') {
+        // Si tiene método getHours pero no es Date válido, intentar usar directamente
+        // Pero primero verificar si es un objeto Time de Prisma (fecha 1970-01-01)
+        // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969
+        if (typeof hora.getUTCFullYear === 'function' && hora.getUTCFullYear() === 1970) {
+          if (typeof hora.getUTCHours === 'function') {
+            horas = hora.getUTCHours();
+            minutos = hora.getUTCMinutes();
+          } else {
+            horas = hora.getHours();
+            minutos = hora.getMinutes();
+          }
+        } else {
+          horas = hora.getHours();
+          minutos = hora.getMinutes();
+        }
+      } else {
+        // Intentar parsear como string o número
+        const fecha = new Date(hora);
+        if (isNaN(fecha.getTime())) {
+          return '8:00PM';
+        }
+        if (fecha.getFullYear() === 1970 && fecha.getMonth() === 0 && fecha.getDate() === 1) {
+          horas = fecha.getUTCHours();
+          minutos = fecha.getUTCMinutes();
+        } else {
+          horas = fecha.getHours();
+          minutos = fecha.getMinutes();
+        }
+      }
+    }
+    // Intentar parsear como Date
+    else {
+      const fecha = new Date(hora);
+      if (isNaN(fecha.getTime())) {
+        return '8:00PM';
+      }
+      // Si es una fecha de 1970-01-01, usar UTC siempre para evitar problemas de zona horaria
+      if (fecha.getFullYear() === 1970 && fecha.getMonth() === 0 && fecha.getDate() === 1) {
+        horas = fecha.getUTCHours();
+        minutos = fecha.getUTCMinutes();
+      } else {
+        horas = fecha.getHours();
+        minutos = fecha.getMinutes();
+      }
+    }
+    
+    // Asegurar que las horas estén en el rango 0-23
+    // Si por alguna razón se obtiene un valor fuera de rango, ajustarlo
+    if (horas < 0 || horas > 23) {
+      horas = horas % 24;
+      if (horas < 0) horas += 24;
+    }
+    
+    const periodo = horas >= 12 ? 'PM' : 'AM';
+    const horas12 = horas > 12 ? horas - 12 : (horas === 0 ? 12 : horas);
+    return `${horas12}:${minutos.toString().padStart(2, '0')}${periodo}`;
+  } catch (e) {
+    console.error('Error formateando hora:', e, 'Hora recibida:', hora, 'Tipo:', typeof hora);
+    return '8:00PM';
   }
-  if (typeof hora === 'string') {
-    return hora;
+}
+
+/**
+ * Obtiene la cantidad de horas adicionales de un servicio "Hora Extra"
+ * @param {Array} serviciosAdicionales - Array de servicios adicionales
+ * @returns {number} Cantidad de horas adicionales
+ */
+function obtenerHorasAdicionales(serviciosAdicionales = []) {
+  if (!serviciosAdicionales || serviciosAdicionales.length === 0) {
+    return 0;
   }
-  return 'Por definir';
+
+  // Buscar el servicio "Hora Extra"
+  const horaExtra = serviciosAdicionales.find(
+    servicio => servicio.servicios?.nombre === 'Hora Extra' || 
+                servicio.servicio?.nombre === 'Hora Extra' ||
+                servicio.nombre === 'Hora Extra'
+  );
+
+  if (!horaExtra) {
+    return 0;
+  }
+
+  // Retornar la cantidad (puede estar en diferentes propiedades)
+  return horaExtra.cantidad || horaExtra.cantidad_servicio || 0;
+}
+
+/**
+ * Calcula la hora fin incluyendo horas adicionales
+ * @param {string|Date} horaFinOriginal - Hora fin original
+ * @param {number} horasAdicionales - Cantidad de horas adicionales
+ * @returns {string} Hora fin con extras en formato HH:MM
+ */
+function calcularHoraFinConExtras(horaFinOriginal, horasAdicionales = 0) {
+  if (!horaFinOriginal) {
+    return horaFinOriginal;
+  }
+
+  try {
+    // Extraer hora y minutos - siempre normalizar a formato HH:MM
+    let horaFinStr;
+    if (horaFinOriginal instanceof Date) {
+      // Para campos Time de Prisma, usar UTC
+      if (horaFinOriginal.getUTCFullYear() === 1970 && horaFinOriginal.getUTCMonth() === 0 && horaFinOriginal.getUTCDate() === 1) {
+        const h = horaFinOriginal.getUTCHours();
+        const m = horaFinOriginal.getUTCMinutes();
+        horaFinStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      } else {
+        const h = horaFinOriginal.getHours();
+        const m = horaFinOriginal.getMinutes();
+        horaFinStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+    } else if (typeof horaFinOriginal === 'string') {
+      if (horaFinOriginal.includes('T')) {
+        const match = horaFinOriginal.match(/(\d{2}):(\d{2})/);
+        if (match) {
+          horaFinStr = `${match[1]}:${match[2]}`;
+        } else {
+          horaFinStr = horaFinOriginal.slice(0, 5);
+        }
+      } else {
+        horaFinStr = horaFinOriginal.slice(0, 5);
+      }
+    } else {
+      return horaFinOriginal;
+    }
+    
+    // Si no hay horas adicionales, devolver la hora normalizada en formato HH:MM
+    if (horasAdicionales === 0) {
+      return horaFinStr;
+    }
+
+    const [horaFin, minutoFin] = horaFinStr.split(':').map(Number);
+
+    // Convertir a minutos desde medianoche para facilitar el cálculo
+    // Si la hora es 0-2 AM, asumimos que es del día siguiente (24-26 horas)
+    let minutosDesdeMedianoche = horaFin * 60 + minutoFin;
+    
+    // Si es 0, 1 o 2 AM, tratarlo como 24, 25 o 26 horas
+    if (horaFin <= 2) {
+      minutosDesdeMedianoche = (horaFin + 24) * 60 + minutoFin;
+    }
+
+    // Sumar las horas adicionales (convertir a minutos)
+    const minutosAdicionales = horasAdicionales * 60;
+    const nuevaHoraEnMinutos = minutosDesdeMedianoche + minutosAdicionales;
+
+    // Convertir de vuelta a horas y minutos
+    let nuevaHora = Math.floor(nuevaHoraEnMinutos / 60);
+    const nuevoMinuto = nuevaHoraEnMinutos % 60;
+
+    // Si la hora es >= 24, convertirla al formato correcto (0-2 AM del día siguiente)
+    // 24 = 0, 25 = 1, 26 = 2, etc.
+    if (nuevaHora >= 24) {
+      nuevaHora = nuevaHora % 24;
+    }
+
+    // Formatear la nueva hora
+    const nuevaHoraFormateada = `${String(nuevaHora).padStart(2, '0')}:${String(nuevoMinuto).padStart(2, '0')}`;
+
+    return nuevaHoraFormateada;
+  } catch (error) {
+    console.error('Error calculando hora fin con extras:', error);
+    return horaFinOriginal;
+  }
 }
 
 module.exports = {

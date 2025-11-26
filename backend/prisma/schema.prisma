@@ -42,6 +42,7 @@ model usuarios {
   versiones_contratos_pdf versiones_contratos_pdf[]
   solicitudes_cliente     solicitudes_cliente[]      @relation("respondido_por")
   leaks                   leaks[]                    @relation("leaks_vendedor")
+  leaks_exclusiones       leaks_exclusiones[]         @relation("leaks_exclusiones_usuario")
   checklist_servicios_externos checklist_servicios_externos[]
   movimientos_inventario  movimientos_inventario[]   @relation("movimientos_usuario")
   historial_cambios_precios historial_cambios_precios[]
@@ -160,6 +161,24 @@ model leaks {
   @@index([email], map: "idx_leaks_email")
   @@index([fecha_recepcion], map: "idx_leaks_fecha_recepcion")
   @@index([telefono], map: "idx_leaks_telefono")
+}
+
+// Tabla para almacenar leads eliminados permanentemente (no se vuelven a sincronizar)
+model leaks_exclusiones {
+  id                Int       @id @default(autoincrement())
+  email              String?   @db.VarChar(255)
+  telefono           String?   @db.VarChar(20)
+  nombre_completo    String?   @db.VarChar(255)
+  motivo             String?   @db.VarChar(255)  // Motivo de la exclusión
+  eliminado_por      Int?      // ID del usuario que eliminó
+  fecha_eliminacion  DateTime  @default(now())
+  
+  // Relaciones
+  usuario            usuarios? @relation("leaks_exclusiones_usuario", fields: [eliminado_por], references: [id])
+  
+  @@index([email], map: "idx_leaks_exclusiones_email")
+  @@index([telefono], map: "idx_leaks_exclusiones_telefono")
+  @@map("leaks_exclusiones")
 }
 
 model temporadas {

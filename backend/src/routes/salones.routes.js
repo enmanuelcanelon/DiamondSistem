@@ -137,13 +137,6 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
     // Convertir fecha y horas a objetos Date para comparación
     // Usar solo la fecha sin hora para comparación exacta (evitar problemas de zona horaria)
     const fechaEventoStr = fecha_evento.includes('T') ? fecha_evento.split('T')[0] : fecha_evento;
-    const fechaEvento = new Date(fechaEventoStr + 'T00:00:00');
-    
-    // Crear rango de fecha para comparación (desde inicio del día hasta fin del día)
-    const fechaInicio = new Date(fechaEvento);
-    fechaInicio.setHours(0, 0, 0, 0);
-    const fechaFin = new Date(fechaEvento);
-    fechaFin.setHours(23, 59, 59, 999);
     
     // Normalizar formato de hora (HH:mm)
     const horaInicioStr = typeof hora_inicio === 'string' 
@@ -153,14 +146,11 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
       ? hora_fin.length === 5 ? hora_fin : hora_fin.slice(0, 5)
       : hora_fin.toTimeString().slice(0, 5);
 
-    // Obtener todos los contratos del salón en esa fecha (usando rango para asegurar comparación correcta)
+    // Obtener todos los contratos del salón - usar comparación de fecha exacta
+    // Primero obtener todos los contratos del salón y luego filtrar por fecha exacta
     const todosContratos = await prisma.contratos.findMany({
       where: {
         salon_id: parseInt(salon_id),
-        fecha_evento: {
-          gte: fechaInicio,
-          lte: fechaFin
-        },
         estado: {
           in: ['activo', 'completado']
         }
@@ -172,6 +162,16 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
           }
         }
       }
+    });
+
+    // Filtrar contratos que están en la misma fecha exacta (comparación de fecha sin hora)
+    const contratosMismaFecha = todosContratos.filter(contrato => {
+      const fechaContratoStr = contrato.fecha_evento instanceof Date
+        ? contrato.fecha_evento.toISOString().split('T')[0]
+        : contrato.fecha_evento.includes('T')
+          ? contrato.fecha_evento.split('T')[0]
+          : contrato.fecha_evento;
+      return fechaContratoStr === fechaEventoStr;
     });
 
     // Función helper para verificar solapamiento de horarios con buffer de 1 hora
@@ -209,17 +209,26 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
 
     // Filtrar contratos que se solapan con el horario solicitado
     // Función auxiliar para extraer hora en formato HH:mm de un campo Time de Prisma
+    // IMPORTANTE: Esta función debe manejar correctamente campos Time de Prisma
+    // Los campos Time se guardan como Date con fecha 1970-01-01 y hora en formato UTC
     const extraerHora = (hora) => {
       if (typeof hora === 'string') {
+        // Si es string, asumir formato HH:mm o HH:mm:ss
         return hora.slice(0, 5);
       } else if (hora instanceof Date) {
-        // Para campos Time de Prisma (fecha 1970-01-01), usar UTC para evitar problemas de zona horaria
-        // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969 para 1970-01-01T00:00:00.000Z
+        // Para campos Time de Prisma (fecha 1970-01-01)
+        // Pueden estar guardados de dos formas:
+        // 1. Eventos antiguos: con Z (UTC) - ej: "1970-01-01T18:00:00Z"
+        // 2. Eventos nuevos: sin Z (hora local) - ej: "1970-01-01T18:00:00"
         if (hora.getUTCFullYear() === 1970 && hora.getUTCMonth() === 0 && hora.getUTCDate() === 1) {
+          // IMPORTANTE: PostgreSQL TIME se almacena sin zona horaria
+          // Prisma siempre devuelve campos Time como UTC (1970-01-01TXX:XX:XXZ)
+          // Por lo tanto, SIEMPRE usar getUTCHours() para campos Time de Prisma
           const horas = hora.getUTCHours();
           const minutos = hora.getUTCMinutes();
           return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
         } else {
+          // Para otros tipos de Date, usar hora local
           return hora.toTimeString().slice(0, 5);
         }
       } else {
@@ -227,21 +236,18 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
       }
     };
 
-    const contratosOcupados = todosContratos.filter(contrato => {
+    // Filtrar solo los contratos que están en la misma fecha y tienen solapamiento de horarios
+    const contratosOcupados = contratosMismaFecha.filter(contrato => {
       const horaInicioContrato = extraerHora(contrato.hora_inicio);
       const horaFinContrato = extraerHora(contrato.hora_fin);
       
       return haySolapamiento(horaInicioStr, horaFinStr, horaInicioContrato, horaFinContrato);
     });
 
-    // Obtener todas las ofertas aceptadas del salón en esa fecha
+    // Obtener todas las ofertas aceptadas del salón
     // Si se proporciona excluir_oferta_id, excluir esa oferta (útil al editar)
     const whereClause = {
       salon_id: parseInt(salon_id),
-      fecha_evento: {
-        gte: fechaInicio,
-        lte: fechaFin
-      },
       estado: 'aceptada'
     };
     
@@ -260,8 +266,18 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
       }
     });
 
-    // Filtrar ofertas que se solapan con el horario solicitado
-    const ofertasOcupadas = todasOfertas.filter(oferta => {
+    // Filtrar ofertas que están en la misma fecha exacta
+    const ofertasMismaFecha = todasOfertas.filter(oferta => {
+      const fechaOfertaStr = oferta.fecha_evento instanceof Date
+        ? oferta.fecha_evento.toISOString().split('T')[0]
+        : oferta.fecha_evento.includes('T')
+          ? oferta.fecha_evento.split('T')[0]
+          : oferta.fecha_evento;
+      return fechaOfertaStr === fechaEventoStr;
+    });
+
+    // Filtrar ofertas que se solapan con el horario solicitado (solo las que están en la misma fecha)
+    const ofertasOcupadas = ofertasMismaFecha.filter(oferta => {
       const horaInicioOferta = extraerHora(oferta.hora_inicio);
       const horaFinOferta = extraerHora(oferta.hora_fin);
       
@@ -275,11 +291,13 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
       const vendedorId = req.user.id;
       
       // Crear fechas completas con hora para verificar en Google Calendar
-      const fechaInicioCompleta = new Date(fechaEvento);
+      // Usar la fecha normalizada para evitar problemas de zona horaria
+      const fechaEventoDate = new Date(fechaEventoStr + 'T00:00:00');
+      const fechaInicioCompleta = new Date(fechaEventoDate);
       const [horaInicioH, horaInicioM] = horaInicioStr.split(':').map(Number);
       fechaInicioCompleta.setHours(horaInicioH, horaInicioM, 0, 0);
       
-      const fechaFinCompleta = new Date(fechaEvento);
+      const fechaFinCompleta = new Date(fechaEventoDate);
       const [horaFinH, horaFinM] = horaFinStr.split(':').map(Number);
       fechaFinCompleta.setHours(horaFinH, horaFinM, 0, 0);
       
@@ -335,55 +353,133 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       });
     }
 
-    // Convertir fecha a objeto Date
+    // Convertir fecha a string normalizado (solo fecha, sin hora)
     const fechaEventoStr = fecha_evento.includes('T') ? fecha_evento.split('T')[0] : fecha_evento;
-    const fechaEvento = new Date(fechaEventoStr + 'T00:00:00');
     
-    // Crear rango de fecha para comparación
-    const fechaInicio = new Date(fechaEvento);
-    fechaInicio.setHours(0, 0, 0, 0);
-    const fechaFin = new Date(fechaEvento);
-    fechaFin.setHours(23, 59, 59, 999);
-
-    // Obtener todos los contratos del salón en esa fecha
+    // Obtener todos los contratos del salón (filtrar por fecha exacta después)
     const todosContratos = await prisma.contratos.findMany({
       where: {
         salon_id: parseInt(salon_id),
-        fecha_evento: {
-          gte: fechaInicio,
-          lte: fechaFin
-        },
         estado: {
           in: ['activo', 'completado']
         }
       },
       select: {
+        id: true,
+        codigo_contrato: true,
+        fecha_evento: true,
         hora_inicio: true,
         hora_fin: true
       }
     });
+    
+    console.log('📋 Total contratos obtenidos para salón', salon_id, ':', todosContratos.length);
+    todosContratos.forEach(c => {
+      const fechaStr = c.fecha_evento instanceof Date
+        ? c.fecha_evento.toISOString().split('T')[0]
+        : c.fecha_evento.includes('T')
+          ? c.fecha_evento.split('T')[0]
+          : c.fecha_evento;
+      console.log(`  - Contrato ${c.codigo_contrato || c.id}: fecha ${fechaStr}`);
+    });
 
-    // Obtener todas las ofertas aceptadas del salón en esa fecha
+    // Filtrar contratos que están en la misma fecha exacta
+    const contratosMismaFecha = todosContratos.filter(contrato => {
+      const fechaContratoStr = contrato.fecha_evento instanceof Date
+        ? contrato.fecha_evento.toISOString().split('T')[0]
+        : contrato.fecha_evento.includes('T')
+          ? contrato.fecha_evento.split('T')[0]
+          : contrato.fecha_evento;
+      const coincide = fechaContratoStr === fechaEventoStr;
+      if (coincide) {
+        console.log(`  ✅ Contrato ${contrato.codigo_contrato || contrato.id} coincide con fecha ${fechaEventoStr}`);
+      }
+      return coincide;
+    });
+    
+    console.log('📅 Contratos en fecha', fechaEventoStr, ':', contratosMismaFecha.length);
+
+    // Obtener todas las ofertas del salón (aceptadas Y pendientes - filtrar por fecha exacta después)
+    // IMPORTANTE: Incluir ofertas pendientes porque también bloquean horarios
     const whereClause = {
       salon_id: parseInt(salon_id),
-      fecha_evento: {
-        gte: fechaInicio,
-        lte: fechaFin
-      },
-      estado: 'aceptada'
+      estado: {
+        in: ['aceptada', 'pendiente'] // Incluir ofertas aceptadas y pendientes
+      }
     };
     
     if (excluir_oferta_id) {
       whereClause.id = { not: parseInt(excluir_oferta_id) };
     }
     
+    console.log('🔍 Query para obtener ofertas:', JSON.stringify(whereClause, null, 2));
+    
     const todasOfertas = await prisma.ofertas.findMany({
       where: whereClause,
       select: {
+        id: true,
+        codigo_oferta: true,
+        fecha_evento: true,
         hora_inicio: true,
-        hora_fin: true
+        hora_fin: true,
+        estado: true,
+        salon_id: true
       }
     });
+    
+    console.log('📋 Total ofertas obtenidas para salón', salon_id, ':', todasOfertas.length);
+    if (todasOfertas.length === 0) {
+      console.log('⚠️ No se encontraron ofertas. Verificando si hay ofertas con salon_id diferente o null...');
+      // Verificar si hay ofertas pendientes sin salon_id o con salon_id diferente
+      const todasOfertasPendientes = await prisma.ofertas.findMany({
+        where: {
+          estado: 'pendiente'
+        },
+        select: {
+          id: true,
+          codigo_oferta: true,
+          fecha_evento: true,
+          salon_id: true,
+          estado: true
+        },
+        take: 10
+      });
+      console.log('📋 Total ofertas pendientes en BD (primeras 10):', todasOfertasPendientes.length);
+      todasOfertasPendientes.forEach(o => {
+        const fechaStr = o.fecha_evento instanceof Date
+          ? o.fecha_evento.toISOString().split('T')[0]
+          : o.fecha_evento.includes('T')
+            ? o.fecha_evento.split('T')[0]
+            : o.fecha_evento;
+        console.log(`  - Oferta ${o.codigo_oferta || o.id} (salon_id: ${o.salon_id}): fecha ${fechaStr}`);
+      });
+    }
+    
+    todasOfertas.forEach(o => {
+      const fechaStr = o.fecha_evento instanceof Date
+        ? o.fecha_evento.toISOString().split('T')[0]
+        : o.fecha_evento.includes('T')
+          ? o.fecha_evento.split('T')[0]
+          : o.fecha_evento;
+      console.log(`  - Oferta ${o.codigo_oferta || o.id} (${o.estado}, salon_id: ${o.salon_id}): fecha ${fechaStr}`);
+    });
+
+    // Filtrar ofertas que están en la misma fecha exacta
+    console.log('🔍 Buscando ofertas para fecha:', fechaEventoStr);
+    const ofertasMismaFecha = todasOfertas.filter(oferta => {
+      const fechaOfertaStr = oferta.fecha_evento instanceof Date
+        ? oferta.fecha_evento.toISOString().split('T')[0]
+        : oferta.fecha_evento.includes('T')
+          ? oferta.fecha_evento.split('T')[0]
+          : oferta.fecha_evento;
+      const coincide = fechaOfertaStr === fechaEventoStr;
+      if (coincide) {
+        console.log(`  ✅ Oferta ${oferta.codigo_oferta || oferta.id} (${oferta.estado}) coincide con fecha ${fechaEventoStr}`);
+      }
+      return coincide;
+    });
+    
+    console.log('📅 Ofertas en fecha', fechaEventoStr, ':', ofertasMismaFecha.length);
 
     // Obtener el nombre del salón para filtrar eventos de Google Calendar
     const salon = await prisma.salones.findUnique({
@@ -391,39 +487,159 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       select: { nombre: true }
     });
 
+    // Crear rango de fecha para Google Calendar (necesario para la función)
+    const fechaEventoDate = new Date(fechaEventoStr + 'T00:00:00');
+    const fechaInicio = new Date(fechaEventoDate);
+    fechaInicio.setHours(0, 0, 0, 0);
+    const fechaFin = new Date(fechaEventoDate);
+    fechaFin.setHours(23, 59, 59, 999);
+
     // Obtener eventos de Google Calendar del mismo día
     let eventosGoogleCalendar = [];
     try {
       const todosEventosCalendar = await obtenerEventosTodosVendedores(fechaInicio, fechaFin);
 
       // Filtrar eventos que coincidan con el salón
-      // Comparación case-insensitive y busca parcial (ej: "DIAMOND AT DORAL" contiene "DIAMOND")
-      const nombreSalon = (salon?.nombre || '').toLowerCase();
+      // Función robusta para normalizar y comparar nombres de salón
+      const normalizarNombreSalon = (nombre) => {
+        if (!nombre) return '';
+        return String(nombre)
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, ' ') // Normalizar espacios múltiples
+          .replace(/[^\w\s]/g, '') // Eliminar caracteres especiales excepto letras, números y espacios
+          .replace(/\s+/g, ' ') // Normalizar espacios de nuevo
+          .trim();
+      };
+
+      const nombreSalon = normalizarNombreSalon(salon?.nombre || '');
+
+      // Logging para debug
+      console.log('🔍 Filtrando eventos de Google Calendar para salón:', salon?.nombre, '(normalizado:', nombreSalon, ')');
+      console.log('📋 Total eventos obtenidos:', todosEventosCalendar.length);
+
       eventosGoogleCalendar = todosEventosCalendar.filter(evento => {
-        const ubicacion = (evento.ubicacion || '').toLowerCase();
-        // Coincide si la ubicación contiene el nombre del salón O viceversa
-        return ubicacion.includes(nombreSalon) || nombreSalon.includes(ubicacion.split(' ')[0]);
+        // Obtener ubicación del evento
+        const ubicacionRaw = evento.ubicacion || '';
+        const ubicacion = normalizarNombreSalon(ubicacionRaw);
+        
+        // Si no hay ubicación, no incluir el evento
+        if (!ubicacion || ubicacion.trim() === '') {
+          return false;
+        }
+        
+        // Mapeo de variantes comunes de nombres de salón
+        const variantesSalones = {
+          'kendall': ['kendall', 'kendal', 'kentall'],
+          'doral': ['doral'],
+          'diamond': ['diamond', 'dmd']
+        };
+        
+        // Función para verificar si dos nombres coinciden (considerando variantes)
+        const nombresCoinciden = (nombre1, nombre2) => {
+          if (!nombre1 || !nombre2) return false;
+          
+          // Comparación exacta normalizada
+          if (nombre1 === nombre2) return true;
+          
+          // Verificar si uno contiene al otro
+          if (nombre1.includes(nombre2) || nombre2.includes(nombre1)) {
+            // Verificar que no sea un falso positivo (ej: "doral" en "diamond at doral")
+            // PRIORIDAD: Diamond debe verificarse ANTES que Doral
+            if (nombre1.includes('diamond') && nombre2.includes('doral') && !nombre2.includes('diamond')) {
+              return false; // "doral" no coincide con "diamond at doral"
+            }
+            if (nombre2.includes('diamond') && nombre1.includes('doral') && !nombre1.includes('diamond')) {
+              return false; // "doral" no coincide con "diamond at doral"
+            }
+            return true;
+          }
+          
+          // Verificar variantes comunes
+          for (const [salonBase, variantes] of Object.entries(variantesSalones)) {
+            const nombre1EsVariante = variantes.some(v => nombre1.includes(v));
+            const nombre2EsVariante = variantes.some(v => nombre2.includes(v));
+            
+            if (nombre1EsVariante && nombre2EsVariante) {
+              // Ambos son variantes del mismo salón base
+              return true;
+            }
+          }
+          
+          return false;
+        };
+        
+        const coincide = nombresCoinciden(nombreSalon, ubicacion);
+        
+        // Logging detallado para debug
+        if (todosEventosCalendar.length <= 5 || coincide) {
+          console.log(`  📍 Evento: "${evento.titulo}" | Ubicación raw: "${ubicacionRaw}" | Ubicación normalizada: "${ubicacion}" | Coincide: ${coincide}`);
+        }
+        
+        return coincide;
       });
 
       console.log('📅 Google Calendar - Eventos encontrados para', salon?.nombre, ':', eventosGoogleCalendar.length);
+      if (eventosGoogleCalendar.length > 0) {
+        console.log('  ✅ Eventos filtrados:');
+        eventosGoogleCalendar.forEach(e => {
+          console.log(`    - ${e.titulo} (${e.ubicacion})`);
+        });
+      }
     } catch (error) {
       console.warn('⚠️ Error al obtener eventos de Google Calendar:', error.message);
       // Continuar sin eventos de Google Calendar si hay error
     }
 
+    // Función para extraer hora como string (HH:mm) de un campo Time de Prisma
+    const extraerHora = (hora) => {
+      if (!hora) return '00:00';
+      
+      if (typeof hora === 'string') {
+        return hora.slice(0, 5);
+      } else if (hora instanceof Date) {
+        if (hora.getUTCFullYear() === 1970 && hora.getUTCMonth() === 0 && hora.getUTCDate() === 1) {
+          // IMPORTANTE: PostgreSQL TIME se almacena sin zona horaria
+          // Prisma siempre devuelve campos Time como UTC
+          // Por lo tanto, SIEMPRE usar getUTCHours() para campos Time de Prisma
+          const horas = hora.getUTCHours();
+          const minutos = hora.getUTCMinutes();
+          return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+        } else {
+          return hora.toTimeString().slice(0, 5);
+        }
+      } else {
+        return '00:00';
+      }
+    };
+
     // Función para convertir hora a minutos desde medianoche
+    // IMPORTANTE: Esta función debe manejar correctamente campos Time de Prisma
+    // Los campos Time se guardan como Date con fecha 1970-01-01 SIN Z (hora local)
+    // Ejemplo: "18:00" se guarda como "1970-01-01T18:00:00" (6 PM hora local)
     const toMinutes = (hora) => {
       let horaStr;
       if (typeof hora === 'string') {
+        // Si es string, asumir formato HH:mm o HH:mm:ss
         horaStr = hora.slice(0, 5);
       } else if (hora instanceof Date) {
-        // Para campos Time de Prisma (fecha 1970-01-01), usar UTC para evitar problemas de zona horaria
-        // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969 para 1970-01-01T00:00:00.000Z
+        // Para campos Time de Prisma (fecha 1970-01-01)
+        // Pueden estar guardados de dos formas:
+        // 1. Eventos antiguos: con Z (UTC) - ej: "1970-01-01T18:00:00Z"
+        // 2. Eventos nuevos: sin Z (hora local) - ej: "1970-01-01T18:00:00"
+        // Verificar si es un campo Time de Prisma (fecha 1970-01-01)
         if (hora.getUTCFullYear() === 1970 && hora.getUTCMonth() === 0 && hora.getUTCDate() === 1) {
+          // IMPORTANTE: PostgreSQL TIME se almacena sin zona horaria
+          // Prisma siempre devuelve campos Time como UTC (1970-01-01TXX:XX:XXZ)
+          // Por lo tanto, SIEMPRE usar getUTCHours() para campos Time de Prisma
+          // Esto funciona tanto para eventos antiguos (guardados con Z) como nuevos (guardados sin Z)
+          // porque PostgreSQL los almacena igual y Prisma los devuelve igual
           const horas = hora.getUTCHours();
           const minutos = hora.getUTCMinutes();
           horaStr = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+          console.log('  🔍 Campo Time (Prisma) - usando UTC:', horaStr, '| UTC:', horas, '| Local:', hora.getHours());
         } else {
+          // Para otros tipos de Date, usar hora local
           horaStr = hora.toTimeString().slice(0, 5);
         }
       } else {
@@ -447,6 +663,44 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     const procesarEvento = (horaInicio, horaFin) => {
       const inicioMin = toMinutes(horaInicio);
       const finMin = toMinutes(horaFin);
+      
+      // Logging para debug
+      let horaInicioStr, horaFinStr;
+      if (typeof horaInicio === 'string') {
+        horaInicioStr = horaInicio.slice(0, 5);
+      } else if (horaInicio instanceof Date) {
+        if (horaInicio.getUTCFullYear() === 1970 && horaInicio.getUTCMonth() === 0 && horaInicio.getUTCDate() === 1) {
+          // IMPORTANTE: PostgreSQL TIME se almacena sin zona horaria
+          // Prisma siempre devuelve campos Time como UTC
+          // Por lo tanto, SIEMPRE usar getUTCHours() para campos Time de Prisma
+          const horas = horaInicio.getUTCHours();
+          const minutos = horaInicio.getUTCMinutes();
+          horaInicioStr = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+        } else {
+          horaInicioStr = horaInicio.toTimeString().slice(0, 5);
+        }
+      } else {
+        horaInicioStr = horaInicio.toTimeString().slice(0, 5);
+      }
+      
+      if (typeof horaFin === 'string') {
+        horaFinStr = horaFin.slice(0, 5);
+      } else if (horaFin instanceof Date) {
+        if (horaFin.getUTCFullYear() === 1970 && horaFin.getUTCMonth() === 0 && horaFin.getUTCDate() === 1) {
+          // IMPORTANTE: PostgreSQL TIME se almacena sin zona horaria
+          // Prisma siempre devuelve campos Time como UTC
+          // Por lo tanto, SIEMPRE usar getUTCHours() para campos Time de Prisma
+          const horas = horaFin.getUTCHours();
+          const minutos = horaFin.getUTCMinutes();
+          horaFinStr = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+        } else {
+          horaFinStr = horaFin.toTimeString().slice(0, 5);
+        }
+      } else {
+        horaFinStr = horaFin.toTimeString().slice(0, 5);
+      }
+      
+      console.log('  ⏰ procesarEvento - Hora inicio:', horaInicioStr, '→ minutos:', inicioMin, '| Hora fin:', horaFinStr, '→ minutos:', finMin);
       
       // Determinar si cruza medianoche
       const cruzaMedianoche = finMin < inicioMin;
@@ -478,13 +732,23 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       }
     };
 
-    // Procesar contratos
-    todosContratos.forEach(contrato => {
+    // Procesar contratos (solo los que están en la misma fecha)
+    contratosMismaFecha.forEach(contrato => {
+      // Logging para debug
+      const horaInicioStr = extraerHora(contrato.hora_inicio);
+      const horaFinStr = extraerHora(contrato.hora_fin);
+      console.log('📅 Procesando contrato:', contrato.codigo_contrato || contrato.id, 
+        'de', horaInicioStr, 'a', horaFinStr);
       procesarEvento(contrato.hora_inicio, contrato.hora_fin);
     });
 
-    // Procesar ofertas
-    todasOfertas.forEach(oferta => {
+    // Procesar ofertas (solo las que están en la misma fecha)
+    ofertasMismaFecha.forEach(oferta => {
+      // Logging para debug
+      const horaInicioStr = extraerHora(oferta.hora_inicio);
+      const horaFinStr = extraerHora(oferta.hora_fin);
+      console.log('📅 Procesando oferta:', oferta.codigo_oferta || oferta.id,
+        'de', horaInicioStr, 'a', horaFinStr);
       procesarEvento(oferta.hora_inicio, oferta.hora_fin);
     });
 
@@ -496,17 +760,76 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         const fechaInicioEvento = new Date(evento.fecha_inicio);
         const fechaFinEvento = new Date(evento.fecha_fin);
 
-        // Extraer solo las horas (HH:MM) para procesar
-        const horaInicio = fechaInicioEvento;
-        const horaFin = fechaFinEvento;
+        // Verificar que las fechas sean válidas
+        if (isNaN(fechaInicioEvento.getTime()) || isNaN(fechaFinEvento.getTime())) {
+          console.warn('⚠️ Evento de Google Calendar con fechas inválidas:', evento.titulo);
+          return;
+        }
+
+        // IMPORTANTE: Extraer la hora en la zona horaria de Miami (America/New_York)
+        // Los eventos de Google Calendar vienen con timezone en el ISO string (ej: "2025-11-29T13:00:00-05:00")
+        // Necesitamos extraer las horas directamente en la zona horaria de Miami
+        // Usar Intl.DateTimeFormat para obtener las partes de fecha/hora en la zona horaria correcta
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        
+        // Extraer horas directamente en zona horaria de Miami
+        const partesInicio = formatter.formatToParts(fechaInicioEvento);
+        const partesFin = formatter.formatToParts(fechaFinEvento);
+        
+        const horaInicioH = parseInt(partesInicio.find(p => p.type === 'hour')?.value || '0', 10);
+        const horaInicioM = parseInt(partesInicio.find(p => p.type === 'minute')?.value || '0', 10);
+        const horaFinH = parseInt(partesFin.find(p => p.type === 'hour')?.value || '0', 10);
+        const horaFinM = parseInt(partesFin.find(p => p.type === 'minute')?.value || '0', 10);
+        
+        const horaInicioStr = `${horaInicioH.toString().padStart(2, '0')}:${horaInicioM.toString().padStart(2, '0')}`;
+        const horaFinStr = `${horaFinH.toString().padStart(2, '0')}:${horaFinM.toString().padStart(2, '0')}`;
 
         console.log('📅 Procesando evento Google Calendar:', evento.titulo,
-          'de', fechaInicioEvento.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-          'a', fechaFinEvento.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
+          'de', horaInicioStr,
+          'a', horaFinStr,
+          '| Ubicación:', evento.ubicacion);
 
-        procesarEvento(horaInicio, horaFin);
+        // IMPORTANTE: Calcular minutos directamente desde las horas extraídas
+        // No crear objetos Date intermedios que puedan causar problemas de zona horaria
+        const inicioMin = horaInicioH * 60 + horaInicioM;
+        const finMin = horaFinH * 60 + horaFinM;
+        
+        // Determinar si cruza medianoche
+        const cruzaMedianoche = finMin < inicioMin;
+        
+        if (cruzaMedianoche) {
+          // Evento cruza medianoche (ej: 8 PM a 12 AM)
+          // Solo ocupamos desde inicio hasta 23:59 del mismo día (NO el día siguiente)
+          const inicioMinAjustado = Math.max(0, inicioMin);
+          const finMinAjustado = 1439; // 23:59 del mismo día
+          
+          rangosOcupados.push({
+            inicio: inicioMinAjustado,
+            fin: finMinAjustado,
+            inicioHora: toHora(inicioMinAjustado),
+            finHora: toHora(finMinAjustado)
+          });
+        } else {
+          // Evento NO cruza medianoche (ej: 12 PM a 4 PM)
+          // Solo ocupamos las horas exactas del evento
+          const inicioMinAjustado = Math.max(0, inicioMin);
+          const finMinAjustado = Math.min(1439, finMin);
+          
+          rangosOcupados.push({
+            inicio: inicioMinAjustado,
+            fin: finMinAjustado,
+            inicioHora: toHora(inicioMinAjustado),
+            finHora: toHora(finMinAjustado)
+          });
+        }
       } catch (error) {
         console.warn('⚠️ Error al procesar evento de Google Calendar:', error);
+        console.warn('  Evento:', evento);
       }
     });
 
@@ -529,6 +852,15 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     });
 
     const horasOcupadasArray = Array.from(horasOcupadas).sort((a, b) => a - b);
+
+    // Logging para debug
+    console.log('📊 Resumen de horarios ocupados:');
+    console.log('  - Total rangos ocupados:', rangosOcupados.length);
+    rangosOcupados.forEach((r, i) => {
+      console.log(`    ${i + 1}. ${r.inicioHora} - ${r.finHora} (${r.inicio} - ${r.fin} minutos)`);
+    });
+    console.log('  - Total horas ocupadas:', horasOcupadasArray.length);
+    console.log('  - Horas:', horasOcupadasArray.join(', '));
 
     res.json({
       success: true,

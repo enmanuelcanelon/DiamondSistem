@@ -548,13 +548,14 @@ function Ofertas() {
                           <Clock className="w-3.5 h-3.5" />
                           <span className="font-medium text-foreground">
                             {(() => {
-                              // La hora_fin guardada ya es la correcta (la que el usuario ingresó)
-                              // No necesitamos agregar horas extras porque ya están incluidas en la hora_fin
-                              const duracion = calcularDuracion(oferta.hora_inicio, oferta.hora_fin);
+                              // Calcular horas adicionales y hora fin con extras (igual que en contratos)
+                              const horasAdicionales = obtenerHorasAdicionales(oferta.ofertas_servicios_adicionales || []);
+                              const horaFinConExtras = calcularHoraFinConExtras(oferta.hora_fin, horasAdicionales);
+                              const duracion = calcularDuracion(oferta.hora_inicio, horaFinConExtras);
                               
                               return (
                                 <>
-                                  {formatearHora(oferta.hora_inicio)} - {formatearHora(oferta.hora_fin)}
+                                  {formatearHora(oferta.hora_inicio)} - {formatearHora(horaFinConExtras)}
                                   {duracion > 0 && (() => {
                                     const horasEnteras = Math.floor(duracion);
                                     const minutos = Math.round((duracion - horasEnteras) * 60);

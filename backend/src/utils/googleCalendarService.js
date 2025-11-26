@@ -351,12 +351,30 @@ async function crearEventoContrato(vendedorId, datosContrato) {
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-    // Construir título del evento
-    let titulo = `${datosContrato.tipoEvento || 'Evento'}`;
-    if (datosContrato.homenajeado) {
-      titulo += ` - ${datosContrato.homenajeado}`;
+    // Construir título del evento en formato: "Tipo de evento" + "[nombre de cliente]" + "Salon [salón]" + "(Paquete)"
+    const partesTitulo = [];
+    
+    // Tipo de evento
+    if (datosContrato.tipoEvento) {
+      partesTitulo.push(datosContrato.tipoEvento);
     }
-    titulo += ` (${datosContrato.codigoContrato})`;
+    
+    // Nombre de cliente entre corchetes
+    if (datosContrato.nombreCliente) {
+      partesTitulo.push(`[${datosContrato.nombreCliente}]`);
+    }
+    
+    // Salón con prefijo "Salon"
+    if (datosContrato.ubicacion) {
+      partesTitulo.push(`Salon ${datosContrato.ubicacion}`);
+    }
+    
+    // Paquete entre paréntesis
+    if (datosContrato.paquete) {
+      partesTitulo.push(`(${datosContrato.paquete})`);
+    }
+    
+    const titulo = partesTitulo.join(' ');
 
     // Construir descripción
     const descripcion = [
@@ -441,6 +459,296 @@ async function crearEventoContrato(vendedorId, datosContrato) {
 }
 
 /**
+ * Crear evento de oferta en Google Calendar
+ * @param {number} vendedorId - ID del vendedor
+ * @param {Object} datosOferta - Datos de la oferta
+ * @param {string} datosOferta.codigoOferta - Código de la oferta
+ * @param {string} datosOferta.nombreCliente - Nombre del cliente
+ * @param {string} datosOferta.tipoEvento - Tipo de evento
+ * @param {string} datosOferta.homenajeado - Nombre del homenajeado (opcional)
+ * @param {Date} datosOferta.fechaEvento - Fecha del evento
+ * @param {Date|string} datosOferta.horaInicio - Hora de inicio (Date o string HH:mm)
+ * @param {Date|string} datosOferta.horaFin - Hora de fin (Date o string HH:mm)
+ * @param {string} datosOferta.ubicacion - Ubicación/salón
+ * @param {number} datosOferta.cantidadInvitados - Cantidad de invitados
+ * @param {Array} datosOferta.serviciosAdicionales - Servicios adicionales de la oferta (para calcular horas extras)
+ * @returns {Promise<Object>} Evento creado
+ */
+async function crearEventoOferta(vendedorId, datosOferta) {
+  try {
+    // Para ofertas, usar el calendario principal del vendedor (Revolution Party)
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
+      select: {
+        google_calendar_sync_enabled: true,
+        google_calendar_id: true
+      }
+    });
+
+    if (!vendedor || !vendedor.google_calendar_sync_enabled) {
+      logger.warn(`⚠️ Vendedor ${vendedorId} no tiene Google Calendar habilitado`);
+      return null;
+    }
+
+    if (!vendedor.google_calendar_id) {
+      logger.warn(`⚠️ Vendedor ${vendedorId} no tiene calendario principal configurado`);
+      return null;
+    }
+    
+    const calendarioId = vendedor.google_calendar_id;
+    logger.info(`📅 Usando calendario principal del vendedor (Revolution Party) para oferta: ${calendarioId}`);
+
+    const tokens = await getValidTokens(vendedorId);
+    if (!tokens) {
+      logger.warn(`⚠️ Vendedor ${vendedorId} no tiene tokens válidos`);
+      return null;
+    }
+
+    const oauth2Client = createAuthenticatedClient(tokens.access_token, tokens.refresh_token);
+    if (!oauth2Client) {
+      return null;
+    }
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    // Construir título del evento en formato: "Tipo de evento" + "codigo de oferta" + "[nombre de cliente]" + "Salon [salón]" + "(Paquete)"
+    // NOTA: Para ofertas se usa el código de oferta, pero el usuario prefiere que se use código de contrato
+    // Por ahora usamos código de oferta ya que aún no hay contrato creado
+    const partesTitulo = [];
+    
+    // Tipo de evento
+    if (datosOferta.tipoEvento) {
+      partesTitulo.push(datosOferta.tipoEvento);
+    }
+    
+    // Código de oferta (se usará hasta que se cree el contrato)
+    if (datosOferta.codigoOferta) {
+      partesTitulo.push(datosOferta.codigoOferta);
+    }
+    
+    // Nombre de cliente entre corchetes
+    if (datosOferta.nombreCliente) {
+      partesTitulo.push(`[${datosOferta.nombreCliente}]`);
+    }
+    
+    // Salón con prefijo "Salon"
+    if (datosOferta.ubicacion) {
+      partesTitulo.push(`Salon ${datosOferta.ubicacion}`);
+    }
+    
+    // Paquete entre paréntesis
+    if (datosOferta.paquete) {
+      partesTitulo.push(`(${datosOferta.paquete})`);
+    }
+    
+    const titulo = partesTitulo.join(' ');
+
+    // Construir descripción
+    const descripcion = [
+      `Cliente: ${datosOferta.nombreCliente}`,
+      `Código: ${datosOferta.codigoOferta}`,
+      `Invitados: ${datosOferta.cantidadInvitados}`,
+      datosOferta.ubicacion ? `Ubicación: ${datosOferta.ubicacion}` : '',
+      'Estado: Pendiente'
+    ].filter(Boolean).join('\n');
+
+    // Calcular horas adicionales de servicios "Hora Extra"
+    const obtenerHorasAdicionales = (serviciosAdicionales = []) => {
+      if (!serviciosAdicionales || serviciosAdicionales.length === 0) {
+        return 0;
+      }
+
+      // Buscar el servicio "Hora Extra"
+      const horaExtra = serviciosAdicionales.find(
+        servicio => servicio.servicios?.nombre === 'Hora Extra' || 
+                    servicio.servicio?.nombre === 'Hora Extra' ||
+                    servicio.nombre === 'Hora Extra'
+      );
+
+      if (!horaExtra) {
+        return 0;
+      }
+
+      // Retornar la cantidad (puede estar en diferentes propiedades)
+      return horaExtra.cantidad || horaExtra.cantidad_servicio || 0;
+    };
+
+    const calcularHoraFinConExtras = (horaFinOriginal, horasAdicionales = 0) => {
+      if (!horaFinOriginal) {
+        return horaFinOriginal;
+      }
+
+      try {
+        // Extraer hora y minutos - siempre normalizar a formato HH:MM
+        let horaFinStr;
+        if (horaFinOriginal instanceof Date) {
+          // Para campos Time de Prisma, usar UTC
+          if (horaFinOriginal.getUTCFullYear() === 1970 && horaFinOriginal.getUTCMonth() === 0 && horaFinOriginal.getUTCDate() === 1) {
+            const h = horaFinOriginal.getUTCHours();
+            const m = horaFinOriginal.getUTCMinutes();
+            horaFinStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+          } else {
+            const h = horaFinOriginal.getHours();
+            const m = horaFinOriginal.getMinutes();
+            horaFinStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+          }
+        } else if (typeof horaFinOriginal === 'string') {
+          if (horaFinOriginal.includes('T')) {
+            const match = horaFinOriginal.match(/(\d{2}):(\d{2})/);
+            if (match) {
+              horaFinStr = `${match[1]}:${match[2]}`;
+            } else {
+              horaFinStr = horaFinOriginal.slice(0, 5);
+            }
+          } else {
+            horaFinStr = horaFinOriginal.slice(0, 5);
+          }
+        } else {
+          return horaFinOriginal;
+        }
+        
+        // Si no hay horas adicionales, devolver la hora normalizada en formato HH:MM
+        if (horasAdicionales === 0) {
+          return horaFinStr;
+        }
+
+        const [horaFin, minutoFin] = horaFinStr.split(':').map(Number);
+
+        // Convertir a minutos desde medianoche para facilitar el cálculo
+        // Si la hora es 0-2 AM, asumimos que es del día siguiente (24-26 horas)
+        let minutosDesdeMedianoche = horaFin * 60 + minutoFin;
+        
+        // Si es 0, 1 o 2 AM, tratarlo como 24, 25 o 26 horas
+        if (horaFin <= 2) {
+          minutosDesdeMedianoche = (horaFin + 24) * 60 + minutoFin;
+        }
+
+        // Sumar las horas adicionales (convertir a minutos)
+        const minutosAdicionales = horasAdicionales * 60;
+        const nuevaHoraEnMinutos = minutosDesdeMedianoche + minutosAdicionales;
+
+        // Convertir de vuelta a horas y minutos
+        let nuevaHora = Math.floor(nuevaHoraEnMinutos / 60);
+        const nuevoMinuto = nuevaHoraEnMinutos % 60;
+
+        // Si la hora es >= 24, convertirla al formato correcto (0-2 AM del día siguiente)
+        // 24 = 0, 25 = 1, 26 = 2, etc.
+        if (nuevaHora >= 24) {
+          nuevaHora = nuevaHora % 24;
+        }
+
+        // Formatear la nueva hora
+        const nuevaHoraFormateada = `${String(nuevaHora).padStart(2, '0')}:${String(nuevoMinuto).padStart(2, '0')}`;
+
+        return nuevaHoraFormateada;
+      } catch (error) {
+        logger.error('Error calculando hora fin con extras:', error);
+        return horaFinOriginal;
+      }
+    };
+
+    const horasAdicionales = obtenerHorasAdicionales(datosOferta.serviciosAdicionales || []);
+    
+    // Calcular hora de fin con horas extras
+    const horaFinConExtras = calcularHoraFinConExtras(datosOferta.horaFin, horasAdicionales);
+    
+    // Combinar fecha y hora para crear Date objects
+    const fechaEvento = new Date(datosOferta.fechaEvento);
+    
+    // Manejar hora_inicio y hora_fin (pueden ser Date objects de Prisma o strings)
+    let horaInicioDate, horaFinDate;
+    
+    if (datosOferta.horaInicio instanceof Date) {
+      // Si es Date de Prisma (1970-01-01), extraer horas UTC
+      if (datosOferta.horaInicio.getUTCFullYear() === 1970 && datosOferta.horaInicio.getUTCMonth() === 0 && datosOferta.horaInicio.getUTCDate() === 1) {
+        const horas = datosOferta.horaInicio.getUTCHours();
+        const minutos = datosOferta.horaInicio.getUTCMinutes();
+        horaInicioDate = new Date();
+        horaInicioDate.setHours(horas, minutos, 0, 0);
+      } else {
+        horaInicioDate = datosOferta.horaInicio;
+      }
+    } else if (typeof datosOferta.horaInicio === 'string') {
+      const [horaInicioH, horaInicioM] = datosOferta.horaInicio.split(':').map(Number);
+      horaInicioDate = new Date();
+      horaInicioDate.setHours(horaInicioH, horaInicioM, 0, 0);
+    } else {
+      throw new Error('Formato de hora_inicio no válido');
+    }
+    
+    // Usar la hora de fin calculada con horas extras (si hay horas extras)
+    const horaFinAUsar = horasAdicionales > 0 ? horaFinConExtras : datosOferta.horaFin;
+    
+    if (typeof horaFinAUsar === 'string') {
+      // Si es string (formato HH:MM), parsearlo directamente
+      const [horaFinH, horaFinM] = horaFinAUsar.split(':').map(Number);
+      horaFinDate = new Date();
+      horaFinDate.setHours(horaFinH, horaFinM, 0, 0);
+    } else if (horaFinAUsar instanceof Date) {
+      // Si es Date de Prisma (1970-01-01), extraer horas UTC
+      if (horaFinAUsar.getUTCFullYear() === 1970 && horaFinAUsar.getUTCMonth() === 0 && horaFinAUsar.getUTCDate() === 1) {
+        const horas = horaFinAUsar.getUTCHours();
+        const minutos = horaFinAUsar.getUTCMinutes();
+        horaFinDate = new Date();
+        horaFinDate.setHours(horas, minutos, 0, 0);
+      } else {
+        horaFinDate = horaFinAUsar;
+      }
+    } else {
+      throw new Error('Formato de hora_fin no válido');
+    }
+    
+    // Combinar fecha y hora
+    const fechaInicio = new Date(fechaEvento);
+    fechaInicio.setHours(horaInicioDate.getHours(), horaInicioDate.getMinutes(), 0, 0);
+    
+    const fechaFin = new Date(fechaEvento);
+    fechaFin.setHours(horaFinDate.getHours(), horaFinDate.getMinutes(), 0, 0);
+    
+    // Si la hora de fin es menor que la de inicio, significa que cruza medianoche
+    if (fechaFin < fechaInicio) {
+      fechaFin.setDate(fechaFin.getDate() + 1);
+    }
+
+    // Formatear fechas para Google Calendar
+    const fechaInicioISO = fechaInicio.toISOString();
+    const fechaFinISO = fechaFin.toISOString();
+
+    const evento = {
+      summary: titulo,
+      description: descripcion,
+      location: datosOferta.ubicacion || '',
+      start: {
+        dateTime: fechaInicioISO,
+        timeZone: 'America/New_York'
+      },
+      end: {
+        dateTime: fechaFinISO,
+        timeZone: 'America/New_York'
+      }
+    };
+
+    const response = await calendar.events.insert({
+      calendarId: calendarioId,
+      resource: evento
+    });
+
+    logger.info(`✅ Evento de oferta creado en Google Calendar (Revolution Party): ${response.data.id} para oferta ${datosOferta.codigoOferta}`);
+    return {
+      id: response.data.id,
+      htmlLink: response.data.htmlLink,
+      titulo: response.data.summary
+    };
+  } catch (error) {
+    logger.error(`❌ Error al crear evento de oferta en Google Calendar:`, error);
+    throw error;
+  }
+}
+
+/**
  * Obtener eventos del calendario CITAS compartido
  * @param {number} vendedorId - ID del vendedor (para obtener tokens)
  * @param {Date} fechaInicio - Fecha de inicio
@@ -454,10 +762,15 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
       return [];
     }
 
-    const vendedor = await prisma.vendedores.findUnique({
-      where: { id: vendedorId },
+    // Buscar en la tabla usuarios con rol 'vendedor' (nueva estructura)
+    const vendedor = await prisma.usuarios.findFirst({
+      where: { 
+        id: vendedorId,
+        rol: 'vendedor'
+      },
       select: {
-        google_calendar_sync_enabled: true
+        google_calendar_sync_enabled: true,
+        email: true
       }
     });
 
@@ -537,6 +850,14 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
         // Incluir información de actualización para debugging
         updated: evento.updated || null
       };
+    })
+    .filter(evento => {
+      // Filtrar solo eventos creados por este vendedor
+      // El creador o organizador debe coincidir con el email del vendedor
+      const emailCreador = evento.creador?.toLowerCase() || '';
+      const emailOrganizador = evento.organizador?.toLowerCase() || '';
+      const emailVendedor = vendedor.email?.toLowerCase() || '';
+      return emailCreador === emailVendedor || emailOrganizador === emailVendedor;
     });
 
     return eventos;
@@ -705,6 +1026,7 @@ module.exports = {
   obtenerEventosCalendarioCitas,
   crearEventoCitas,
   crearEventoContrato,
+  crearEventoOferta,
   obtenerEventosPorMes,
   obtenerEventosPorDia,
   verificarDisponibilidad,

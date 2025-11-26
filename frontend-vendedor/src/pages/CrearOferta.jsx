@@ -2158,6 +2158,13 @@ function CrearOferta() {
     
     let eventos = eventosCalendario.eventos_por_dia[dia] || [];
     
+    // IMPORTANTE: Solo mostrar eventos de Google Calendar (es_google_calendar: true)
+    // NO mostrar contratos ni ofertas de la base de datos porque tienen bugs
+    eventos = eventos.filter(evento => {
+      // Solo incluir eventos de Google Calendar
+      return evento.es_google_calendar === true || evento.calendario === 'principal' || evento.calendario === 'citas';
+    });
+    
     // Filtrar eventos pasados - solo mostrar eventos de hoy en adelante (hora Miami)
     const ahoraMiami = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}));
     const hoyMiami = new Date(ahoraMiami.getFullYear(), ahoraMiami.getMonth(), ahoraMiami.getDate());

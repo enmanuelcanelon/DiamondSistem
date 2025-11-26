@@ -763,11 +763,70 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
     }
 
     // CALENDARIO 1: Solo contratos del vendedor (sin Google Calendar)
-    const calendarioContratos = eventosContratos.map(evento => ({
-      ...evento,
-      tipo: 'contrato',
-      calendario: 'contratos'
-    }));
+    // COMENTADO: El usuario quiere que solo se muestren eventos de Google Calendar, no contratos de BD
+    // const calendarioContratos = eventosContratos.map(evento => ({
+    //   ...evento,
+    //   tipo: 'contrato',
+    //   calendario: 'contratos'
+    // }));
+
+    // CALENDARIO 2: Eventos del calendario principal (Google Calendar - Revolution Party)
+    const calendarioPrincipal = eventosCalendarioPrincipal.map(eventoGoogle => {
+      try {
+        // Para eventos de todo el día, parsear la fecha correctamente
+        let fechaInicioEvento;
+        if (eventoGoogle.es_todo_el_dia && eventoGoogle.fecha_inicio) {
+          const fechaStr = eventoGoogle.fecha_inicio.split('T')[0];
+          const [year, month, day] = fechaStr.split('-').map(Number);
+          fechaInicioEvento = new Date(year, month - 1, day);
+        } else {
+          fechaInicioEvento = new Date(eventoGoogle.fecha_inicio);
+        }
+        
+        const fechaFinEvento = eventoGoogle.fecha_fin ? new Date(eventoGoogle.fecha_fin) : null;
+        
+        // Extraer información del título (formato: "revolution party - [homenajeado] ([codigo])")
+        const titulo = eventoGoogle.titulo || eventoGoogle.summary || '';
+        const matchCodigo = titulo.match(/\(([^)]+)\)/);
+        const codigo = matchCodigo ? matchCodigo[1] : null;
+        const matchHomenajeado = titulo.match(/revolution party\s*-\s*([^(]+)/);
+        const homenajeado = matchHomenajeado ? matchHomenajeado[1].trim() : null;
+        
+        return {
+          id: `google_${eventoGoogle.id}`,
+          codigo_contrato: codigo,
+          fecha_evento: fechaInicioEvento,
+          fecha_inicio: eventoGoogle.fecha_inicio,
+          fecha_fin: eventoGoogle.fecha_fin,
+          hora_inicio: fechaInicioEvento,
+          hora_fin: fechaFinEvento,
+          cantidad_invitados: null,
+          estado_pago: null,
+          clientes: {
+            nombre_completo: homenajeado || titulo || 'Evento',
+            email: eventoGoogle.creador,
+            telefono: null,
+            tipo_evento: null
+          },
+          salones: {
+            nombre: eventoGoogle.ubicacion || 'Sin ubicación'
+          },
+          eventos: null,
+          es_google_calendar: true,
+          es_todo_el_dia: eventoGoogle.es_todo_el_dia || false,
+          timeZone: eventoGoogle.timeZone || 'America/New_York',
+          descripcion: eventoGoogle.descripcion,
+          htmlLink: eventoGoogle.htmlLink,
+          titulo: titulo,
+          summary: eventoGoogle.summary,
+          tipo: 'google_calendar',
+          calendario: 'principal'
+        };
+      } catch (error) {
+        logger.warn('Error al procesar evento de Google Calendar principal:', error);
+        return null;
+      }
+    }).filter(e => e !== null && e.fecha_evento.getMonth() + 1 === mesFiltro && e.fecha_evento.getFullYear() === añoFiltro);
 
     // CALENDARIO 3: Eventos del calendario CITAS
     const calendarioCitas = eventosCalendarioCitas.map(eventoGoogle => {
@@ -818,9 +877,19 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
       }
     }).filter(e => e !== null && e.fecha_evento.getMonth() + 1 === mesFiltro && e.fecha_evento.getFullYear() === añoFiltro);
 
-    // Para el calendario del vendedor, solo incluir contratos (sin Google Calendar principal)
-    // El calendario principal se muestra en el endpoint general
-    const eventosCombinados = [...calendarioContratos];
+    // IMPORTANTE: Solo incluir eventos de Google Calendar (calendario principal)
+    // NO incluir contratos de la base de datos porque tienen bugs
+    // NO incluir ofertas pendientes de la base de datos
+    const eventosCombinados = [...calendarioPrincipal];
+
+    // Logging para debug
+    logger.info(`📅 Calendario vendedor ${id} - Mes ${mesFiltro}/${añoFiltro}:`);
+    logger.info(`  - Eventos Google Calendar (principal): ${calendarioPrincipal.length}`);
+    logger.info(`  - Eventos Google Calendar (CITAS): ${calendarioCitas.length}`);
+    logger.info(`  - Eventos combinados (solo Google Calendar): ${eventosCombinados.length}`);
+    calendarioPrincipal.forEach(e => {
+      logger.info(`    ✅ Google Calendar: ${e.clientes?.nombre_completo || e.titulo} - ${e.fecha_evento.toISOString().split('T')[0]}`);
+    });
 
     // Agrupar eventos por día
     const eventosPorDia = {};
@@ -845,19 +914,13 @@ router.get('/:id/calendario/mes/:mes/:año', authenticate, requireVendedor, asyn
       eventos_por_dia: eventosPorDia,
       eventos: eventosCombinados,
       // Separar por tipo de calendario
-      calendario_contratos: calendarioContratos,
+      calendario_contratos: [], // COMENTADO: No incluir contratos de BD porque tienen bugs
       calendario_citas: calendarioCitas,
-      calendario_principal: eventosCalendarioPrincipal.filter(e => {
-        const fecha = new Date(e.fecha_inicio);
-        return fecha.getMonth() + 1 === mesFiltro && fecha.getFullYear() === añoFiltro;
-      }),
+      calendario_principal: calendarioPrincipal,
       estadisticas: {
-        eventos_contratos: eventosContratos.length,
+        eventos_contratos: 0, // COMENTADO: No contar contratos de BD
         eventos_citas: calendarioCitas.length,
-        eventos_principal: eventosCalendarioPrincipal.filter(e => {
-          const fecha = new Date(e.fecha_inicio);
-          return fecha.getMonth() + 1 === mesFiltro && fecha.getFullYear() === añoFiltro;
-        }).length
+        eventos_principal: calendarioPrincipal.length
       }
     });
 

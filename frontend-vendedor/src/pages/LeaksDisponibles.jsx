@@ -265,7 +265,7 @@ function LeaksDisponibles() {
   };
 
   const handleEliminarLeak = (leakId, nombreCompleto) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar el leak de ${nombreCompleto}? Esta acción no se puede deshacer.`)) {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el lead de ${nombreCompleto}?\n\nEsta acción:\n- Eliminará el lead para siempre\n- No se volverá a sincronizar desde Google Sheets\n\nEsta acción NO se puede deshacer.`)) {
       eliminarLeakMutation.mutate(leakId);
     }
   };

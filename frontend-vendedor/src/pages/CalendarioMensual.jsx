@@ -209,8 +209,15 @@ function CalendarioMensual() {
     
     const eventos = eventosPorDia[dia] || [];
     
+    // IMPORTANTE: Solo mostrar eventos de Google Calendar (es_google_calendar: true)
+    // NO mostrar contratos ni ofertas de la base de datos porque tienen bugs
+    const eventosFiltrados = eventos.filter(evento => {
+      // Solo incluir eventos de Google Calendar
+      return evento.es_google_calendar === true || evento.calendario === 'principal' || evento.calendario === 'citas';
+    });
+    
     // Filtrar eventos según los filtros de salones activos
-    return eventos.filter(evento => {
+    return eventosFiltrados.filter(evento => {
       let nombreSalon = '';
       if (evento.salones?.nombre) {
         nombreSalon = String(evento.salones.nombre).toLowerCase();
