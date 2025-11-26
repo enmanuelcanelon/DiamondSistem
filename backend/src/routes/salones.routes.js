@@ -3,6 +3,7 @@ const router = express.Router();
 const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor, requireVendedorOrInventario } = require('../middleware/auth');
 const { NotFoundError } = require('../middleware/errorHandler');
+const { obtenerEventosTodosVendedores } = require('../utils/googleCalendarService');
 
 const prisma = getPrismaClient();
 
@@ -325,6 +326,7 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
 router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const { salon_id, fecha_evento, excluir_oferta_id } = req.query;
+    console.log('🔍 /horarios-ocupados - salon_id:', salon_id, '| fecha_evento:', fecha_evento);
 
     if (!salon_id || !fecha_evento) {
       return res.status(400).json({
@@ -383,6 +385,32 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       }
     });
 
+    // Obtener el nombre del salón para filtrar eventos de Google Calendar
+    const salon = await prisma.salones.findUnique({
+      where: { id: parseInt(salon_id) },
+      select: { nombre: true }
+    });
+
+    // Obtener eventos de Google Calendar del mismo día
+    let eventosGoogleCalendar = [];
+    try {
+      const todosEventosCalendar = await obtenerEventosTodosVendedores(fechaInicio, fechaFin);
+
+      // Filtrar eventos que coincidan con el salón
+      // Comparación case-insensitive y busca parcial (ej: "DIAMOND AT DORAL" contiene "DIAMOND")
+      const nombreSalon = (salon?.nombre || '').toLowerCase();
+      eventosGoogleCalendar = todosEventosCalendar.filter(evento => {
+        const ubicacion = (evento.ubicacion || '').toLowerCase();
+        // Coincide si la ubicación contiene el nombre del salón O viceversa
+        return ubicacion.includes(nombreSalon) || nombreSalon.includes(ubicacion.split(' ')[0]);
+      });
+
+      console.log('📅 Google Calendar - Eventos encontrados para', salon?.nombre, ':', eventosGoogleCalendar.length);
+    } catch (error) {
+      console.warn('⚠️ Error al obtener eventos de Google Calendar:', error.message);
+      // Continuar sin eventos de Google Calendar si hay error
+    }
+
     // Función para convertir hora a minutos desde medianoche
     const toMinutes = (hora) => {
       let horaStr;
@@ -390,7 +418,8 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         horaStr = hora.slice(0, 5);
       } else if (hora instanceof Date) {
         // Para campos Time de Prisma (fecha 1970-01-01), usar UTC para evitar problemas de zona horaria
-        if (hora.getFullYear() === 1970 && hora.getMonth() === 0 && hora.getDate() === 1) {
+        // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969 para 1970-01-01T00:00:00.000Z
+        if (hora.getUTCFullYear() === 1970 && hora.getUTCMonth() === 0 && hora.getUTCDate() === 1) {
           const horas = hora.getUTCHours();
           const minutos = hora.getUTCMinutes();
           horaStr = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
@@ -459,15 +488,37 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       procesarEvento(oferta.hora_inicio, oferta.hora_fin);
     });
 
+    // Procesar eventos de Google Calendar
+    eventosGoogleCalendar.forEach(evento => {
+      // Los eventos de Google Calendar vienen con fecha_inicio y fecha_fin como ISO strings
+      // Necesitamos convertirlos a objetos Date y extraer las horas
+      try {
+        const fechaInicioEvento = new Date(evento.fecha_inicio);
+        const fechaFinEvento = new Date(evento.fecha_fin);
+
+        // Extraer solo las horas (HH:MM) para procesar
+        const horaInicio = fechaInicioEvento;
+        const horaFin = fechaFinEvento;
+
+        console.log('📅 Procesando evento Google Calendar:', evento.titulo,
+          'de', fechaInicioEvento.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+          'a', fechaFinEvento.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
+
+        procesarEvento(horaInicio, horaFin);
+      } catch (error) {
+        console.warn('⚠️ Error al procesar evento de Google Calendar:', error);
+      }
+    });
+
     // Generar lista de horas ocupadas (cada hora completa que esté dentro de un rango)
     const horasOcupadas = new Set();
-    
+
     rangosOcupados.forEach(rango => {
       // Agregar cada hora completa dentro del rango
       // IMPORTANTE: Solo procesar minutos dentro del mismo día (0-1439)
       const inicioMin = Math.max(0, rango.inicio);
       const finMin = Math.min(1439, rango.fin); // Máximo 23:59 del mismo día
-      
+
       for (let min = inicioMin; min <= finMin; min += 60) {
         const hora = Math.floor(min / 60);
         // Asegurar que la hora esté en el rango 0-23
@@ -477,9 +528,11 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       }
     });
 
+    const horasOcupadasArray = Array.from(horasOcupadas).sort((a, b) => a - b);
+
     res.json({
       success: true,
-      horasOcupadas: Array.from(horasOcupadas).sort((a, b) => a - b),
+      horasOcupadas: horasOcupadasArray,
       rangosOcupados: rangosOcupados.map(r => ({
         inicio: r.inicioHora,
         fin: r.finHora

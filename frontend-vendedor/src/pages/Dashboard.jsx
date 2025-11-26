@@ -281,33 +281,33 @@ function Dashboard() {
   };
 
   // Calcular tasa de conversión como número
-  const tasaConversion = parseFloat(stats?.estadisticas?.ofertas?.tasa_conversion?.replace('%', '') || 0);
+  const tasaConversion = parseFloat(stats?.ofertas?.tasa_conversion?.replace('%', '') || 0);
 
   const statCards = [
     {
       name: 'Clientes',
-      value: stats?.estadisticas?.clientes?.total || 0,
-      cambio: stats?.estadisticas?.clientes?.cambio || 0,
+      value: stats?.clientes?.total || 0,
+      cambio: stats?.clientes?.cambio || 0,
       descripcion: 'Clientes',
     },
     {
       name: 'Ofertas Pendientes',
-      value: stats?.estadisticas?.ofertas?.pendientes || 0,
-      cambio: stats?.estadisticas?.ofertas?.cambioPendientes || 0,
+      value: stats?.ofertas?.pendientes || 0,
+      cambio: stats?.ofertas?.cambioPendientes || 0,
       descripcion: 'Ofertas Pendientes',
     },
     {
       name: 'Contratos Activos',
-      value: stats?.estadisticas?.contratos?.activos || 0,
-      cambio: stats?.estadisticas?.contratos?.cambio || 0,
+      value: stats?.contratos?.activos || 0,
+      cambio: stats?.contratos?.cambio || 0,
       descripcion: 'Contratos Activos',
     },
     {
       name: 'Ventas',
-      value: mostrarDatos 
-        ? `$${parseFloat(stats?.estadisticas?.finanzas?.total_ventas || 0).toLocaleString()}`
+      value: mostrarDatos
+        ? `$${parseFloat(stats?.finanzas?.total_ventas || 0).toLocaleString()}`
         : '••••••',
-      cambio: stats?.estadisticas?.finanzas?.cambio || 0,
+      cambio: stats?.finanzas?.cambio_ventas || 0,
       descripcion: 'Ventas',
     },
   ];
@@ -511,19 +511,19 @@ function Dashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Pendientes</span>
                 <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                {stats?.estadisticas?.ofertas?.pendientes || 0}
+                {stats?.ofertas?.pendientes || 0}
                 </Badge>
             </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Aceptadas</span>
                 <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
-                {stats?.estadisticas?.ofertas?.aceptadas || 0}
+                {stats?.ofertas?.aceptadas || 0}
                 </Badge>
             </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Rechazadas</span>
                 <Badge variant="outline" className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
-                {stats?.estadisticas?.ofertas?.rechazadas || 0}
+                {stats?.ofertas?.rechazadas || 0}
                 </Badge>
               </div>
               <Separator />
@@ -532,7 +532,7 @@ function Dashboard() {
                   <span className="font-medium">Tasa de Conversión</span>
                   <div className="flex items-center gap-1">
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-semibold">{stats?.estadisticas?.ofertas?.tasa_conversion || '0%'}</span>
+                    <span className="font-semibold">{stats?.ofertas?.tasa_conversion || '0%'}</span>
                   </div>
             </div>
                 {/* Gráfico de Tasa de Conversión */}
@@ -622,30 +622,30 @@ function Dashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Porcentaje</span>
                 <Badge variant="secondary">
-                {stats?.estadisticas?.finanzas?.comision_porcentaje || 0}%
+                {stats?.finanzas?.comision_porcentaje || 0}%
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Total Comisiones</span>
                 <span className="text-sm font-semibold">
-                  {mostrarDatos 
-                    ? `$${parseFloat(stats?.estadisticas?.comisiones?.total || stats?.estadisticas?.finanzas?.total_comisiones || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  {mostrarDatos
+                    ? `$${parseFloat(stats?.comisiones?.total || stats?.finanzas?.total_comisiones || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : '••••••'}
               </span>
             </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Desbloqueadas</span>
                 <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
-                  {mostrarDatos 
-                    ? `$${parseFloat(stats?.estadisticas?.comisiones?.desbloqueadas || stats?.estadisticas?.finanzas?.total_comisiones_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  {mostrarDatos
+                    ? `$${parseFloat(stats?.comisiones?.desbloqueadas || stats?.finanzas?.total_comisiones_desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : '••••••'}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Pendientes</span>
                 <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                  {mostrarDatos 
-                    ? `$${parseFloat(stats?.estadisticas?.comisiones?.pendientes || stats?.estadisticas?.finanzas?.total_comisiones_pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  {mostrarDatos
+                    ? `$${parseFloat(stats?.comisiones?.pendientes || stats?.finanzas?.total_comisiones_pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : '••••••'}
                 </Badge>
             </div>
@@ -653,18 +653,18 @@ function Dashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Contratos Pagados</span>
                 <Badge variant="default">
-                {stats?.estadisticas?.contratos?.pagados_completo || 0}
+                {stats?.contratos?.pagados_completo || 0}
                 </Badge>
               </div>
 
               {/* Comisiones por Mes */}
-              {stats?.estadisticas?.comisiones?.por_mes && stats.estadisticas.comisiones.por_mes.length > 0 && (
+              {stats?.comisiones?.por_mes && stats.comisiones.por_mes.length > 0 && (
                 <>
                   <Separator />
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium">Por Mes</h3>
                     <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                      {stats.estadisticas.comisiones.por_mes.map((item, idx) => {
+                      {stats.comisiones.por_mes.map((item, idx) => {
                         const [anio, mes] = item.mes.split('-');
                         const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
                         const nombreMes = meses[parseInt(mes) - 1];
@@ -672,7 +672,7 @@ function Dashboard() {
                           <div key={idx} className="flex items-center justify-between text-sm py-1.5 px-2 bg-muted/50 rounded-md">
                             <span className="text-muted-foreground">{nombreMes} {anio}</span>
                             <span className="font-medium">
-                              {mostrarDatos 
+                              {mostrarDatos
                                 ? `$${item.total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                 : '••••••'}
               </span>

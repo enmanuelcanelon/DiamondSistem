@@ -22,7 +22,7 @@ import {
   Mail,
 } from 'lucide-react';
 import api from '../config/api';
-import { formatearHora, calcularDuracion, calcularHoraFinConExtras, obtenerHorasAdicionales } from '../utils/formatters';
+import { formatearHora, calcularDuracion } from '../utils/formatters';
 import { generarNombreEvento, getEventoEmoji } from '../utils/eventNames';
 import toast, { Toaster } from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -399,13 +399,13 @@ function DetalleContrato() {
                     <p className="text-sm text-muted-foreground">Horario</p>
                     <p className="font-medium text-foreground">
                       {(() => {
-                        const horasAdicionales = obtenerHorasAdicionales(contrato?.contratos_servicios);
-                        const horaFinConExtras = calcularHoraFinConExtras(contrato?.hora_fin, horasAdicionales);
-                        const duracion = calcularDuracion(contrato?.hora_inicio, horaFinConExtras);
-                        
+                        // Mostrar siempre la hora_fin de la BD, sin ajustar por horas extra
+                        // Las "Horas Extra" se muestran como servicio adicional por separado
+                        const duracion = calcularDuracion(contrato?.hora_inicio, contrato?.hora_fin);
+
                         return (
                           <>
-                            {formatearHora(contrato?.hora_inicio)} - {formatearHora(horaFinConExtras)}
+                            {formatearHora(contrato?.hora_inicio)} - {formatearHora(contrato?.hora_fin)}
                             {duracion > 0 && (() => {
                               const horasEnteras = Math.floor(duracion);
                               const minutos = Math.round((duracion - horasEnteras) * 60);

@@ -84,9 +84,10 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   const lugarSalon = datos.lugar_salon || '';
   let direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166'; // Default
   let esRevolution = false;
+  let esDiamond = false;
   let nombreCompania = 'Diamond Venue';
   const nombreSalon = (salon?.nombre || lugarSalon || '').toLowerCase();
-  
+
   if (nombreSalon) {
     if (nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Doral<br>8726 NW 26th St<br>Doral, FL 33172';
@@ -99,6 +100,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     } else if (nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
       esRevolution = false;
+      esDiamond = true;
       nombreCompania = 'Diamond Venue';
     }
   }
@@ -717,30 +719,38 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   // Procesar servicios adicionales primero
   // Asegurar que serviciosAdicionales no sea undefined
   const serviciosAdicionalesProcesados = procesarServiciosAdicionales(serviciosAdicionales || {});
-  
+
+  // DEBUG: Ver qué hay en servicios adicionales
+  console.log('🔍 DEBUG EXTRAS:');
+  console.log('serviciosAdicionales:', Object.keys(serviciosAdicionales).map(k => `${k}: ${serviciosAdicionales[k]?.length || 0}`));
+  console.log('serviciosAdicionalesProcesados:', Object.keys(serviciosAdicionalesProcesados).map(k => `${k}: ${serviciosAdicionalesProcesados[k]?.length || 0}`));
+
   // NOTA: La lógica de Sidra/Champaña ahora se maneja en organizarServiciosPorCategoria usando seleccion_sidra_champana
   // Ya no necesitamos mover servicios entre paquete y extras aquí
   // Los servicios del paquete ya fueron procesados correctamente en organizarServiciosPorCategoria
-  
+
   // Regenerar HTML del paquete y extras con servicios procesados
   const serviciosPaqueteHTML = generarHTMLServicios(serviciosPaquete, true);
   const serviciosAdicionalesHTML = generarHTMLServicios(serviciosAdicionalesProcesados, false);
-  
+
   const htmlServiciosPaqueteFinal = serviciosPaqueteHTML.html;
   const gridStylePaquete = serviciosPaqueteHTML.gridStyle || 'grid-template-columns: 1fr 1fr 1fr;';
-  
+
   const htmlServiciosAdicionales = serviciosAdicionalesHTML.html;
   const gridStyleExtras = serviciosAdicionalesHTML.gridStyle || 'grid-template-columns: 1fr 1fr 1fr;';
-  
+
+  console.log('htmlServiciosAdicionales length:', htmlServiciosAdicionales?.length || 0);
+
   // Verificar si el paquete tiene servicios (si no tiene, no mostrar la sección de paquete)
   // Los servicios del paquete ya fueron procesados en organizarServiciosPorCategoria
   // Nota: serviciosOrganizados ahora contiene objetos con cantidades, no arrays con objetos
   // La verificación de servicios del paquete se hace en generarHTMLServicios
   const tieneServiciosPaquete = serviciosPaqueteHTML && serviciosPaqueteHTML.html && serviciosPaqueteHTML.html.length > 0;
-  
+
   // Generar HTML completo de la sección de servicios adicionales si hay servicios (nuevo diseño)
   // serviciosAdicionalesProcesados contiene objetos con arrays de servicios
   const tieneServiciosAdicionales = serviciosAdicionalesProcesados && Object.values(serviciosAdicionalesProcesados).some(arr => Array.isArray(arr) && arr.length > 0);
+  console.log('tieneServiciosAdicionales:', tieneServiciosAdicionales);
   const htmlSeccionAdicionales = tieneServiciosAdicionales
     ? `
     <div class="page page-2">
@@ -766,12 +776,14 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
       </tr>`
     : '';
 
-  // Convertir logo a base64 si existe y generar HTML del logo (solo Revolution)
+  // Convertir logo a base64 si existe y generar HTML del logo
   let logoPath = '';
   if (esRevolution) {
     logoPath = path.join(__dirname, '../templates/assets/Logorevolution.png');
+  } else if (esDiamond) {
+    logoPath = path.join(__dirname, '../../../7.png');
   }
-  
+
   let logoHTML = `<div style="font-size: 18px; font-weight: 100; color: #FFFFFF; letter-spacing: 2px;">${nombreCompania}</div>`;
   if (logoPath && fs.existsSync(logoPath)) {
     try {
@@ -783,35 +795,85 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     }
   }
 
-  // Cargar fondo para Revolution (Doral/Kendall) - Portada
-  const fondoPath = path.join(__dirname, '../templates/assets/img12.jpg');
-  const hasBackground = esRevolution && fs.existsSync(fondoPath);
+  // Cargar fondo para portada/header
+  // Determinar qué template se está usando para cargar el fondo correcto
+  const usaTemplateDiamond = !esRevolution; // Si no es Revolution, usa template Diamond
   
-  let fondoStyle = `background-image: 
+  let fondoStyle = `background-image:
                 radial-gradient(circle, rgba(212,175,55,0.2) 2px, transparent 2.5px),
                 radial-gradient(circle, rgba(212,175,55,0.2) 2px, transparent 2.5px);
             background-size: 30px 30px;
             background-position: 0 0, 15px 15px;
             display: block;`;
-  
-  if (hasBackground) {
-    try {
-      const fondoBuffer = fs.readFileSync(fondoPath);
-      const fondoBase64 = `data:image/jpeg;base64,${fondoBuffer.toString('base64')}`;
-      fondoStyle = `background-image: url("${fondoBase64}");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            opacity: 1;
-            display: block;`;
-    } catch (error) {
-      console.error('Error al cargar fondo:', error);
+  let hasBackground = false;
+
+  if (esRevolution) {
+    // Fondo para Revolution - img12.jpg
+    const fondoRevolutionPath = path.join(__dirname, '../templates/assets/img12.jpg');
+    if (fs.existsSync(fondoRevolutionPath)) {
+      try {
+        const fondoBuffer = fs.readFileSync(fondoRevolutionPath);
+        const fondoBase64 = `data:image/jpeg;base64,${fondoBuffer.toString('base64')}`;
+        fondoStyle = `background-image: url("${fondoBase64}");
+              background-size: cover;
+              background-position: center;
+              background-repeat: no-repeat;
+              opacity: 1;
+              display: block;`;
+        hasBackground = true;
+      } catch (error) {
+        console.error('Error al cargar fondo Revolution:', error);
+      }
+    }
+  } else if (usaTemplateDiamond) {
+    // Fondo para Diamond - fondoDiamond.png (siempre que se use template Diamond)
+    const fondoDiamondPath = path.join(__dirname, '../../../fondoDiamond.png');
+    console.log('🔍 Intentando cargar fondo Diamond desde:', fondoDiamondPath);
+    console.log('🔍 Ruta absoluta:', path.resolve(fondoDiamondPath));
+    console.log('🔍 Existe archivo:', fs.existsSync(fondoDiamondPath));
+    
+    if (fs.existsSync(fondoDiamondPath)) {
+      try {
+        const fondoBuffer = fs.readFileSync(fondoDiamondPath);
+        const fondoBase64 = `data:image/png;base64,${fondoBuffer.toString('base64')}`;
+        fondoStyle = `background-image: url("${fondoBase64}");
+              background-size: cover;
+              background-position: center;
+              background-repeat: no-repeat;
+              opacity: 1;
+              display: block;`;
+        hasBackground = true;
+        console.log('✅ Fondo Diamond cargado correctamente');
+      } catch (error) {
+        console.error('❌ Error al cargar fondo Diamond:', error);
+      }
+    } else {
+      console.warn('⚠️ Archivo fondoDiamond.png no encontrado en:', fondoDiamondPath);
+      // Intentar ruta alternativa desde la raíz del proyecto
+      const fondoDiamondPathAlt = path.join(__dirname, '../../../../fondoDiamond.png');
+      console.log('🔍 Intentando ruta alternativa:', fondoDiamondPathAlt);
+      if (fs.existsSync(fondoDiamondPathAlt)) {
+        try {
+          const fondoBuffer = fs.readFileSync(fondoDiamondPathAlt);
+          const fondoBase64 = `data:image/png;base64,${fondoBuffer.toString('base64')}`;
+          fondoStyle = `background-image: url("${fondoBase64}");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                opacity: 1;
+                display: block;`;
+          hasBackground = true;
+          console.log('✅ Fondo Diamond cargado desde ruta alternativa');
+        } catch (error) {
+          console.error('❌ Error al cargar fondo Diamond desde ruta alternativa:', error);
+        }
+      }
     }
   }
 
   // Cargar fondo general para package-card
   let packageCardBackground = '';
-  
+
   if (esRevolution) {
     // Fondo para Revolution
     const fondoGeneralPath = path.join(__dirname, '../templates/assets/fondoRevolutionGeneral.png');
@@ -899,10 +961,10 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     '{{FIRST_PAYMENT_DATE}}': fechaPrimerPago,
     '{{FIRST_PAYMENT_AMOUNT}}': formatearMoneda(primerPago),
     '{{TOTAL_REMAINING}}': formatearMoneda(totalRestante),
-    '{{PACKAGE_CARD_BACKGROUND}}': packageCardBackground,
+    '\\/\\*PACKAGE_CARD_BACKGROUND_PLACEHOLDER\\*\\/': packageCardBackground,
     '{{NOMBRE_COMPANIA}}': nombreCompania,
     '{{LOGO_HTML}}': logoHTML,
-    '{{FONDO_STYLE}}': esRevolution ? fondoStyle : '', // Solo fondo para Revolution, Diamond sin fondo
+    '\\/\\*FONDO_STYLE_PLACEHOLDER\\*\\/': fondoStyle, // Fondo para Revolution y Diamond (ya se cargó según la compañía)
     '{{HAS_BACKGROUND_CLASS}}': hasBackground ? 'has-background' : '',
     // Traducciones
     '{{TEXT_INVERSION_TERMINOS}}': t(lang, 'investment'),
@@ -1375,6 +1437,7 @@ function organizarServiciosPorCategoria(datos) {
   // Servicios adicionales: solo los que NO están en el paquete
   // EXCEPCIÓN: Servicios de personal (Bartender, Personal de Atención, Coordinador) pueden aparecer en extras aunque estén en el paquete
   // porque pueden ser servicios adicionales (más personal, más bartenders, etc.)
+  // EXCEPCIÓN: "Hora Extra" siempre debe aparecer en EXTRAS, nunca en PAQUETE, incluso si está en el paquete
   const serviciosAdicionalesFiltrados = serviciosAdicionales
     .filter(os => {
       const servicio = os.servicios || os;
@@ -1382,6 +1445,14 @@ function organizarServiciosPorCategoria(datos) {
       const nombreServicio = (servicio.nombre || '').toLowerCase();
       const descripcionServicio = (servicio.descripcion || '').toLowerCase();
       const textoCompleto = `${nombreServicio} ${descripcionServicio}`;
+      
+      // Verificar si es "Hora Extra" - siempre debe aparecer en extras
+      const esHoraExtra = nombreServicio.includes('hora extra') || 
+                          nombreServicio.includes('hora adicional') ||
+                          descripcionServicio.includes('hora extra') ||
+                          descripcionServicio.includes('hora adicional') ||
+                          textoCompleto.includes('hora extra') ||
+                          textoCompleto.includes('hora adicional');
       
       // Verificar si es un servicio de personal
       const esServicioPersonal = nombreServicio.includes('bartender') || 
@@ -1398,9 +1469,10 @@ function organizarServiciosPorCategoria(datos) {
                                   textoCompleto.includes('coordinador');
       
       // Solo incluir si NO está en el paquete (después de aplicar la selección)
+      // EXCEPCIÓN: Si es "Hora Extra", siempre permitirlo (debe aparecer en extras)
       // EXCEPCIÓN: Si es servicio de personal, permitirlo aunque esté en el paquete (puede ser adicional)
       const estaEnPaquete = servicioId && serviciosPaqueteIds.has(servicioId);
-      return servicioId && (!estaEnPaquete || esServicioPersonal);
+      return servicioId && (!estaEnPaquete || esHoraExtra || esServicioPersonal);
     })
     .map(os => {
       const servicio = os.servicios || os;

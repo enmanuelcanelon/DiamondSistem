@@ -968,33 +968,13 @@ function CrearOferta() {
 
       if (response.data.success) {
         const horasBackend = response.data.horasOcupadas || [];
-        
-        // Obtener horas ocupadas del calendario si hay un día seleccionado y coincide con la fecha
-        let horasCalendario = [];
-        if (diaSeleccionadoCalendario) {
-          const fechaSeleccionada = fechaEvento.split('T')[0];
-          const fechaCalendario = formatearFechaParaInput(diaSeleccionadoCalendario);
-          
-          // Solo usar horas del calendario si la fecha coincide
-          if (fechaSeleccionada === fechaCalendario) {
-            horasCalendario = calcularHorasOcupadasDesdeCalendario(diaSeleccionadoCalendario, salonId);
-          }
-        } else {
-          // Si no hay día seleccionado en el calendario, intentar calcular desde la fecha del evento
-          // Extraer día, mes y año de la fecha
-          const [año, mes, dia] = fechaEvento.split('T')[0].split('-').map(Number);
-          // Verificar si la fecha está en el mes y año actual del calendario
-          if (mes === mesCalendario && año === añoCalendario) {
-            horasCalendario = calcularHorasOcupadasDesdeCalendario(dia, salonId);
-          }
-        }
-        
-        // Combinar ambas fuentes (backend y calendario)
-        const todasLasHoras = new Set([...horasBackend, ...horasCalendario]);
-        const horasCombinadas = Array.from(todasLasHoras).sort((a, b) => a - b);
-        
-        setHorasOcupadas(horasCombinadas);
-        return horasCombinadas;
+
+        // IMPORTANTE: El backend ya retorna TODAS las horas ocupadas correctamente
+        // (contratos, ofertas aceptadas Y eventos de Google Calendar)
+        // NO necesitamos combinar con cálculos del frontend que tienen bugs de timezone
+
+        setHorasOcupadas(horasBackend);
+        return horasBackend;
       }
       return [];
     } catch (error) {
