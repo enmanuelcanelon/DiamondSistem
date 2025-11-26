@@ -440,9 +440,22 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     Object.values(serviciosPorCategoria).flat().forEach(servicio => {
       // Verificar que el servicio corresponde al tipo (paquete o extra)
       const servicioEsPaquete = servicio.esPaquete === true;
-      if (esPaquete && !servicioEsPaquete) return; // Si es paquete, solo servicios del paquete
-      if (!esPaquete && servicioEsPaquete) return; // Si es extra, solo servicios adicionales
-      
+
+      // EXCEPCIÓN: "Hora Extra" siempre debe aparecer en EXTRAS, nunca en PAQUETE
+      const nombreServicio = (servicio.nombre || servicio.servicios?.nombre || '').toLowerCase();
+      const esHoraExtra = nombreServicio.includes('hora extra') || nombreServicio.includes('hora adicional');
+
+      if (esHoraExtra) {
+        // Si es Hora Extra y estamos generando PAQUETE, saltarla (no mostrar en paquete)
+        if (esPaquete) return;
+        // Si es Hora Extra y estamos generando EXTRAS, siempre incluirla
+        // (continuar procesando)
+      } else {
+        // Para otros servicios, aplicar la lógica normal
+        if (esPaquete && !servicioEsPaquete) return; // Si es paquete, solo servicios del paquete
+        if (!esPaquete && servicioEsPaquete) return; // Si es extra, solo servicios adicionales
+      }
+
       const mapeo = mapearServicioACategoria(servicio);
       if (mapeo) {
         // Contar servicios duplicados para mostrar cantidad

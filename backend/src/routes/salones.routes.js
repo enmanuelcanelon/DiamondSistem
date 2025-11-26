@@ -213,7 +213,8 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
         return hora.slice(0, 5);
       } else if (hora instanceof Date) {
         // Para campos Time de Prisma (fecha 1970-01-01), usar UTC para evitar problemas de zona horaria
-        if (hora.getFullYear() === 1970 && hora.getMonth() === 0 && hora.getDate() === 1) {
+        // CRÍTICO: Usar getUTCFullYear() porque en UTC-5, getFullYear() puede devolver 1969 para 1970-01-01T00:00:00.000Z
+        if (hora.getUTCFullYear() === 1970 && hora.getUTCMonth() === 0 && hora.getUTCDate() === 1) {
           const horas = hora.getUTCHours();
           const minutos = hora.getUTCMinutes();
           return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;

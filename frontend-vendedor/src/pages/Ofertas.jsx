@@ -134,36 +134,9 @@ function Ofertas() {
     };
   }, [handleObserver]);
 
-  // Mutation para aceptar oferta
-  const aceptarMutation = useMutation({
-    mutationFn: async (oferta) => {
-      const response = await api.put(`/ofertas/${oferta.id}/aceptar`);
-      // Usar la oferta actualizada del backend, no la original
-      return { ...response.data, oferta: response.data.oferta || oferta };
-    },
-    onSuccess: (data) => {
-      // NO invalidar queries antes de abrir el modal para evitar que se recargue la lista
-      // y se pierda el objeto de oferta actualizado
-      // queryClient.invalidateQueries(['ofertas']);
-      
-      // Abrir automáticamente el modal de plan de pago
-      // Asegurarse de usar la oferta actualizada con el total_final correcto
-      const ofertaActualizada = data.oferta;
-      
-      // Asegurarse de que el total_final sea un número
-      if (ofertaActualizada && ofertaActualizada.total_final) {
-        ofertaActualizada.total_final = parseFloat(ofertaActualizada.total_final);
-      }
-      
-      setOfertaSeleccionada(ofertaActualizada);
-      setModalPlanPagoOpen(true);
-      
-      // Invalidar queries después de abrir el modal y forzar refetch
-      setTimeout(async () => {
-        await queryClient.invalidateQueries({ queryKey: ['ofertas'], refetchType: 'active' });
-      }, 100);
-    },
-  });
+  // DEPRECATED: Ya no marcamos la oferta como "aceptada" hasta que se cree el contrato
+  // La oferta se marcará como "aceptada" automáticamente cuando se cree el contrato exitosamente
+  // Esto evita que quede en estado "aceptada" si el usuario cancela el plan de pagos
 
   // Mutation para rechazar oferta
   const rechazarMutation = useMutation({
@@ -211,7 +184,15 @@ function Ofertas() {
   });
 
   const handleAceptar = (oferta) => {
-    aceptarMutation.mutate(oferta);
+    // Ya no marcamos la oferta como "aceptada" aquí
+    // En su lugar, abrimos directamente el modal de plan de pagos
+    // La oferta se marcará como "aceptada" automáticamente cuando se cree el contrato
+    const ofertaConTotal = { ...oferta };
+    if (ofertaConTotal.total_final) {
+      ofertaConTotal.total_final = parseFloat(ofertaConTotal.total_final);
+    }
+    setOfertaSeleccionada(ofertaConTotal);
+    setModalPlanPagoOpen(true);
   };
 
   const handleRechazar = (ofertaId) => {
@@ -629,13 +610,12 @@ function Ofertas() {
 
                   {oferta.estado === 'pendiente' && (
                     <>
-                      <Button 
+                      <Button
                         variant="outline"
                         onClick={() => handleAceptar(oferta)}
-                        disabled={aceptarMutation.isPending}
                         className="!border-green-500 !text-green-600 hover:!bg-green-50 dark:!border-green-500 dark:!text-green-400 dark:hover:!bg-green-950/20 whitespace-nowrap"
                       >
-                        {aceptarMutation.isPending ? 'Aceptando...' : 'Aceptar Oferta'}
+                        Aceptar Oferta
                       </Button>
                       <Button 
                         variant="outline"
