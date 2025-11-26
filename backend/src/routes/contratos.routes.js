@@ -311,6 +311,9 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       mesesFinanciamientoSanitizado = sanitizarInt(meses_financiamiento, 1, 60);
     }
 
+    // Validar plan de pagos antes de obtener la oferta
+    // Necesitamos verificar que los meses de financiamiento no excedan el tiempo hasta el evento
+
     // Obtener oferta con todas sus relaciones
     const oferta = await prisma.ofertas.findUnique({
       where: { id: ofertaIdSanitizado },
@@ -336,8 +339,20 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       throw new NotFoundError('Oferta no encontrada');
     }
 
-    if (oferta.estado !== 'aceptada') {
-      throw new ValidationError('Solo se pueden crear contratos de ofertas aceptadas');
+    // Verificar que la oferta esté pendiente (no aceptada aún)
+    // La oferta se marcará como "aceptada" DESPUÉS de crear el contrato exitosamente
+    if (oferta.estado === 'rechazada') {
+      throw new ValidationError('No se puede crear un contrato de una oferta rechazada');
+    }
+
+    if (oferta.estado === 'aceptada') {
+      // Verificar si ya existe un contrato para evitar duplicados
+      const contratoExistentePrev = await prisma.contratos.findFirst({
+        where: { oferta_id: ofertaIdSanitizado }
+      });
+      if (contratoExistentePrev) {
+        throw new ValidationError('Esta oferta ya tiene un contrato asociado');
+      }
     }
 
     // Validar que el total de la oferta no sea negativo
@@ -352,6 +367,34 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
 
     if (contratoExistente) {
       throw new ValidationError('Ya existe un contrato para esta oferta');
+    }
+
+    // NUEVO: Validar plan de pagos basado en la fecha del evento
+    if (oferta.fecha_evento) {
+      const fechaEvento = new Date(oferta.fecha_evento);
+      const fechaActual = new Date();
+
+      // Calcular meses hasta el evento
+      const mesesHastaEvento = Math.floor(
+        (fechaEvento.getTime() - fechaActual.getTime()) / (1000 * 60 * 60 * 24 * 30)
+      );
+
+      // Si el evento es en 1 mes o menos, solo permitir pago único
+      if (mesesHastaEvento <= 1 && tipo_pago !== 'unico') {
+        throw new ValidationError(
+          `El evento es en ${mesesHastaEvento <= 0 ? 'menos de 1 mes' : '1 mes'}. ` +
+          'Solo se permite pago único para eventos tan próximos. ' +
+          'Por favor, seleccione la opción de pago único.'
+        );
+      }
+
+      // Si el evento es en menos meses que los solicitados para financiar
+      if ((tipo_pago === 'financiado' || tipo_pago === 'plazos') && mesesFinanciamientoSanitizado > mesesHastaEvento) {
+        throw new ValidationError(
+          `No se puede financiar en ${mesesFinanciamientoSanitizado} meses cuando el evento es en ${mesesHastaEvento} ${mesesHastaEvento === 1 ? 'mes' : 'meses'}. ` +
+          `El máximo de meses permitido es ${mesesHastaEvento}.`
+        );
+      }
     }
 
     // NUEVO: Validar que existe un pago de reserva de $500 antes de crear el contrato
@@ -625,6 +668,16 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           hora_fin: oferta.hora_fin,
           cantidad_invitados_confirmados: oferta.cantidad_invitados,
           estado: 'en_proceso'
+        }
+      });
+
+      // CRÍTICO: Marcar oferta como aceptada DENTRO de la transacción
+      // Si algo falla después de esto, el rollback revertirá el estado
+      await prisma.ofertas.update({
+        where: { id: oferta.id },
+        data: {
+          estado: 'aceptada',
+          fecha_respuesta: new Date()
         }
       });
 

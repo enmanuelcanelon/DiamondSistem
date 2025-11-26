@@ -102,8 +102,8 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato, ofertaId, cl
     
     // Total restante después de la reserva
     const totalRestante = total - depositoReserva;
-    
-    // Segundo pago de $500 (15 días después de la reserva)
+
+    // Segundo pago de $500 (10 días después de la reserva)
     const segundoPago = Math.min(500, totalRestante);
     
     // Saldo restante después del segundo pago
@@ -595,7 +595,7 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato, ofertaId, cl
                           <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                             <div>
                               <p className="font-semibold">Segundo Pago</p>
-                              <p className="text-xs text-muted-foreground">15 días después de la reserva</p>
+                              <p className="text-xs text-muted-foreground">10 días después de la reserva</p>
                             </div>
                             <span className="font-bold text-blue-700 dark:text-blue-400">
                               ${planGenerado.segundoPago.toLocaleString()}
@@ -719,7 +719,7 @@ function ModalPlanPago({ isOpen, onClose, onConfirm, totalContrato, ofertaId, cl
                   </div>
                   <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
                     <li>El depósito de $500 es no reembolsable</li>
-                    <li>El segundo pago de $500 debe realizarse 15 días después de la reserva</li>
+                    <li>El segundo pago de $500 debe realizarse 10 días después de la reserva</li>
                     {tipoPago === 'plazos' && (
                       <>
                         <li>Los pagos mensuales se realizarán el día {diaMesPago} de cada mes</li>
