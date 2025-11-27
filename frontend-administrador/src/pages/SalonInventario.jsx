@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Building2, 
-  Package, 
-  AlertTriangle, 
-  Calendar, 
-  User, 
-  Calculator, 
-  CheckCircle, 
-  Edit2, 
-  Save, 
+import {
+  Building2,
+  Package,
+  AlertTriangle,
+  Calendar,
+  User,
+  Calculator,
+  CheckCircle,
+  Edit2,
+  Save,
   X,
   ArrowLeft,
   RefreshCw,
@@ -43,7 +43,7 @@ function SalonInventario() {
 
   // Normalizar nombre del salón
   const salonNombreNormalizado = salonNombre?.toLowerCase();
-  
+
   // Query para obtener todos los salones y encontrar el ID correcto
   const { data: salonesData } = useQuery({
     queryKey: ['salones'],
@@ -55,10 +55,10 @@ function SalonInventario() {
 
   // Buscar el salón por nombre (case insensitive)
   // Primero intentar buscar en salonesData, si no existe, buscar directamente por nombre común
-  let salon = salonesData?.salones?.find(s => 
+  let salon = salonesData?.salones?.find(s =>
     s.nombre?.toLowerCase() === salonNombreNormalizado
   );
-  
+
   // Si no se encuentra, crear un objeto temporal con el ID conocido
   if (!salon && salonNombreNormalizado) {
     const salonesConocidos = {
@@ -68,7 +68,7 @@ function SalonInventario() {
     };
     salon = salonesConocidos[salonNombreNormalizado];
   }
-  
+
   const salonId = salon?.id;
 
   // Debug: verificar datos del salón
@@ -96,18 +96,18 @@ function SalonInventario() {
     queryKey: ['contratos-salon', salonId, mesSeleccionado, anioSeleccionado],
     queryFn: async () => {
       if (!salonId) return { data: [], contratos: [] };
-      
+
       // Construir URL con filtros de mes y año
       const fechaInicio = new Date(anioSeleccionado, mesSeleccionado - 1, 1);
       fechaInicio.setHours(0, 0, 0, 0);
       const fechaFin = new Date(anioSeleccionado, mesSeleccionado, 0);
       fechaFin.setHours(23, 59, 59, 999);
-      
+
       // Formatear fechas para la URL - el backend espera formato YYYY-MM-DD
       // y agrega T23:59:59 automáticamente a fecha_hasta
       const fechaDesdeStr = fechaInicio.toISOString().split('T')[0];
       const fechaHastaStr = fechaFin.toISOString().split('T')[0];
-      
+
       const url = `/contratos?salon_id=${salonId}&estado=activo&limit=100&fecha_desde=${fechaDesdeStr}&fecha_hasta=${fechaHastaStr}`;
       console.log('Buscando contratos con URL:', url);
       console.log('Fecha desde:', fechaDesdeStr, 'Fecha hasta:', fechaHastaStr);
@@ -614,7 +614,7 @@ function SalonInventario() {
                   const itemsCategoria = itemsPorCategoria[categoria];
                   const itemsBajoStockCategoria = itemsCategoria.filter(item => item.necesita_reposicion).length;
                   const estaExpandida = categoriasExpandidas[categoria] !== false;
-                  
+
                   return (
                     <div key={categoria} className="border border-gray-200 rounded-lg overflow-hidden">
                       <button
@@ -622,8 +622,8 @@ function SalonInventario() {
                         className="w-full bg-gray-100 px-4 py-3 border-b border-gray-200 hover:bg-gray-200 transition flex items-center justify-between"
                       >
                         <div className="flex items-center gap-3">
-                          <ChevronDown 
-                            className={`w-5 h-5 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`} 
+                          <ChevronDown
+                            className={`w-5 h-5 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`}
                           />
                           <h3 className="text-lg font-semibold text-gray-900">{categoria}</h3>
                         </div>
@@ -642,11 +642,10 @@ function SalonInventario() {
                             {itemsCategoria.map((item) => (
                               <div
                                 key={item.item_id}
-                                className={`p-4 rounded-lg border ${
-                                  item.necesita_reposicion
-                                    ? 'border-red-200 bg-red-50'
-                                    : 'border-gray-200 bg-gray-50'
-                                }`}
+                                className={`p-4 rounded-lg border ${item.necesita_reposicion
+                                  ? 'border-red-200 bg-red-50'
+                                  : 'border-gray-200 bg-gray-50'
+                                  }`}
                               >
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
@@ -656,9 +655,8 @@ function SalonInventario() {
                                     <div className="mt-2 space-y-1">
                                       <div className="flex justify-between text-sm">
                                         <span className="text-gray-600">Actual:</span>
-                                        <span className={`font-medium ${
-                                          item.necesita_reposicion ? 'text-red-600' : 'text-gray-900'
-                                        }`}>
+                                        <span className={`font-medium ${item.necesita_reposicion ? 'text-red-600' : 'text-gray-900'
+                                          }`}>
                                           {parseFloat(item.cantidad_actual).toFixed(2)} {item.inventario_items?.unidad_medida}
                                         </span>
                                       </div>
@@ -718,11 +716,10 @@ function SalonInventario() {
                         setSelectedContrato(contrato.id);
                         setCalculadoData(null);
                       }}
-                      className={`border rounded-lg p-4 cursor-pointer transition ${
-                        selectedContrato === contrato.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:bg-gray-50'
-                      }`}
+                      className={`border rounded-lg p-4 cursor-pointer transition ${selectedContrato === contrato.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:bg-gray-50'
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="font-semibold text-gray-900">{contrato.codigo_contrato}</div>
@@ -737,9 +734,8 @@ function SalonInventario() {
                               {diasRestantes} días
                             </span>
                           )}
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            contrato.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs rounded-full ${contrato.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
                             {contrato.estado}
                           </span>
                         </div>
@@ -839,7 +835,7 @@ function SalonInventario() {
                   const itemsCalculados = calculadoData.items_calculados || [];
                   const itemsPorCategoriaCalculados = agruparItemsCalculadosPorCategoria(itemsCalculados);
                   const categoriasCalculados = Object.keys(itemsPorCategoriaCalculados).sort();
-                  
+
                   // Inicializar categorías expandidas si es necesario
                   if (Object.keys(categoriasExpandidasCalculados).length === 0 && categoriasCalculados.length > 0) {
                     const todasExpandidas = {};
@@ -858,7 +854,7 @@ function SalonInventario() {
                         {categoriasCalculados.map((categoria) => {
                           const itemsCategoria = itemsPorCategoriaCalculados[categoria];
                           const estaExpandida = categoriasExpandidasCalculados[categoria] !== false;
-                          
+
                           return (
                             <div key={categoria} className="border border-gray-200 rounded overflow-hidden">
                               <button
@@ -866,588 +862,676 @@ function SalonInventario() {
                                 className="w-full bg-gray-100 px-3 py-2 hover:bg-gray-200 transition flex items-center justify-between text-sm"
                               >
                                 <div className="flex items-center gap-2">
-                                  <ChevronDown 
-                                    className={`w-4 h-4 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`} 
+                                  <ChevronDown
+                                    className={`w-4 h-4 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`}
                                   />
                                   <span className="font-semibold text-gray-900">{categoria}</span>
                                   <span className="text-gray-600">({itemsCategoria.length} items)</span>
                                 </div>
                               </button>
                               {estaExpandida && (
-                                <table className="min-w-full text-sm">
-                                  <thead className="bg-gray-50">
-                                    <tr>
-                                      <th className="px-3 py-2 text-left">Item</th>
-                                      <th className="px-3 py-2 text-left">Cantidad</th>
-                                      <th className="px-3 py-2 text-left">Unidad</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-gray-200">
-                                    {itemsCategoria.map((item, idx) => (
-                                      <tr key={idx}>
-                                        <td className="px-3 py-2">{item.item_nombre}</td>
-                                        <td className="px-3 py-2">{item.cantidad_necesaria.toFixed(2)}</td>
-                                        <td className="px-3 py-2">{item.unidad_medida}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Asignaciones Existentes */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">
-                  Asignaciones de Inventario ({asignaciones.length})
-                </h3>
-                {asignaciones.length > 0 ? (() => {
-                  const itemsPorCategoriaAsignaciones = agruparAsignacionesPorCategoria(asignaciones);
-                  const categoriasAsignaciones = Object.keys(itemsPorCategoriaAsignaciones).sort();
-                  
-                  // Inicializar categorías expandidas si es necesario
-                  if (Object.keys(categoriasExpandidasAsignaciones).length === 0 && categoriasAsignaciones.length > 0) {
-                    const todasExpandidas = {};
-                    categoriasAsignaciones.forEach(cat => {
-                      todasExpandidas[cat] = true;
-                    });
-                    setCategoriasExpandidasAsignaciones(todasExpandidas);
-                  }
-
-                  return (
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {categoriasAsignaciones.map((categoria) => {
-                        const asignacionesCategoria = itemsPorCategoriaAsignaciones[categoria];
-                        const estaExpandida = categoriasExpandidasAsignaciones[categoria] !== false;
-                        
-                        return (
-                          <div key={categoria} className="border border-gray-200 rounded overflow-hidden">
-                            <button
-                              onClick={() => toggleCategoriaAsignaciones(categoria)}
-                              className="w-full bg-gray-100 px-3 py-2 hover:bg-gray-200 transition flex items-center justify-between text-sm"
-                            >
-                              <div className="flex items-center gap-2">
-                                <ChevronDown 
-                                  className={`w-4 h-4 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`} 
-                                />
-                                <span className="font-semibold text-gray-900">{categoria}</span>
-                                <span className="text-gray-600">({asignacionesCategoria.length} items)</span>
-                              </div>
-                            </button>
-                            {estaExpandida && (
-                              <div className="space-y-3 p-3 bg-white">
-                                {asignacionesCategoria.map((asignacion) => (
-                      <div
-                        key={asignacion.id}
-                        className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 text-sm">
-                              {asignacion.inventario_items?.nombre}
-                            </h4>
-                            <span className={`px-2 py-1 text-xs rounded-full mt-1 inline-block ${
-                              asignacion.estado === 'asignado' ? 'bg-blue-100 text-blue-800' :
-                              asignacion.estado === 'utilizado' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {asignacion.estado}
-                            </span>
-                          </div>
-                          {editingAsignacion === asignacion.id ? (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleSave(asignacion.id)}
-                                className="text-green-600 hover:text-green-700"
-                                disabled={updateAsignacionMutation.isPending}
-                              >
-                                <Save className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingAsignacion(null);
-                                  setEditData({ cantidad_asignada: '', cantidad_utilizada: '' });
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleEdit(asignacion)}
-                                className="text-blue-600 hover:text-blue-700"
-                                title="Editar asignación"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              {asignacion.estado !== 'cancelado' && (
-                                <button
-                                  onClick={() => {
-                                    if (window.confirm(`¿Estás seguro que deseas cancelar la asignación de ${asignacion.inventario_items?.nombre}? El inventario será devuelto al salón.`)) {
-                                      cancelarAsignacionMutation.mutate(asignacion.id);
-                                    }
-                                  }}
-                                  className="text-red-600 hover:text-red-700"
-                                  disabled={cancelarAsignacionMutation.isPending}
-                                  title="Cancelar asignación"
-                                >
-                                  {cancelarAsignacionMutation.isPending ? (
-                                    <RefreshCw className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="w-4 h-4" />
-                                  )}
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-3 space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Cantidad Asignada:</span>
-                            {editingAsignacion === asignacion.id ? (
-                              <input
-                                type="number"
-                                value={editData.cantidad_asignada}
-                                onChange={(e) => setEditData({ ...editData, cantidad_asignada: e.target.value })}
-                                min="0"
-                                step="0.01"
-                                className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
-                              />
-                            ) : (
-                              <span className="font-medium text-gray-900">
-                                {parseFloat(asignacion.cantidad_asignada).toFixed(2)} {asignacion.inventario_items?.unidad_medida}
-                              </span>
-                            )}
-                          </div>
-                          {asignacion.cantidad_utilizada && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Cantidad Utilizada:</span>
-                              {editingAsignacion === asignacion.id ? (
-                                <input
-                                  type="number"
-                                  value={editData.cantidad_utilizada}
-                                  onChange={(e) => setEditData({ ...editData, cantidad_utilizada: e.target.value })}
-                                  min="0"
-                                  step="0.01"
-                                  className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
-                                />
-                              ) : (
-                                <span className="font-medium text-gray-900">
-                                  {parseFloat(asignacion.cantidad_utilizada).toFixed(2)} {asignacion.inventario_items?.unidad_medida}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-500">
-                            Fuente: {asignacion.fuente}
-                          </div>
-                        </div>
-                      </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })() : (
-                  <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-lg">
-                    <Package className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p>No hay asignaciones de inventario para este contrato</p>
-                    <p className="text-sm mt-1">Calcula y asigna el inventario necesario</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modales de Acción */}
-      {showModalAccion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {showModalAccion === 'asignacion' && 'Asignar Inventario a Evento'}
-                {showModalAccion === 'devolucion' && 'Devolver Inventario de Evento'}
-                {showModalAccion === 'retorno' && 'Retornar Inventario a Central'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowModalAccion(null);
-                  setContratoSeleccionadoAccion(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {showModalAccion === 'asignacion' && (
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Selecciona un evento para asignar inventario del salón. El inventario se tomará del almacén del salón.
-                </p>
-                <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-                  {contratos.length > 0 ? (
-                    <div className="divide-y divide-gray-200">
-                      {contratos.map((contrato) => (
-                        <button
-                          key={contrato.id}
-                          onClick={() => {
-                            setContratoSeleccionadoAccion(contrato.id);
-                            calcularMutation.mutate(contrato.id);
-                          }}
-                          className="w-full text-left p-4 hover:bg-blue-50 transition"
-                        >
-                          <div className="font-semibold text-gray-900">{contrato.codigo_contrato}</div>
-                          <div className="text-sm text-gray-600">
-                            {contrato.clientes?.nombre_completo} - {new Date(contrato.fecha_evento).toLocaleDateString('es-ES')}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center text-gray-500">
-                      No hay eventos programados para este salón
-                    </div>
-                  )}
-                </div>
-                {contratoSeleccionadoAccion && calculadoData && (
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-gray-700 mb-2">
-                      Items calculados: {calculadoData.items_calculados?.length || 0}
-                    </p>
-                    <button
-                      onClick={() => {
-                        asignarMutation.mutate({ contratoId: contratoSeleccionadoAccion, forzar: false });
-                        setShowModalAccion(null);
-                        setContratoSeleccionadoAccion(null);
-                      }}
-                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                    >
-                      Confirmar Asignación
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {showModalAccion === 'devolucion' && (
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Selecciona un evento para devolver el inventario asignado de vuelta al salón.
-                </p>
-                <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-                  {contratos.filter(c => c.asignaciones_inventario && c.asignaciones_inventario.length > 0).length > 0 ? (
-                    <div className="divide-y divide-gray-200">
-                      {contratos
-                        .filter(c => c.asignaciones_inventario && c.asignaciones_inventario.length > 0)
-                        .map((contrato) => (
-                          <button
-                            key={contrato.id}
-                            onClick={async () => {
-                              try {
-                                // Obtener todas las asignaciones del contrato
-                                const asignacionesResponse = await api.get(`/inventario/asignaciones?contrato_id=${contrato.id}`);
-                                const asignaciones = asignacionesResponse.data?.asignaciones || [];
-                                
-                                // Cancelar todas las asignaciones activas
-                                const asignacionesActivas = asignaciones.filter(a => a.estado !== 'cancelado');
-                                
-                                if (asignacionesActivas.length === 0) {
-                                  toast.error('Este evento no tiene asignaciones activas para devolver');
-                                  return;
-                                }
-
-                                // Confirmar acción
-                                if (window.confirm(`¿Estás seguro que deseas devolver ${asignacionesActivas.length} items asignados del evento ${contrato.codigo_contrato} al inventario del salón?`)) {
-                                  // Cancelar todas las asignaciones
-                                  const promesas = asignacionesActivas.map(asignacion => 
-                                    api.put(`/inventario/asignaciones/${asignacion.id}`, {
-                                      estado: 'cancelado'
-                                    })
-                                  );
-                                  
-                                  await Promise.all(promesas);
-                                  
-                                  toast.success(`Se devolvieron ${asignacionesActivas.length} items al inventario del salón`);
-                                  queryClient.invalidateQueries(['asignaciones-contrato']);
-                                  queryClient.invalidateQueries(['inventario-salon', salonId]);
-                                  queryClient.invalidateQueries(['contratos-salon', salonId, mesSeleccionado, anioSeleccionado]);
-                                  setShowModalAccion(null);
-                                }
-                              } catch (error) {
-                                toast.error(error.response?.data?.message || 'Error al devolver inventario del evento');
-                              }
-                            }}
-                            className="w-full text-left p-4 hover:bg-yellow-50 transition"
-                          >
-                            <div className="font-semibold text-gray-900">{contrato.codigo_contrato}</div>
-                            <div className="text-sm text-gray-600">
-                              {contrato.clientes?.nombre_completo} - {contrato.asignaciones_inventario.length} items asignados
-                            </div>
-                          </button>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center text-gray-500">
-                      No hay eventos con inventario asignado
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {showModalAccion === 'retorno' && (() => {
-              // Items con stock disponible
-              const itemsConStock = inventario.filter(item => parseFloat(item.cantidad_actual) > 0);
-              const itemsPorCategoriaRetorno = agruparPorCategoria(itemsConStock);
-              const categoriasRetorno = Object.keys(itemsPorCategoriaRetorno).sort();
-              
-              // Inicializar categorías expandidas si es necesario
-              if (Object.keys(categoriasExpandidasRetorno).length === 0 && categoriasRetorno.length > 0) {
-                inicializarCategoriasRetorno(itemsConStock);
-              }
-
-              return (
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    Selecciona los items del inventario del salón que deseas retornar al almacén central.
-                  </p>
-                  
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Items Disponibles ({itemsConStock.length} items con stock)
-                    </label>
-                    <div className="flex items-center gap-3">
-                      {Object.keys(itemsSeleccionadosRetorno).length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm text-gray-600">Cantidad para todos:</label>
-                          <input
-                            type="number"
-                            placeholder="50"
-                            min="0"
-                            step="0.01"
-                            onChange={(e) => {
-                              const cantidad = parseFloat(e.target.value) || 0;
-                              if (cantidad >= 0) {
-                                const nuevosSeleccionados = {};
-                                Object.keys(itemsSeleccionadosRetorno).forEach(itemId => {
-                                  const item = itemsConStock.find(i => i.item_id === parseInt(itemId));
-                                  if (item) {
-                                    const cantidadDisponible = parseFloat(item.cantidad_actual);
-                                    nuevosSeleccionados[itemId] = {
-                                      item_id: parseInt(itemId),
-                                      cantidad: Math.min(cantidad, cantidadDisponible)
-                                    };
-                                  }
-                                });
-                                setItemsSeleccionadosRetorno(nuevosSeleccionados);
-                              }
-                            }}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                          />
-                        </div>
-                      )}
-                      {(() => {
-                        const todosSeleccionados = itemsConStock.every(item => itemsSeleccionadosRetorno[item.item_id]);
-                        const haySeleccionados = Object.keys(itemsSeleccionadosRetorno).length > 0;
-
-                        if (todosSeleccionados && haySeleccionados) {
-                          return (
-                            <button
-                              onClick={() => setItemsSeleccionadosRetorno({})}
-                              className="text-sm text-red-600 hover:text-red-700 font-medium"
-                            >
-                              Deseleccionar Todos
-                            </button>
-                          );
-                        } else {
-                          return (
-                            <button
-                              onClick={() => {
-                                const todosSeleccionados = {};
-                                itemsConStock.forEach(item => {
-                                  const cantidadDisponible = parseFloat(item.cantidad_actual);
-                                  if (cantidadDisponible > 0) {
-                                    todosSeleccionados[item.item_id] = {
-                                      item_id: item.item_id,
-                                      cantidad: cantidadDisponible // Por defecto, toda la cantidad disponible
-                                    };
-                                  }
-                                });
-                                setItemsSeleccionadosRetorno(todosSeleccionados);
-                              }}
-                              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                            >
-                              Seleccionar Todos
-                            </button>
-                          );
-                        }
-                      })()}
-                    </div>
-                  </div>
-
-                  <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-                    <div className="space-y-2 p-2">
-                      {categoriasRetorno.map((categoria) => {
-                        const itemsCategoria = itemsPorCategoriaRetorno[categoria];
-                        const estaExpandida = categoriasExpandidasRetorno[categoria] !== false;
-                        
-                        return (
-                          <div key={categoria} className="border border-gray-200 rounded overflow-hidden">
-                            <button
-                              onClick={() => toggleCategoriaRetorno(categoria)}
-                              className="w-full bg-gray-100 px-3 py-2 hover:bg-gray-200 transition flex items-center justify-between text-sm"
-                            >
-                              <div className="flex items-center gap-2">
-                                <ChevronDown 
-                                  className={`w-4 h-4 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`} 
-                                />
-                                <span className="font-semibold text-gray-900">{categoria}</span>
-                                <span className="text-gray-600">({itemsCategoria.length} items)</span>
-                              </div>
-                            </button>
-                            {estaExpandida && (
+                                {/* Desktop Table */ }
+                                < div className="hidden md:block overflow-x-auto">
                               <table className="min-w-full text-sm">
                                 <thead className="bg-gray-50">
                                   <tr>
-                                    <th className="px-3 py-2 text-left">
-                                      <CheckCircle className="w-3 h-3 inline" />
-                                    </th>
                                     <th className="px-3 py-2 text-left">Item</th>
-                                    <th className="px-3 py-2 text-left">Disponible</th>
-                                    <th className="px-3 py-2 text-left">Cantidad a Retornar</th>
+                                    <th className="px-3 py-2 text-left">Cantidad</th>
+                                    <th className="px-3 py-2 text-left">Unidad</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                  {itemsCategoria.map((item) => {
-                                    const cantidadDisponible = parseFloat(item.cantidad_actual);
-                                    const estaSeleccionado = itemsSeleccionadosRetorno[item.item_id];
-                                    
-                                    return (
-                                      <tr key={item.item_id} className={estaSeleccionado ? 'bg-orange-50' : ''}>
-                                        <td className="px-3 py-2">
-                                          <input
-                                            type="checkbox"
-                                            checked={!!estaSeleccionado}
-                                            onChange={(e) => {
-                                              if (e.target.checked) {
-                                                setItemsSeleccionadosRetorno({
-                                                  ...itemsSeleccionadosRetorno,
-                                                  [item.item_id]: { 
-                                                    item_id: item.item_id, 
-                                                    cantidad: cantidadDisponible 
-                                                  }
-                                                });
-                                              } else {
-                                                const nuevos = { ...itemsSeleccionadosRetorno };
-                                                delete nuevos[item.item_id];
-                                                setItemsSeleccionadosRetorno(nuevos);
-                                              }
-                                            }}
-                                            className="rounded"
-                                          />
-                                        </td>
-                                        <td className="px-3 py-2">
-                                          <div className="font-medium">{item.inventario_items?.nombre}</div>
-                                          <div className="text-xs text-gray-500">{item.inventario_items?.unidad_medida}</div>
-                                        </td>
-                                        <td className="px-3 py-2">{cantidadDisponible.toFixed(2)}</td>
-                                        <td className="px-3 py-2">
-                                          {estaSeleccionado && (
-                                            <input
-                                              type="number"
-                                              value={itemsSeleccionadosRetorno[item.item_id]?.cantidad || ''}
-                                              onChange={(e) => {
-                                                const cantidad = parseFloat(e.target.value) || 0;
-                                                if (cantidad >= 0 && cantidad <= cantidadDisponible) {
-                                                  setItemsSeleccionadosRetorno({
-                                                    ...itemsSeleccionadosRetorno,
-                                                    [item.item_id]: { item_id: item.item_id, cantidad }
-                                                  });
-                                                }
-                                              }}
-                                              min="0"
-                                              max={cantidadDisponible}
-                                              step="0.01"
-                                              className="w-24 px-2 py-1 border border-gray-300 rounded"
-                                            />
-                                          )}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
+                                  {itemsCategoria.map((item, idx) => (
+                                    <tr key={idx}>
+                                      <td className="px-3 py-2">{item.item_nombre}</td>
+                                      <td className="px-3 py-2">{item.cantidad_necesaria.toFixed(2)}</td>
+                                      <td className="px-3 py-2">{item.unidad_medida}</td>
+                                    </tr>
+                                  ))}
                                 </tbody>
                               </table>
-                            )}
+                            </div>
+
+                                {/* Mobile Cards */ }
+                          <div className="md:hidden space-y-2 p-2">
+                            {itemsCategoria.map((item, idx) => (
+                              <div key={idx} className="bg-gray-50 p-3 rounded border border-gray-100">
+                                <div className="font-medium text-gray-900 text-sm">{item.item_nombre}</div>
+                                <div className="flex justify-between mt-1 text-xs text-gray-600">
+                                  <span>Cantidad: {item.cantidad_necesaria.toFixed(2)}</span>
+                                  <span>{item.unidad_medida}</span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        );
-                      })}
+                              )}
+                      </div>
+                      );
+                        })}
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Motivo (opcional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Motivo del retorno"
-                      id="motivo-retorno"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <button
-                      onClick={() => {
-                        const items = Object.values(itemsSeleccionadosRetorno).filter(item => item.cantidad > 0);
-                        if (items.length === 0) {
-                          toast.error('Selecciona al menos un item con cantidad mayor a 0');
-                          return;
-                        }
-                        const motivo = document.getElementById('motivo-retorno')?.value || '';
-                        retornarCentralMutation.mutate({
-                          salon_id: salonId,
-                          items,
-                          motivo: motivo || `Retorno a almacén central desde ${salon.nombre}`
-                        });
-                      }}
-                      disabled={retornarCentralMutation.isPending || Object.keys(itemsSeleccionadosRetorno).length === 0}
-                      className="flex-1 bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {retornarCentralMutation.isPending ? 'Retornando...' : `Retornar (${Object.keys(itemsSeleccionadosRetorno).length} items)`}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowModalAccion(null);
-                        setItemsSeleccionadosRetorno({});
-                        setCategoriasExpandidasRetorno({});
-                      }}
-                      className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
+                    </div>
               );
-            })()}
+                })()}
+            </div>
+
+            {/* Asignaciones Existentes */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900">
+                Asignaciones de Inventario ({asignaciones.length})
+              </h3>
+              {asignaciones.length > 0 ? (() => {
+                const itemsPorCategoriaAsignaciones = agruparAsignacionesPorCategoria(asignaciones);
+                const categoriasAsignaciones = Object.keys(itemsPorCategoriaAsignaciones).sort();
+
+                // Inicializar categorías expandidas si es necesario
+                if (Object.keys(categoriasExpandidasAsignaciones).length === 0 && categoriasAsignaciones.length > 0) {
+                  const todasExpandidas = {};
+                  categoriasAsignaciones.forEach(cat => {
+                    todasExpandidas[cat] = true;
+                  });
+                  setCategoriasExpandidasAsignaciones(todasExpandidas);
+                }
+
+                return (
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {categoriasAsignaciones.map((categoria) => {
+                      const asignacionesCategoria = itemsPorCategoriaAsignaciones[categoria];
+                      const estaExpandida = categoriasExpandidasAsignaciones[categoria] !== false;
+
+                      return (
+                        <div key={categoria} className="border border-gray-200 rounded overflow-hidden">
+                          <button
+                            onClick={() => toggleCategoriaAsignaciones(categoria)}
+                            className="w-full bg-gray-100 px-3 py-2 hover:bg-gray-200 transition flex items-center justify-between text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <ChevronDown
+                                className={`w-4 h-4 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`}
+                              />
+                              <span className="font-semibold text-gray-900">{categoria}</span>
+                              <span className="text-gray-600">({asignacionesCategoria.length} items)</span>
+                            </div>
+                          </button>
+                          {estaExpandida && (
+                            <div className="space-y-3 p-3 bg-white">
+                              {asignacionesCategoria.map((asignacion) => (
+                                <div
+                                  key={asignacion.id}
+                                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                                >
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex-1">
+                                      <h4 className="font-semibold text-gray-900 text-sm">
+                                        {asignacion.inventario_items?.nombre}
+                                      </h4>
+                                      <span className={`px-2 py-1 text-xs rounded-full mt-1 inline-block ${asignacion.estado === 'asignado' ? 'bg-blue-100 text-blue-800' :
+                                        asignacion.estado === 'utilizado' ? 'bg-green-100 text-green-800' :
+                                          'bg-gray-100 text-gray-800'
+                                        }`}>
+                                        {asignacion.estado}
+                                      </span>
+                                    </div>
+                                    {editingAsignacion === asignacion.id ? (
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => handleSave(asignacion.id)}
+                                          className="text-green-600 hover:text-green-700"
+                                          disabled={updateAsignacionMutation.isPending}
+                                        >
+                                          <Save className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setEditingAsignacion(null);
+                                            setEditData({ cantidad_asignada: '', cantidad_utilizada: '' });
+                                          }}
+                                          className="text-red-600 hover:text-red-700"
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => handleEdit(asignacion)}
+                                          className="text-blue-600 hover:text-blue-700"
+                                          title="Editar asignación"
+                                        >
+                                          <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        {asignacion.estado !== 'cancelado' && (
+                                          <button
+                                            onClick={() => {
+                                              if (window.confirm(`¿Estás seguro que deseas cancelar la asignación de ${asignacion.inventario_items?.nombre}? El inventario será devuelto al salón.`)) {
+                                                cancelarAsignacionMutation.mutate(asignacion.id);
+                                              }
+                                            }}
+                                            className="text-red-600 hover:text-red-700"
+                                            disabled={cancelarAsignacionMutation.isPending}
+                                            title="Cancelar asignación"
+                                          >
+                                            {cancelarAsignacionMutation.isPending ? (
+                                              <RefreshCw className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                              <Trash2 className="w-4 h-4" />
+                                            )}
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="mt-3 space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Cantidad Asignada:</span>
+                                      {editingAsignacion === asignacion.id ? (
+                                        <input
+                                          type="number"
+                                          value={editData.cantidad_asignada}
+                                          onChange={(e) => setEditData({ ...editData, cantidad_asignada: e.target.value })}
+                                          min="0"
+                                          step="0.01"
+                                          className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                                        />
+                                      ) : (
+                                        <span className="font-medium text-gray-900">
+                                          {parseFloat(asignacion.cantidad_asignada).toFixed(2)} {asignacion.inventario_items?.unidad_medida}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {asignacion.cantidad_utilizada && (
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-600">Cantidad Utilizada:</span>
+                                        {editingAsignacion === asignacion.id ? (
+                                          <input
+                                            type="number"
+                                            value={editData.cantidad_utilizada}
+                                            onChange={(e) => setEditData({ ...editData, cantidad_utilizada: e.target.value })}
+                                            min="0"
+                                            step="0.01"
+                                            className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                                          />
+                                        ) : (
+                                          <span className="font-medium text-gray-900">
+                                            {parseFloat(asignacion.cantidad_utilizada).toFixed(2)} {asignacion.inventario_items?.unidad_medida}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                    <div className="text-xs text-gray-500">
+                                      Fuente: {asignacion.fuente}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })() : (
+                <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-lg">
+                  <Package className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p>No hay asignaciones de inventario para este contrato</p>
+                  <p className="text-sm mt-1">Calcula y asigna el inventario necesario</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      )}
+        </div>
+  )
+}
+
+{/* Modales de Acción */ }
+{
+  showModalAccion && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {showModalAccion === 'asignacion' && 'Asignar Inventario a Evento'}
+            {showModalAccion === 'devolucion' && 'Devolver Inventario de Evento'}
+            {showModalAccion === 'retorno' && 'Retornar Inventario a Central'}
+          </h3>
+          <button
+            onClick={() => {
+              setShowModalAccion(null);
+              setContratoSeleccionadoAccion(null);
+            }}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {showModalAccion === 'asignacion' && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Selecciona un evento para asignar inventario del salón. El inventario se tomará del almacén del salón.
+            </p>
+            <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+              {contratos.length > 0 ? (
+                <div className="divide-y divide-gray-200">
+                  {contratos.map((contrato) => (
+                    <button
+                      key={contrato.id}
+                      onClick={() => {
+                        setContratoSeleccionadoAccion(contrato.id);
+                        calcularMutation.mutate(contrato.id);
+                      }}
+                      className="w-full text-left p-4 hover:bg-blue-50 transition"
+                    >
+                      <div className="font-semibold text-gray-900">{contrato.codigo_contrato}</div>
+                      <div className="text-sm text-gray-600">
+                        {contrato.clientes?.nombre_completo} - {new Date(contrato.fecha_evento).toLocaleDateString('es-ES')}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-500">
+                  No hay eventos programados para este salón
+                </div>
+              )}
+            </div>
+            {contratoSeleccionadoAccion && calculadoData && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-gray-700 mb-2">
+                  Items calculados: {calculadoData.items_calculados?.length || 0}
+                </p>
+                <button
+                  onClick={() => {
+                    asignarMutation.mutate({ contratoId: contratoSeleccionadoAccion, forzar: false });
+                    setShowModalAccion(null);
+                    setContratoSeleccionadoAccion(null);
+                  }}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                >
+                  Confirmar Asignación
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {showModalAccion === 'devolucion' && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Selecciona un evento para devolver el inventario asignado de vuelta al salón.
+            </p>
+            <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+              {contratos.filter(c => c.asignaciones_inventario && c.asignaciones_inventario.length > 0).length > 0 ? (
+                <div className="divide-y divide-gray-200">
+                  {contratos
+                    .filter(c => c.asignaciones_inventario && c.asignaciones_inventario.length > 0)
+                    .map((contrato) => (
+                      <button
+                        key={contrato.id}
+                        onClick={async () => {
+                          try {
+                            // Obtener todas las asignaciones del contrato
+                            const asignacionesResponse = await api.get(`/inventario/asignaciones?contrato_id=${contrato.id}`);
+                            const asignaciones = asignacionesResponse.data?.asignaciones || [];
+
+                            // Cancelar todas las asignaciones activas
+                            const asignacionesActivas = asignaciones.filter(a => a.estado !== 'cancelado');
+
+                            if (asignacionesActivas.length === 0) {
+                              toast.error('Este evento no tiene asignaciones activas para devolver');
+                              return;
+                            }
+
+                            // Confirmar acción
+                            if (window.confirm(`¿Estás seguro que deseas devolver ${asignacionesActivas.length} items asignados del evento ${contrato.codigo_contrato} al inventario del salón?`)) {
+                              // Cancelar todas las asignaciones
+                              const promesas = asignacionesActivas.map(asignacion =>
+                                api.put(`/inventario/asignaciones/${asignacion.id}`, {
+                                  estado: 'cancelado'
+                                })
+                              );
+
+                              await Promise.all(promesas);
+
+                              toast.success(`Se devolvieron ${asignacionesActivas.length} items al inventario del salón`);
+                              queryClient.invalidateQueries(['asignaciones-contrato']);
+                              queryClient.invalidateQueries(['inventario-salon', salonId]);
+                              queryClient.invalidateQueries(['contratos-salon', salonId, mesSeleccionado, anioSeleccionado]);
+                              setShowModalAccion(null);
+                            }
+                          } catch (error) {
+                            toast.error(error.response?.data?.message || 'Error al devolver inventario del evento');
+                          }
+                        }}
+                        className="w-full text-left p-4 hover:bg-yellow-50 transition"
+                      >
+                        <div className="font-semibold text-gray-900">{contrato.codigo_contrato}</div>
+                        <div className="text-sm text-gray-600">
+                          {contrato.clientes?.nombre_completo} - {contrato.asignaciones_inventario.length} items asignados
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-500">
+                  No hay eventos con inventario asignado
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showModalAccion === 'retorno' && (() => {
+          // Items con stock disponible
+          const itemsConStock = inventario.filter(item => parseFloat(item.cantidad_actual) > 0);
+          const itemsPorCategoriaRetorno = agruparPorCategoria(itemsConStock);
+          const categoriasRetorno = Object.keys(itemsPorCategoriaRetorno).sort();
+
+          // Inicializar categorías expandidas si es necesario
+          if (Object.keys(categoriasExpandidasRetorno).length === 0 && categoriasRetorno.length > 0) {
+            inicializarCategoriasRetorno(itemsConStock);
+          }
+
+          return (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Selecciona los items del inventario del salón que deseas retornar al almacén central.
+              </p>
+
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Items Disponibles ({itemsConStock.length} items con stock)
+                </label>
+                <div className="flex items-center gap-3">
+                  {Object.keys(itemsSeleccionadosRetorno).length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-600">Cantidad para todos:</label>
+                      <input
+                        type="number"
+                        placeholder="50"
+                        min="0"
+                        step="0.01"
+                        onChange={(e) => {
+                          const cantidad = parseFloat(e.target.value) || 0;
+                          if (cantidad >= 0) {
+                            const nuevosSeleccionados = {};
+                            Object.keys(itemsSeleccionadosRetorno).forEach(itemId => {
+                              const item = itemsConStock.find(i => i.item_id === parseInt(itemId));
+                              if (item) {
+                                const cantidadDisponible = parseFloat(item.cantidad_actual);
+                                nuevosSeleccionados[itemId] = {
+                                  item_id: parseInt(itemId),
+                                  cantidad: Math.min(cantidad, cantidadDisponible)
+                                };
+                              }
+                            });
+                            setItemsSeleccionadosRetorno(nuevosSeleccionados);
+                          }
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
+                  )}
+                  {(() => {
+                    const todosSeleccionados = itemsConStock.every(item => itemsSeleccionadosRetorno[item.item_id]);
+                    const haySeleccionados = Object.keys(itemsSeleccionadosRetorno).length > 0;
+
+                    if (todosSeleccionados && haySeleccionados) {
+                      return (
+                        <button
+                          onClick={() => setItemsSeleccionadosRetorno({})}
+                          className="text-sm text-red-600 hover:text-red-700 font-medium"
+                        >
+                          Deseleccionar Todos
+                        </button>
+                      );
+                    } else {
+                      return (
+                        <button
+                          onClick={() => {
+                            const todosSeleccionados = {};
+                            itemsConStock.forEach(item => {
+                              const cantidadDisponible = parseFloat(item.cantidad_actual);
+                              if (cantidadDisponible > 0) {
+                                todosSeleccionados[item.item_id] = {
+                                  item_id: item.item_id,
+                                  cantidad: cantidadDisponible // Por defecto, toda la cantidad disponible
+                                };
+                              }
+                            });
+                            setItemsSeleccionadosRetorno(todosSeleccionados);
+                          }}
+                          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          Seleccionar Todos
+                        </button>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                <div className="space-y-2 p-2">
+                  {categoriasRetorno.map((categoria) => {
+                    const itemsCategoria = itemsPorCategoriaRetorno[categoria];
+                    const estaExpandida = categoriasExpandidasRetorno[categoria] !== false;
+
+                    return (
+                      <div key={categoria} className="border border-gray-200 rounded overflow-hidden">
+                        <button
+                          onClick={() => toggleCategoriaRetorno(categoria)}
+                          className="w-full bg-gray-100 px-3 py-2 hover:bg-gray-200 transition flex items-center justify-between text-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            <ChevronDown
+                              className={`w-4 h-4 text-gray-600 transition-transform ${estaExpandida ? '' : '-rotate-90'}`}
+                            />
+                            <span className="font-semibold text-gray-900">{categoria}</span>
+                            <span className="text-gray-600">({itemsCategoria.length} items)</span>
+                          </div>
+                        </button>
+                        {estaExpandida && (
+                              {/* Desktop Table */}
+                              <div className="hidden md:block overflow-x-auto">
+                                <table className="min-w-full text-sm">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left">
+                                        <CheckCircle className="w-3 h-3 inline" />
+                                      </th>
+                                      <th className="px-3 py-2 text-left">Item</th>
+                                      <th className="px-3 py-2 text-left">Disponible</th>
+                                      <th className="px-3 py-2 text-left">Cantidad a Retornar</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-200">
+                                    {itemsCategoria.map((item) => {
+                                      const cantidadDisponible = parseFloat(item.cantidad_actual);
+                                      const estaSeleccionado = itemsSeleccionadosRetorno[item.item_id];
+                                      
+                                      return (
+                                        <tr key={item.item_id} className={estaSeleccionado ? 'bg-orange-50' : ''}>
+                                          <td className="px-3 py-2">
+                                            <input
+                                              type="checkbox"
+                                              checked={!!estaSeleccionado}
+                                              onChange={(e) => {
+                                                if (e.target.checked) {
+                                                  setItemsSeleccionadosRetorno({
+                                                    ...itemsSeleccionadosRetorno,
+                                                    [item.item_id]: { 
+                                                      item_id: item.item_id, 
+                                                      cantidad: cantidadDisponible 
+                                                    }
+                                                  });
+                                                } else {
+                                                  const nuevos = { ...itemsSeleccionadosRetorno };
+                                                  delete nuevos[item.item_id];
+                                                  setItemsSeleccionadosRetorno(nuevos);
+                                                }
+                                              }}
+                                              className="rounded"
+                                            />
+                                          </td>
+                                          <td className="px-3 py-2">
+                                            <div className="font-medium">{item.inventario_items?.nombre}</div>
+                                            <div className="text-xs text-gray-500">{item.inventario_items?.unidad_medida}</div>
+                                          </td>
+                                          <td className="px-3 py-2">{cantidadDisponible.toFixed(2)}</td>
+                                          <td className="px-3 py-2">
+                                            {estaSeleccionado && (
+                                              <input
+                                                type="number"
+                                                value={itemsSeleccionadosRetorno[item.item_id]?.cantidad || ''}
+                                                onChange={(e) => {
+                                                  const cantidad = parseFloat(e.target.value) || 0;
+                                                  if (cantidad >= 0 && cantidad <= cantidadDisponible) {
+                                                    setItemsSeleccionadosRetorno({
+                                                      ...itemsSeleccionadosRetorno,
+                                                      [item.item_id]: { item_id: item.item_id, cantidad }
+                                                    });
+                                                  }
+                                                }}
+                                                min="0"
+                                                max={cantidadDisponible}
+                                                step="0.01"
+                                                className="w-24 px-2 py-1 border border-gray-300 rounded"
+                                              />
+                                            )}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Mobile Cards */}
+                              <div className="md:hidden space-y-2 p-2">
+                                {itemsCategoria.map((item) => {
+                                  const cantidadDisponible = parseFloat(item.cantidad_actual);
+                                  const estaSeleccionado = itemsSeleccionadosRetorno[item.item_id];
+                                  
+                                  return (
+                                    <div 
+                                      key={item.item_id} 
+                                      className={`p-3 rounded border ${estaSeleccionado ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-200'}`}
+                                    >
+                                      <div className="flex items-start gap-3">
+                                        <input
+                                          type="checkbox"
+                                          checked={!!estaSeleccionado}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setItemsSeleccionadosRetorno({
+                                                ...itemsSeleccionadosRetorno,
+                                                [item.item_id]: { 
+                                                  item_id: item.item_id, 
+                                                  cantidad: cantidadDisponible 
+                                                }
+                                              });
+                                            } else {
+                                              const nuevos = { ...itemsSeleccionadosRetorno };
+                                              delete nuevos[item.item_id];
+                                              setItemsSeleccionadosRetorno(nuevos);
+                                            }
+                                          }}
+                                          className="mt-1 rounded"
+                                        />
+                                        <div className="flex-1">
+                                          <div className="font-medium text-sm text-gray-900">{item.inventario_items?.nombre}</div>
+                                          <div className="text-xs text-gray-500 mb-2">
+                                            Disponible: {cantidadDisponible.toFixed(2)} {item.inventario_items?.unidad_medida}
+                                          </div>
+                                          
+                                          {estaSeleccionado && (
+                                            <div className="flex items-center gap-2">
+                                              <label className="text-xs text-gray-600">Retornar:</label>
+                                              <input
+                                                type="number"
+                                                value={itemsSeleccionadosRetorno[item.item_id]?.cantidad || ''}
+                                                onChange={(e) => {
+                                                  const cantidad = parseFloat(e.target.value) || 0;
+                                                  if (cantidad >= 0 && cantidad <= cantidadDisponible) {
+                                                    setItemsSeleccionadosRetorno({
+                                                      ...itemsSeleccionadosRetorno,
+                                                      [item.item_id]: { item_id: item.item_id, cantidad }
+                                                    });
+                                                  }
+                                                }}
+                                                min="0"
+                                                max={cantidadDisponible}
+                                                step="0.01"
+                                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Motivo (opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Motivo del retorno"
+                  id="motivo-retorno"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    const items = Object.values(itemsSeleccionadosRetorno).filter(item => item.cantidad > 0);
+                    if (items.length === 0) {
+                      toast.error('Selecciona al menos un item con cantidad mayor a 0');
+                      return;
+                    }
+                    const motivo = document.getElementById('motivo-retorno')?.value || '';
+                    retornarCentralMutation.mutate({
+                      salon_id: salonId,
+                      items,
+                      motivo: motivo || `Retorno a almacén central desde ${salon.nombre}`
+                    });
+                  }}
+                  disabled={retornarCentralMutation.isPending || Object.keys(itemsSeleccionadosRetorno).length === 0}
+                  className="flex-1 bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {retornarCentralMutation.isPending ? 'Retornando...' : `Retornar (${Object.keys(itemsSeleccionadosRetorno).length} items)`}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowModalAccion(null);
+                    setItemsSeleccionadosRetorno({});
+                    setCategoriasExpandidasRetorno({});
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+      );
+        })()}
     </div>
+    </div >
+  )
+}
+    </div >
   );
 }
 

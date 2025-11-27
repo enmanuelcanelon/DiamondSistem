@@ -1,4 +1,4 @@
- import * as React from "react"
+import * as React from "react"
 import { X } from "lucide-react"
 
 const DialogContext = React.createContext(undefined)
@@ -20,8 +20,8 @@ const Dialog = ({ open, onOpenChange, children, ...props }) => {
   return (
     <DialogContext.Provider value={{ open, onOpenChange }}>
       <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div 
-          className="fixed inset-0 bg-black/50" 
+        <div
+          className="fixed inset-0 bg-black/50"
           onClick={() => onOpenChange?.(false)}
         />
         <div className="relative z-50" {...props}>
@@ -39,7 +39,7 @@ const DialogContent = React.forwardRef(({ className = "", children, ...props }, 
   return (
     <div
       ref={ref}
-      className={`bg-background text-foreground rounded-lg shadow-lg border p-6 w-full mx-4 ${className || 'max-w-lg'}`}
+      className={`bg-background text-foreground shadow-lg border p-6 w-full fixed inset-0 sm:static sm:inset-auto sm:rounded-lg sm:max-w-lg sm:mx-4 overflow-y-auto ${className}`}
       onClick={(e) => e.stopPropagation()}
       {...props}
     >
@@ -85,7 +85,7 @@ const DialogClose = React.forwardRef(({ className = "", ...props }, ref) => {
     <button
       ref={ref}
       onClick={() => context.onOpenChange?.(false)}
-      className={`absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className}`}
+      className={`absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-50 ${className}`}
       {...props}
     >
       <X className="h-4 w-4" />

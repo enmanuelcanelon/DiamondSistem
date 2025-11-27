@@ -175,8 +175,10 @@ function VendedoresGerente() {
       </div>
 
       {/* Lista de Vendedores */}
+      {/* Lista de Vendedores */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Vista Desktop - Tabla */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -266,6 +268,76 @@ function VendedoresGerente() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Vista Móvil - Cards */}
+        <div className="md:hidden space-y-4 p-4">
+          {vendedoresData?.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              No hay vendedores registrados
+            </div>
+          ) : (
+            vendedoresData?.map((vendedor) => (
+              <div key={vendedor.id} className="bg-white border rounded-lg p-4 shadow-sm space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium text-gray-900">{vendedor.nombre_completo}</h3>
+                    <p className="text-sm text-gray-500">{vendedor.codigo_vendedor}</p>
+                  </div>
+                  {vendedor.activo ? (
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 flex items-center gap-1">
+                      <UserCheck className="w-3 h-3" />
+                      Activo
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 flex items-center gap-1">
+                      <UserX className="w-3 h-3" />
+                      Inactivo
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1 text-sm text-gray-600">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Email:</span>
+                    <span>{vendedor.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Teléfono:</span>
+                    <span>{vendedor.telefono || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Comisión:</span>
+                    <span>{parseFloat(vendedor.comision_porcentaje || 0).toFixed(2)}%</span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t flex justify-end gap-3">
+                  <button
+                    onClick={() => handleEditar(vendedor)}
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-full"
+                    title="Editar"
+                  >
+                    <Edit className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleCambiarPassword(vendedor)}
+                    className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-full"
+                    title="Cambiar contraseña"
+                  >
+                    <Key className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => toggleActivo(vendedor)}
+                    className={`p-2 rounded-full ${vendedor.activo ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"}`}
+                    title={vendedor.activo ? "Desactivar" : "Activar"}
+                  >
+                    {vendedor.activo ? <UserX className="w-5 h-5" /> : <UserCheck className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

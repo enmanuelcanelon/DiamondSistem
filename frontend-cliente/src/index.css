@@ -32,11 +32,46 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-black text-white font-sans;
     font-family: 'Inter', sans-serif;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Mobile input optimization - prevent iOS zoom */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Ensure touch targets are at least 44px on mobile */
+  @media (max-width: 768px) {
+
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    a {
+      min-height: 44px;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+      min-width: 20px;
+      min-height: 20px;
+    }
   }
 }
 
@@ -87,6 +122,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);

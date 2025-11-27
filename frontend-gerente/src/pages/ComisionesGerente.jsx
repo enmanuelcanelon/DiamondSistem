@@ -226,7 +226,9 @@ function ComisionesGerente() {
                           <XCircle className="w-5 h-5 text-muted-foreground" />
                           Comisiones Pendientes de Pago ({comisiones_pendientes.length})
                         </h4>
-                        <div className="overflow-x-auto">
+
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                               <tr>
@@ -245,11 +247,10 @@ function ComisionesGerente() {
                                   <td className="px-4 py-3 text-sm text-gray-900">{comision.codigo_contrato}</td>
                                   <td className="px-4 py-3 text-sm text-gray-600">{comision.cliente}</td>
                                   <td className="px-4 py-3 text-sm">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      comision.tipo === 'primera_mitad' 
-                                        ? 'bg-muted text-foreground' 
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${comision.tipo === 'primera_mitad'
+                                        ? 'bg-muted text-foreground'
                                         : 'bg-muted/50 text-muted-foreground'
-                                    }`}>
+                                      }`}>
                                       {comision.tipo === 'primera_mitad' ? 'Primera Mitad' : 'Segunda Mitad'}
                                     </span>
                                   </td>
@@ -270,6 +271,37 @@ function ComisionesGerente() {
                             </tbody>
                           </table>
                         </div>
+
+                        {/* Mobile Cards */}
+                        <div className="md:hidden space-y-3">
+                          {comisiones_pendientes.map((comision, idx) => (
+                            <div key={idx} className="bg-muted/20 border rounded-lg p-3 space-y-2">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium text-gray-900">{comision.cliente}</p>
+                                  <p className="text-xs text-gray-500">{comision.codigo_contrato}</p>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${comision.tipo === 'primera_mitad'
+                                    ? 'bg-muted text-foreground'
+                                    : 'bg-muted/50 text-muted-foreground'
+                                  }`}>
+                                  {comision.tipo === 'primera_mitad' ? '1ª Mitad' : '2ª Mitad'}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <p className="text-gray-500">Comisión Total</p>
+                                  <p className="font-medium">${parseFloat(comision.monto_total || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500">Pendiente</p>
+                                  <p className="font-bold text-red-600">${parseFloat(comision.monto_pendiente || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -280,7 +312,9 @@ function ComisionesGerente() {
                           <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
                           Comisiones Pagadas ({comisiones_pagadas.length})
                         </h4>
-                        <div className="overflow-x-auto">
+
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                               <tr>
@@ -299,11 +333,10 @@ function ComisionesGerente() {
                                   <td className="px-4 py-3 text-sm text-gray-900">{comision.codigo_contrato}</td>
                                   <td className="px-4 py-3 text-sm text-gray-600">{comision.cliente}</td>
                                   <td className="px-4 py-3 text-sm">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      comision.tipo === 'primera_mitad' 
-                                        ? 'bg-muted text-foreground' 
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${comision.tipo === 'primera_mitad'
+                                        ? 'bg-muted text-foreground'
                                         : 'bg-muted/50 text-muted-foreground'
-                                    }`}>
+                                      }`}>
                                       {comision.tipo === 'primera_mitad' ? 'Primera Mitad' : 'Segunda Mitad'}
                                     </span>
                                   </td>
@@ -317,7 +350,7 @@ function ComisionesGerente() {
                                     ${parseFloat(comision.monto_pagado || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                   <td className="px-4 py-3 text-sm text-gray-600">
-                                    {comision.fecha_pago 
+                                    {comision.fecha_pago
                                       ? format(new Date(comision.fecha_pago), 'dd/MM/yyyy', { locale: es })
                                       : '-'}
                                   </td>
@@ -326,16 +359,51 @@ function ComisionesGerente() {
                             </tbody>
                           </table>
                         </div>
+
+                        {/* Mobile Cards */}
+                        <div className="md:hidden space-y-3">
+                          {comisiones_pagadas.map((comision, idx) => (
+                            <div key={idx} className="bg-muted/20 border rounded-lg p-3 space-y-2">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium text-gray-900">{comision.cliente}</p>
+                                  <p className="text-xs text-gray-500">{comision.codigo_contrato}</p>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${comision.tipo === 'primera_mitad'
+                                    ? 'bg-muted text-foreground'
+                                    : 'bg-muted/50 text-muted-foreground'
+                                  }`}>
+                                  {comision.tipo === 'primera_mitad' ? '1ª Mitad' : '2ª Mitad'}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <p className="text-gray-500">Pagado</p>
+                                  <p className="font-bold text-green-600">${parseFloat(comision.monto_pagado || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500">Fecha</p>
+                                  <p className="font-medium">
+                                    {comision.fecha_pago
+                                      ? format(new Date(comision.fecha_pago), 'dd/MM/yyyy', { locale: es })
+                                      : '-'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
-                    {(!comisiones_pendientes || comisiones_pendientes.length === 0) && 
-                     (!comisiones_pagadas || comisiones_pagadas.length === 0) && (
-                      <div className="text-center py-8 text-gray-500">
-                        <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                        <p>No hay comisiones registradas para este vendedor</p>
-                      </div>
-                    )}
+                    {(!comisiones_pendientes || comisiones_pendientes.length === 0) &&
+                      (!comisiones_pagadas || comisiones_pagadas.length === 0) && (
+                        <div className="text-center py-8 text-gray-500">
+                          <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                          <p>No hay comisiones registradas para este vendedor</p>
+                        </div>
+                      )}
                   </div>
                 )}
               </div>

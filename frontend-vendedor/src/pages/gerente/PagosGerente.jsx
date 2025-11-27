@@ -15,7 +15,7 @@ function PagosGerente() {
       const params = {};
       if (fechaDesde) params.fecha_desde = fechaDesde;
       if (fechaHasta) params.fecha_hasta = fechaHasta;
-      
+
       const response = await api.get('/gerentes/pagos', { params });
       return response.data;
     },
@@ -121,7 +121,7 @@ function PagosGerente() {
             Mostrando {pagos.length} pagos
           </p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -156,7 +156,7 @@ function PagosGerente() {
                 pagos.map((pago) => (
                   <tr key={pago.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {pago.fecha_pago 
+                      {pago.fecha_pago
                         ? format(new Date(pago.fecha_pago), 'dd/MM/yyyy', { locale: es })
                         : '-'}
                     </td>
@@ -180,6 +180,52 @@ function PagosGerente() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Vista Móvil - Cards */}
+        <div className="md:hidden space-y-4 p-4">
+          {pagos.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              No hay pagos registrados
+            </div>
+          ) : (
+            pagos.map((pago) => (
+              <div key={pago.id} className="bg-white border rounded-lg p-4 shadow-sm space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium text-gray-900">
+                      {pago.contratos?.clientes?.nombre_completo || 'Cliente desconocido'}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {pago.contratos?.codigo_contrato || '-'}
+                    </p>
+                  </div>
+                  <span className="font-bold text-green-600">
+                    ${parseFloat(pago.monto || 0).toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="space-y-1 text-sm text-gray-600">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Fecha:</span>
+                    <span>
+                      {pago.fecha_pago
+                        ? format(new Date(pago.fecha_pago), 'dd/MM/yyyy', { locale: es })
+                        : '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Vendedor:</span>
+                    <span>{(pago.contratos?.usuarios || pago.contratos?.vendedores)?.nombre_completo || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Método:</span>
+                    <span className="capitalize">{pago.metodo_pago || '-'}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

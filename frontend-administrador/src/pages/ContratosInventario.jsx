@@ -114,9 +114,9 @@ function ContratosInventario() {
   const contratos = contratosData?.contratos || [];
   const contratosFiltrados = searchTerm
     ? contratos.filter(c =>
-        c.codigo_contrato?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.clientes?.nombre_completo?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      c.codigo_contrato?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.clientes?.nombre_completo?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     : contratos;
 
   const contratoSeleccionado = contratos.find(c => c.id === selectedContrato);
@@ -212,11 +212,10 @@ function ContratosInventario() {
                       setSelectedContrato(contrato.id);
                       setCalculadoData(null);
                     }}
-                    className={`border rounded-lg p-4 cursor-pointer transition ${
-                      selectedContrato === contrato.id
+                    className={`border rounded-lg p-4 cursor-pointer transition ${selectedContrato === contrato.id
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold text-gray-900">{contrato.codigo_contrato}</div>
@@ -227,7 +226,7 @@ function ContratosInventario() {
                           fechaHoy.setHours(0, 0, 0, 0);
                           const diasRestantes = Math.ceil((fechaEvento - fechaHoy) / (1000 * 60 * 60 * 24));
                           const necesitaAsignacion = !contrato.asignaciones_inventario || contrato.asignaciones_inventario.length === 0;
-                          
+
                           if (diasRestantes <= 30 && diasRestantes >= 0 && necesitaAsignacion) {
                             return (
                               <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-semibold">
@@ -243,9 +242,8 @@ function ContratosInventario() {
                           }
                           return null;
                         })()}
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          contrato.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${contrato.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
                           {contrato.estado}
                         </span>
                       </div>
@@ -325,24 +323,41 @@ function ContratosInventario() {
                       Items Calculados ({calculadoData.items_calculados?.length || 0})
                     </h4>
                     <div className="max-h-64 overflow-y-auto">
-                      <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50 sticky top-0">
-                          <tr>
-                            <th className="px-3 py-2 text-left">Item</th>
-                            <th className="px-3 py-2 text-left">Cantidad</th>
-                            <th className="px-3 py-2 text-left">Unidad</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {calculadoData.items_calculados?.map((item, idx) => (
-                            <tr key={idx}>
-                              <td className="px-3 py-2">{item.item_nombre}</td>
-                              <td className="px-3 py-2">{item.cantidad_necesaria.toFixed(2)}</td>
-                              <td className="px-3 py-2">{item.unidad_medida}</td>
+                      {/* Desktop Table */}
+                      <div className="hidden md:block overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-gray-50 sticky top-0">
+                            <tr>
+                              <th className="px-3 py-2 text-left">Item</th>
+                              <th className="px-3 py-2 text-left">Cantidad</th>
+                              <th className="px-3 py-2 text-left">Unidad</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {calculadoData.items_calculados?.map((item, idx) => (
+                              <tr key={idx}>
+                                <td className="px-3 py-2">{item.item_nombre}</td>
+                                <td className="px-3 py-2">{item.cantidad_necesaria.toFixed(2)}</td>
+                                <td className="px-3 py-2">{item.unidad_medida}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile Cards */}
+                      <div className="md:hidden space-y-2">
+                        {calculadoData.items_calculados?.map((item, idx) => (
+                          <div key={idx} className="bg-white p-3 rounded border border-gray-200 shadow-sm">
+                            <div className="font-medium text-gray-900 mb-1">{item.item_nombre}</div>
+                            <div className="flex justify-between text-xs text-gray-500">
+                              <span className="font-medium text-blue-600">
+                                {item.cantidad_necesaria.toFixed(2)} {item.unidad_medida}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -360,11 +375,10 @@ function ContratosInventario() {
                           <div className="text-gray-600">
                             {parseFloat(asignacion.cantidad_asignada).toFixed(2)} {asignacion.inventario_items?.unidad_medida}
                             {' - '}
-                            <span className={`${
-                              asignacion.estado === 'asignado' ? 'text-blue-600' :
-                              asignacion.estado === 'utilizado' ? 'text-green-600' :
-                              'text-gray-600'
-                            }`}>
+                            <span className={`${asignacion.estado === 'asignado' ? 'text-blue-600' :
+                                asignacion.estado === 'utilizado' ? 'text-green-600' :
+                                  'text-gray-600'
+                              }`}>
                               {asignacion.estado}
                             </span>
                           </div>

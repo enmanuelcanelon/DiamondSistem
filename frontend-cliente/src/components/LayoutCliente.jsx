@@ -6,9 +6,9 @@ function LayoutCliente() {
   return (
     <div className="min-h-screen bg-black text-white selection:bg-white/20">
       <Sidebar />
-      <div className="pl-64">
+      <div className="lg:pl-64">
         <Header />
-        <main className="pt-24 pb-12">
+        <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>

@@ -194,7 +194,8 @@ function VendedoresGerente() {
 
       {/* Lista de Vendedores */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Vista Desktop - Tabla */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -232,34 +233,34 @@ function VendedoresGerente() {
                 vendedoresData?.map((vendedor) => (
                   <React.Fragment key={vendedor.id}>
                     <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{vendedor.nombre_completo}</div>
-                        <div className="text-sm text-gray-500">{vendedor.codigo_vendedor}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {vendedor.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {vendedor.telefono || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {parseFloat(vendedor.comision_porcentaje || 0).toFixed(2)}%
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {vendedor.activo ? (
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-muted text-foreground flex items-center gap-1 w-fit">
-                          <UserCheck className="w-3 h-3" />
-                          Activo
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-muted/50 text-muted-foreground flex items-center gap-1 w-fit">
-                          <UserX className="w-3 h-3" />
-                          Inactivo
-                        </span>
-                      )}
-                    </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{vendedor.nombre_completo}</div>
+                          <div className="text-sm text-gray-500">{vendedor.codigo_vendedor}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {vendedor.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {vendedor.telefono || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {parseFloat(vendedor.comision_porcentaje || 0).toFixed(2)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {vendedor.activo ? (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-muted text-foreground flex items-center gap-1 w-fit">
+                            <UserCheck className="w-3 h-3" />
+                            Activo
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-muted/50 text-muted-foreground flex items-center gap-1 w-fit">
+                            <UserX className="w-3 h-3" />
+                            Inactivo
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => setVendedoresExpandidos(prev => ({
@@ -282,28 +283,28 @@ function VendedoresGerente() {
                           )}
                         </button>
                       </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button
-                        onClick={() => handleEditar(vendedor)}
-                        className="text-foreground hover:text-muted-foreground"
-                        title="Editar"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleCambiarPassword(vendedor)}
-                        className="text-foreground hover:text-muted-foreground"
-                        title="Cambiar contraseña"
-                      >
-                        <Key className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => toggleActivo(vendedor)}
-                        className="text-foreground hover:text-muted-foreground"
-                        title={vendedor.activo ? "Desactivar" : "Activar"}
-                      >
-                        {vendedor.activo ? <UserX className="w-5 h-5" /> : <UserCheck className="w-5 h-5" />}
-                      </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button
+                          onClick={() => handleEditar(vendedor)}
+                          className="text-foreground hover:text-muted-foreground"
+                          title="Editar"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleCambiarPassword(vendedor)}
+                          className="text-foreground hover:text-muted-foreground"
+                          title="Cambiar contraseña"
+                        >
+                          <Key className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => toggleActivo(vendedor)}
+                          className="text-foreground hover:text-muted-foreground"
+                          title={vendedor.activo ? "Desactivar" : "Activar"}
+                        >
+                          {vendedor.activo ? <UserX className="w-5 h-5" /> : <UserCheck className="w-5 h-5" />}
+                        </button>
                         <button
                           onClick={() => setVendedorAEliminar(vendedor)}
                           className="text-foreground hover:text-muted-foreground"
@@ -363,8 +364,8 @@ function VendedoresGerente() {
                               </div>
                             )}
                           </div>
-                    </td>
-                  </tr>
+                        </td>
+                      </tr>
                     )}
                   </React.Fragment>
                 ))
@@ -372,12 +373,118 @@ function VendedoresGerente() {
             </tbody>
           </table>
         </div>
+
+        {/* Vista Móvil - Cards */}
+        <div className="md:hidden space-y-4 p-4">
+          {vendedoresData?.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              No hay vendedores registrados
+            </div>
+          ) : (
+            vendedoresData?.map((vendedor) => (
+              <div key={vendedor.id} className="bg-white border rounded-lg p-4 shadow-sm space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium text-gray-900">{vendedor.nombre_completo}</h3>
+                    <p className="text-sm text-gray-500">{vendedor.codigo_vendedor}</p>
+                  </div>
+                  {vendedor.activo ? (
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-muted text-foreground flex items-center gap-1">
+                      <UserCheck className="w-3 h-3" />
+                      Activo
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-muted/50 text-muted-foreground flex items-center gap-1">
+                      <UserX className="w-3 h-3" />
+                      Inactivo
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1 text-sm text-gray-600">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Email:</span>
+                    <span>{vendedor.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Teléfono:</span>
+                    <span>{vendedor.telefono || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Comisión:</span>
+                    <span>{parseFloat(vendedor.comision_porcentaje || 0).toFixed(2)}%</span>
+                  </div>
+                </div>
+
+                {/* Comisiones en Móvil */}
+                <div className="pt-2 border-t">
+                  <button
+                    onClick={() => setVendedoresExpandidos(prev => ({
+                      ...prev,
+                      [vendedor.id]: !prev[vendedor.id]
+                    }))}
+                    className="flex items-center justify-between w-full text-sm font-medium text-foreground py-2"
+                  >
+                    <span>Ver Comisiones</span>
+                    {vendedoresExpandidos[vendedor.id] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+
+                  {vendedoresExpandidos[vendedor.id] && vendedor.comisiones && (
+                    <div className="space-y-3 pt-2 pb-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-muted/30 p-2 rounded border">
+                          <p className="text-[10px] text-muted-foreground">Total</p>
+                          <p className="text-sm font-bold">${parseFloat(vendedor.comisiones.total || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                        </div>
+                        <div className="bg-muted/30 p-2 rounded border">
+                          <p className="text-[10px] text-muted-foreground">Desbloqueadas</p>
+                          <p className="text-sm font-bold">${parseFloat(vendedor.comisiones.desbloqueadas || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t flex justify-end gap-3">
+                  <button
+                    onClick={() => handleEditar(vendedor)}
+                    className="p-2 text-foreground hover:bg-muted rounded-full"
+                    title="Editar"
+                  >
+                    <Edit className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleCambiarPassword(vendedor)}
+                    className="p-2 text-foreground hover:bg-muted rounded-full"
+                    title="Cambiar contraseña"
+                  >
+                    <Key className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => toggleActivo(vendedor)}
+                    className="p-2 text-foreground hover:bg-muted rounded-full"
+                    title={vendedor.activo ? "Desactivar" : "Activar"}
+                  >
+                    {vendedor.activo ? <UserX className="w-5 h-5" /> : <UserCheck className="w-5 h-5" />}
+                  </button>
+                  <button
+                    onClick={() => setVendedorAEliminar(vendedor)}
+                    className="p-2 text-foreground hover:bg-muted rounded-full"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Modal Crear/Editar */}
       {mostrarModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white w-full h-full sm:h-auto sm:rounded-lg sm:max-w-md p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">
                 {vendedorEditando ? 'Editar Vendedor' : 'Nuevo Vendedor'}
@@ -492,8 +599,8 @@ function VendedoresGerente() {
 
       {/* Modal Cambiar Contraseña */}
       {mostrarModalPassword && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white w-full h-full sm:h-auto sm:rounded-lg sm:max-w-md p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">
                 Cambiar Contraseña - {vendedorEditando?.nombre_completo}
@@ -554,14 +661,14 @@ function VendedoresGerente() {
                 </button>
               </div>
             </form>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Modal de Confirmación de Eliminación */}
       {vendedorAEliminar && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white w-full h-full sm:h-auto sm:rounded-lg sm:max-w-md p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">
                 Confirmar Eliminación
