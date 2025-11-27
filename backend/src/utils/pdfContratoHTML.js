@@ -34,7 +34,6 @@ async function generarContratoHTML(contrato, lang = 'es') {
   
   // Si photobooth_tipo no está en la oferta, intentar inferirlo desde contratos_servicios
   let photoboothTipoInferido = contrato.ofertas?.photobooth_tipo || null;
-  console.log('🔍 Photobooth tipo desde oferta:', photoboothTipoInferido);
   
   if (!photoboothTipoInferido && contrato.contratos_servicios) {
     // Buscar qué Photobooth está en contratos_servicios con precio 0 (incluido en paquete)
@@ -46,8 +45,6 @@ async function generarContratoHTML(contrato, lang = 'es') {
       return esPhotobooth && precio === 0 && esPaquete;
     });
     
-    console.log('🔍 Photobooths encontrados en contrato (precio 0, incluido en paquete):', photoboothsEnContrato.map(cs => cs.servicios?.nombre));
-    
     if (photoboothsEnContrato.length > 0) {
       const nombrePhotobooth = (photoboothsEnContrato[0].servicios?.nombre || '').toLowerCase();
       if (nombrePhotobooth.includes('360')) {
@@ -55,12 +52,9 @@ async function generarContratoHTML(contrato, lang = 'es') {
       } else if (nombrePhotobooth.includes('print') || nombrePhotobooth.includes('impresión') || nombrePhotobooth.includes('impresion')) {
         photoboothTipoInferido = 'Photobooth Print';
       }
-      console.log('✅ Photobooth tipo inferido:', photoboothTipoInferido);
-    } else {
-      console.log('⚠️ No se encontró Photobooth en contratos_servicios con precio 0');
     }
   }
-
+  
   // Adaptar estructura del contrato para la función de categorización
   // La función espera paquetes_servicios y ofertas_servicios_adicionales o contratos_servicios
   const datosParaCategorizar = {
@@ -72,16 +66,6 @@ async function generarContratoHTML(contrato, lang = 'es') {
   
   const serviciosOrganizados = organizarServiciosPorCategoria(datosParaCategorizar);
 
-  // DEBUG: Verificar qué servicios están llegando
-  const serviciosPaqueteListAntes = Object.values(serviciosOrganizados).flat().filter(s => s.esPaquete === true);
-  const photoboothsEnPaquete = serviciosPaqueteListAntes.filter(s => {
-    const nombre = (s.nombre || s.servicios?.nombre || '').toLowerCase();
-    return nombre.includes('photobooth');
-  });
-  if (photoboothsEnPaquete.length > 1) {
-    console.log('⚠️ ADVERTENCIA: Se encontraron múltiples Photobooth en servicios del paquete:', photoboothsEnPaquete.map(s => s.nombre || s.servicios?.nombre));
-    console.log('Selección Photobooth:', contrato.ofertas?.photobooth_tipo);
-  }
 
   // Preparar servicios del paquete y adicionales usando la misma estructura que ofertas
   // Separar servicios del paquete y adicionales
@@ -1041,9 +1025,6 @@ async function generarContratoHTML(contrato, lang = 'es') {
   }
   const invitadosAdicionales = Math.max(0, cantidadInvitados - invitadosMinimo);
   
-  // DEBUG: Verificar cálculo de invitados adicionales
-  console.log('📊 Invitados - Total:', cantidadInvitados, '| Mínimo:', invitadosMinimo, '| Adicionales:', invitadosAdicionales);
-  
   // Obtener precio por persona adicional según temporada
   let precioPersonaAdicional = 0;
   let montoInvitadosAdicionales = 0;
@@ -1063,9 +1044,6 @@ async function generarContratoHTML(contrato, lang = 'es') {
       precioPersonaAdicional = 52.00; // Baja o Media
     }
     montoInvitadosAdicionales = invitadosAdicionales * precioPersonaAdicional;
-    console.log('💰 Invitados adicionales - Cantidad:', invitadosAdicionales, '| Precio c/u:', precioPersonaAdicional, '| Total:', montoInvitadosAdicionales);
-  } else {
-    console.log('ℹ️ No hay invitados adicionales o el cálculo resultó en 0');
   }
 
   // Recalcular subtotal base incluyendo invitados adicionales
