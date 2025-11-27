@@ -15,7 +15,7 @@ INSERT INTO configuracion_sistema (clave, valor, tipo, descripcion) VALUES
 ('pago_mensual_minimo', '500.00', 'monto', 'Pago mensual mínimo para financiamiento'),
 ('dias_pago_completo', '15', 'texto', 'Días antes del evento para pago completo'),
 ('recargo_tarjeta', '3.8', 'porcentaje', 'Recargo por pago con tarjeta'),
-('comision_vendedor_default', '10.00', 'porcentaje', 'Comisión por defecto para vendedores');
+('comision_vendedor_default', '3.00', 'porcentaje', 'Comisión por defecto para vendedores');
 
 -- ============================================
 -- 2. TEMPORADAS

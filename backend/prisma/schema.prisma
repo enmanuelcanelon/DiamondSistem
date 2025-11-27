@@ -23,7 +23,7 @@ model usuarios {
   fecha_actualizacion DateTime? @default(now()) @db.Timestamp(6)
   
   // Campos específicos para vendedores (nullable)
-  comision_porcentaje Decimal?  @db.Decimal(5, 2)  // Solo para vendedores
+  comision_porcentaje Decimal?  @default(3.00) @db.Decimal(5, 2)  // Solo para vendedores (3% por defecto)
   salario_base        Decimal?  @default(0.00) @db.Decimal(10, 2)
   total_ventas        Decimal?  @default(0.00) @db.Decimal(10, 2)
   total_comisiones    Decimal?  @default(0.00) @db.Decimal(10, 2)
@@ -64,7 +64,7 @@ model vendedores {
   email               String    @unique @db.VarChar(255)
   telefono            String?   @db.VarChar(20)
   password_hash       String    @db.VarChar(255)
-  comision_porcentaje Decimal?  @default(10.00) @db.Decimal(5, 2)
+  comision_porcentaje Decimal?  @default(3.00) @db.Decimal(5, 2)
   salario_base        Decimal?  @default(0.00) @db.Decimal(10, 2)
   total_ventas        Decimal?  @default(0.00) @db.Decimal(10, 2)
   total_comisiones    Decimal?  @default(0.00) @db.Decimal(10, 2)
