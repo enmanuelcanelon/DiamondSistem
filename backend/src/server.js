@@ -62,6 +62,10 @@ if (!fs.existsSync(logsDir)) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy - Necesario para Railway y otros servicios que usan proxy reverso
+// Esto permite que Express confíe en los headers X-Forwarded-* del proxy
+app.set('trust proxy', true);
+
 // Inicializar Prisma Client (singleton)
 const { getPrismaClient, disconnectPrisma } = require('./config/database');
 const prisma = getPrismaClient();

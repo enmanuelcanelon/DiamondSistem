@@ -8,11 +8,26 @@ async function ejecutarSeeds() {
   try {
     console.log('🌱 Ejecutando seeds de base de datos...\n');
 
-    // Leer el archivo SQL (desde backend/scripts/ hasta database/seeds.sql)
-    const seedsPath = path.resolve(__dirname, '../../database/seeds.sql');
+    // Buscar el archivo SQL en múltiples ubicaciones posibles
+    const posiblesRutas = [
+      path.resolve(__dirname, '../seeds.sql'), // backend/seeds.sql (para Railway)
+      path.resolve(__dirname, '../../database/seeds.sql'), // database/seeds.sql (desarrollo local)
+      path.resolve(process.cwd(), 'database/seeds.sql'), // Desde raíz del proyecto
+      path.resolve(process.cwd(), 'backend/seeds.sql') // Desde raíz, backend/seeds.sql
+    ];
+
+    let seedsPath = null;
+    for (const ruta of posiblesRutas) {
+      if (fs.existsSync(ruta)) {
+        seedsPath = ruta;
+        console.log(`📄 Archivo seeds.sql encontrado en: ${ruta}`);
+        break;
+      }
+    }
     
-    if (!fs.existsSync(seedsPath)) {
-      console.log('⚠️  Archivo seeds.sql no encontrado, saltando seeds...');
+    if (!seedsPath) {
+      console.log('⚠️  Archivo seeds.sql no encontrado en ninguna ubicación, saltando seeds...');
+      console.log('   Buscado en:', posiblesRutas.map(r => path.relative(process.cwd(), r)).join(', '));
       return;
     }
 
