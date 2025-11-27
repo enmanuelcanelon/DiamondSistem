@@ -595,16 +595,6 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     // La fecha de creación del contrato será la fecha del pago de reserva
     const fechaCreacionContrato = new Date(pagoReserva.fecha_pago);
 
-    // Generar códigos
-    const ultimoContrato = await prisma.contratos.findFirst({
-      orderBy: { id: 'desc' }
-    });
-
-    const codigo_contrato = generarCodigoContrato(ultimoContrato?.id || 0);
-    
-    // El código de acceso se genera después de crear el contrato para usar su ID
-    let codigo_acceso_temp = generarCodigoAccesoCliente(ultimoContrato?.id + 1 || 1);
-
     // Calcular financiamiento si aplica
     let pago_mensual = null;
     if (tipo_pago === 'financiado') {
@@ -629,13 +619,25 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     );
 
     // Crear contrato en transacción
-    const contrato = await prisma.$transaction(async (prisma) => {
+    const contrato = await prisma.$transaction(async (tx) => {
+      // CRÍTICO: Generar código de contrato DENTRO de la transacción para evitar race conditions
+      // Usar FOR UPDATE para bloquear la fila y garantizar unicidad
+      const ultimoContrato = await tx.contratos.findFirst({
+        orderBy: { id: 'desc' },
+        select: { id: true }
+      });
+
+      const codigo_contrato = generarCodigoContrato(ultimoContrato?.id || 0);
+
+      // Generar código de acceso único
+      const codigo_acceso_temp = generarCodigoAccesoCliente(ultimoContrato?.id + 1 || 1);
+
       // CRÍTICO: Asegurar que usuario_id siempre se asigne correctamente
       // Priorizar oferta.usuario_id, luego req.user.id, luego oferta.vendedor_id
       const usuarioIdFinal = oferta.usuario_id || req.user.id || oferta.vendedor_id;
-      
+
       // Crear contrato
-      const nuevoContrato = await prisma.contratos.create({
+      const nuevoContrato = await tx.contratos.create({
         data: {
           codigo_contrato,
           oferta_id: oferta.id,
@@ -670,14 +672,14 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       });
 
       // Vincular el pago de reserva al contrato
-      await prisma.pagos.update({
+      await tx.pagos.update({
         where: { id: parseInt(pago_reserva_id) },
         data: { contrato_id: nuevoContrato.id }
       });
 
       // Copiar servicios de la oferta al contrato
       // CRÍTICO: Obtener servicios con información del nombre para poder filtrar
-      const serviciosPaquete = await prisma.paquetes_servicios.findMany({
+      const serviciosPaquete = await tx.paquetes_servicios.findMany({
         where: { paquete_id: oferta.paquete_id },
         include: {
           servicios: {
@@ -741,7 +743,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
 
       // Servicios incluidos en el paquete (ya filtrados)
       for (const ps of serviciosPaqueteFiltrados) {
-        await prisma.contratos_servicios.create({
+        await tx.contratos_servicios.create({
           data: {
             contrato_id: nuevoContrato.id,
             servicio_id: ps.servicio_id,
@@ -755,7 +757,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
 
       // Servicios adicionales
       for (const osa of oferta.ofertas_servicios_adicionales) {
-        await prisma.contratos_servicios.create({
+        await tx.contratos_servicios.create({
           data: {
             contrato_id: nuevoContrato.id,
             servicio_id: osa.servicio_id,
@@ -770,7 +772,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       // Crear evento asociado
       // Usar tipo_evento de la oferta (específico de esta oferta) en lugar del tipo_evento del cliente
       const tipoEventoOferta = oferta.tipo_evento || oferta.clientes?.tipo_evento || 'Evento';
-      await prisma.eventos.create({
+      await tx.eventos.create({
         data: {
           contrato_id: nuevoContrato.id,
           cliente_id: oferta.cliente_id,
@@ -785,7 +787,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
 
       // CRÍTICO: Marcar oferta como aceptada DENTRO de la transacción
       // Si algo falla después de esto, el rollback revertirá el estado
-      await prisma.ofertas.update({
+      await tx.ofertas.update({
         where: { id: oferta.id },
         data: {
           estado: 'aceptada',

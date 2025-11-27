@@ -1,6 +1,12 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
+
+// Debug condicional - solo muestra logs en desarrollo
+const debug = process.env.NODE_ENV === 'development'
+  ? (...args) => logger.debug(args.join(' '))
+  : () => {};
 
 /**
  * Genera un PDF de contrato usando HTML + Puppeteer
@@ -1306,7 +1312,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
       const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
       logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 400px; height: auto; opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));">`;
     } catch (error) {
-      console.error('Error al cargar logo:', error);
+      logger.error('Error al cargar logo:', error);
     }
   }
 
@@ -1334,7 +1340,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
             display: block;`;
         hasBackground = true;
     } catch (error) {
-        console.error('Error al cargar fondo Revolution:', error);
+        logger.error('Error al cargar fondo Revolution:', error);
       }
     }
   } else {
@@ -1352,7 +1358,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
               display: block;`;
         hasBackground = true;
       } catch (error) {
-        console.error('Error al cargar fondo Diamond:', error);
+        logger.error('Error al cargar fondo Diamond:', error);
         // Intentar ruta alternativa
         const fondoDiamondPathAlt = path.join(__dirname, '../../../../fondoDiamond.png');
         if (fs.existsSync(fondoDiamondPathAlt)) {
@@ -1367,7 +1373,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
                   display: block;`;
             hasBackground = true;
           } catch (error) {
-            console.error('Error al cargar fondo Diamond desde ruta alternativa:', error);
+            logger.error('Error al cargar fondo Diamond desde ruta alternativa:', error);
           }
         }
       }
@@ -1390,7 +1396,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
               background-repeat: no-repeat;
               opacity: 1;`;
       } catch (error) {
-        console.error('Error al cargar fondo general:', error);
+        logger.error('Error al cargar fondo general:', error);
         packageCardBackground = '';
       }
     }
@@ -1407,7 +1413,7 @@ async function generarContratoHTML(contrato, lang = 'es') {
               background-repeat: no-repeat;
               opacity: 1;`;
       } catch (error) {
-        console.error('Error al cargar fondo Diamond:', error);
+        logger.error('Error al cargar fondo Diamond:', error);
         packageCardBackground = '';
       }
     } else {
@@ -1659,7 +1665,7 @@ function formatearHora(hora) {
     const horas12 = horas > 12 ? horas - 12 : (horas === 0 ? 12 : horas);
     return `${horas12}:${minutos.toString().padStart(2, '0')}${periodo}`;
   } catch (e) {
-    console.error('Error formateando hora:', e, 'Hora recibida:', hora, 'Tipo:', typeof hora);
+    logger.error('Error formateando hora:', e, 'Hora recibida:', hora, 'Tipo:', typeof hora);
     return '8:00PM';
   }
 }
@@ -1764,7 +1770,7 @@ function calcularHoraFinConExtras(horaFinOriginal, horasAdicionales = 0) {
 
     return nuevaHoraFormateada;
   } catch (error) {
-    console.error('Error calculando hora fin con extras:', error);
+    logger.error('Error calculando hora fin con extras:', error);
     return horaFinOriginal;
   }
 }

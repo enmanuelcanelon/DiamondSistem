@@ -232,9 +232,71 @@ GET    /api/temporadas/fecha/:fecha # Obtener temporada por fecha
 
 ## 🔐 Autenticación
 
-La API usa JWT (JSON Web Tokens) para autenticación.
+La API usa JWT (JSON Web Tokens) con sistema de **Refresh Tokens**.
 
-### Login
+### Sistema de Tokens (v2 - Recomendado)
+
+- **Access Token**: Corta duración (15 minutos), usado en cada request
+- **Refresh Token**: Larga duración (7 días), usado para renovar access tokens
+
+### Login con Refresh Tokens (v2)
+
+```http
+POST /api/auth/login-v2/vendedor
+Content-Type: application/json
+
+{
+  "codigo_vendedor": "VEND001",
+  "password": "Admin123!"
+}
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "a1b2c3d4e5f6...",
+  "expiresIn": "15m",
+  "user": {
+    "id": 1,
+    "nombre_completo": "Carlos Rodríguez",
+    "codigo_usuario": "VEND001",
+    "email": "carlos@diamondsistem.com"
+  }
+}
+```
+
+### Renovar Access Token
+
+```http
+POST /api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "a1b2c3d4e5f6..."
+}
+```
+
+### Cerrar Sesión
+
+```http
+POST /api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "a1b2c3d4e5f6..."
+}
+```
+
+### Cerrar Todas las Sesiones
+
+```http
+POST /api/auth/logout-all
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+### Login Legacy (compatibilidad)
 
 ```http
 POST /api/auth/login/vendedor
@@ -411,12 +473,15 @@ La API retorna errores en formato JSON consistente:
 ## 🔒 Seguridad
 
 - ✅ Passwords hasheados con bcrypt (10 rounds)
-- ✅ JWT con expiración de 7 días
-- ✅ CORS configurado
+- ✅ **Sistema de Refresh Tokens** (access 15m + refresh 7d)
+- ✅ Generación de códigos con `crypto.randomBytes()` (criptográficamente seguros)
+- ✅ CORS configurado con validación estricta de orígenes
 - ✅ Validación de entrada
 - ✅ Sanitización de datos
-- ✅ Headers de seguridad
-- ✅ Rate limiting (próximamente)
+- ✅ Headers de seguridad con Helmet.js (HSTS, CSP, Referrer Policy)
+- ✅ **Logging estructurado** con Winston
+- ✅ Validación obligatoria de ENCRYPTION_KEY en producción
+- ✅ Rate limiting
 
 ## 📊 Base de Datos
 
@@ -442,8 +507,8 @@ Para dudas o problemas:
 
 ---
 
-**Versión**: 1.0.0  
-**Última actualización**: Noviembre 2025  
+**Versión**: 3.2.0
+**Última actualización**: Noviembre 2025
 **Desarrollado por**: DiamondSistem Team
 
 

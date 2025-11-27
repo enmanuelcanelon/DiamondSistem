@@ -3,6 +3,7 @@
  */
 
 const axios = require('axios');
+const logger = require('./logger');
 
 // ID del Google Sheet
 const SPREADSHEET_ID = '1UEvesE2KmDZ6kTEKz4J1cv9Aq09nkNaybkAAwFO1z64';
@@ -29,7 +30,7 @@ async function obtenerDatosGoogleSheet() {
     return parsearCSV(response.data);
 
   } catch (error) {
-    console.error('Error al obtener datos de Google Sheets:', error.message);
+    logger.error('Error al obtener datos de Google Sheets', { error: error.message });
     throw new Error(`Error al sincronizar con Google Sheets: ${error.message}`);
   }
 }

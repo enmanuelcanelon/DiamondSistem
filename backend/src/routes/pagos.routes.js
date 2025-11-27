@@ -322,14 +322,18 @@ router.post('/', authenticate, async (req, res, next) => {
       };
     });
 
-    // NUEVO: Recalcular comisiones del vendedor después de registrar el pago
-    // (después de que se complete la transacción)
+    // CRÍTICO: Recalcular comisiones del vendedor después de registrar el pago
+    // Se ejecuta después de la transacción pero con manejo de errores robusto
     try {
       const { calcularComisionesVendedor } = require('../utils/comisionCalculator');
       await calcularComisionesVendedor(contratoIdSanitizado);
     } catch (comisionError) {
-      // No fallar la respuesta si hay error en comisiones (solo loguear)
-      console.error('Error al calcular comisiones después del pago:', comisionError);
+      // Loguear el error pero no fallar la respuesta - las comisiones se pueden recalcular manualmente
+      const logger = require('../utils/logger');
+      logger.error('Error al calcular comisiones después del pago', {
+        contratoId: contratoIdSanitizado,
+        error: comisionError.message
+      });
     }
 
     res.status(201).json({

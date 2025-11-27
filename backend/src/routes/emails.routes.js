@@ -9,6 +9,7 @@ const { authenticate, requireVendedor, requireInventario } = require('../middlew
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const emailService = require('../services/emailService');
 const { generarPDFContrato } = require('../utils/pdfContrato');
+const logger = require('../utils/logger');
 
 const prisma = getPrismaClient();
 
@@ -85,7 +86,7 @@ router.post('/contrato/:id', authenticate, async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('❌ Error al enviar contrato por email:', error);
+    logger.error('Error al enviar contrato por email', { error: error.message });
     next(error);
   }
 });
@@ -141,7 +142,7 @@ router.post('/recordatorio-pago/:id', authenticate, async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('❌ Error al enviar recordatorio de pago:', error);
+    logger.error('Error al enviar recordatorio de pago', { error: error.message });
     next(error);
   }
 });
@@ -185,7 +186,7 @@ router.post('/confirmacion-contrato/:id', authenticate, requireVendedor, async (
     });
 
   } catch (error) {
-    console.error('❌ Error al enviar confirmación:', error);
+    logger.error('Error al enviar confirmación', { error: error.message });
     next(error);
   }
 });
@@ -207,7 +208,7 @@ router.get('/verificar', authenticate, requireVendedor, async (req, res, next) =
     });
 
   } catch (error) {
-    console.error('❌ Error al verificar configuración:', error);
+    logger.error('Error al verificar configuración de email', { error: error.message });
     next(error);
   }
 });

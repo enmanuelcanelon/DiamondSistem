@@ -1,6 +1,12 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
+
+// Debug condicional - solo muestra logs en desarrollo
+const debug = process.env.NODE_ENV === 'development'
+  ? (...args) => logger.debug(args.join(' '))
+  : () => {};
 
 /**
  * Genera una Factura Proforma usando HTML + Puppeteer
@@ -49,14 +55,14 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   
   
   if (!datos.tipo_evento) {
-    console.warn('⚠️ Oferta sin tipo_evento. ID:', datos.id || 'N/A', 'Usando:', datos.clientes?.tipo_evento || 'Event');
+    debug('⚠️ Oferta sin tipo_evento. ID:', datos.id || 'N/A', 'Usando:', datos.clientes?.tipo_evento || 'Event');
   }
   const fechaEvento = new Date(datos.fecha_evento);
   const fechaCreacionOferta = datos.fecha_creacion 
     ? new Date(datos.fecha_creacion).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
     : new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   // Debug temporal para ver qué formato tienen las horas
-  console.log('🔍 Debug horas PDF:', {
+  debug('🔍 Debug horas PDF:', {
     hora_inicio_raw: datos.hora_inicio,
     hora_inicio_type: typeof datos.hora_inicio,
     hora_inicio_isDate: datos.hora_inicio instanceof Date,
@@ -74,7 +80,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   const horaFinConExtras = calcularHoraFinConExtras(datos.hora_fin, horasAdicionales);
   const horaFin = formatearHora(horaFinConExtras);
   
-  console.log('🔍 Horas formateadas:', { horaInicio, horaFin, horasAdicionales, horaFinConExtras });
+  debug('🔍 Horas formateadas:', { horaInicio, horaFin, horasAdicionales, horaFinConExtras });
   const cantidadInvitados = datos.cantidad_invitados || 0;
   const emailCliente = datos.clientes?.email || '';
   // Obtener teléfono del cliente - asegurar que no sea undefined, vacío o 0000000000
@@ -92,7 +98,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   let nombreCompania = 'Diamond Venue';
   const nombreSalon = (salon?.nombre || lugarSalon || '').toLowerCase();
 
-  console.log('🔍 Detección de salón:', {
+  debug('🔍 Detección de salón:', {
     salon_nombre: salon?.nombre,
     lugar_salon: lugarSalon,
     nombreSalon_lowercase: nombreSalon,
@@ -104,26 +110,26 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
       direccionSalon = 'Salón Doral<br>8726 NW 26th St<br>Doral, FL 33172';
       esRevolution = true;
       nombreCompania = 'Revolution Party Venues';
-      console.log('✅ Detectado: Doral (Revolution)');
+      debug('✅ Detectado: Doral (Revolution)');
     } else if (nombreSalon.includes('kendall')) {
       direccionSalon = 'Salón Kendall<br>14271 Southwest 120th Street<br>Kendall, Miami, FL 33186';
       esRevolution = true;
       nombreCompania = 'Revolution Party Venues';
-      console.log('✅ Detectado: Kendall (Revolution)');
+      debug('✅ Detectado: Kendall (Revolution)');
     } else if (nombreSalon.includes('diamond')) {
       direccionSalon = 'Salón Diamond<br>4747 NW 79th Ave<br>Doral, FL 33166';
       esRevolution = false;
       esDiamond = true;
       nombreCompania = 'Diamond Venue';
-      console.log('✅ Detectado: Diamond');
+      debug('✅ Detectado: Diamond');
     } else {
-      console.warn('⚠️ Salón no reconocido:', nombreSalon);
+      debug('⚠️ Salón no reconocido:', nombreSalon);
     }
   } else {
-    console.warn('⚠️ No se pudo determinar el salón. Usando valores por defecto (Diamond)');
+    debug('⚠️ No se pudo determinar el salón. Usando valores por defecto (Diamond)');
   }
 
-  console.log('🔍 Configuración final:', {
+  debug('🔍 Configuración final:', {
     esRevolution,
     esDiamond,
     nombreCompania,
@@ -750,9 +756,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   const serviciosAdicionalesProcesados = procesarServiciosAdicionales(serviciosAdicionales || {});
 
   // DEBUG: Ver qué hay en servicios adicionales
-  console.log('🔍 DEBUG EXTRAS:');
-  console.log('serviciosAdicionales:', Object.keys(serviciosAdicionales).map(k => `${k}: ${serviciosAdicionales[k]?.length || 0}`));
-  console.log('serviciosAdicionalesProcesados:', Object.keys(serviciosAdicionalesProcesados).map(k => `${k}: ${serviciosAdicionalesProcesados[k]?.length || 0}`));
+  debug('🔍 DEBUG EXTRAS:');
+  debug('serviciosAdicionales:', Object.keys(serviciosAdicionales).map(k => `${k}: ${serviciosAdicionales[k]?.length || 0}`));
+  debug('serviciosAdicionalesProcesados:', Object.keys(serviciosAdicionalesProcesados).map(k => `${k}: ${serviciosAdicionalesProcesados[k]?.length || 0}`));
 
   // NOTA: La lógica de Sidra/Champaña ahora se maneja en organizarServiciosPorCategoria usando seleccion_sidra_champana
   // Ya no necesitamos mover servicios entre paquete y extras aquí
@@ -768,7 +774,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   const htmlServiciosAdicionales = serviciosAdicionalesHTML.html;
   const gridStyleExtras = serviciosAdicionalesHTML.gridStyle || 'grid-template-columns: 1fr 1fr 1fr;';
 
-  console.log('htmlServiciosAdicionales length:', htmlServiciosAdicionales?.length || 0);
+  debug('htmlServiciosAdicionales length:', htmlServiciosAdicionales?.length || 0);
 
   // Verificar si el paquete tiene servicios (si no tiene, no mostrar la sección de paquete)
   // Los servicios del paquete ya fueron procesados en organizarServiciosPorCategoria
@@ -779,7 +785,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   // Generar HTML completo de la sección de servicios adicionales si hay servicios (nuevo diseño)
   // serviciosAdicionalesProcesados contiene objetos con arrays de servicios
   const tieneServiciosAdicionales = serviciosAdicionalesProcesados && Object.values(serviciosAdicionalesProcesados).some(arr => Array.isArray(arr) && arr.length > 0);
-  console.log('tieneServiciosAdicionales:', tieneServiciosAdicionales);
+  debug('tieneServiciosAdicionales:', tieneServiciosAdicionales);
   const htmlSeccionAdicionales = tieneServiciosAdicionales
     ? `
     <div class="page page-2">
@@ -809,14 +815,14 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   let logoPath = '';
   if (esRevolution) {
     logoPath = path.join(__dirname, '../templates/assets/Logorevolution.png');
-    console.log('🔍 Intentando cargar logo Revolution desde:', logoPath);
-    console.log('🔍 Ruta absoluta:', path.resolve(logoPath));
-    console.log('🔍 Existe archivo:', fs.existsSync(logoPath));
+    debug('🔍 Intentando cargar logo Revolution desde:', logoPath);
+    debug('🔍 Ruta absoluta:', path.resolve(logoPath));
+    debug('🔍 Existe archivo:', fs.existsSync(logoPath));
   } else if (esDiamond) {
     logoPath = path.join(__dirname, '../../../7.png');
-    console.log('🔍 Intentando cargar logo Diamond desde:', logoPath);
-    console.log('🔍 Ruta absoluta:', path.resolve(logoPath));
-    console.log('🔍 Existe archivo:', fs.existsSync(logoPath));
+    debug('🔍 Intentando cargar logo Diamond desde:', logoPath);
+    debug('🔍 Ruta absoluta:', path.resolve(logoPath));
+    debug('🔍 Existe archivo:', fs.existsSync(logoPath));
   }
 
   let logoHTML = `<div style="font-size: 18px; font-weight: 100; color: #FFFFFF; letter-spacing: 2px;">${nombreCompania}</div>`;
@@ -825,12 +831,12 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
       const logoBuffer = fs.readFileSync(logoPath);
       const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
       logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 400px; height: auto; opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));">`;
-      console.log('✅ Logo cargado correctamente');
+      debug('✅ Logo cargado correctamente');
     } catch (error) {
-      console.error('❌ Error al cargar logo:', error);
+      logger.error('❌ Error al cargar logo:', error);
     }
   } else {
-    console.warn('⚠️ Logo no encontrado en:', logoPath);
+    debug('⚠️ Logo no encontrado en:', logoPath);
   }
 
   // Cargar fondo para portada/header
@@ -848,9 +854,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   if (esRevolution) {
     // Fondo para Revolution - img12.jpg
     const fondoRevolutionPath = path.join(__dirname, '../templates/assets/img12.jpg');
-    console.log('🔍 Intentando cargar fondo Revolution desde:', fondoRevolutionPath);
-    console.log('🔍 Ruta absoluta:', path.resolve(fondoRevolutionPath));
-    console.log('🔍 Existe archivo:', fs.existsSync(fondoRevolutionPath));
+    debug('🔍 Intentando cargar fondo Revolution desde:', fondoRevolutionPath);
+    debug('🔍 Ruta absoluta:', path.resolve(fondoRevolutionPath));
+    debug('🔍 Existe archivo:', fs.existsSync(fondoRevolutionPath));
     
     if (fs.existsSync(fondoRevolutionPath)) {
       try {
@@ -863,15 +869,15 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
               opacity: 1;
               display: block;`;
         hasBackground = true;
-        console.log('✅ Fondo Revolution cargado correctamente');
+        debug('✅ Fondo Revolution cargado correctamente');
       } catch (error) {
-        console.error('❌ Error al cargar fondo Revolution:', error);
+        logger.error('❌ Error al cargar fondo Revolution:', error);
       }
     } else {
-      console.warn('⚠️ Archivo img12.jpg no encontrado en:', fondoRevolutionPath);
+      debug('⚠️ Archivo img12.jpg no encontrado en:', fondoRevolutionPath);
       // Intentar ruta alternativa desde la raíz del proyecto
       const fondoRevolutionPathAlt = path.join(__dirname, '../../../fondoRevolutionGeneral.png');
-      console.log('🔍 Intentando ruta alternativa:', fondoRevolutionPathAlt);
+      debug('🔍 Intentando ruta alternativa:', fondoRevolutionPathAlt);
       if (fs.existsSync(fondoRevolutionPathAlt)) {
         try {
           const fondoBuffer = fs.readFileSync(fondoRevolutionPathAlt);
@@ -883,18 +889,18 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
                 opacity: 1;
                 display: block;`;
           hasBackground = true;
-          console.log('✅ Fondo Revolution cargado desde ruta alternativa');
+          debug('✅ Fondo Revolution cargado desde ruta alternativa');
         } catch (error) {
-          console.error('❌ Error al cargar fondo Revolution desde ruta alternativa:', error);
+          logger.error('❌ Error al cargar fondo Revolution desde ruta alternativa:', error);
         }
       }
     }
   } else if (usaTemplateDiamond) {
     // Fondo para Diamond - fondoDiamond.png (siempre que se use template Diamond)
     const fondoDiamondPath = path.join(__dirname, '../../../fondoDiamond.png');
-    console.log('🔍 Intentando cargar fondo Diamond desde:', fondoDiamondPath);
-    console.log('🔍 Ruta absoluta:', path.resolve(fondoDiamondPath));
-    console.log('🔍 Existe archivo:', fs.existsSync(fondoDiamondPath));
+    debug('🔍 Intentando cargar fondo Diamond desde:', fondoDiamondPath);
+    debug('🔍 Ruta absoluta:', path.resolve(fondoDiamondPath));
+    debug('🔍 Existe archivo:', fs.existsSync(fondoDiamondPath));
     
     if (fs.existsSync(fondoDiamondPath)) {
       try {
@@ -907,15 +913,15 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
               opacity: 1;
               display: block;`;
         hasBackground = true;
-        console.log('✅ Fondo Diamond cargado correctamente');
+        debug('✅ Fondo Diamond cargado correctamente');
       } catch (error) {
-        console.error('❌ Error al cargar fondo Diamond:', error);
+        logger.error('❌ Error al cargar fondo Diamond:', error);
       }
     } else {
-      console.warn('⚠️ Archivo fondoDiamond.png no encontrado en:', fondoDiamondPath);
+      debug('⚠️ Archivo fondoDiamond.png no encontrado en:', fondoDiamondPath);
       // Intentar ruta alternativa desde la raíz del proyecto
       const fondoDiamondPathAlt = path.join(__dirname, '../../../../fondoDiamond.png');
-      console.log('🔍 Intentando ruta alternativa:', fondoDiamondPathAlt);
+      debug('🔍 Intentando ruta alternativa:', fondoDiamondPathAlt);
       if (fs.existsSync(fondoDiamondPathAlt)) {
         try {
           const fondoBuffer = fs.readFileSync(fondoDiamondPathAlt);
@@ -927,9 +933,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
                 opacity: 1;
                 display: block;`;
           hasBackground = true;
-          console.log('✅ Fondo Diamond cargado desde ruta alternativa');
+          debug('✅ Fondo Diamond cargado desde ruta alternativa');
         } catch (error) {
-          console.error('❌ Error al cargar fondo Diamond desde ruta alternativa:', error);
+          logger.error('❌ Error al cargar fondo Diamond desde ruta alternativa:', error);
         }
       }
     }
@@ -941,9 +947,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   if (esRevolution) {
     // Fondo para Revolution - package-card
     const fondoGeneralPath = path.join(__dirname, '../templates/assets/fondoRevolutionGeneral.png');
-    console.log('🔍 Intentando cargar fondo general Revolution desde:', fondoGeneralPath);
-    console.log('🔍 Ruta absoluta:', path.resolve(fondoGeneralPath));
-    console.log('🔍 Existe archivo:', fs.existsSync(fondoGeneralPath));
+    debug('🔍 Intentando cargar fondo general Revolution desde:', fondoGeneralPath);
+    debug('🔍 Ruta absoluta:', path.resolve(fondoGeneralPath));
+    debug('🔍 Existe archivo:', fs.existsSync(fondoGeneralPath));
     
     if (fs.existsSync(fondoGeneralPath)) {
       try {
@@ -954,16 +960,16 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
               background-position: center;
               background-repeat: no-repeat;
               opacity: 1;`;
-        console.log('✅ Fondo general Revolution cargado correctamente');
+        debug('✅ Fondo general Revolution cargado correctamente');
       } catch (error) {
-        console.error('❌ Error al cargar fondo general Revolution:', error);
+        logger.error('❌ Error al cargar fondo general Revolution:', error);
         packageCardBackground = '';
       }
     } else {
-      console.warn('⚠️ Archivo fondoRevolutionGeneral.png no encontrado en:', fondoGeneralPath);
+      debug('⚠️ Archivo fondoRevolutionGeneral.png no encontrado en:', fondoGeneralPath);
       // Intentar ruta alternativa desde la raíz del proyecto
       const fondoGeneralPathAlt = path.join(__dirname, '../../../fondoRevolutionGeneral.png');
-      console.log('🔍 Intentando ruta alternativa:', fondoGeneralPathAlt);
+      debug('🔍 Intentando ruta alternativa:', fondoGeneralPathAlt);
       if (fs.existsSync(fondoGeneralPathAlt)) {
         try {
           const fondoGeneralBuffer = fs.readFileSync(fondoGeneralPathAlt);
@@ -973,9 +979,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
                 background-position: center;
                 background-repeat: no-repeat;
                 opacity: 1;`;
-          console.log('✅ Fondo general Revolution cargado desde ruta alternativa');
+          debug('✅ Fondo general Revolution cargado desde ruta alternativa');
         } catch (error) {
-          console.error('❌ Error al cargar fondo general Revolution desde ruta alternativa:', error);
+          logger.error('❌ Error al cargar fondo general Revolution desde ruta alternativa:', error);
           packageCardBackground = '';
         }
       }
@@ -993,7 +999,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
               background-repeat: no-repeat;
               opacity: 1;`;
       } catch (error) {
-        console.error('Error al cargar fondo Diamond:', error);
+        logger.error('Error al cargar fondo Diamond:', error);
         packageCardBackground = '';
       }
     }
@@ -1083,23 +1089,23 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
   Object.keys(replacements).forEach(key => {
     const value = replacements[key];
     if (key.includes('FONDO_STYLE') || key.includes('PACKAGE_CARD_BACKGROUND')) {
-      console.log('🔍 Reemplazando placeholder:', key);
-      console.log('🔍 Valor a insertar:', value ? value.substring(0, 100) + '...' : 'VACÍO');
+      debug('🔍 Reemplazando placeholder:', key);
+      debug('🔍 Valor a insertar:', value ? value.substring(0, 100) + '...' : 'VACÍO');
     }
     html = html.replace(new RegExp(key, 'g'), value || '');
   });
   
   // Verificar que los reemplazos se hicieron correctamente
   if (html.includes('{{FONDO_STYLE}}')) {
-    console.warn('⚠️ El placeholder {{FONDO_STYLE}} no fue reemplazado');
+    debug('⚠️ El placeholder {{FONDO_STYLE}} no fue reemplazado');
   } else {
-    console.log('✅ Placeholder {{FONDO_STYLE}} reemplazado correctamente');
+    debug('✅ Placeholder {{FONDO_STYLE}} reemplazado correctamente');
   }
   
   if (html.includes('{{PACKAGE_CARD_BACKGROUND}}')) {
-    console.warn('⚠️ El placeholder {{PACKAGE_CARD_BACKGROUND}} no fue reemplazado');
+    debug('⚠️ El placeholder {{PACKAGE_CARD_BACKGROUND}} no fue reemplazado');
   } else {
-    console.log('✅ Placeholder {{PACKAGE_CARD_BACKGROUND}} reemplazado correctamente');
+    debug('✅ Placeholder {{PACKAGE_CARD_BACKGROUND}} reemplazado correctamente');
   }
 
   // Generar PDF con Puppeteer
@@ -1824,7 +1830,7 @@ function formatearHora(hora) {
     const horas12 = horas > 12 ? horas - 12 : (horas === 0 ? 12 : horas);
     return `${horas12}:${minutos.toString().padStart(2, '0')}${periodo}`;
   } catch (e) {
-    console.error('Error formateando hora:', e, 'Hora recibida:', hora, 'Tipo:', typeof hora);
+    logger.error('Error formateando hora:', e, 'Hora recibida:', hora, 'Tipo:', typeof hora);
     return '8:00PM';
   }
 }
@@ -1929,7 +1935,7 @@ function calcularHoraFinConExtras(horaFinOriginal, horasAdicionales = 0) {
 
     return nuevaHoraFormateada;
   } catch (error) {
-    console.error('Error calculando hora fin con extras:', error);
+    logger.error('Error calculando hora fin con extras:', error);
     return horaFinOriginal;
   }
 }

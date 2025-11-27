@@ -4,6 +4,7 @@
  */
 
 const nodemailer = require('nodemailer');
+const logger = require('../utils/logger');
 
 // Configuración del transporter para Proton Mail
 const transporter = nodemailer.createTransport({
@@ -34,7 +35,7 @@ async function verificarConfiguracion() {
     await transporter.verify();
     return true;
   } catch (error) {
-    console.error('❌ Error en configuración de email:', error.message);
+    logger.error('Error en configuración de email', { error: error.message });
     return false;
   }
 }
@@ -127,7 +128,7 @@ async function enviarConfirmacionContrato(destinatario, contrato, cliente) {
 
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error al enviar email de confirmación:', error.message);
+    logger.error('Error al enviar email de confirmación', { error: error.message });
     throw error;
   }
 }
@@ -204,10 +205,10 @@ async function enviarRecordatorioPago(destinatario, contrato, cliente, montoPend
       html,
     });
 
-    console.log('✅ Email de recordatorio enviado:', info.messageId);
+    logger.info('Email de recordatorio enviado', { messageId: info.messageId });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error al enviar recordatorio de pago:', error.message);
+    logger.error('Error al enviar recordatorio de pago', { error: error.message });
     throw error;
   }
 }
@@ -267,10 +268,10 @@ async function enviarNotificacionMensaje(destinatario, remitente, contrato, extr
       html,
     });
 
-    console.log('✅ Notificación de mensaje enviada:', info.messageId);
+    logger.info('Notificación de mensaje enviada', { messageId: info.messageId });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error al enviar notificación de mensaje:', error.message);
+    logger.error('Error al enviar notificación de mensaje', { error: error.message });
     throw error;
   }
 }
@@ -340,10 +341,10 @@ async function enviarContratoPDF(destinatario, contrato, cliente, pdfBuffer) {
       ],
     });
 
-    console.log('✅ Contrato PDF enviado por email:', info.messageId);
+    logger.info('Contrato PDF enviado por email', { messageId: info.messageId });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error al enviar contrato por email:', error.message);
+    logger.error('Error al enviar contrato por email', { error: error.message });
     throw error;
   }
 }

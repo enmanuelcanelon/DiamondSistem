@@ -4,8 +4,16 @@ const { getPrismaClient } = require('../config/database');
 const { authenticate, requireVendedor, requireVendedorOrInventario } = require('../middleware/auth');
 const { NotFoundError } = require('../middleware/errorHandler');
 const { obtenerEventosTodosVendedores } = require('../utils/googleCalendarService');
+const logger = require('../utils/logger');
 
 const prisma = getPrismaClient();
+
+// Debug logging solo en desarrollo
+const debugLog = (...args) => {
+  if (process.env.NODE_ENV === 'development') {
+    logger.debug(args.join(' '));
+  }
+};
 
 // ====================================
 // OBTENER TODOS LOS SALONES ACTIVOS
@@ -325,7 +333,7 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
 router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res, next) => {
   try {
     const { salon_id, fecha_evento, excluir_oferta_id } = req.query;
-    console.log('🔍 /horarios-ocupados - salon_id:', salon_id, '| fecha_evento:', fecha_evento);
+    debugLog('🔍 /horarios-ocupados - salon_id:', salon_id, '| fecha_evento:', fecha_evento);
 
     if (!salon_id || !fecha_evento) {
       return res.status(400).json({
@@ -370,11 +378,11 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       }
       return '';
     };
-
-    console.log('📋 Total contratos obtenidos para salón', salon_id, ':', todosContratos.length);
+    
+    debugLog('📋 Total contratos obtenidos para salón', salon_id, ':', todosContratos.length);
     todosContratos.forEach(c => {
       const fechaStr = extraerFechaStr(c.fecha_evento);
-      console.log(`  - Contrato ${c.codigo_contrato || c.id}: fecha ${fechaStr} (raw: ${c.fecha_evento})`);
+      debugLog(`  - Contrato ${c.codigo_contrato || c.id}: fecha ${fechaStr} (raw: ${c.fecha_evento})`);
     });
 
     // Filtrar contratos que están en la misma fecha exacta
@@ -382,14 +390,14 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       const fechaContratoStr = extraerFechaStr(contrato.fecha_evento);
       const coincide = fechaContratoStr === fechaEventoStr;
       if (coincide) {
-        console.log(`  ✅ Contrato ${contrato.codigo_contrato || contrato.id} coincide con fecha ${fechaEventoStr}`);
+        debugLog(`  ✅ Contrato ${contrato.codigo_contrato || contrato.id} coincide con fecha ${fechaEventoStr}`);
       } else {
-        console.log(`  ❌ Contrato ${contrato.codigo_contrato || contrato.id} NO coincide: fecha contrato ${fechaContratoStr} vs fecha consultada ${fechaEventoStr}`);
+        debugLog(`  ❌ Contrato ${contrato.codigo_contrato || contrato.id} NO coincide: fecha contrato ${fechaContratoStr} vs fecha consultada ${fechaEventoStr}`);
       }
       return coincide;
     });
     
-    console.log('📅 Contratos en fecha', fechaEventoStr, ':', contratosMismaFecha.length);
+    debugLog('📅 Contratos en fecha', fechaEventoStr, ':', contratosMismaFecha.length);
 
     // Obtener todas las ofertas del salón (aceptadas Y pendientes - filtrar por fecha exacta después)
     // IMPORTANTE: Incluir ofertas pendientes porque también bloquean horarios
@@ -404,7 +412,7 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       whereClause.id = { not: parseInt(excluir_oferta_id) };
     }
     
-    console.log('🔍 Query para obtener ofertas:', JSON.stringify(whereClause, null, 2));
+    debugLog('🔍 Query para obtener ofertas:', JSON.stringify(whereClause, null, 2));
     
     const todasOfertas = await prisma.ofertas.findMany({
       where: whereClause,
@@ -434,9 +442,9 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       }
     });
     
-    console.log('📋 Total ofertas obtenidas para salón', salon_id, ':', todasOfertas.length);
+    debugLog('📋 Total ofertas obtenidas para salón', salon_id, ':', todasOfertas.length);
     if (todasOfertas.length === 0) {
-      console.log('⚠️ No se encontraron ofertas. Verificando si hay ofertas con salon_id diferente o null...');
+      debugLog('⚠️ No se encontraron ofertas. Verificando si hay ofertas con salon_id diferente o null...');
       // Verificar si hay ofertas pendientes sin salon_id o con salon_id diferente
       const todasOfertasPendientes = await prisma.ofertas.findMany({
         where: {
@@ -451,32 +459,32 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         },
         take: 10
       });
-      console.log('📋 Total ofertas pendientes en BD (primeras 10):', todasOfertasPendientes.length);
+      debugLog('📋 Total ofertas pendientes en BD (primeras 10):', todasOfertasPendientes.length);
       todasOfertasPendientes.forEach(o => {
         const fechaStr = extraerFechaStr(o.fecha_evento);
-        console.log(`  - Oferta ${o.codigo_oferta || o.id} (salon_id: ${o.salon_id}): fecha ${fechaStr}`);
+        debugLog(`  - Oferta ${o.codigo_oferta || o.id} (salon_id: ${o.salon_id}): fecha ${fechaStr}`);
       });
     }
     
     todasOfertas.forEach(o => {
       const fechaStr = extraerFechaStr(o.fecha_evento);
-      console.log(`  - Oferta ${o.codigo_oferta || o.id} (${o.estado}, salon_id: ${o.salon_id}): fecha ${fechaStr}`);
+      debugLog(`  - Oferta ${o.codigo_oferta || o.id} (${o.estado}, salon_id: ${o.salon_id}): fecha ${fechaStr}`);
     });
 
     // Filtrar ofertas que están en la misma fecha exacta
-    console.log('🔍 Buscando ofertas para fecha:', fechaEventoStr);
+    debugLog('🔍 Buscando ofertas para fecha:', fechaEventoStr);
     const ofertasMismaFecha = todasOfertas.filter(oferta => {
       const fechaOfertaStr = extraerFechaStr(oferta.fecha_evento);
       const coincide = fechaOfertaStr === fechaEventoStr;
       if (coincide) {
-        console.log(`  ✅ Oferta ${oferta.codigo_oferta || oferta.id} (${oferta.estado}) coincide con fecha ${fechaEventoStr}`);
+        debugLog(`  ✅ Oferta ${oferta.codigo_oferta || oferta.id} (${oferta.estado}) coincide con fecha ${fechaEventoStr}`);
       } else {
-        console.log(`  ❌ Oferta ${oferta.codigo_oferta || oferta.id} NO coincide: fecha oferta ${fechaOfertaStr} vs fecha consultada ${fechaEventoStr}`);
+        debugLog(`  ❌ Oferta ${oferta.codigo_oferta || oferta.id} NO coincide: fecha oferta ${fechaOfertaStr} vs fecha consultada ${fechaEventoStr}`);
       }
       return coincide;
     });
     
-    console.log('📅 Ofertas en fecha', fechaEventoStr, ':', ofertasMismaFecha.length);
+    debugLog('📅 Ofertas en fecha', fechaEventoStr, ':', ofertasMismaFecha.length);
 
     // Obtener el nombre del salón para filtrar eventos de Google Calendar
     const salon = await prisma.salones.findUnique({
@@ -512,8 +520,8 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       const nombreSalon = normalizarNombreSalon(salon?.nombre || '');
 
       // Logging para debug
-      console.log('🔍 Filtrando eventos de Google Calendar para salón:', salon?.nombre, '(normalizado:', nombreSalon, ')');
-      console.log('📋 Total eventos obtenidos:', todosEventosCalendar.length);
+      debugLog('🔍 Filtrando eventos de Google Calendar para salón:', salon?.nombre, '(normalizado:', nombreSalon, ')');
+      debugLog('📋 Total eventos obtenidos:', todosEventosCalendar.length);
 
       eventosGoogleCalendar = todosEventosCalendar.filter(evento => {
         // Obtener ubicación del evento
@@ -570,21 +578,21 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         
         // Logging detallado para debug
         if (todosEventosCalendar.length <= 5 || coincide) {
-          console.log(`  📍 Evento: "${evento.titulo}" | Ubicación raw: "${ubicacionRaw}" | Ubicación normalizada: "${ubicacion}" | Coincide: ${coincide}`);
+          debugLog(`  📍 Evento: "${evento.titulo}" | Ubicación raw: "${ubicacionRaw}" | Ubicación normalizada: "${ubicacion}" | Coincide: ${coincide}`);
         }
         
         return coincide;
       });
 
-      console.log('📅 Google Calendar - Eventos encontrados para', salon?.nombre, ':', eventosGoogleCalendar.length);
+      debugLog('📅 Google Calendar - Eventos encontrados para', salon?.nombre, ':', eventosGoogleCalendar.length);
       if (eventosGoogleCalendar.length > 0) {
-        console.log('  ✅ Eventos filtrados:');
+        debugLog('  ✅ Eventos filtrados:');
         eventosGoogleCalendar.forEach(e => {
-          console.log(`    - ${e.titulo} (${e.ubicacion})`);
+          debugLog(`    - ${e.titulo} (${e.ubicacion})`);
         });
       }
     } catch (error) {
-      console.warn('⚠️ Error al obtener eventos de Google Calendar:', error.message);
+      logger.warn('⚠️ Error al obtener eventos de Google Calendar:', error.message);
       // Continuar sin eventos de Google Calendar si hay error
     }
 
@@ -634,7 +642,7 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
           const horas = hora.getUTCHours();
           const minutos = hora.getUTCMinutes();
           horaStr = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
-          console.log('  🔍 Campo Time (Prisma) - usando UTC:', horaStr, '| UTC:', horas, '| Local:', hora.getHours());
+          debugLog('  🔍 Campo Time (Prisma) - usando UTC:', horaStr, '| UTC:', horas, '| Local:', hora.getHours());
         } else {
           // Para otros tipos de Date, usar hora local
           horaStr = hora.toTimeString().slice(0, 5);
@@ -704,7 +712,7 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       // EXCEPTO si el evento termina exactamente a medianoche (00:00)
       // Esto bloquea la hora siguiente para que no se puedan programar otros eventos
       if (!terminaEnMedianoche) {
-        finMin += 60;
+      finMin += 60;
         // Si después de agregar la hora de limpieza, finMin excede las 24 horas (1440 minutos),
         // limitarlo a 23:59 (1439 minutos) del mismo día
         if (finMin >= 1440) {
@@ -743,7 +751,7 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       }
       
       const horaFinConLimpieza = toHora(finMin);
-      console.log('  ⏰ procesarEvento - Hora inicio:', horaInicioStr, '→ minutos:', inicioMin, 
+      debugLog('  ⏰ procesarEvento - Hora inicio:', horaInicioStr, '→ minutos:', inicioMin, 
         '| Hora fin (con extras):', horaFinStr, '| Hora fin (con limpieza):', horaFinConLimpieza, '→ minutos:', finMin,
         '| Termina en medianoche:', terminaEnMedianoche);
       
@@ -766,7 +774,7 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         
         // Si la hora_fin original es 00:00, el evento termina a medianoche, así que solo bloqueamos hasta 23:59
         // No bloqueamos horas adicionales después de medianoche porque el evento ya terminó
-        console.log(`  ⚠️ Evento cruza medianoche - bloqueando solo hasta 23:59 del día actual`);
+        debugLog(`  ⚠️ Evento cruza medianoche - bloqueando solo hasta 23:59 del día actual`);
         rangosOcupados.push({
           inicio: inicioMinAjustado,
           fin: finMinAjustado,
@@ -803,10 +811,10 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         // Si existe, el contrato está mal guardado y el evento de Google Calendar lo reemplazará
         const hayEventoGoogleCalendar = eventosGoogleCalendar.length > 0;
         if (hayEventoGoogleCalendar) {
-          console.log(`  ⚠️ Contrato ${contrato.codigo_contrato || contrato.id} tiene hora_fin 00:00 pero hora_inicio es temprano (${extraerHora(contrato.hora_inicio)})`);
-          console.log(`     Esto sugiere que el contrato está mal guardado.`);
-          console.log(`     Hay ${eventosGoogleCalendar.length} evento(s) de Google Calendar para este día y salón.`);
-          console.log(`     Ignorando el contrato mal guardado y usando el evento de Google Calendar en su lugar.`);
+          debugLog(`  ⚠️ Contrato ${contrato.codigo_contrato || contrato.id} tiene hora_fin 00:00 pero hora_inicio es temprano (${extraerHora(contrato.hora_inicio)})`);
+          debugLog(`     Esto sugiere que el contrato está mal guardado.`);
+          debugLog(`     Hay ${eventosGoogleCalendar.length} evento(s) de Google Calendar para este día y salón.`);
+          debugLog(`     Ignorando el contrato mal guardado y usando el evento de Google Calendar en su lugar.`);
           return false; // Ignorar este contrato mal guardado
         }
       }
@@ -827,15 +835,15 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       // Si el evento termina a medianoche (00:00) y hora_inicio es tarde (después de 20:00),
       // entonces es un evento que realmente cruza medianoche
       if (horaFinMin === 0 && horaInicioMin >= 1200) {
-        console.log(`  ⚠️ ADVERTENCIA: Contrato ${contrato.codigo_contrato || contrato.id} tiene hora_fin 00:00 (medianoche)`);
-        console.log(`     Esto significa que el evento termina a medianoche del día siguiente.`);
-        console.log(`     Procesando de todas formas, pero bloqueando solo hasta 23:59 del día consultado.`);
+        debugLog(`  ⚠️ ADVERTENCIA: Contrato ${contrato.codigo_contrato || contrato.id} tiene hora_fin 00:00 (medianoche)`);
+        debugLog(`     Esto significa que el evento termina a medianoche del día siguiente.`);
+        debugLog(`     Procesando de todas formas, pero bloqueando solo hasta 23:59 del día consultado.`);
       }
       
-      console.log('📅 Procesando contrato:', contrato.codigo_contrato || contrato.id, 
+      debugLog('📅 Procesando contrato:', contrato.codigo_contrato || contrato.id, 
         'de', horaInicioStr, 'a', horaFinStr, 
         horasAdicionales > 0 ? `(+${horasAdicionales}h extras)` : '');
-      console.log(`  🔍 Detalles: hora_inicio minutos: ${horaInicioMin}, hora_fin minutos: ${horaFinMin}`);
+      debugLog(`  🔍 Detalles: hora_inicio minutos: ${horaInicioMin}, hora_fin minutos: ${horaFinMin}`);
       procesarEvento(contrato.hora_inicio, contrato.hora_fin, horasAdicionales);
     });
 
@@ -843,7 +851,7 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     // Una oferta es solo una propuesta, no un evento confirmado
     // Solo cuando se convierte en contrato es que bloquea el horario
     // Por lo tanto, NO procesamos ofertas aquí
-    // console.log('ℹ️ Ofertas no bloquean horas - solo contratos confirmados bloquean horarios');
+    // debugLog('ℹ️ Ofertas no bloquean horas - solo contratos confirmados bloquean horarios');
 
     // Procesar eventos de Google Calendar
     eventosGoogleCalendar.forEach(evento => {
@@ -855,7 +863,7 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
 
         // Verificar que las fechas sean válidas
         if (isNaN(fechaInicioEvento.getTime()) || isNaN(fechaFinEvento.getTime())) {
-          console.warn('⚠️ Evento de Google Calendar con fechas inválidas:', evento.titulo);
+          logger.warn('⚠️ Evento de Google Calendar con fechas inválidas:', evento.titulo);
           return;
         }
 
@@ -876,11 +884,11 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         
         // Comparar con la fecha que se está consultando
         if (fechaInicioEventoStr !== fechaEventoStr) {
-          console.log(`  ⏭️ Evento "${evento.titulo}" no pertenece al día ${fechaEventoStr} (fecha inicio: ${fechaInicioEventoStr}) - saltando`);
+          debugLog(`  ⏭️ Evento "${evento.titulo}" no pertenece al día ${fechaEventoStr} (fecha inicio: ${fechaInicioEventoStr}) - saltando`);
           return; // Saltar eventos que no pertenecen al día consultado
         }
 
-        console.log(`  ✅ Evento "${evento.titulo}" pertenece al día ${fechaEventoStr} - procesando`);
+        debugLog(`  ✅ Evento "${evento.titulo}" pertenece al día ${fechaEventoStr} - procesando`);
 
         // IMPORTANTE: Extraer la hora en la zona horaria de Miami (America/New_York)
         // Los eventos de Google Calendar vienen con timezone en el ISO string (ej: "2025-11-29T13:00:00-05:00")
@@ -905,7 +913,7 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         const horaInicioStr = `${horaInicioH.toString().padStart(2, '0')}:${horaInicioM.toString().padStart(2, '0')}`;
         const horaFinStr = `${horaFinH.toString().padStart(2, '0')}:${horaFinM.toString().padStart(2, '0')}`;
 
-        console.log('📅 Procesando evento Google Calendar:', evento.titulo,
+        debugLog('📅 Procesando evento Google Calendar:', evento.titulo,
           'de', horaInicioStr,
           'a', horaFinStr,
           '| Ubicación:', evento.ubicacion);
@@ -945,8 +953,8 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
           });
         }
       } catch (error) {
-        console.warn('⚠️ Error al procesar evento de Google Calendar:', error);
-        console.warn('  Evento:', evento);
+        logger.warn('⚠️ Error al procesar evento de Google Calendar:', error);
+        logger.warn('  Evento:', evento);
       }
     });
 
@@ -980,13 +988,13 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     const horasOcupadasArray = Array.from(horasOcupadas).sort((a, b) => a - b);
 
     // Logging para debug
-    console.log('📊 Resumen de horarios ocupados:');
-    console.log('  - Total rangos ocupados:', rangosOcupados.length);
+    debugLog('📊 Resumen de horarios ocupados:');
+    debugLog('  - Total rangos ocupados:', rangosOcupados.length);
     rangosOcupados.forEach((r, i) => {
-      console.log(`    ${i + 1}. ${r.inicioHora} - ${r.finHora} (${r.inicio} - ${r.fin} minutos)`);
+      debugLog(`    ${i + 1}. ${r.inicioHora} - ${r.finHora} (${r.inicio} - ${r.fin} minutos)`);
     });
-    console.log('  - Total horas ocupadas:', horasOcupadasArray.length);
-    console.log('  - Horas:', horasOcupadasArray.join(', '));
+    debugLog('  - Total horas ocupadas:', horasOcupadasArray.length);
+    debugLog('  - Horas:', horasOcupadasArray.join(', '));
 
     res.json({
       success: true,

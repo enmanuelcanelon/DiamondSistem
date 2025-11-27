@@ -590,9 +590,13 @@ Password: Inventario123!
 #### Autenticación y Seguridad
 - ✅ Autenticación multi-rol (Vendedor, Cliente, Manager, Gerente, Inventario)
 - ✅ JWT con expiración configurable
+- ✅ **Sistema de Refresh Tokens** (access token 15m + refresh token 7d)
 - ✅ Passwords hasheados con bcrypt
+- ✅ Generación de códigos con `crypto.randomBytes()` (criptográficamente seguros)
 - ✅ Middleware de autorización por rol
 - ✅ Rate limiting y protección CORS
+- ✅ Headers de seguridad con Helmet.js (HSTS, CSP, Referrer Policy)
+- ✅ Logging estructurado con Winston
 
 #### Gestión de Contratos
 - ✅ Creación de ofertas con cálculo automático de precios
@@ -750,12 +754,19 @@ Este script elimina:
 
 ### Autenticación
 ```
-POST /api/auth/login/vendedor      # Login vendedor
-POST /api/auth/login/cliente        # Login cliente
+POST /api/auth/login/vendedor      # Login vendedor (legacy)
+POST /api/auth/login/cliente        # Login cliente (legacy)
 POST /api/auth/login/manager        # Login manager
 POST /api/auth/login/gerente        # Login gerente
 POST /api/auth/login/inventario     # Login administración
 GET  /api/auth/me                   # Usuario actual
+
+# Nuevos endpoints con Refresh Tokens (v2)
+POST /api/auth/login-v2/vendedor   # Login vendedor con refresh tokens
+POST /api/auth/login-v2/cliente    # Login cliente con refresh tokens
+POST /api/auth/refresh             # Renovar access token
+POST /api/auth/logout              # Cerrar sesión (revocar refresh token)
+POST /api/auth/logout-all          # Cerrar todas las sesiones del usuario
 ```
 
 ### Ofertas
@@ -856,15 +867,17 @@ brew services restart postgresql@14
 
 ## 📊 Estado del Proyecto
 
-**Versión**: 3.1.0  
-**Estado**: ✅ **Producción Ready**  
-**Última actualización**: Enero 2025
+**Versión**: 3.2.0
+**Estado**: ✅ **Producción Ready**
+**Última actualización**: Noviembre 2025
 
-### Cambios en esta versión
-- ✅ Migración completa a tabla `usuarios` unificada
-- ✅ Optimizaciones de rendimiento para Supabase
-- ✅ Código limpio y listo para producción
-- ✅ Documentación actualizada
+### Cambios en esta versión (v3.2.0)
+- ✅ **Sistema de Refresh Tokens JWT** (access 15m + refresh 7d)
+- ✅ Generación de códigos criptográficamente seguros (`crypto.randomBytes`)
+- ✅ Logging estructurado con Winston (~60 console.logs reemplazados)
+- ✅ Headers de seguridad mejorados (Helmet.js, HSTS)
+- ✅ Validación obligatoria de ENCRYPTION_KEY en producción
+- ✅ Índices de base de datos optimizados
 
 Ver [CHANGELOG.md](CHANGELOG.md) para detalles completos de cambios.
 

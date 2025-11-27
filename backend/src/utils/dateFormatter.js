@@ -3,6 +3,8 @@
  * Todas las fechas se guardan en formato YYYY-MM-DD
  */
 
+const logger = require('./logger');
+
 /**
  * Convierte cualquier formato de fecha a YYYY-MM-DD
  * @param {Date|string} fecha - Fecha en cualquier formato
@@ -98,7 +100,7 @@ function normalizarFechas(datos) {
       try {
         normalized[campo] = formatearFechaSQL(normalized[campo]);
       } catch (error) {
-        console.error(`Error al normalizar ${campo}:`, error.message);
+        logger.error(`Error al normalizar campo fecha: ${campo}`, { error: error.message });
         throw error;
       }
     }
@@ -110,7 +112,7 @@ function normalizarFechas(datos) {
       try {
         normalized[campo] = formatearTiempoSQL(normalized[campo]);
       } catch (error) {
-        console.error(`Error al normalizar ${campo}:`, error.message);
+        logger.error(`Error al normalizar campo tiempo: ${campo}`, { error: error.message });
         throw error;
       }
     }

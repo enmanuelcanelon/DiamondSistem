@@ -77,11 +77,22 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:", "http:", "blob:"],
+      // Removido 'http:' por seguridad - solo HTTPS en producción
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "https:"],
+      fontSrc: ["'self'", "https:", "data:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
     },
   },
   crossOriginEmbedderPolicy: false, // Permitir PDFs embebidos
   crossOriginResourcePolicy: { policy: "cross-origin" }, // Permitir recursos cross-origin (imágenes)
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
 
 // CORS - Configuración segura
@@ -127,14 +138,6 @@ const corsOptions = {
         callback(null, true);
       } else {
         logger.warn(`CORS bloqueado: ${origin}`);
-        logger.warn(`NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
-        logger.warn(`Orígenes permitidos (strings): ${JSON.stringify(allowedOrigins.filter(a => typeof a === 'string'))}`);
-        logger.warn(`Total orígenes: ${allowedOrigins.length}`);
-        // Si el origen incluye localhost:5177 pero no está en la lista, agregarlo
-        if (origin && origin.includes('localhost:5177') && !isAllowed) {
-          logger.warn(`⚠️ PERMITIENDO ${origin} (frontend-inventario)`);
-          return callback(null, true);
-        }
         callback(new Error('No permitido por CORS'));
       }
     } else {
@@ -194,9 +197,9 @@ app.use('/distribucion_mesas', express.static(path.join(__dirname, '../../inform
 // Servir otros archivos estáticos normalmente
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Body parser con límites de tamaño
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body parser con límites de tamaño más restrictivos
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // Logger de requests
 if (process.env.NODE_ENV === 'development') {

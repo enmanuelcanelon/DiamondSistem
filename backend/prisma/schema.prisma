@@ -434,6 +434,9 @@ model contratos_servicios {
   fecha_agregado      DateTime?  @default(now()) @db.Timestamp(6)
   servicios           servicios? @relation(fields: [servicio_id], references: [id])
   contratos           contratos? @relation(fields: [contrato_id], references: [id])
+
+  @@index([contrato_id], map: "idx_contratos_servicios_contrato")
+  @@index([servicio_id], map: "idx_contratos_servicios_servicio")
 }
 
 model pagos {

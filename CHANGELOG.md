@@ -5,6 +5,40 @@ Todos los cambios notables del proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [3.2.0] - 2025-11-27
+
+### 🔒 Seguridad
+- **Refresh Tokens JWT**: Implementación completa de sistema de refresh tokens
+  - Access tokens de corta duración (15 minutos)
+  - Refresh tokens de larga duración (7 días)
+  - Endpoints `/api/auth/refresh`, `/api/auth/logout`, `/api/auth/logout-all`
+  - Nuevos endpoints v2 para login con refresh tokens
+- **Generación de códigos seguros**: Migración de `Math.random()` a `crypto.randomBytes()` en:
+  - Códigos de contrato
+  - Códigos de acceso de cliente
+  - Códigos de vendedor
+- **Validación de ENCRYPTION_KEY**: Error obligatorio en producción si no está configurada
+- **Mejoras en CORS**: Validación más estricta de orígenes permitidos
+- **Headers de seguridad**: Configuración mejorada de Helmet.js
+  - HSTS habilitado
+  - Referrer Policy estricta
+  - Upgrade Insecure Requests en producción
+
+### 🔧 Mejorado
+- **Logging estructurado**: Reemplazo de ~60 `console.log` por Winston logger en:
+  - auth.routes.js, ajustes.routes.js, leaks.routes.js
+  - contratos.routes.js, clientes.routes.js, pagos.routes.js, salones.routes.js
+  - emailService.js, emails.routes.js
+  - dateFormatter.js, inventarioCalculator.js, googleSheetsService.js
+  - sincronizarLeaks.js, encryption.js
+  - pdfContratoHTML.js, pdfFacturaHTML.js (con función debug() condicional)
+- **Índices de base de datos**: Agregado índice compuesto en `contratos_servicios` para optimizar queries
+
+### 🗑️ Eliminado
+- Archivos temporales de debug: `temp_check_*.js`
+
+---
+
 ## [3.1.0] - 2025-01-XX
 
 ### ✨ Añadido
@@ -107,6 +141,7 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+[3.2.0]: https://github.com/IamEac/DiamondSistem/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/IamEac/DiamondSistem/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/IamEac/DiamondSistem/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/IamEac/DiamondSistem/compare/v1.0.0...v2.0.0

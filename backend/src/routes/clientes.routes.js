@@ -170,6 +170,8 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
     }
 
     // Crear cliente
+    // CRÍTICO: SIEMPRE usar req.user.id - NUNCA permitir que el cliente pase usuario_id
+    // Esto previene que un vendedor cree clientes asignados a otro vendedor
     const cliente = await prisma.clientes.create({
       data: {
         nombre_completo: datos.nombre_completo,
@@ -178,7 +180,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
         direccion: datos.direccion || null,
         como_nos_conocio: datos.como_nos_conocio || null,
         tipo_evento: datos.tipo_evento || null,
-        usuario_id: datos.usuario_id || req.user.id
+        usuario_id: req.user.id // SIEMPRE usar el usuario autenticado
       },
       include: {
         usuarios: {

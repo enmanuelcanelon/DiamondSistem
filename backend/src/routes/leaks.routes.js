@@ -11,6 +11,7 @@ const { authenticate, requireVendedor } = require('../middleware/auth');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const { asignarSalonPorInvitados, validarYCorregirSalon, calcularFechaProximoContacto } = require('../utils/leakAssignment');
 const { obtenerDatosGoogleSheet, procesarCantidadInvitados, procesarSalon } = require('../utils/googleSheetsService');
+const logger = require('../utils/logger');
 
 const prisma = getPrismaClient();
 
@@ -1122,7 +1123,7 @@ router.post('/sincronizar-old', authenticate, requireVendedor, async (req, res, 
             }
           }
         } catch (e) {
-          console.error('Error al parsear fecha_recepcion:', fechaRecepcionExcel, e);
+          logger.warn('Error al parsear fecha_recepcion', { fechaRecepcion: fechaRecepcionExcel, error: e.message });
         }
       }
 

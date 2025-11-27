@@ -3,6 +3,7 @@ const router = express.Router();
 const { getPrismaClient } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { generarPDFAjustesEvento } = require('../utils/pdfAjustesEvento');
+const logger = require('../utils/logger');
 
 const prisma = getPrismaClient();
 
@@ -203,7 +204,7 @@ router.put('/contrato/:contratoId', authenticate, async (req, res, next) => {
       ajustes
     });
   } catch (error) {
-    console.error('Error al actualizar ajustes:', error);
+    logger.error('Error al actualizar ajustes', { error: error.message });
     return res.status(500).json({
       success: false,
       message: 'Error al actualizar los ajustes',

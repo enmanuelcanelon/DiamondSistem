@@ -4,6 +4,7 @@
  */
 
 const { getPrismaClient } = require('../config/database');
+const logger = require('./logger');
 const prisma = getPrismaClient();
 
 // Configuración base por salón (80 invitados)
@@ -235,7 +236,7 @@ const calcularInventarioParaContrato = async (contrato) => {
 
     return itemsCalculados;
   } catch (error) {
-    console.error('Error calculando inventario para contrato:', error);
+    logger.error('Error calculando inventario para contrato', { error: error.message });
     throw error;
   }
 };
@@ -277,7 +278,7 @@ const asignarInventarioAContrato = async (contratoId, itemsCalculados, salonId) 
           fuente = 'central';
         } else {
           // No hay suficiente stock
-          console.warn(`⚠️ Stock insuficiente para ${item.item_nombre}. Necesario: ${item.cantidad_necesaria}, Disponible: ${cantidadDisponible}`);
+          logger.warn('Stock insuficiente para item', { item: item.item_nombre, necesario: item.cantidad_necesaria, disponible: cantidadDisponible });
         }
       }
 
@@ -388,7 +389,7 @@ const asignarInventarioAContrato = async (contratoId, itemsCalculados, salonId) 
 
     return asignaciones;
   } catch (error) {
-    console.error('Error asignando inventario a contrato:', error);
+    logger.error('Error asignando inventario a contrato', { error: error.message });
     throw error;
   }
 };

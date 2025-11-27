@@ -6,6 +6,7 @@
 const { obtenerDatosGoogleSheet, procesarCantidadInvitados, procesarSalon } = require('./googleSheetsService');
 const { validarYCorregirSalon } = require('./leakAssignment');
 const { getPrismaClient } = require('../config/database');
+const logger = require('./logger');
 const prisma = getPrismaClient();
 
 async function sincronizarLeaksAutomaticamente() {
@@ -497,7 +498,7 @@ async function sincronizarLeaksAutomaticamente() {
     };
 
   } catch (error) {
-    console.error('Error en sincronización automática de leaks:', error);
+    logger.error('Error en sincronización automática de leaks', { error: error.message });
     return {
       success: false,
       message: `Error en sincronización: ${error.message}`,

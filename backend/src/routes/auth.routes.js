@@ -6,7 +6,13 @@ const express = require('express');
 const router = express.Router();
 const { getPrismaClient } = require('../config/database');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
-const { generateVendedorToken, generateClienteToken, generateManagerToken, generateGerenteToken, generateInventarioToken, generateUsuarioToken } = require('../utils/jwt');
+const {
+  generateVendedorToken, generateClienteToken, generateManagerToken,
+  generateGerenteToken, generateInventarioToken, generateUsuarioToken,
+  generateUsuarioTokens, generateClienteTokens,
+  verifyRefreshToken, revokeRefreshToken, revokeAllUserTokens,
+  generateAccessToken
+} = require('../utils/jwt');
 const { authenticate, requireVendedor, requireManager, requireGerente, requireInventario } = require('../middleware/auth');
 const { UnauthorizedError, ValidationError, NotFoundError } = require('../middleware/errorHandler');
 
@@ -703,6 +709,260 @@ router.post('/change-password', authenticate, async (req, res, next) => {
     res.json({
       success: true,
       message: 'Contraseña actualizada exitosamente'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/auth/refresh
+ * @desc    Renovar access token usando refresh token
+ * @access  Public
+ */
+router.post('/refresh', async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      throw new ValidationError('Refresh token es requerido');
+    }
+
+    // Verificar refresh token
+    const tokenData = verifyRefreshToken(refreshToken);
+
+    if (!tokenData) {
+      throw new UnauthorizedError('Refresh token inválido o expirado');
+    }
+
+    const { userId, userType } = tokenData;
+
+    // Buscar usuario según tipo
+    let usuario = null;
+    let payload = null;
+
+    if (userType === 'cliente') {
+      // Para clientes, buscar por contrato
+      const contrato = await prisma.contratos.findFirst({
+        where: {
+          clientes: { id: userId }
+        },
+        include: { clientes: true }
+      });
+
+      if (!contrato || !contrato.clientes) {
+        throw new UnauthorizedError('Usuario no encontrado');
+      }
+
+      payload = {
+        id: contrato.clientes.id,
+        tipo: 'cliente',
+        codigoAcceso: contrato.codigo_acceso_cliente,
+        contratoId: contrato.id,
+        email: contrato.clientes.email
+      };
+    } else {
+      // Para otros usuarios, buscar en tabla usuarios
+      usuario = await prisma.usuarios.findUnique({
+        where: { id: userId }
+      });
+
+      if (!usuario) {
+        throw new UnauthorizedError('Usuario no encontrado');
+      }
+
+      if (!usuario.activo) {
+        throw new UnauthorizedError('Cuenta desactivada');
+      }
+
+      payload = {
+        id: usuario.id,
+        tipo: usuario.rol,
+        codigoUsuario: usuario.codigo_usuario,
+        email: usuario.email
+      };
+    }
+
+    // Generar nuevo access token
+    const accessToken = generateAccessToken(payload);
+
+    res.json({
+      success: true,
+      accessToken,
+      expiresIn: '15m'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Cerrar sesión (revocar refresh token)
+ * @access  Public
+ */
+router.post('/logout', async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+      revokeRefreshToken(refreshToken);
+    }
+
+    res.json({
+      success: true,
+      message: 'Sesión cerrada exitosamente'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/auth/logout-all
+ * @desc    Cerrar todas las sesiones del usuario
+ * @access  Private
+ */
+router.post('/logout-all', authenticate, async (req, res, next) => {
+  try {
+    const count = revokeAllUserTokens(req.user.id, req.user.tipo);
+
+    res.json({
+      success: true,
+      message: `Se cerraron ${count} sesiones activas`
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/auth/login-v2/vendedor
+ * @desc    Login de vendedor con refresh tokens (nueva versión)
+ * @access  Public
+ */
+router.post('/login-v2/vendedor', async (req, res, next) => {
+  try {
+    const { codigo_vendedor, password } = req.body;
+
+    if (!codigo_vendedor || !password) {
+      throw new ValidationError('Código de vendedor y contraseña son requeridos');
+    }
+
+    const vendedor = await prisma.usuarios.findFirst({
+      where: {
+        codigo_usuario: codigo_vendedor,
+        rol: 'vendedor'
+      }
+    });
+
+    if (!vendedor) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    if (!vendedor.activo) {
+      throw new UnauthorizedError('Cuenta de vendedor desactivada');
+    }
+
+    const isValidPassword = await comparePassword(password, vendedor.password_hash);
+
+    if (!isValidPassword) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    // Generar par de tokens (access + refresh)
+    const tokens = generateUsuarioTokens(vendedor);
+
+    const { password_hash, ...vendedorData } = vendedor;
+
+    res.json({
+      success: true,
+      message: 'Login exitoso',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      user: vendedorData
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/auth/login-v2/cliente
+ * @desc    Login de cliente con refresh tokens (nueva versión)
+ * @access  Public
+ */
+router.post('/login-v2/cliente', async (req, res, next) => {
+  try {
+    const { codigo_acceso } = req.body;
+
+    if (!codigo_acceso) {
+      throw new ValidationError('Código de acceso es requerido');
+    }
+
+    const contrato = await prisma.contratos.findUnique({
+      where: { codigo_acceso_cliente: codigo_acceso },
+      include: {
+        clientes: true,
+        eventos: true
+      }
+    });
+
+    if (!contrato) {
+      throw new UnauthorizedError('Código de acceso inválido');
+    }
+
+    if (contrato.estado !== 'activo') {
+      throw new UnauthorizedError('El contrato no está activo');
+    }
+
+    // Validar expiración del código
+    if (contrato.fecha_evento) {
+      const fechaEvento = new Date(contrato.fecha_evento);
+      const fechaActual = new Date();
+      const diasDespuesEvento = 30;
+
+      const fechaExpiracion = new Date(fechaEvento);
+      fechaExpiracion.setDate(fechaExpiracion.getDate() + diasDespuesEvento);
+
+      if (fechaActual > fechaExpiracion) {
+        throw new UnauthorizedError(
+          `El código de acceso ha expirado. El evento fue el ${fechaEvento.toLocaleDateString('es-ES')}.`
+        );
+      }
+    }
+
+    // Generar par de tokens
+    const tokens = generateClienteTokens(contrato.clientes, contrato);
+
+    res.json({
+      success: true,
+      message: 'Login exitoso',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      user: {
+        id: contrato.clientes.id,
+        nombre_completo: contrato.clientes.nombre_completo,
+        email: contrato.clientes.email,
+        telefono: contrato.clientes.telefono
+      },
+      contrato: {
+        id: contrato.id,
+        codigo_contrato: contrato.codigo_contrato,
+        fecha_evento: contrato.fecha_evento,
+        total_contrato: contrato.total_contrato,
+        total_pagado: contrato.total_pagado,
+        saldo_pendiente: contrato.saldo_pendiente,
+        estado_pago: contrato.estado_pago
+      },
+      evento: contrato.eventos || null
     });
 
   } catch (error) {
