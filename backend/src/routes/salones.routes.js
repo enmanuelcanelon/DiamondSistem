@@ -164,13 +164,26 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
       }
     });
 
+    // Función helper para extraer fecha sin problemas de zona horaria
+    const extraerFechaStr = (fecha) => {
+      if (!fecha) return '';
+      if (fecha instanceof Date) {
+        // CRÍTICO: Usar métodos locales en lugar de toISOString() para evitar problemas de zona horaria
+        // toISOString() convierte a UTC y puede cambiar el día
+        const año = fecha.getFullYear();
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        const dia = String(fecha.getDate()).padStart(2, '0');
+        return `${año}-${mes}-${dia}`;
+      } else if (typeof fecha === 'string') {
+        // Si es string, extraer solo la parte de fecha
+        return fecha.includes('T') ? fecha.split('T')[0] : fecha;
+      }
+      return '';
+    };
+
     // Filtrar contratos que están en la misma fecha exacta (comparación de fecha sin hora)
     const contratosMismaFecha = todosContratos.filter(contrato => {
-      const fechaContratoStr = contrato.fecha_evento instanceof Date
-        ? contrato.fecha_evento.toISOString().split('T')[0]
-        : contrato.fecha_evento.includes('T')
-          ? contrato.fecha_evento.split('T')[0]
-          : contrato.fecha_evento;
+      const fechaContratoStr = extraerFechaStr(contrato.fecha_evento);
       return fechaContratoStr === fechaEventoStr;
     });
 
@@ -288,8 +301,9 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
         contratos: contratosOcupados.map(c => ({
           codigo: c.codigo_contrato,
           cliente: c.clientes?.nombre_completo,
-          hora_inicio: c.hora_inicio,
-          hora_fin: c.hora_fin
+          hora_inicio: extraerHora(c.hora_inicio),
+          hora_fin: extraerHora(c.hora_fin),
+          fecha_evento: extraerFechaStr(c.fecha_evento)
         })),
         ofertas: ofertasOcupadas.map(o => ({
           codigo: o.codigo_oferta,
@@ -340,26 +354,37 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       }
     });
     
+    // Función helper para extraer fecha sin problemas de zona horaria
+    const extraerFechaStr = (fecha) => {
+      if (!fecha) return '';
+      if (fecha instanceof Date) {
+        // CRÍTICO: Usar métodos locales en lugar de toISOString() para evitar problemas de zona horaria
+        // toISOString() convierte a UTC y puede cambiar el día
+        const año = fecha.getFullYear();
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        const dia = String(fecha.getDate()).padStart(2, '0');
+        return `${año}-${mes}-${dia}`;
+      } else if (typeof fecha === 'string') {
+        // Si es string, extraer solo la parte de fecha
+        return fecha.includes('T') ? fecha.split('T')[0] : fecha;
+      }
+      return '';
+    };
+
     console.log('📋 Total contratos obtenidos para salón', salon_id, ':', todosContratos.length);
     todosContratos.forEach(c => {
-      const fechaStr = c.fecha_evento instanceof Date
-        ? c.fecha_evento.toISOString().split('T')[0]
-        : c.fecha_evento.includes('T')
-          ? c.fecha_evento.split('T')[0]
-          : c.fecha_evento;
-      console.log(`  - Contrato ${c.codigo_contrato || c.id}: fecha ${fechaStr}`);
+      const fechaStr = extraerFechaStr(c.fecha_evento);
+      console.log(`  - Contrato ${c.codigo_contrato || c.id}: fecha ${fechaStr} (raw: ${c.fecha_evento})`);
     });
 
     // Filtrar contratos que están en la misma fecha exacta
     const contratosMismaFecha = todosContratos.filter(contrato => {
-      const fechaContratoStr = contrato.fecha_evento instanceof Date
-        ? contrato.fecha_evento.toISOString().split('T')[0]
-        : contrato.fecha_evento.includes('T')
-          ? contrato.fecha_evento.split('T')[0]
-          : contrato.fecha_evento;
+      const fechaContratoStr = extraerFechaStr(contrato.fecha_evento);
       const coincide = fechaContratoStr === fechaEventoStr;
       if (coincide) {
         console.log(`  ✅ Contrato ${contrato.codigo_contrato || contrato.id} coincide con fecha ${fechaEventoStr}`);
+      } else {
+        console.log(`  ❌ Contrato ${contrato.codigo_contrato || contrato.id} NO coincide: fecha contrato ${fechaContratoStr} vs fecha consultada ${fechaEventoStr}`);
       }
       return coincide;
     });
@@ -428,35 +453,25 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       });
       console.log('📋 Total ofertas pendientes en BD (primeras 10):', todasOfertasPendientes.length);
       todasOfertasPendientes.forEach(o => {
-        const fechaStr = o.fecha_evento instanceof Date
-          ? o.fecha_evento.toISOString().split('T')[0]
-          : o.fecha_evento.includes('T')
-            ? o.fecha_evento.split('T')[0]
-            : o.fecha_evento;
+        const fechaStr = extraerFechaStr(o.fecha_evento);
         console.log(`  - Oferta ${o.codigo_oferta || o.id} (salon_id: ${o.salon_id}): fecha ${fechaStr}`);
       });
     }
     
     todasOfertas.forEach(o => {
-      const fechaStr = o.fecha_evento instanceof Date
-        ? o.fecha_evento.toISOString().split('T')[0]
-        : o.fecha_evento.includes('T')
-          ? o.fecha_evento.split('T')[0]
-          : o.fecha_evento;
+      const fechaStr = extraerFechaStr(o.fecha_evento);
       console.log(`  - Oferta ${o.codigo_oferta || o.id} (${o.estado}, salon_id: ${o.salon_id}): fecha ${fechaStr}`);
     });
 
     // Filtrar ofertas que están en la misma fecha exacta
     console.log('🔍 Buscando ofertas para fecha:', fechaEventoStr);
     const ofertasMismaFecha = todasOfertas.filter(oferta => {
-      const fechaOfertaStr = oferta.fecha_evento instanceof Date
-        ? oferta.fecha_evento.toISOString().split('T')[0]
-        : oferta.fecha_evento.includes('T')
-          ? oferta.fecha_evento.split('T')[0]
-          : oferta.fecha_evento;
+      const fechaOfertaStr = extraerFechaStr(oferta.fecha_evento);
       const coincide = fechaOfertaStr === fechaEventoStr;
       if (coincide) {
         console.log(`  ✅ Oferta ${oferta.codigo_oferta || oferta.id} (${oferta.estado}) coincide con fecha ${fechaEventoStr}`);
+      } else {
+        console.log(`  ❌ Oferta ${oferta.codigo_oferta || oferta.id} NO coincide: fecha oferta ${fechaOfertaStr} vs fecha consultada ${fechaEventoStr}`);
       }
       return coincide;
     });
@@ -679,9 +694,23 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       const inicioMin = toMinutes(horaInicio);
       let finMin = toMinutes(horaFinConExtras);
       
+      // CRÍTICO: Verificar si la hora de fin original es 00:00 (medianoche)
+      // Si es medianoche, el evento termina a medianoche del día siguiente
+      // En ese caso, NO agregamos hora de limpieza después de medianoche
+      const horaFinOriginalMin = toMinutes(horaFin);
+      const terminaEnMedianoche = horaFinOriginalMin === 0 || horaFinOriginalMin === 1440;
+      
       // IMPORTANTE: Agregar 1 hora adicional (60 minutos) para limpieza después del evento
+      // EXCEPTO si el evento termina exactamente a medianoche (00:00)
       // Esto bloquea la hora siguiente para que no se puedan programar otros eventos
-      finMin += 60;
+      if (!terminaEnMedianoche) {
+        finMin += 60;
+        // Si después de agregar la hora de limpieza, finMin excede las 24 horas (1440 minutos),
+        // limitarlo a 23:59 (1439 minutos) del mismo día
+        if (finMin >= 1440) {
+          finMin = 1439; // 23:59 del mismo día
+        }
+      }
       
       // Logging para debug
       let horaInicioStr, horaFinStr;
@@ -715,17 +744,29 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       
       const horaFinConLimpieza = toHora(finMin);
       console.log('  ⏰ procesarEvento - Hora inicio:', horaInicioStr, '→ minutos:', inicioMin, 
-        '| Hora fin (con extras):', horaFinStr, '| Hora fin (con limpieza):', horaFinConLimpieza, '→ minutos:', finMin);
+        '| Hora fin (con extras):', horaFinStr, '| Hora fin (con limpieza):', horaFinConLimpieza, '→ minutos:', finMin,
+        '| Termina en medianoche:', terminaEnMedianoche);
       
       // Determinar si cruza medianoche
-      const cruzaMedianoche = finMin < inicioMin || finMin >= 1440;
+      // CRÍTICO: Si hora_fin es 00:00 (medianoche), significa que el evento termina a medianoche del día siguiente
+      // En ese caso, solo bloqueamos hasta 23:59 del día actual
+      const horaFinOriginal = toMinutes(horaFin);
+      // Solo considerar que cruza medianoche si:
+      // 1. La hora_fin original es menor que la hora_inicio (ej: 20:00 a 02:00)
+      // 2. La hora_fin original es exactamente 00:00 (medianoche)
+      // NO considerar que cruza medianoche solo porque finMin >= 1440, porque eso puede ser por la hora de limpieza
+      const cruzaMedianoche = horaFinOriginal < inicioMin || horaFinOriginal === 0;
       
       if (cruzaMedianoche) {
-        // Evento cruza medianoche (ej: 8 PM a 12 AM + 1 hora limpieza)
+        // Evento cruza medianoche (ej: 8 PM a 12 AM)
+        // IMPORTANTE: Si la hora_fin original es 00:00 (medianoche), el evento termina a medianoche del día siguiente
         // Solo ocupamos desde inicio hasta 23:59 del mismo día (NO el día siguiente)
         const inicioMinAjustado = Math.max(0, inicioMin);
         const finMinAjustado = 1439; // 23:59 del mismo día
         
+        // Si la hora_fin original es 00:00, el evento termina a medianoche, así que solo bloqueamos hasta 23:59
+        // No bloqueamos horas adicionales después de medianoche porque el evento ya terminó
+        console.log(`  ⚠️ Evento cruza medianoche - bloqueando solo hasta 23:59 del día actual`);
         rangosOcupados.push({
           inicio: inicioMinAjustado,
           fin: finMinAjustado,
@@ -748,16 +789,53 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     };
 
     // Procesar contratos (solo los que están en la misma fecha)
-    contratosMismaFecha.forEach(contrato => {
+    // CRÍTICO: Si hay eventos de Google Calendar para el mismo día y salón, verificar si el contrato está mal guardado
+    // Si un contrato tiene hora_fin 00:00 pero hora_inicio es temprano (antes de 20:00),
+    // probablemente está mal guardado y deberíamos usar el evento de Google Calendar si existe
+    const contratosParaProcesar = contratosMismaFecha.filter(contrato => {
+      const horaFinMin = toMinutes(contrato.hora_fin);
+      const horaInicioMin = toMinutes(contrato.hora_inicio);
+      
+      // Si el contrato tiene hora_fin 00:00 y hora_inicio es temprano (antes de 20:00),
+      // probablemente está mal guardado
+      if (horaFinMin === 0 && horaInicioMin > 0 && horaInicioMin < 1200) {
+        // Verificar si hay un evento de Google Calendar para el mismo día y salón
+        // Si existe, el contrato está mal guardado y el evento de Google Calendar lo reemplazará
+        const hayEventoGoogleCalendar = eventosGoogleCalendar.length > 0;
+        if (hayEventoGoogleCalendar) {
+          console.log(`  ⚠️ Contrato ${contrato.codigo_contrato || contrato.id} tiene hora_fin 00:00 pero hora_inicio es temprano (${extraerHora(contrato.hora_inicio)})`);
+          console.log(`     Esto sugiere que el contrato está mal guardado.`);
+          console.log(`     Hay ${eventosGoogleCalendar.length} evento(s) de Google Calendar para este día y salón.`);
+          console.log(`     Ignorando el contrato mal guardado y usando el evento de Google Calendar en su lugar.`);
+          return false; // Ignorar este contrato mal guardado
+        }
+      }
+      return true; // Procesar este contrato
+    });
+    
+    contratosParaProcesar.forEach(contrato => {
       // Calcular horas adicionales del contrato
       const horasAdicionales = obtenerHorasAdicionales(contrato.contratos_servicios || []);
       
       // Logging para debug
       const horaInicioStr = extraerHora(contrato.hora_inicio);
       const horaFinStr = extraerHora(contrato.hora_fin);
+      
+      const horaFinMin = toMinutes(contrato.hora_fin);
+      const horaInicioMin = toMinutes(contrato.hora_inicio);
+      
+      // Si el evento termina a medianoche (00:00) y hora_inicio es tarde (después de 20:00),
+      // entonces es un evento que realmente cruza medianoche
+      if (horaFinMin === 0 && horaInicioMin >= 1200) {
+        console.log(`  ⚠️ ADVERTENCIA: Contrato ${contrato.codigo_contrato || contrato.id} tiene hora_fin 00:00 (medianoche)`);
+        console.log(`     Esto significa que el evento termina a medianoche del día siguiente.`);
+        console.log(`     Procesando de todas formas, pero bloqueando solo hasta 23:59 del día consultado.`);
+      }
+      
       console.log('📅 Procesando contrato:', contrato.codigo_contrato || contrato.id, 
         'de', horaInicioStr, 'a', horaFinStr, 
         horasAdicionales > 0 ? `(+${horasAdicionales}h extras)` : '');
+      console.log(`  🔍 Detalles: hora_inicio minutos: ${horaInicioMin}, hora_fin minutos: ${horaFinMin}`);
       procesarEvento(contrato.hora_inicio, contrato.hora_fin, horasAdicionales);
     });
 
@@ -780,6 +858,29 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
           console.warn('⚠️ Evento de Google Calendar con fechas inválidas:', evento.titulo);
           return;
         }
+
+        // CRÍTICO: Verificar que el evento pertenezca al día específico que se está consultando
+        // Extraer la fecha de inicio del evento (solo fecha, sin hora) en zona horaria de Miami
+        const formatterFecha = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+        
+        const partesFechaInicio = formatterFecha.formatToParts(fechaInicioEvento);
+        const añoInicio = parseInt(partesFechaInicio.find(p => p.type === 'year')?.value || '0', 10);
+        const mesInicio = parseInt(partesFechaInicio.find(p => p.type === 'month')?.value || '0', 10);
+        const diaInicio = parseInt(partesFechaInicio.find(p => p.type === 'day')?.value || '0', 10);
+        const fechaInicioEventoStr = `${añoInicio}-${mesInicio.toString().padStart(2, '0')}-${diaInicio.toString().padStart(2, '0')}`;
+        
+        // Comparar con la fecha que se está consultando
+        if (fechaInicioEventoStr !== fechaEventoStr) {
+          console.log(`  ⏭️ Evento "${evento.titulo}" no pertenece al día ${fechaEventoStr} (fecha inicio: ${fechaInicioEventoStr}) - saltando`);
+          return; // Saltar eventos que no pertenecen al día consultado
+        }
+
+        console.log(`  ✅ Evento "${evento.titulo}" pertenece al día ${fechaEventoStr} - procesando`);
 
         // IMPORTANTE: Extraer la hora en la zona horaria de Miami (America/New_York)
         // Los eventos de Google Calendar vienen con timezone en el ISO string (ej: "2025-11-29T13:00:00-05:00")
@@ -858,8 +959,17 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       const inicioMin = Math.max(0, rango.inicio);
       const finMin = Math.min(1439, rango.fin); // Máximo 23:59 del mismo día
 
-      for (let min = inicioMin; min <= finMin; min += 60) {
-        const hora = Math.floor(min / 60);
+      // CRÍTICO: Incluir todas las horas que estén DENTRO del rango
+      // Si el rango es de 14:00 (840 min) a 20:00 (1200 min), incluir horas 14, 15, 16, 17, 18, 19, 20
+      // Incluir la hora de fin si el rango llega hasta esa hora (incluso si termina exactamente al inicio)
+      // La hora de limpieza significa que el salón está ocupado hasta esa hora, así que debemos incluirla
+      const horaInicio = Math.floor(inicioMin / 60);
+      const horaFin = Math.floor(finMin / 60);
+      
+      // Incluir todas las horas desde horaInicio hasta horaFin (inclusive)
+      // Si el rango termina exactamente a las 20:00 (1200 min), incluir también la hora 20
+      // porque el evento + limpieza ocupa hasta las 20:00, bloqueando esa hora completa
+      for (let hora = horaInicio; hora <= horaFin; hora++) {
         // Asegurar que la hora esté en el rango 0-23
         if (hora >= 0 && hora < 24) {
           horasOcupadas.add(hora);

@@ -641,7 +641,7 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
           oferta_id: oferta.id,
           cliente_id: oferta.cliente_id,
           usuario_id: usuarioIdFinal, // CRÍTICO: Siempre asignar usuario_id
-          vendedor_id: oferta.vendedor_id || usuarioIdFinal, // Mantener para compatibilidad
+          vendedor_id: oferta.vendedor_id || null, // Mantener para compatibilidad (solo si existe en vendedores)
           paquete_id: oferta.paquete_id,
           salon_id: oferta.salon_id || null,
           lugar_salon: oferta.lugar_salon || null,
