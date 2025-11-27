@@ -32,16 +32,56 @@ async function generarContratoHTML(contrato, lang = 'es') {
   // Organizar servicios por categoría (usar la misma función de ofertas)
   const { organizarServiciosPorCategoria, generarFacturaProformaHTML } = require('./pdfFacturaHTML');
   
+  // Si photobooth_tipo no está en la oferta, intentar inferirlo desde contratos_servicios
+  let photoboothTipoInferido = contrato.ofertas?.photobooth_tipo || null;
+  console.log('🔍 Photobooth tipo desde oferta:', photoboothTipoInferido);
+  
+  if (!photoboothTipoInferido && contrato.contratos_servicios) {
+    // Buscar qué Photobooth está en contratos_servicios con precio 0 (incluido en paquete)
+    const photoboothsEnContrato = contrato.contratos_servicios.filter(cs => {
+      const nombre = (cs.servicios?.nombre || '').toLowerCase();
+      const precio = parseFloat(cs.precio_unitario || 0);
+      const esPaquete = cs.incluido_en_paquete === true;
+      const esPhotobooth = nombre.includes('photobooth') || nombre.includes('cabina');
+      return esPhotobooth && precio === 0 && esPaquete;
+    });
+    
+    console.log('🔍 Photobooths encontrados en contrato (precio 0, incluido en paquete):', photoboothsEnContrato.map(cs => cs.servicios?.nombre));
+    
+    if (photoboothsEnContrato.length > 0) {
+      const nombrePhotobooth = (photoboothsEnContrato[0].servicios?.nombre || '').toLowerCase();
+      if (nombrePhotobooth.includes('360')) {
+        photoboothTipoInferido = 'Photobooth 360';
+      } else if (nombrePhotobooth.includes('print') || nombrePhotobooth.includes('impresión') || nombrePhotobooth.includes('impresion')) {
+        photoboothTipoInferido = 'Photobooth Print';
+      }
+      console.log('✅ Photobooth tipo inferido:', photoboothTipoInferido);
+    } else {
+      console.log('⚠️ No se encontró Photobooth en contratos_servicios con precio 0');
+    }
+  }
+
   // Adaptar estructura del contrato para la función de categorización
   // La función espera paquetes_servicios y ofertas_servicios_adicionales o contratos_servicios
   const datosParaCategorizar = {
     paquetes: contrato.paquetes,
     contratos_servicios: contrato.contratos_servicios || [],
     seleccion_sidra_champana: contrato.ofertas?.seleccion_sidra_champana || null,
-    photobooth_tipo: contrato.ofertas?.photobooth_tipo || null
+    photobooth_tipo: photoboothTipoInferido
   };
   
   const serviciosOrganizados = organizarServiciosPorCategoria(datosParaCategorizar);
+
+  // DEBUG: Verificar qué servicios están llegando
+  const serviciosPaqueteListAntes = Object.values(serviciosOrganizados).flat().filter(s => s.esPaquete === true);
+  const photoboothsEnPaquete = serviciosPaqueteListAntes.filter(s => {
+    const nombre = (s.nombre || s.servicios?.nombre || '').toLowerCase();
+    return nombre.includes('photobooth');
+  });
+  if (photoboothsEnPaquete.length > 1) {
+    console.log('⚠️ ADVERTENCIA: Se encontraron múltiples Photobooth en servicios del paquete:', photoboothsEnPaquete.map(s => s.nombre || s.servicios?.nombre));
+    console.log('Selección Photobooth:', contrato.ofertas?.photobooth_tipo);
+  }
 
   // Preparar servicios del paquete y adicionales usando la misma estructura que ofertas
   // Separar servicios del paquete y adicionales
@@ -95,16 +135,70 @@ async function generarContratoHTML(contrato, lang = 'es') {
     }
   });
 
+  // Obtener selecciones para filtrar servicios del paquete (usar el valor inferido si está disponible)
+  const seleccionPhotobooth = photoboothTipoInferido || contrato.ofertas?.photobooth_tipo || null;
+  const seleccionSidraChampana = contrato.ofertas?.seleccion_sidra_champana || null;
+
+  // Función helper para filtrar servicios del paquete basándose en selecciones
+  const filtrarServiciosPaquete = (servicios) => {
+    return servicios.filter(servicio => {
+      // Obtener nombre del servicio de diferentes posibles ubicaciones
+      const nombreServicio = (servicio.nombre || servicio.servicios?.nombre || servicio.descripcion || servicio.servicios?.descripcion || '').toLowerCase();
+      
+      // Filtrar Photobooth: solo incluir el seleccionado
+      if (seleccionPhotobooth) {
+        const esPhotobooth360 = nombreServicio.includes('photobooth 360') || nombreServicio.includes('cabina 360') || 
+                                (nombreServicio.includes('360') && (nombreServicio.includes('photobooth') || nombreServicio.includes('cabina')));
+        const esPhotoboothPrint = nombreServicio.includes('photobooth print') || 
+                                 (nombreServicio.includes('photobooth') && (nombreServicio.includes('print') || nombreServicio.includes('impresión') || nombreServicio.includes('impresion'))) || 
+                                 (nombreServicio.includes('cabina') && (nombreServicio.includes('impresión') || nombreServicio.includes('impresion')));
+        
+        if (esPhotobooth360 || esPhotoboothPrint) {
+          const seleccionNormalizada = String(seleccionPhotobooth).toLowerCase();
+          const esSeleccion360 = seleccionNormalizada.includes('360');
+          const esSeleccionPrint = seleccionNormalizada.includes('print') || seleccionNormalizada.includes('impresión') || seleccionNormalizada.includes('impresion');
+          
+          // Si es Photobooth 360 pero se seleccionó Print, excluir
+          if (esPhotobooth360 && esSeleccionPrint) {
+            return false;
+          }
+          // Si es Photobooth Print pero se seleccionó 360, excluir
+          if (esPhotoboothPrint && esSeleccion360) {
+            return false;
+          }
+        }
+      }
+      
+      // Filtrar Sidra/Champaña: solo incluir el seleccionado
+      if (seleccionSidraChampana) {
+        const esSidra = nombreServicio.includes('sidra') || nombreServicio.includes('cider');
+        const esChampana = nombreServicio.includes('champaña') || nombreServicio.includes('champagne');
+        
+        // Si es Sidra pero se seleccionó Champaña, excluir
+        if (esSidra && seleccionSidraChampana === 'Champaña') {
+          return false;
+        }
+        // Si es Champaña pero se seleccionó Sidra, excluir
+        if (esChampana && seleccionSidraChampana === 'Sidra') {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  };
+
   // Preparar estructura para generarHTMLServicios (igual que ofertas)
+  // Aplicar filtro de Photobooth y Sidra/Champaña antes de pasar a generarHTMLServicios
   const serviciosPaquete = {
-    venue: serviciosOrganizados.venue.filter(s => s.esPaquete === true),
-    cake: serviciosOrganizados.cake.filter(s => s.esPaquete === true),
-    decoration: serviciosOrganizados.decoration.filter(s => s.esPaquete === true),
-    specials: serviciosOrganizados.specials.filter(s => s.esPaquete === true),
-    barService: serviciosOrganizados.barService.filter(s => s.esPaquete === true),
-    catering: serviciosOrganizados.catering.filter(s => s.esPaquete === true),
-    serviceCoord: serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === true),
-    personal: serviciosOrganizados.personal ? serviciosOrganizados.personal.filter(s => s.esPaquete === true) : []
+    venue: filtrarServiciosPaquete(serviciosOrganizados.venue.filter(s => s.esPaquete === true)),
+    cake: filtrarServiciosPaquete(serviciosOrganizados.cake.filter(s => s.esPaquete === true)),
+    decoration: filtrarServiciosPaquete(serviciosOrganizados.decoration.filter(s => s.esPaquete === true)),
+    specials: filtrarServiciosPaquete(serviciosOrganizados.specials.filter(s => s.esPaquete === true)),
+    barService: filtrarServiciosPaquete(serviciosOrganizados.barService.filter(s => s.esPaquete === true)),
+    catering: filtrarServiciosPaquete(serviciosOrganizados.catering.filter(s => s.esPaquete === true)),
+    serviceCoord: filtrarServiciosPaquete(serviciosOrganizados.serviceCoord.filter(s => s.esPaquete === true)),
+    personal: serviciosOrganizados.personal ? filtrarServiciosPaquete(serviciosOrganizados.personal.filter(s => s.esPaquete === true)) : []
   };
 
   // Filtrar servicios adicionales: solo los que están en serviciosAdicionalesIds
@@ -431,6 +525,10 @@ async function generarContratoHTML(contrato, lang = 'es') {
       transporte: {}
     };
 
+    // Obtener selecciones de Photobooth y Sidra/Champaña para filtrar (usar el valor inferido si está disponible)
+    const seleccionPhotobooth = photoboothTipoInferido || contrato.ofertas?.photobooth_tipo || null;
+    const seleccionSidraChampana = contrato.ofertas?.seleccion_sidra_champana || null;
+
     // Procesar todos los servicios y mapearlos a las nuevas categorías
     // IMPORTANTE: Solo procesar servicios que corresponden (esPaquete debe coincidir)
     Object.values(serviciosPorCategoria).flat().forEach(servicio => {
@@ -452,8 +550,89 @@ async function generarContratoHTML(contrato, lang = 'es') {
         if (!esPaquete && servicioEsPaquete) return; // Si es extra, solo servicios adicionales
       }
 
+      // Filtrar Photobooth: solo mostrar el seleccionado en el paquete
+      if (esPaquete && seleccionPhotobooth) {
+        const esPhotobooth360 = nombreServicio.includes('photobooth 360') || nombreServicio.includes('cabina 360') || 
+                                (nombreServicio.includes('360') && (nombreServicio.includes('photobooth') || nombreServicio.includes('cabina')));
+        const esPhotoboothPrint = nombreServicio.includes('photobooth print') || 
+                                 (nombreServicio.includes('photobooth') && (nombreServicio.includes('print') || nombreServicio.includes('impresión') || nombreServicio.includes('impresion'))) || 
+                                 (nombreServicio.includes('cabina') && (nombreServicio.includes('impresión') || nombreServicio.includes('impresion')));
+        
+        if (esPhotobooth360 || esPhotoboothPrint) {
+          const seleccionNormalizada = String(seleccionPhotobooth).toLowerCase();
+          const esSeleccion360 = seleccionNormalizada.includes('360');
+          const esSeleccionPrint = seleccionNormalizada.includes('print') || seleccionNormalizada.includes('impresión') || seleccionNormalizada.includes('impresion');
+          
+          // Si es Photobooth 360 pero se seleccionó Print, excluir
+          if (esPhotobooth360 && esSeleccionPrint) {
+            return;
+          }
+          // Si es Photobooth Print pero se seleccionó 360, excluir
+          if (esPhotoboothPrint && esSeleccion360) {
+            return;
+          }
+        }
+      }
+
+      // Filtrar Sidra/Champaña: solo mostrar el seleccionado en el paquete
+      if (esPaquete && seleccionSidraChampana) {
+        const esSidra = nombreServicio.includes('sidra') || nombreServicio.includes('cider');
+        const esChampana = nombreServicio.includes('champaña') || nombreServicio.includes('champagne');
+        
+        // Si es Sidra pero se seleccionó Champaña, excluir
+        if (esSidra && seleccionSidraChampana === 'Champaña') {
+          return;
+        }
+        // Si es Champaña pero se seleccionó Sidra, excluir
+        if (esChampana && seleccionSidraChampana === 'Sidra') {
+          return;
+        }
+      }
+
       const mapeo = mapearServicioACategoria(servicio);
       if (mapeo) {
+        // Filtrar Photobooth y Sidra/Champaña DESPUÉS del mapeo
+        // Si estamos generando el paquete, aplicar filtro adicional
+        if (esPaquete) {
+          // Filtrar Photobooth: solo incluir el seleccionado
+          if (seleccionPhotobooth && mapeo.categoria === 'fotografia') {
+            const itemLower = mapeo.item.toLowerCase();
+            const esPhotobooth360 = itemLower.includes('photobooth 360') || itemLower.includes('360');
+            const esPhotoboothPrint = itemLower.includes('photobooth print') || (itemLower.includes('photobooth') && itemLower.includes('print'));
+            
+            if (esPhotobooth360 || esPhotoboothPrint) {
+              const seleccionNormalizada = String(seleccionPhotobooth).toLowerCase();
+              const esSeleccion360 = seleccionNormalizada.includes('360');
+              const esSeleccionPrint = seleccionNormalizada.includes('print') || seleccionNormalizada.includes('impresión') || seleccionNormalizada.includes('impresion');
+              
+              // Si es Photobooth 360 pero se seleccionó Print, excluir
+              if (esPhotobooth360 && esSeleccionPrint) {
+                return; // Saltar este servicio
+              }
+              // Si es Photobooth Print pero se seleccionó 360, excluir
+              if (esPhotoboothPrint && esSeleccion360) {
+                return; // Saltar este servicio
+              }
+            }
+          }
+          
+          // Filtrar Sidra/Champaña: solo incluir el seleccionado
+          if (seleccionSidraChampana && mapeo.categoria === 'bebidas') {
+            const itemLower = mapeo.item.toLowerCase();
+            const esSidra = itemLower.includes('sidra') || itemLower.includes('cider');
+            const esChampana = itemLower.includes('champaña') || itemLower.includes('champagne');
+            
+            // Si es Sidra pero se seleccionó Champaña, excluir
+            if (esSidra && seleccionSidraChampana === 'Champaña') {
+              return; // Saltar este servicio
+            }
+            // Si es Champaña pero se seleccionó Sidra, excluir
+            if (esChampana && seleccionSidraChampana === 'Sidra') {
+              return; // Saltar este servicio
+            }
+          }
+        }
+        
         // Contar servicios duplicados para mostrar cantidad
         // Usar un objeto para contar en lugar de un array simple
         if (!serviciosOrganizados[mapeo.categoria]) {
@@ -467,6 +646,49 @@ async function generarContratoHTML(contrato, lang = 'es') {
         serviciosOrganizados[mapeo.categoria][mapeo.item] += cantidadServicio;
       }
     });
+
+    // Aplicar filtro de Photobooth y Sidra/Champaña en el objeto final de servicios organizados
+    // Esto asegura que solo se muestre el seleccionado, incluso si ambos llegaron al mapeo
+    if (esPaquete && seleccionPhotobooth) {
+      if (serviciosOrganizados.fotografia) {
+        const itemsFotografia = serviciosOrganizados.fotografia;
+        const seleccionNormalizada = String(seleccionPhotobooth).toLowerCase();
+        const esSeleccion360 = seleccionNormalizada.includes('360');
+        const esSeleccionPrint = seleccionNormalizada.includes('print') || seleccionNormalizada.includes('impresión') || seleccionNormalizada.includes('impresion');
+        
+        // Eliminar el Photobooth no seleccionado del objeto
+        Object.keys(itemsFotografia).forEach(item => {
+          const itemLower = item.toLowerCase();
+          const esPhotobooth360 = itemLower.includes('photobooth 360') || (itemLower.includes('photobooth') && itemLower.includes('360'));
+          const esPhotoboothPrint = itemLower.includes('photobooth print') || (itemLower.includes('photobooth') && itemLower.includes('print'));
+          
+          if (esPhotobooth360 && esSeleccionPrint) {
+            delete itemsFotografia[item];
+          } else if (esPhotoboothPrint && esSeleccion360) {
+            delete itemsFotografia[item];
+          }
+        });
+      }
+    }
+    
+    if (esPaquete && seleccionSidraChampana) {
+      if (serviciosOrganizados.bebidas) {
+        const itemsBebidas = serviciosOrganizados.bebidas;
+        
+        // Eliminar la bebida no seleccionada del objeto
+        Object.keys(itemsBebidas).forEach(item => {
+          const itemLower = item.toLowerCase();
+          const esSidra = itemLower.includes('sidra') || itemLower.includes('cider');
+          const esChampana = itemLower.includes('champaña') || itemLower.includes('champagne');
+          
+          if (esSidra && seleccionSidraChampana === 'Champaña') {
+            delete itemsBebidas[item];
+          } else if (esChampana && seleccionSidraChampana === 'Sidra') {
+            delete itemsBebidas[item];
+          }
+        });
+      }
+    }
 
     // Verificar si hay servicios organizados (si no hay, retornar HTML vacío)
     // Ahora serviciosOrganizados contiene objetos con cantidades, no arrays
@@ -776,7 +998,8 @@ async function generarContratoHTML(contrato, lang = 'es') {
   let totalFinal = parseFloat(contrato.total_contrato || 0);
 
   if (oferta) {
-    precioPaquete = parseFloat(oferta.precio_paquete_base || oferta.precio_base_ajustado || 0);
+    // Obtener precio del paquete desde la oferta, con fallback al paquete del contrato
+    precioPaquete = parseFloat(oferta.precio_paquete_base || oferta.precio_base_ajustado || contrato.paquetes?.precio_base || 0);
     ajusteTemporada = parseFloat(oferta.ajuste_temporada_custom || oferta.ajuste_temporada || 0);
     // Usar el total calculado de servicios adicionales del contrato en lugar del de la oferta
     subtotalServicios = totalServiciosAdicionalesCalculado;
@@ -787,11 +1010,66 @@ async function generarContratoHTML(contrato, lang = 'es') {
     tarifaServicioMonto = parseFloat(oferta.tarifa_servicio_monto || 0);
     totalFinal = parseFloat(oferta.total_final || contrato.total_contrato || 0);
   } else {
-    // Si no hay oferta, usar el total calculado
+    // Si no hay oferta, usar valores del contrato o paquete como fallback
+    precioPaquete = parseFloat(contrato.paquetes?.precio_base || 0);
+    ajusteTemporada = 0;
     subtotalServicios = totalServiciosAdicionalesCalculado;
+    descuento = 0;
+    impuestoPorcentaje = 7;
+    // Si no hay oferta, calcular impuestos y tarifa de servicio desde el total
+    const subtotalSinImpuestos = precioPaquete + subtotalServicios;
+    if (subtotalSinImpuestos > 0 && totalFinal > 0) {
+      // Calcular impuestos y tarifa de servicio proporcionalmente
+      const diferencia = totalFinal - subtotalSinImpuestos;
+      impuestoMonto = (diferencia * impuestoPorcentaje) / (impuestoPorcentaje + tarifaServicioPorcentaje);
+      tarifaServicioMonto = (diferencia * tarifaServicioPorcentaje) / (impuestoPorcentaje + tarifaServicioPorcentaje);
+    } else {
+      impuestoMonto = 0;
+      tarifaServicioMonto = 0;
+    }
+    tarifaServicioPorcentaje = 18;
+    totalFinal = parseFloat(contrato.total_contrato || 0);
   }
 
-  const subtotalBase = precioPaquete + ajusteTemporada + subtotalServicios - descuento;
+  // Calcular invitados adicionales (cantidadInvitados ya está declarado arriba)
+  // Usar el valor de la oferta si está disponible, de lo contrario usar el del paquete o 60 por defecto
+  // NOTA: Algunos paquetes pueden tener invitados_minimo incorrecto en la BD, usar 60 como estándar para Diamond
+  let invitadosMinimo = 60; // Valor por defecto estándar
+  if (contrato.paquetes?.invitados_minimo && contrato.paquetes.invitados_minimo > 0) {
+    // Si el paquete tiene un valor válido, usarlo, pero si es mayor a 60, usar 60 (estándar Diamond)
+    invitadosMinimo = Math.min(contrato.paquetes.invitados_minimo, 60);
+  }
+  const invitadosAdicionales = Math.max(0, cantidadInvitados - invitadosMinimo);
+  
+  // DEBUG: Verificar cálculo de invitados adicionales
+  console.log('📊 Invitados - Total:', cantidadInvitados, '| Mínimo:', invitadosMinimo, '| Adicionales:', invitadosAdicionales);
+  
+  // Obtener precio por persona adicional según temporada
+  let precioPersonaAdicional = 0;
+  let montoInvitadosAdicionales = 0;
+  if (invitadosAdicionales > 0) {
+    // Obtener temporada de la oferta o calcular desde el ajuste de temporada
+    let temporadaNombre = '';
+    if (oferta && oferta.temporadas) {
+      temporadaNombre = oferta.temporadas.nombre || '';
+    } else if (ajusteTemporada > 0) {
+      // Si hay ajuste de temporada, probablemente es temporada alta
+      temporadaNombre = 'Alta';
+    }
+    
+    if (temporadaNombre === 'Alta' || ajusteTemporada > 0) {
+      precioPersonaAdicional = 80.00;
+    } else {
+      precioPersonaAdicional = 52.00; // Baja o Media
+    }
+    montoInvitadosAdicionales = invitadosAdicionales * precioPersonaAdicional;
+    console.log('💰 Invitados adicionales - Cantidad:', invitadosAdicionales, '| Precio c/u:', precioPersonaAdicional, '| Total:', montoInvitadosAdicionales);
+  } else {
+    console.log('ℹ️ No hay invitados adicionales o el cálculo resultó en 0');
+  }
+
+  // Recalcular subtotal base incluyendo invitados adicionales
+  const subtotalBase = precioPaquete + ajusteTemporada + montoInvitadosAdicionales + subtotalServicios - descuento;
   const totalContrato = parseFloat(contrato.total_contrato || 0);
   const totalPagado = parseFloat(contrato.total_pagado || 0);
   const saldoPendiente = parseFloat(contrato.saldo_pendiente || 0);
@@ -811,6 +1089,12 @@ async function generarContratoHTML(contrato, lang = 'es') {
     investmentBreakdownDivs += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColor};">
       <span style="font-size: 15px; color: ${textColor}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">Ajuste de Temporada</span>
       <span style="font-size: 16px; color: ${textColor}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${ajusteTemporada.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+    </div>`;
+  }
+  if (montoInvitadosAdicionales > 0) {
+    investmentBreakdownDivs += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid ${borderColor};">
+      <span style="font-size: 15px; color: ${textColor}; font-weight: 400; font-family: '${fontFamily}', sans-serif;">${invitadosAdicionales} Invitados Adicionales ($${precioPersonaAdicional.toFixed(2)} c/u)</span>
+      <span style="font-size: 16px; color: ${textColor}; font-weight: 500; font-family: '${fontFamily}', sans-serif; text-align: right;">$${montoInvitadosAdicionales.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
     </div>`;
   }
   if (subtotalServicios > 0) {
@@ -844,6 +1128,9 @@ async function generarContratoHTML(contrato, lang = 'es') {
   investmentBreakdown += `<tr class="info-table-row"><td class="info-table-label">Precio del Paquete</td><td class="info-table-value">$${precioPaquete.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td></tr>`;
   if (ajusteTemporada !== 0) {
     investmentBreakdown += `<tr class="info-table-row"><td class="info-table-label">Ajuste de Temporada</td><td class="info-table-value">$${ajusteTemporada.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td></tr>`;
+  }
+  if (montoInvitadosAdicionales > 0) {
+    investmentBreakdown += `<tr class="info-table-row"><td class="info-table-label">${invitadosAdicionales} Invitados Adicionales ($${precioPersonaAdicional.toFixed(2)} c/u)</td><td class="info-table-value">$${montoInvitadosAdicionales.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td></tr>`;
   }
   if (subtotalServicios > 0) {
     investmentBreakdown += `<tr class="info-table-row"><td class="info-table-label">Servicios Adicionales/Extras</td><td class="info-table-value">$${subtotalServicios.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td></tr>`;

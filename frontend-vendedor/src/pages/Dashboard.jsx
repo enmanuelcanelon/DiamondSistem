@@ -153,42 +153,44 @@ function Dashboard() {
   const { data: contratosData, isLoading: isLoadingContratos } = useQuery({
     queryKey: ['contratos-dashboard', user?.id, mesSeleccionado, añoSeleccionado],
     queryFn: async () => {
-      // Obtener todos los contratos y filtrar por fecha_creacion_contrato
-      const response = await api.get('/contratos', {
-        params: {
-          page: 1,
-          limit: 1000
-        }
-      });
-      
-      // Filtrar contratos por fecha del primer pago de $500 del mes seleccionado
-      const todosContratos = response.data?.data || [];
+      // Calcular fechas del mes seleccionado
       const fechaInicioMes = new Date(añoSeleccionado, mesSeleccionado - 1, 1);
       fechaInicioMes.setHours(0, 0, 0, 0);
       const fechaFinMes = new Date(añoSeleccionado, mesSeleccionado, 0, 23, 59, 59);
       
+      // Obtener todos los contratos creados en el mes seleccionado (fecha_creacion_contrato)
+      const response = await api.get('/contratos', {
+        params: {
+          page: 1,
+          limit: 1000,
+          fecha_creacion_desde: fechaInicioMes.toISOString().split('T')[0],
+          fecha_creacion_hasta: fechaFinMes.toISOString().split('T')[0]
+        }
+      });
+      
+      // Filtrar contratos por fecha_creacion_contrato del mes seleccionado
+      const todosContratos = response.data?.data || [];
       const contratosFiltrados = todosContratos.filter(contrato => {
-        // Obtener el primer pago de $500 o más
-        if (!contrato.pagos || contrato.pagos.length === 0) return false;
+        if (!contrato.fecha_creacion_contrato) return false;
         
-        // Buscar el primer pago completado de $500 o más
-        const primerPago500 = contrato.pagos.find(pago => 
-          pago.estado === 'completado' && 
-          parseFloat(pago.monto_total || 0) >= 500
-        );
-        
-        if (!primerPago500 || !primerPago500.fecha_pago) return false;
-        
-        const fechaPrimerPago = new Date(primerPago500.fecha_pago);
-        const fechaPrimerPagoNormalizada = new Date(fechaPrimerPago.getFullYear(), fechaPrimerPago.getMonth(), fechaPrimerPago.getDate());
+        const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
+        const fechaCreacionNormalizada = new Date(fechaCreacion.getFullYear(), fechaCreacion.getMonth(), fechaCreacion.getDate());
         const fechaInicioNormalizada = new Date(fechaInicioMes.getFullYear(), fechaInicioMes.getMonth(), fechaInicioMes.getDate());
         const fechaFinNormalizada = new Date(fechaFinMes.getFullYear(), fechaFinMes.getMonth(), fechaFinMes.getDate());
-        return fechaPrimerPagoNormalizada >= fechaInicioNormalizada && fechaPrimerPagoNormalizada <= fechaFinNormalizada;
+        
+        return fechaCreacionNormalizada >= fechaInicioNormalizada && fechaCreacionNormalizada <= fechaFinNormalizada;
+      });
+      
+      // Ordenar por fecha_creacion_contrato descendente (más recientes primero)
+      contratosFiltrados.sort((a, b) => {
+        const fechaA = new Date(a.fecha_creacion_contrato || 0);
+        const fechaB = new Date(b.fecha_creacion_contrato || 0);
+        return fechaB - fechaA;
       });
       
       return {
         ...response.data,
-        data: contratosFiltrados.slice(0, 10) // Solo mostrar los primeros 10
+        data: contratosFiltrados // Mostrar todos los contratos del mes
       };
     },
     enabled: !!user?.id,

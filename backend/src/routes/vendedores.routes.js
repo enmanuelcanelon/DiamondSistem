@@ -1222,8 +1222,14 @@ router.get('/:id/comisiones', authenticate, requireVendedor, async (req, res, ne
     );
 
     // Obtener contratos con pagos
+    // CRÍTICO: Usar OR para incluir tanto usuario_id (nuevo) como vendedor_id (deprecated)
     const contratos = await prisma.contratos.findMany({
-      where: { vendedor_id: vendedorId },
+      where: {
+        OR: [
+          { usuario_id: vendedorId },
+          { vendedor_id: vendedorId }
+        ]
+      },
       include: {
         clientes: {
           select: {

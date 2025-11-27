@@ -23,7 +23,7 @@ const prisma = getPrismaClient();
  */
 router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next) => {
   try {
-    const { cliente_id, estado, estado_pago, fecha_desde, fecha_hasta, search, salon_id, alerta_30_dias } = req.query;
+    const { cliente_id, estado, estado_pago, fecha_desde, fecha_hasta, fecha_creacion_desde, fecha_creacion_hasta, search, salon_id, alerta_30_dias } = req.query;
 
     // Si es vendedor, solo ver sus contratos. Si es inventario, ver todos
     const where = {};
@@ -81,6 +81,17 @@ router.get('/', authenticate, requireVendedorOrInventario, async (req, res, next
       }
       if (fecha_hasta) {
         where.fecha_evento.lte = new Date(fecha_hasta + 'T23:59:59');
+      }
+    }
+
+    // Filtro por fecha de creación del contrato
+    if (fecha_creacion_desde || fecha_creacion_hasta) {
+      where.fecha_creacion_contrato = {};
+      if (fecha_creacion_desde) {
+        where.fecha_creacion_contrato.gte = new Date(fecha_creacion_desde);
+      }
+      if (fecha_creacion_hasta) {
+        where.fecha_creacion_contrato.lte = new Date(fecha_creacion_hasta + 'T23:59:59');
       }
     }
 
@@ -619,14 +630,18 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
 
     // Crear contrato en transacción
     const contrato = await prisma.$transaction(async (prisma) => {
+      // CRÍTICO: Asegurar que usuario_id siempre se asigne correctamente
+      // Priorizar oferta.usuario_id, luego req.user.id, luego oferta.vendedor_id
+      const usuarioIdFinal = oferta.usuario_id || req.user.id || oferta.vendedor_id;
+      
       // Crear contrato
       const nuevoContrato = await prisma.contratos.create({
         data: {
           codigo_contrato,
           oferta_id: oferta.id,
           cliente_id: oferta.cliente_id,
-          usuario_id: oferta.usuario_id, // Usar usuario_id en lugar de vendedor_id (deprecated)
-          vendedor_id: oferta.vendedor_id, // Mantener para compatibilidad
+          usuario_id: usuarioIdFinal, // CRÍTICO: Siempre asignar usuario_id
+          vendedor_id: oferta.vendedor_id || usuarioIdFinal, // Mantener para compatibilidad
           paquete_id: oferta.paquete_id,
           salon_id: oferta.salon_id || null,
           lugar_salon: oferta.lugar_salon || null,
@@ -661,12 +676,71 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
       });
 
       // Copiar servicios de la oferta al contrato
+      // CRÍTICO: Obtener servicios con información del nombre para poder filtrar
       const serviciosPaquete = await prisma.paquetes_servicios.findMany({
-        where: { paquete_id: oferta.paquete_id }
+        where: { paquete_id: oferta.paquete_id },
+        include: {
+          servicios: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          }
+        }
       });
 
-      // Servicios incluidos en el paquete
-      for (const ps of serviciosPaquete) {
+      // Obtener selecciones de Photobooth y Sidra/Champaña de la oferta
+      const seleccionPhotobooth = oferta.photobooth_tipo || null;
+      const seleccionSidraChampana = oferta.seleccion_sidra_champana || null;
+
+      // Filtrar servicios del paquete basándose en las selecciones
+      const serviciosPaqueteFiltrados = serviciosPaquete.filter(ps => {
+        const nombreServicio = (ps.servicios?.nombre || '').toLowerCase();
+        
+        // Filtrar Photobooth: solo incluir el seleccionado
+        if (seleccionPhotobooth) {
+          const esPhotobooth360 = nombreServicio.includes('photobooth 360') || nombreServicio.includes('cabina 360') || 
+                                  (nombreServicio.includes('360') && (nombreServicio.includes('photobooth') || nombreServicio.includes('cabina')));
+          const esPhotoboothPrint = nombreServicio.includes('photobooth print') || 
+                                   (nombreServicio.includes('photobooth') && (nombreServicio.includes('print') || nombreServicio.includes('impresión') || nombreServicio.includes('impresion'))) || 
+                                   (nombreServicio.includes('cabina') && (nombreServicio.includes('impresión') || nombreServicio.includes('impresion')));
+          
+          if (esPhotobooth360 || esPhotoboothPrint) {
+            const seleccionNormalizada = String(seleccionPhotobooth).toLowerCase();
+            const esSeleccion360 = seleccionNormalizada.includes('360');
+            const esSeleccionPrint = seleccionNormalizada.includes('print') || seleccionNormalizada.includes('impresión') || seleccionNormalizada.includes('impresion');
+            
+            // Si es Photobooth 360 pero se seleccionó Print, excluir
+            if (esPhotobooth360 && esSeleccionPrint) {
+              return false;
+            }
+            // Si es Photobooth Print pero se seleccionó 360, excluir
+            if (esPhotoboothPrint && esSeleccion360) {
+              return false;
+            }
+          }
+        }
+        
+        // Filtrar Sidra/Champaña: solo incluir el seleccionado
+        if (seleccionSidraChampana) {
+          const esSidra = nombreServicio.includes('sidra') || nombreServicio.includes('cider');
+          const esChampana = nombreServicio.includes('champaña') || nombreServicio.includes('champagne');
+          
+          // Si es Sidra pero se seleccionó Champaña, excluir
+          if (esSidra && seleccionSidraChampana === 'Champaña') {
+            return false;
+          }
+          // Si es Champaña pero se seleccionó Sidra, excluir
+          if (esChampana && seleccionSidraChampana === 'Sidra') {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+
+      // Servicios incluidos en el paquete (ya filtrados)
+      for (const ps of serviciosPaqueteFiltrados) {
         await prisma.contratos_servicios.create({
           data: {
             contrato_id: nuevoContrato.id,
@@ -976,6 +1050,19 @@ router.get('/:id/pdf-contrato', authenticate, async (req, res, next) => {
             id: true,
             tipo_evento: true,
             codigo_oferta: true,
+            precio_paquete_base: true,
+            precio_base_ajustado: true,
+            ajuste_temporada: true,
+            ajuste_temporada_custom: true,
+            subtotal_servicios: true,
+            descuento: true,
+            impuesto_porcentaje: true,
+            impuesto_monto: true,
+            tarifa_servicio_porcentaje: true,
+            tarifa_servicio_monto: true,
+            total_final: true,
+            photobooth_tipo: true,
+            seleccion_sidra_champana: true,
             temporadas: {
               select: {
                 id: true,

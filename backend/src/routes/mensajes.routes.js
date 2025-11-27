@@ -25,6 +25,7 @@ router.get('/contrato/:contrato_id', authenticate, async (req, res, next) => {
       where: { id: parseInt(contrato_id) },
       select: {
         cliente_id: true,
+        usuario_id: true,
         vendedor_id: true
       }
     });
@@ -38,7 +39,8 @@ router.get('/contrato/:contrato_id', authenticate, async (req, res, next) => {
       throw new ValidationError('No tienes acceso a estos mensajes');
     }
 
-    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
+    // CRÍTICO: Verificar tanto usuario_id (nuevo) como vendedor_id (deprecated) para compatibilidad
+    if (req.user.tipo === 'vendedor' && !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes acceso a estos mensajes');
     }
 
@@ -109,6 +111,7 @@ router.post('/', authenticate, async (req, res, next) => {
       where: { id: parseInt(contrato_id) },
       select: {
         cliente_id: true,
+        usuario_id: true,
         vendedor_id: true
       }
     });
@@ -122,7 +125,8 @@ router.post('/', authenticate, async (req, res, next) => {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
-    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
+    // CRÍTICO: Verificar tanto usuario_id (nuevo) como vendedor_id (deprecated) para compatibilidad
+    if (req.user.tipo === 'vendedor' && !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes acceso a este contrato');
     }
 
@@ -178,6 +182,7 @@ router.get('/contrato/:contrato_id/no-leidos', authenticate, async (req, res, ne
       where: { id: parseInt(contrato_id) },
       select: {
         cliente_id: true,
+        usuario_id: true,
         vendedor_id: true
       }
     });
@@ -191,7 +196,8 @@ router.get('/contrato/:contrato_id/no-leidos', authenticate, async (req, res, ne
       throw new ValidationError('No tienes acceso a estos mensajes');
     }
 
-    if (req.user.tipo === 'vendedor' && contrato.vendedor_id !== req.user.id) {
+    // CRÍTICO: Verificar tanto usuario_id (nuevo) como vendedor_id (deprecated) para compatibilidad
+    if (req.user.tipo === 'vendedor' && !(contrato.usuario_id === req.user.id || contrato.vendedor_id === req.user.id)) {
       throw new ValidationError('No tienes acceso a estos mensajes');
     }
 
@@ -234,9 +240,13 @@ router.get('/vendedor/no-leidos/batch', authenticate, async (req, res, next) => 
     }
 
     // Obtener todos los contratos del vendedor
+    // CRÍTICO: Incluir tanto usuario_id (nuevo) como vendedor_id (deprecated) para compatibilidad
     const contratos = await prisma.contratos.findMany({
       where: {
-        vendedor_id: req.user.id
+        OR: [
+          { usuario_id: req.user.id },
+          { vendedor_id: req.user.id }
+        ]
       },
       select: {
         id: true
@@ -302,9 +312,13 @@ router.get('/vendedor/buzon', authenticate, async (req, res, next) => {
     }
 
     // Obtener todos los contratos del vendedor con clientes
+    // CRÍTICO: Incluir tanto usuario_id (nuevo) como vendedor_id (deprecated) para compatibilidad
     const contratos = await prisma.contratos.findMany({
       where: {
-        vendedor_id: req.user.id,
+        OR: [
+          { usuario_id: req.user.id },
+          { vendedor_id: req.user.id }
+        ],
         mensajes: {
           some: {} // Solo contratos que tienen al menos un mensaje
         }

@@ -921,23 +921,44 @@ function CrearOferta() {
       const error = validarHorarios(horaInicio, horaFin);
       setErrorHorario(error || '');
       
-      // Si se cambia la hora de inicio y hay un paquete "Especial" seleccionado, verificar si sigue siendo válido
-      if (name === 'hora_inicio' && formData.paquete_id && paqueteSeleccionado) {
+      // Si se cambia la hora de inicio o fin y hay un paquete "Especial" seleccionado, verificar si sigue siendo válido
+      if ((name === 'hora_inicio' || name === 'hora_fin') && formData.paquete_id && paqueteSeleccionado) {
         const esPaqueteEspecial = paqueteSeleccionado.nombre?.toLowerCase().includes('especial');
-        if (esPaqueteEspecial && value) {
-          const [hora, minutos] = value.split(':').map(Number);
-          const horaEnMinutos = hora * 60 + minutos;
+        if (esPaqueteEspecial) {
+          const horaInicio = name === 'hora_inicio' ? value : formData.hora_inicio;
+          const horaFin = name === 'hora_fin' ? value : formData.hora_fin;
+          
+          // Si no hay ambas horas, no validar aún
+          if (!horaInicio || !horaFin) {
+            setFormData({
+              ...formData,
+              [name]: value,
+            });
+            return;
+          }
+          
+          const [horaInicioNum, minutosInicio] = horaInicio.split(':').map(Number);
+          const horaInicioEnMinutos = horaInicioNum * 60 + minutosInicio;
+          
+          const [horaFinNum, minutosFin] = horaFin.split(':').map(Number);
+          const horaFinEnMinutos = horaFinNum * 60 + minutosFin;
+          
           const horaMinima = 10 * 60; // 10:00 AM
           const horaMaxima = 17 * 60; // 5:00 PM (17:00)
           
-          // Si la hora está fuera del rango, deseleccionar el paquete
-          if (horaEnMinutos < horaMinima || horaEnMinutos > horaMaxima) {
+          // Verificar que la hora de inicio esté entre 10 AM y 5 PM
+          const inicioFueraDelRango = horaInicioEnMinutos < horaMinima || horaInicioEnMinutos > horaMaxima;
+          // Verificar que la hora de fin sea a las 5 PM o antes
+          const finDespuesDe5PM = horaFinEnMinutos > horaMaxima;
+          
+          // Si alguna condición no se cumple, deseleccionar el paquete
+          if (inicioFueraDelRango || finDespuesDe5PM) {
             setFormData({
               ...formData,
               paquete_id: '',
               [name]: value,
             });
-            toast.error('Los paquetes especiales solo están disponibles de 6:00 PM a 12:00 AM');
+            toast.error('El paquete "Especial" solo está disponible de 10:00 AM a 5:00 PM. El evento debe terminar a las 5:00 PM o antes.');
             return;
           }
         }
@@ -3474,24 +3495,34 @@ function CrearOferta() {
                       return false;
                     }
                     
-                    // Si es paquete "Especial", solo mostrarlo si la hora de inicio está entre 10:00 AM y 5:00 PM
+                    // Si es paquete "Especial", solo mostrarlo si:
+                    // 1. La hora de inicio está entre 10:00 AM y 5:00 PM
+                    // 2. La hora de fin es a las 5:00 PM o antes
                     const esPaqueteEspecial = p.nombre?.toLowerCase().includes('especial');
                     if (esPaqueteEspecial) {
-                      // Si no hay hora de inicio seleccionada, no mostrar el paquete "Especial"
-                      if (!formData.hora_inicio) {
+                      // Si no hay hora de inicio o hora de fin, no mostrar el paquete "Especial"
+                      if (!formData.hora_inicio || !formData.hora_fin) {
                         return false;
                       }
                       
-                      const [hora, minutos] = formData.hora_inicio.split(':').map(Number);
-                      const horaEnMinutos = hora * 60 + minutos;
+                      const [horaInicio, minutosInicio] = formData.hora_inicio.split(':').map(Number);
+                      const horaInicioEnMinutos = horaInicio * 60 + minutosInicio;
+                      
+                      const [horaFin, minutosFin] = formData.hora_fin.split(':').map(Number);
+                      const horaFinEnMinutos = horaFin * 60 + minutosFin;
                       
                       // 10:00 AM = 10:00 = 600 minutos
                       // 5:00 PM = 17:00 = 1020 minutos
                       const horaMinima = 10 * 60; // 10:00 AM
                       const horaMaxima = 17 * 60; // 5:00 PM (17:00)
                       
-                      // Si la hora está fuera del rango, no mostrar el paquete
-                      if (horaEnMinutos < horaMinima || horaEnMinutos > horaMaxima) {
+                      // Verificar que la hora de inicio esté entre 10 AM y 5 PM
+                      if (horaInicioEnMinutos < horaMinima || horaInicioEnMinutos > horaMaxima) {
+                        return false;
+                      }
+                      
+                      // Verificar que la hora de fin sea a las 5 PM o antes (17:00 = 1020 minutos)
+                      if (horaFinEnMinutos > horaMaxima) {
                         return false;
                       }
                     }
@@ -3514,17 +3545,21 @@ function CrearOferta() {
                     ℹ️ Para sedes externas, solo está disponible el <strong>Paquete Personalizado</strong>
                   </p>
                 )}
-                {formData.salon_id && formData.salon_id !== 'otro' && formData.hora_inicio && (() => {
-                  const [hora, minutos] = formData.hora_inicio.split(':').map(Number);
-                  const horaEnMinutos = hora * 60 + minutos;
+                {formData.salon_id && formData.salon_id !== 'otro' && formData.hora_inicio && formData.hora_fin && (() => {
+                  const [horaInicio, minutosInicio] = formData.hora_inicio.split(':').map(Number);
+                  const horaInicioEnMinutos = horaInicio * 60 + minutosInicio;
+                  const [horaFin, minutosFin] = formData.hora_fin.split(':').map(Number);
+                  const horaFinEnMinutos = horaFin * 60 + minutosFin;
                   const horaMinima = 10 * 60; // 10:00 AM
                   const horaMaxima = 17 * 60; // 5:00 PM (17:00)
-                  const estaFueraDelRango = horaEnMinutos < horaMinima || horaEnMinutos > horaMaxima;
                   
-                  if (estaFueraDelRango) {
+                  const inicioFueraDelRango = horaInicioEnMinutos < horaMinima || horaInicioEnMinutos > horaMaxima;
+                  const finDespuesDe5PM = horaFinEnMinutos > horaMaxima;
+                  
+                  if (inicioFueraDelRango || finDespuesDe5PM) {
                     return (
                       <p className="text-xs text-blue-600 mt-1">
-                        ℹ️ El paquete "Especial" solo está disponible entre las 10:00 AM y las 5:00 PM
+                        ℹ️ El paquete "Especial" solo está disponible de 10:00 AM a 5:00 PM. El evento debe terminar a las 5:00 PM o antes.
                       </p>
                     );
                   }

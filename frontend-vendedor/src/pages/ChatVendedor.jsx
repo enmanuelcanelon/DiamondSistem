@@ -32,7 +32,8 @@ function ChatVendedor() {
   }
 
   // Verificar que el vendedor tiene acceso a este contrato
-  if (contrato && contrato.vendedor_id !== user?.id) {
+  // CRÍTICO: Verificar tanto usuario_id (nuevo) como vendedor_id (deprecated) para compatibilidad
+  if (contrato && contrato.usuario_id !== user?.id && contrato.vendedor_id !== user?.id) {
     return (
       <div className="text-center py-12">
         <p className="text-destructive font-medium">No tienes acceso a este contrato</p>

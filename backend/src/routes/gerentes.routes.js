@@ -379,7 +379,13 @@ router.get('/dashboard', authenticate, requireGerente, async (req, res, next) =>
     const estadisticasVendedores = await Promise.all(
       vendedores.map(async (vendedor) => {
         // Obtener ofertas del vendedor (con filtro de fecha si aplica)
-        const whereOfertas = { vendedor_id: vendedor.id };
+        // CRÍTICO: Usar OR para incluir tanto usuario_id (nuevo) como vendedor_id (deprecated)
+        const whereOfertas = {
+          OR: [
+            { usuario_id: vendedor.id },
+            { vendedor_id: vendedor.id }
+          ]
+        };
         if (fechaFiltro) {
           whereOfertas.fecha_creacion = fechaFiltro;
         }
@@ -401,7 +407,13 @@ router.get('/dashboard', authenticate, requireGerente, async (req, res, next) =>
           : '0.00';
 
         // Obtener contratos del vendedor (con filtro de fecha si aplica)
-        const whereContratos = { vendedor_id: vendedor.id };
+        // CRÍTICO: Usar OR para incluir tanto usuario_id (nuevo) como vendedor_id (deprecated)
+        const whereContratos = {
+          OR: [
+            { usuario_id: vendedor.id },
+            { vendedor_id: vendedor.id }
+          ]
+        };
         if (fechaFiltro) {
           whereContratos.fecha_creacion_contrato = fechaFiltro;
         }
@@ -535,11 +547,11 @@ router.get('/dashboard', authenticate, requireGerente, async (req, res, next) =>
             telefono: true
           }
         },
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         }
       },
@@ -593,9 +605,9 @@ router.get('/dashboard', authenticate, requireGerente, async (req, res, next) =>
               email: c.clientes.email,
               telefono: c.clientes.telefono
             } : null,
-            vendedor: c.vendedores ? {
-              nombre_completo: c.vendedores.nombre_completo,
-              codigo_vendedor: c.vendedores.codigo_vendedor
+            vendedor: c.usuarios ? {
+              nombre_completo: c.usuarios.nombre_completo,
+              codigo_vendedor: c.usuarios.codigo_usuario
             } : null
           }))
         }
@@ -619,7 +631,13 @@ router.get('/contratos', authenticate, requireGerente, async (req, res, next) =>
     const where = {};
     if (estado) where.estado = estado;
     if (estado_pago) where.estado_pago = estado_pago;
-    if (vendedor_id) where.vendedor_id = parseInt(vendedor_id);
+    // CRÍTICO: Usar OR para incluir tanto usuario_id (nuevo) como vendedor_id (deprecated)
+    if (vendedor_id) {
+      where.OR = [
+        { usuario_id: parseInt(vendedor_id) },
+        { vendedor_id: parseInt(vendedor_id) }
+      ];
+    }
     
     // Filtro por salón
     if (salon_nombre) {
@@ -656,11 +674,11 @@ router.get('/contratos', authenticate, requireGerente, async (req, res, next) =>
             telefono: true
           }
         },
-        vendedores: {
+        usuarios: {
           select: {
             id: true,
             nombre_completo: true,
-            codigo_vendedor: true
+            codigo_usuario: true
           }
         },
         paquetes: {

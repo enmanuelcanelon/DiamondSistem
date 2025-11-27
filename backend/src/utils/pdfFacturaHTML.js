@@ -1681,6 +1681,33 @@ function organizarServiciosPorCategoria(datos) {
     }
   });
 
+  // REGLA ESPECIAL: Si el paquete es "Diamond" o "Deluxe", agregar "Hora Extra" a EXTRAS si no está ya incluido
+  const nombrePaquete = (datos.paquetes?.nombre || '').toLowerCase();
+  const esPaqueteDiamondODeluxe = nombrePaquete.includes('diamond') || nombrePaquete.includes('deluxe');
+  
+  if (esPaqueteDiamondODeluxe) {
+    // Verificar si "Hora Extra" ya está en los servicios
+    const tieneHoraExtra = todosServicios.some(servicio => {
+      const nombre = (servicio.nombre || servicio.servicios?.nombre || '').toLowerCase();
+      return nombre.includes('hora extra') || nombre.includes('hora adicional');
+    });
+    
+    // Si no tiene "Hora Extra", agregarlo directamente a la categoría extras
+    if (!tieneHoraExtra) {
+      // Crear objeto de servicio "Hora Extra" con la estructura correcta
+      const horaExtraServicio = {
+        nombre: 'Hora Extra',
+        descripcion: 'Hora Extra',
+        categoria: 'extras',
+        esPaquete: false, // Se muestra en extras, no en paquete
+        cantidad: 1
+      };
+      
+      // Agregar directamente a la categoría extras
+      organizados.extras.push(horaExtraServicio);
+    }
+  }
+
   return organizados;
 }
 

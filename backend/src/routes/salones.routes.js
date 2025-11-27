@@ -244,45 +244,11 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
       return haySolapamiento(horaInicioStr, horaFinStr, horaInicioContrato, horaFinContrato);
     });
 
-    // Obtener todas las ofertas aceptadas del salón
-    // Si se proporciona excluir_oferta_id, excluir esa oferta (útil al editar)
-    const whereClause = {
-      salon_id: parseInt(salon_id),
-      estado: 'aceptada'
-    };
-    
-    if (excluir_oferta_id) {
-      whereClause.id = { not: parseInt(excluir_oferta_id) };
-    }
-    
-    const todasOfertas = await prisma.ofertas.findMany({
-      where: whereClause,
-      include: {
-        clientes: {
-          select: {
-            nombre_completo: true
-          }
-        }
-      }
-    });
-
-    // Filtrar ofertas que están en la misma fecha exacta
-    const ofertasMismaFecha = todasOfertas.filter(oferta => {
-      const fechaOfertaStr = oferta.fecha_evento instanceof Date
-        ? oferta.fecha_evento.toISOString().split('T')[0]
-        : oferta.fecha_evento.includes('T')
-          ? oferta.fecha_evento.split('T')[0]
-          : oferta.fecha_evento;
-      return fechaOfertaStr === fechaEventoStr;
-    });
-
-    // Filtrar ofertas que se solapan con el horario solicitado (solo las que están en la misma fecha)
-    const ofertasOcupadas = ofertasMismaFecha.filter(oferta => {
-      const horaInicioOferta = extraerHora(oferta.hora_inicio);
-      const horaFinOferta = extraerHora(oferta.hora_fin);
-      
-      return haySolapamiento(horaInicioStr, horaFinStr, horaInicioOferta, horaFinOferta);
-    });
+    // IMPORTANTE: Las ofertas NO bloquean horas - solo los contratos bloquean horas
+    // Una oferta es solo una propuesta, no un evento confirmado
+    // Solo cuando se convierte en contrato es que bloquea el horario
+    // Por lo tanto, NO verificamos ofertas aquí
+    const ofertasOcupadas = [];
 
     // Verificar disponibilidad en Google Calendar (sin mostrar detalles)
     let googleCalendarOcupado = false;
@@ -312,7 +278,8 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
       // Continuar sin considerar Google Calendar si hay error
     }
 
-    const disponible = contratosOcupados.length === 0 && ofertasOcupadas.length === 0 && !googleCalendarOcupado;
+    // IMPORTANTE: Solo contratos bloquean horas, no ofertas
+    const disponible = contratosOcupados.length === 0 && !googleCalendarOcupado;
 
     res.json({
       success: true,
@@ -423,7 +390,22 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         hora_inicio: true,
         hora_fin: true,
         estado: true,
-        salon_id: true
+        salon_id: true,
+        ofertas_servicios_adicionales: {
+          where: {
+            servicios: {
+              nombre: 'Hora Extra'
+            }
+          },
+          select: {
+            cantidad: true,
+            servicios: {
+              select: {
+                nombre: true
+              }
+            }
+          }
+        }
       }
     });
     
@@ -659,10 +641,47 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     // Obtener todos los rangos ocupados - SOLO las horas exactas del evento, sin buffers
     const rangosOcupados = [];
 
+    // Función para calcular horas adicionales de un servicio "Hora Extra"
+    const obtenerHorasAdicionales = (serviciosAdicionales = []) => {
+      if (!serviciosAdicionales || serviciosAdicionales.length === 0) {
+        return 0;
+      }
+      const horaExtra = serviciosAdicionales.find(
+        servicio => servicio.servicios?.nombre === 'Hora Extra' || 
+                    servicio.servicio?.nombre === 'Hora Extra' ||
+                    servicio.nombre === 'Hora Extra'
+      );
+      if (!horaExtra) {
+        return 0;
+      }
+      return horaExtra.cantidad || horaExtra.cantidad_servicio || 0;
+    };
+
+    // Función para calcular hora de fin incluyendo horas extras
+    const calcularHoraFinConExtras = (horaFinOriginal, horasAdicionales = 0) => {
+      if (!horaFinOriginal || horasAdicionales === 0) {
+        return horaFinOriginal;
+      }
+      const finMin = toMinutes(horaFinOriginal);
+      const nuevaFinMin = finMin + (horasAdicionales * 60);
+      // Convertir de vuelta a formato hora
+      const nuevaHora = Math.floor(nuevaFinMin / 60) % 24;
+      const nuevoMinuto = nuevaFinMin % 60;
+      return `${nuevaHora.toString().padStart(2, '0')}:${nuevoMinuto.toString().padStart(2, '0')}`;
+    };
+
     // Función para procesar un evento (contrato u oferta)
-    const procesarEvento = (horaInicio, horaFin) => {
+    // IMPORTANTE: Agregar 1 hora adicional después de la hora de fin para limpieza
+    const procesarEvento = (horaInicio, horaFin, horasAdicionales = 0) => {
+      // Calcular hora de fin incluyendo horas extras
+      const horaFinConExtras = calcularHoraFinConExtras(horaFin, horasAdicionales);
+      
       const inicioMin = toMinutes(horaInicio);
-      const finMin = toMinutes(horaFin);
+      let finMin = toMinutes(horaFinConExtras);
+      
+      // IMPORTANTE: Agregar 1 hora adicional (60 minutos) para limpieza después del evento
+      // Esto bloquea la hora siguiente para que no se puedan programar otros eventos
+      finMin += 60;
       
       // Logging para debug
       let horaInicioStr, horaFinStr;
@@ -670,9 +689,6 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         horaInicioStr = horaInicio.slice(0, 5);
       } else if (horaInicio instanceof Date) {
         if (horaInicio.getUTCFullYear() === 1970 && horaInicio.getUTCMonth() === 0 && horaInicio.getUTCDate() === 1) {
-          // IMPORTANTE: PostgreSQL TIME se almacena sin zona horaria
-          // Prisma siempre devuelve campos Time como UTC
-          // Por lo tanto, SIEMPRE usar getUTCHours() para campos Time de Prisma
           const horas = horaInicio.getUTCHours();
           const minutos = horaInicio.getUTCMinutes();
           horaInicioStr = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
@@ -683,30 +699,29 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         horaInicioStr = horaInicio.toTimeString().slice(0, 5);
       }
       
-      if (typeof horaFin === 'string') {
-        horaFinStr = horaFin.slice(0, 5);
-      } else if (horaFin instanceof Date) {
-        if (horaFin.getUTCFullYear() === 1970 && horaFin.getUTCMonth() === 0 && horaFin.getUTCDate() === 1) {
-          // IMPORTANTE: PostgreSQL TIME se almacena sin zona horaria
-          // Prisma siempre devuelve campos Time como UTC
-          // Por lo tanto, SIEMPRE usar getUTCHours() para campos Time de Prisma
-          const horas = horaFin.getUTCHours();
-          const minutos = horaFin.getUTCMinutes();
+      if (typeof horaFinConExtras === 'string') {
+        horaFinStr = horaFinConExtras.slice(0, 5);
+      } else if (horaFinConExtras instanceof Date) {
+        if (horaFinConExtras.getUTCFullYear() === 1970 && horaFinConExtras.getUTCMonth() === 0 && horaFinConExtras.getUTCDate() === 1) {
+          const horas = horaFinConExtras.getUTCHours();
+          const minutos = horaFinConExtras.getUTCMinutes();
           horaFinStr = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
         } else {
-          horaFinStr = horaFin.toTimeString().slice(0, 5);
+          horaFinStr = horaFinConExtras.toTimeString().slice(0, 5);
         }
       } else {
-        horaFinStr = horaFin.toTimeString().slice(0, 5);
+        horaFinStr = horaFinConExtras.toTimeString().slice(0, 5);
       }
       
-      console.log('  ⏰ procesarEvento - Hora inicio:', horaInicioStr, '→ minutos:', inicioMin, '| Hora fin:', horaFinStr, '→ minutos:', finMin);
+      const horaFinConLimpieza = toHora(finMin);
+      console.log('  ⏰ procesarEvento - Hora inicio:', horaInicioStr, '→ minutos:', inicioMin, 
+        '| Hora fin (con extras):', horaFinStr, '| Hora fin (con limpieza):', horaFinConLimpieza, '→ minutos:', finMin);
       
       // Determinar si cruza medianoche
-      const cruzaMedianoche = finMin < inicioMin;
+      const cruzaMedianoche = finMin < inicioMin || finMin >= 1440;
       
       if (cruzaMedianoche) {
-        // Evento cruza medianoche (ej: 8 PM a 12 AM)
+        // Evento cruza medianoche (ej: 8 PM a 12 AM + 1 hora limpieza)
         // Solo ocupamos desde inicio hasta 23:59 del mismo día (NO el día siguiente)
         const inicioMinAjustado = Math.max(0, inicioMin);
         const finMinAjustado = 1439; // 23:59 del mismo día
@@ -718,10 +733,10 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
           finHora: toHora(finMinAjustado)
         });
       } else {
-        // Evento NO cruza medianoche (ej: 12 PM a 4 PM)
-        // Solo ocupamos las horas exactas del evento
+        // Evento NO cruza medianoche (ej: 12 PM a 4 PM + 1 hora limpieza = hasta 5 PM)
+        // Ocupamos las horas del evento + 1 hora de limpieza
         const inicioMinAjustado = Math.max(0, inicioMin);
-        const finMinAjustado = Math.min(1439, finMin);
+        const finMinAjustado = Math.min(1439, finMin); // Máximo 23:59 del mismo día
         
         rangosOcupados.push({
           inicio: inicioMinAjustado,
@@ -734,23 +749,23 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
 
     // Procesar contratos (solo los que están en la misma fecha)
     contratosMismaFecha.forEach(contrato => {
+      // Calcular horas adicionales del contrato
+      const horasAdicionales = obtenerHorasAdicionales(contrato.contratos_servicios || []);
+      
       // Logging para debug
       const horaInicioStr = extraerHora(contrato.hora_inicio);
       const horaFinStr = extraerHora(contrato.hora_fin);
       console.log('📅 Procesando contrato:', contrato.codigo_contrato || contrato.id, 
-        'de', horaInicioStr, 'a', horaFinStr);
-      procesarEvento(contrato.hora_inicio, contrato.hora_fin);
+        'de', horaInicioStr, 'a', horaFinStr, 
+        horasAdicionales > 0 ? `(+${horasAdicionales}h extras)` : '');
+      procesarEvento(contrato.hora_inicio, contrato.hora_fin, horasAdicionales);
     });
 
-    // Procesar ofertas (solo las que están en la misma fecha)
-    ofertasMismaFecha.forEach(oferta => {
-      // Logging para debug
-      const horaInicioStr = extraerHora(oferta.hora_inicio);
-      const horaFinStr = extraerHora(oferta.hora_fin);
-      console.log('📅 Procesando oferta:', oferta.codigo_oferta || oferta.id,
-        'de', horaInicioStr, 'a', horaFinStr);
-      procesarEvento(oferta.hora_inicio, oferta.hora_fin);
-    });
+    // IMPORTANTE: Las ofertas NO bloquean horas - solo los contratos bloquean horas
+    // Una oferta es solo una propuesta, no un evento confirmado
+    // Solo cuando se convierte en contrato es que bloquea el horario
+    // Por lo tanto, NO procesamos ofertas aquí
+    // console.log('ℹ️ Ofertas no bloquean horas - solo contratos confirmados bloquean horarios');
 
     // Procesar eventos de Google Calendar
     eventosGoogleCalendar.forEach(evento => {
@@ -816,9 +831,10 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
           });
         } else {
           // Evento NO cruza medianoche (ej: 12 PM a 4 PM)
-          // Solo ocupamos las horas exactas del evento
+          // IMPORTANTE: Agregar 1 hora adicional (60 minutos) para limpieza después del evento
+          const finMinConLimpieza = finMin + 60;
           const inicioMinAjustado = Math.max(0, inicioMin);
-          const finMinAjustado = Math.min(1439, finMin);
+          const finMinAjustado = Math.min(1439, finMinConLimpieza);
           
           rangosOcupados.push({
             inicio: inicioMinAjustado,

@@ -169,7 +169,13 @@ const calcularComisionesVendedor = async (contratoId) => {
  */
 const calcularComisionesDesbloqueadasVendedor = async (vendedorId, fechaFiltro = null) => {
   // Construir where clause
-  const where = { vendedor_id: vendedorId };
+  // CRÍTICO: Usar OR para incluir tanto usuario_id (nuevo) como vendedor_id (deprecated)
+  const where = {
+    OR: [
+      { usuario_id: vendedorId },
+      { vendedor_id: vendedorId }
+    ]
+  };
   if (fechaFiltro) {
     where.fecha_creacion_contrato = fechaFiltro;
   }

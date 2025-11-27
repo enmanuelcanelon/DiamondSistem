@@ -66,8 +66,14 @@ router.get('/', authenticate, requireInventario, async (req, res, next) => {
         );
         
         // Obtener todos los contratos del vendedor para verificar comisiones desbloqueadas
+        // CRÍTICO: Usar OR para incluir tanto usuario_id (nuevo) como vendedor_id (deprecated)
         const contratos = await prisma.contratos.findMany({
-          where: { vendedor_id: vendedor.id },
+          where: {
+            OR: [
+              { usuario_id: vendedor.id },
+              { vendedor_id: vendedor.id }
+            ]
+          },
           include: {
             clientes: {
               select: {
@@ -703,8 +709,14 @@ router.get('/resumen-pdf', authenticate, requireInventario, async (req, res, nex
         );
         
         // Obtener contratos con pagos
+        // CRÍTICO: Usar OR para incluir tanto usuario_id (nuevo) como vendedor_id (deprecated)
         const contratos = await prisma.contratos.findMany({
-          where: { vendedor_id: vendedor.id },
+          where: {
+            OR: [
+              { usuario_id: vendedor.id },
+              { vendedor_id: vendedor.id }
+            ]
+          },
           include: {
             clientes: {
               select: {
