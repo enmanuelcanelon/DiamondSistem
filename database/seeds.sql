@@ -32,23 +32,28 @@ INSERT INTO temporadas (nombre, meses, ajuste_precio, descripcion, activo) VALUE
 
 -- Paquete 1: Especial
 INSERT INTO paquetes (nombre, precio_base, duracion_horas, invitados_minimo, dias_disponibles, horario_inicio, horario_fin_base, horario_fin_maximo, descripcion, es_personalizable, activo) VALUES
-('Especial', 3500.00, 4, 80, 'Lunes a Viernes', '10:00:00', '01:00:00', '02:00:00', 'Paquete ideal para eventos entre semana con todos los servicios básicos incluidos.', FALSE, TRUE);
+('Especial', 3500.00, 4, 80, 'Lunes a Viernes', '10:00:00', '01:00:00', '02:00:00', 'Paquete ideal para eventos entre semana con todos los servicios básicos incluidos.', FALSE, TRUE)
+ON CONFLICT (nombre) DO NOTHING;
 
 -- Paquete 2: Platinum
 INSERT INTO paquetes (nombre, precio_base, duracion_horas, invitados_minimo, dias_disponibles, horario_inicio, horario_fin_base, horario_fin_maximo, descripcion, es_personalizable, activo) VALUES
-('Platinum', 7500.00, 4, 80, 'Lunes a Lunes', '10:00:00', '01:00:00', '02:00:00', 'Paquete premium con servicios adicionales como mapping, coordinador y mesa de quesos.', FALSE, TRUE);
+('Platinum', 7500.00, 4, 80, 'Lunes a Lunes', '10:00:00', '01:00:00', '02:00:00', 'Paquete premium con servicios adicionales como mapping, coordinador y mesa de quesos.', FALSE, TRUE)
+ON CONFLICT (nombre) DO NOTHING;
 
 -- Paquete 3: Diamond
 INSERT INTO paquetes (nombre, precio_base, duracion_horas, invitados_minimo, dias_disponibles, horario_inicio, horario_fin_base, horario_fin_maximo, descripcion, es_personalizable, activo) VALUES
-('Diamond', 10500.00, 5, 80, 'Lunes a Lunes', '10:00:00', '01:00:00', '02:00:00', 'Paquete exclusivo con hora loca, foto/video, photobooth y limosina incluidos.', FALSE, TRUE);
+('Diamond', 10500.00, 5, 80, 'Lunes a Lunes', '10:00:00', '01:00:00', '02:00:00', 'Paquete exclusivo con hora loca, foto/video, photobooth y limosina incluidos.', FALSE, TRUE)
+ON CONFLICT (nombre) DO NOTHING;
 
 -- Paquete 4: Deluxe
 INSERT INTO paquetes (nombre, precio_base, duracion_horas, invitados_minimo, dias_disponibles, horario_inicio, horario_fin_base, horario_fin_maximo, descripcion, es_personalizable, activo) VALUES
-('Deluxe', 12500.00, 5, 80, 'Lunes a Lunes', '10:00:00', '01:00:00', '02:00:00', 'Paquete todo incluido con licor premium, maestro de ceremonia y servicios VIP.', FALSE, TRUE);
+('Deluxe', 12500.00, 5, 80, 'Lunes a Lunes', '10:00:00', '01:00:00', '02:00:00', 'Paquete todo incluido con licor premium, maestro de ceremonia y servicios VIP.', FALSE, TRUE)
+ON CONFLICT (nombre) DO NOTHING;
 
 -- Paquete 5: Personalizado
 INSERT INTO paquetes (nombre, precio_base, duracion_horas, invitados_minimo, dias_disponibles, horario_inicio, horario_fin_base, horario_fin_maximo, descripcion, es_personalizable, activo) VALUES
-('Personalizado', 6000.00, 4, 50, 'Lunes a Lunes', '10:00:00', '01:00:00', '02:00:00', 'Crea tu evento a medida. Personaliza cada detalle según tus necesidades.', TRUE, TRUE);
+('Personalizado', 6000.00, 4, 50, 'Lunes a Lunes', '10:00:00', '01:00:00', '02:00:00', 'Crea tu evento a medida. Personaliza cada detalle según tus necesidades.', TRUE, TRUE)
+ON CONFLICT (nombre) DO NOTHING;
 
 -- ============================================
 -- 4. SERVICIOS

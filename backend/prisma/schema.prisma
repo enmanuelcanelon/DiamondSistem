@@ -224,7 +224,7 @@ model paquetes_salones {
 
 model paquetes {
   id                 Int       @id @default(autoincrement())
-  nombre             String    @db.VarChar(100)
+  nombre             String    @unique @db.VarChar(100)
   precio_base        Decimal   @db.Decimal(10, 2)
   duracion_horas     Int
   invitados_minimo   Int?

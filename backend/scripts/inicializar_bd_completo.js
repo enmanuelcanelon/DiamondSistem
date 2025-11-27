@@ -12,6 +12,18 @@ async function inicializarBDCompleto() {
     // Obtener el directorio del backend (padre de scripts)
     const backendDir = path.resolve(__dirname, '..');
 
+    // Paso 0: Limpiar paquetes duplicados (si existen)
+    console.log('🧹 Paso 0: Limpiando paquetes duplicados...');
+    try {
+      execSync('node scripts/limpiar_paquetes_duplicados.js', { 
+        stdio: 'inherit',
+        cwd: backendDir 
+      });
+      console.log('✅ Limpieza completada\n');
+    } catch (error) {
+      console.error('⚠️  Error limpiando duplicados (continuando...):', error.message);
+    }
+
     // Paso 1: Crear salones
     console.log('📋 Paso 1: Creando salones...');
     try {
