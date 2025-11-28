@@ -511,8 +511,19 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     let eventosGoogleCalendar = [];
     try {
       debugLog(`🔍 Buscando eventos en Google Calendar desde ${fechaInicio.toISOString()} hasta ${fechaFin.toISOString()}`);
-      const todosEventosCalendar = await obtenerEventosTodosVendedores(fechaInicio, fechaFin);
-      debugLog(`📅 Eventos obtenidos de Google Calendar: ${todosEventosCalendar.length}`);
+      const todosEventosCalendarRaw = await obtenerEventosTodosVendedores(fechaInicio, fechaFin);
+
+      // IMPORTANTE: Deduplicar eventos por ID (pueden venir duplicados del calendario principal y general)
+      const eventosVistos = new Set();
+      const todosEventosCalendar = todosEventosCalendarRaw.filter(evento => {
+        if (eventosVistos.has(evento.id)) {
+          return false; // Ya lo vimos, saltarlo
+        }
+        eventosVistos.add(evento.id);
+        return true;
+      });
+
+      debugLog(`📅 Eventos obtenidos de Google Calendar: ${todosEventosCalendar.length} (de ${todosEventosCalendarRaw.length} antes de deduplicar)`);
       if (todosEventosCalendar.length > 0) {
         todosEventosCalendar.forEach(e => {
           debugLog(`   - "${e.titulo}" | Ubicación: "${e.ubicacion}" | Inicio: ${e.fecha_inicio}`);

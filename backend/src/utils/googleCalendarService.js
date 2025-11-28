@@ -127,6 +127,9 @@ async function obtenerEventosCalendarioPrincipal(vendedorId, fechaInicio, fechaF
     const timeMin = fechaInicio.toISOString();
     const timeMax = fechaFin.toISOString();
 
+    logger.info(`📅 [PRINCIPAL] Consultando calendario: ${vendedor.google_calendar_id}`);
+    logger.info(`📅 [PRINCIPAL] Rango: ${timeMin} a ${timeMax}`);
+
     const response = await calendar.events.list({
       calendarId: vendedor.google_calendar_id,
       timeMin: timeMin,
@@ -138,6 +141,13 @@ async function obtenerEventosCalendarioPrincipal(vendedorId, fechaInicio, fechaF
       // Forzar actualización evitando caché
       alwaysIncludeEmail: false
     });
+
+    logger.info(`📅 [PRINCIPAL] Respuesta de Google: ${response.data.items?.length || 0} eventos crudos`);
+    if (response.data.items && response.data.items.length > 0) {
+      response.data.items.slice(0, 5).forEach(e => {
+        logger.info(`📅 [PRINCIPAL]   - "${e.summary}" | Ubicación: "${e.location}" | Inicio: ${e.start?.dateTime || e.start?.date}`);
+      });
+    }
 
     const eventos = (response.data.items || [])
       .filter(evento => {
@@ -792,6 +802,9 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
     const timeMin = fechaInicio.toISOString();
     const timeMax = fechaFin.toISOString();
 
+    logger.info(`📅 [CITAS-API] Consultando calendario CITAS: ${calendarioCitasId}`);
+    logger.info(`📅 [CITAS-API] Rango: ${timeMin} a ${timeMax}`);
+
     const response = await calendar.events.list({
       calendarId: calendarioCitasId,
       timeMin: timeMin,
@@ -802,6 +815,13 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
       showDeleted: false,
       alwaysIncludeEmail: false
     });
+
+    logger.info(`📅 [CITAS-API] Respuesta de Google: ${response.data.items?.length || 0} eventos crudos`);
+    if (response.data.items && response.data.items.length > 0) {
+      response.data.items.forEach(e => {
+        logger.info(`📅 [CITAS-API]   - "${e.summary}" | Ubicación: "${e.location}" | Inicio: ${e.start?.dateTime || e.start?.date}`);
+      });
+    }
 
     const eventos = (response.data.items || [])
       .filter(evento => {
@@ -864,6 +884,124 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
     return eventos;
   } catch (error) {
     logger.warn(`⚠️ Error al obtener eventos del calendario CITAS:`, error);
+    return [];
+  }
+}
+
+/**
+ * Obtener eventos del calendario GENERAL (Revolution Party) - Para verificar disponibilidad al crear ofertas
+ * Este calendario contiene TODOS los eventos de todos los vendedores
+ * @param {number} vendedorId - ID del vendedor (para obtener tokens de autenticación)
+ * @param {Date} fechaInicio - Fecha de inicio
+ * @param {Date} fechaFin - Fecha de fin
+ * @returns {Promise<Array>} Array de eventos
+ */
+async function obtenerEventosCalendarioGeneral(vendedorId, fechaInicio, fechaFin) {
+  try {
+    const calendarioGeneralId = process.env.GOOGLE_CALENDAR_GENERAL_ID;
+    if (!calendarioGeneralId) {
+      logger.warn('📅 [GENERAL] GOOGLE_CALENDAR_GENERAL_ID no está configurado');
+      return [];
+    }
+
+    // Buscar vendedor para obtener tokens
+    const vendedor = await prisma.usuarios.findFirst({
+      where: {
+        id: vendedorId,
+        rol: 'vendedor'
+      },
+      select: {
+        google_calendar_sync_enabled: true,
+        email: true
+      }
+    });
+
+    if (!vendedor || !vendedor.google_calendar_sync_enabled) {
+      logger.warn('📅 [GENERAL] Vendedor no tiene sync habilitado');
+      return [];
+    }
+
+    const tokens = await getValidTokens(vendedorId);
+    if (!tokens) {
+      logger.warn('📅 [GENERAL] No hay tokens válidos para el vendedor');
+      return [];
+    }
+
+    const oauth2Client = createAuthenticatedClient(tokens.access_token, tokens.refresh_token);
+    if (!oauth2Client) {
+      logger.warn('📅 [GENERAL] No se pudo crear cliente OAuth');
+      return [];
+    }
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    const timeMin = fechaInicio.toISOString();
+    const timeMax = fechaFin.toISOString();
+
+    logger.info(`📅 [GENERAL] Consultando calendario Revolution Party: ${calendarioGeneralId}`);
+    logger.info(`📅 [GENERAL] Rango: ${timeMin} a ${timeMax}`);
+
+    const response = await calendar.events.list({
+      calendarId: calendarioGeneralId,
+      timeMin: timeMin,
+      timeMax: timeMax,
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: 2500,
+      showDeleted: false,
+      alwaysIncludeEmail: false
+    });
+
+    logger.info(`📅 [GENERAL] Respuesta de Google: ${response.data.items?.length || 0} eventos crudos`);
+    if (response.data.items && response.data.items.length > 0) {
+      response.data.items.slice(0, 5).forEach(e => {
+        logger.info(`📅 [GENERAL]   - "${e.summary}" | Ubicación: "${e.location}" | Inicio: ${e.start?.dateTime || e.start?.date}`);
+      });
+      if (response.data.items.length > 5) {
+        logger.info(`📅 [GENERAL]   ... y ${response.data.items.length - 5} eventos más`);
+      }
+    }
+
+    const eventos = (response.data.items || [])
+      .filter(evento => evento.status !== 'cancelled')
+      .map(evento => {
+        const inicio = evento.start?.dateTime || evento.start?.date;
+        const fin = evento.end?.dateTime || evento.end?.date;
+        const esTodoElDia = !evento.start?.dateTime && !!evento.start?.date;
+
+        let fechaInicioEvento = inicio || null;
+        let fechaFinEvento = fin || null;
+
+        if (esTodoElDia && inicio && !inicio.includes('T')) {
+          fechaInicioEvento = `${inicio}T00:00:00-05:00`;
+        }
+
+        if (esTodoElDia && fin && !fin.includes('T')) {
+          fechaFinEvento = `${fin}T00:00:00-05:00`;
+        }
+
+        return {
+          id: evento.id,
+          titulo: evento.summary || 'Sin título',
+          descripcion: evento.description || '',
+          fecha_inicio: fechaInicioEvento,
+          fecha_fin: fechaFinEvento,
+          es_todo_el_dia: esTodoElDia,
+          timeZone: evento.start?.timeZone || evento.end?.timeZone || 'America/New_York',
+          ubicacion: evento.location || '',
+          creador: evento.creator?.email || '',
+          organizador: evento.organizer?.email || '',
+          estado: evento.status || 'confirmed',
+          htmlLink: evento.htmlLink || '',
+          calendario: 'general',
+          updated: evento.updated || null
+        };
+      });
+
+    logger.info(`📅 [GENERAL] Calendario Revolution Party: ${eventos.length} eventos encontrados`);
+
+    return eventos;
+  } catch (error) {
+    logger.warn(`⚠️ Error al obtener eventos del calendario GENERAL:`, error);
     return [];
   }
 }
@@ -996,23 +1134,10 @@ async function obtenerEventosTodosVendedores(fechaInicio, fechaFin) {
       }
     }
 
-    // 2. Obtener eventos del calendario CITAS compartido (usar el primer vendedor con tokens válidos)
-    const vendedorConTokens = vendedores.find(v => v.google_calendar_sync_enabled);
-    if (vendedorConTokens) {
-      try {
-        const eventosCitas = await obtenerEventosCalendarioCitas(vendedorConTokens.id, fechaInicio, fechaFin);
-        eventosCitas.forEach(evento => {
-          todosLosEventos.push({
-            ...evento,
-            vendedor_id: null,
-            vendedor_nombre: 'CITAS',
-            vendedor_codigo: 'CITAS'
-          });
-        });
-      } catch (error) {
-        logger.warn('Error al obtener eventos del calendario CITAS:', error);
-      }
-    }
+    // NOTA: El calendario GENERAL (Revolution Party) ya está siendo consultado como calendario principal
+    // del vendedor, por lo que no necesitamos consultarlo de nuevo aquí.
+    // El google_calendar_id del vendedor ES revolutionpartyvenueleads@gmail.com
+    logger.info(`📅 [RESUMEN] Total eventos obtenidos de calendarios: ${todosLosEventos.length}`);
 
     return todosLosEventos;
   } catch (error) {
@@ -1025,6 +1150,7 @@ module.exports = {
   obtenerEventosGoogleCalendar,
   obtenerEventosCalendarioPrincipal,
   obtenerEventosCalendarioCitas,
+  obtenerEventosCalendarioGeneral,
   crearEventoCitas,
   crearEventoContrato,
   crearEventoOferta,
