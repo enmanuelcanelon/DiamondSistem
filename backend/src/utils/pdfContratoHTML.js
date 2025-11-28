@@ -1306,14 +1306,38 @@ async function generarContratoHTML(contrato, lang = 'es') {
 
   // Convertir logo a base64 si existe y generar HTML del logo (mismo tamaño que ofertas)
   let logoHTML = `<div style="font-size: 18px; font-weight: 100; color: #FFFFFF; letter-spacing: 2px;">${nombreCompania}</div>`;
+  
+  // Si no se encontró el logoPath, intentar buscar el logo de Diamond en múltiples ubicaciones
+  if (!logoPath || !fs.existsSync(logoPath)) {
+    if (!esRevolution) {
+      // Intentar múltiples rutas posibles para el logo de Diamond
+      const posiblesRutasLogo = [
+        path.join(__dirname, '../../../7.png'),
+        path.join(__dirname, '../../../../7.png'),
+        path.resolve(process.cwd(), '7.png'),
+        path.resolve(process.cwd(), '../7.png')
+      ];
+      
+      for (const ruta of posiblesRutasLogo) {
+        if (fs.existsSync(ruta)) {
+          logoPath = ruta;
+          break;
+        }
+      }
+    }
+  }
+  
   if (logoPath && fs.existsSync(logoPath)) {
     try {
       const logoBuffer = fs.readFileSync(logoPath);
       const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
       logoHTML = `<img src="${logoBase64}" alt="${nombreCompania}" class="cover-logo" style="max-width: 400px; height: auto; opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));">`;
+      debug('✅ Logo cargado correctamente desde:', logoPath);
     } catch (error) {
       logger.error('Error al cargar logo:', error);
     }
+  } else {
+    debug('⚠️ Logo no encontrado en:', logoPath);
   }
 
   // Cargar fondo para portada (igual que ofertas)
@@ -1345,8 +1369,24 @@ async function generarContratoHTML(contrato, lang = 'es') {
     }
   } else {
     // Fondo para Diamond - fondoDiamond.png (igual que ofertas)
-    const fondoDiamondPath = path.join(__dirname, '../../../fondoDiamond.png');
-    if (fs.existsSync(fondoDiamondPath)) {
+    // Intentar múltiples rutas posibles para el fondo de Diamond
+    const posiblesRutasFondo = [
+      path.join(__dirname, '../../../fondoDiamond.png'),
+      path.join(__dirname, '../../../../fondoDiamond.png'),
+      path.resolve(process.cwd(), 'fondoDiamond.png'),
+      path.resolve(process.cwd(), '../fondoDiamond.png')
+    ];
+    
+    let fondoDiamondPath = null;
+    for (const ruta of posiblesRutasFondo) {
+      if (fs.existsSync(ruta)) {
+        fondoDiamondPath = ruta;
+        debug('✅ Fondo Diamond encontrado en:', fondoDiamondPath);
+        break;
+      }
+    }
+    
+    if (fondoDiamondPath) {
       try {
         const fondoBuffer = fs.readFileSync(fondoDiamondPath);
         const fondoBase64 = `data:image/png;base64,${fondoBuffer.toString('base64')}`;
@@ -1357,26 +1397,12 @@ async function generarContratoHTML(contrato, lang = 'es') {
               opacity: 1;
               display: block;`;
         hasBackground = true;
+        debug('✅ Fondo Diamond cargado correctamente');
       } catch (error) {
         logger.error('Error al cargar fondo Diamond:', error);
-        // Intentar ruta alternativa
-        const fondoDiamondPathAlt = path.join(__dirname, '../../../../fondoDiamond.png');
-        if (fs.existsSync(fondoDiamondPathAlt)) {
-          try {
-            const fondoBuffer = fs.readFileSync(fondoDiamondPathAlt);
-            const fondoBase64 = `data:image/png;base64,${fondoBuffer.toString('base64')}`;
-            fondoStyle = `background-image: url("${fondoBase64}");
-                  background-size: cover;
-                  background-position: center;
-                  background-repeat: no-repeat;
-                  opacity: 1;
-                  display: block;`;
-            hasBackground = true;
-          } catch (error) {
-            logger.error('Error al cargar fondo Diamond desde ruta alternativa:', error);
-          }
-        }
       }
+    } else {
+      debug('⚠️ Archivo fondoDiamond.png no encontrado en ninguna de las rutas:', posiblesRutasFondo);
     }
   }
 
@@ -1401,9 +1427,24 @@ async function generarContratoHTML(contrato, lang = 'es') {
       }
     }
   } else {
-    // Fondo para Diamond
-    const fondoDiamondPath = path.join(__dirname, '../../../fondoDiamond.png');
-    if (fs.existsSync(fondoDiamondPath)) {
+    // Fondo para Diamond - package-card
+    // Intentar múltiples rutas posibles para el fondo de Diamond
+    const posiblesRutasFondo = [
+      path.join(__dirname, '../../../fondoDiamond.png'),
+      path.join(__dirname, '../../../../fondoDiamond.png'),
+      path.resolve(process.cwd(), 'fondoDiamond.png'),
+      path.resolve(process.cwd(), '../fondoDiamond.png')
+    ];
+    
+    let fondoDiamondPath = null;
+    for (const ruta of posiblesRutasFondo) {
+      if (fs.existsSync(ruta)) {
+        fondoDiamondPath = ruta;
+        break;
+      }
+    }
+    
+    if (fondoDiamondPath) {
       try {
         const fondoDiamondBuffer = fs.readFileSync(fondoDiamondPath);
         const fondoDiamondBase64 = `data:image/png;base64,${fondoDiamondBuffer.toString('base64')}`;
@@ -1412,11 +1453,13 @@ async function generarContratoHTML(contrato, lang = 'es') {
               background-position: center;
               background-repeat: no-repeat;
               opacity: 1;`;
+        debug('✅ Fondo Diamond para package-card cargado correctamente');
       } catch (error) {
         logger.error('Error al cargar fondo Diamond:', error);
         packageCardBackground = '';
       }
     } else {
+      debug('⚠️ Fondo Diamond para package-card no encontrado');
     }
   }
 

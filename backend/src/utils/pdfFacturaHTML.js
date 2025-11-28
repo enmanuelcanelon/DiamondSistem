@@ -126,6 +126,9 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
       debug('⚠️ Salón no reconocido:', nombreSalon);
     }
   } else {
+    // Si no se detecta salón, asumir Diamond por defecto
+    esDiamond = true;
+    esRevolution = false;
     debug('⚠️ No se pudo determinar el salón. Usando valores por defecto (Diamond)');
   }
 
@@ -818,11 +821,26 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     debug('🔍 Intentando cargar logo Revolution desde:', logoPath);
     debug('🔍 Ruta absoluta:', path.resolve(logoPath));
     debug('🔍 Existe archivo:', fs.existsSync(logoPath));
-  } else if (esDiamond) {
-    logoPath = path.join(__dirname, '../../../7.png');
-    debug('🔍 Intentando cargar logo Diamond desde:', logoPath);
-    debug('🔍 Ruta absoluta:', path.resolve(logoPath));
-    debug('🔍 Existe archivo:', fs.existsSync(logoPath));
+  } else if (esDiamond || !esRevolution) {
+    // Intentar múltiples rutas posibles para el logo de Diamond
+    const posiblesRutasLogo = [
+      path.join(__dirname, '../../../7.png'),
+      path.join(__dirname, '../../../../7.png'),
+      path.resolve(process.cwd(), '7.png'),
+      path.resolve(process.cwd(), '../7.png')
+    ];
+    
+    for (const ruta of posiblesRutasLogo) {
+      if (fs.existsSync(ruta)) {
+        logoPath = ruta;
+        debug('✅ Logo Diamond encontrado en:', logoPath);
+        break;
+      }
+    }
+    
+    if (!logoPath) {
+      debug('⚠️ Logo Diamond no encontrado en ninguna de las rutas:', posiblesRutasLogo);
+    }
   }
 
   let logoHTML = `<div style="font-size: 18px; font-weight: 100; color: #FFFFFF; letter-spacing: 2px;">${nombreCompania}</div>`;
@@ -897,12 +915,24 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
     }
   } else if (usaTemplateDiamond) {
     // Fondo para Diamond - fondoDiamond.png (siempre que se use template Diamond)
-    const fondoDiamondPath = path.join(__dirname, '../../../fondoDiamond.png');
-    debug('🔍 Intentando cargar fondo Diamond desde:', fondoDiamondPath);
-    debug('🔍 Ruta absoluta:', path.resolve(fondoDiamondPath));
-    debug('🔍 Existe archivo:', fs.existsSync(fondoDiamondPath));
+    // Intentar múltiples rutas posibles para el fondo de Diamond
+    const posiblesRutasFondo = [
+      path.join(__dirname, '../../../fondoDiamond.png'),
+      path.join(__dirname, '../../../../fondoDiamond.png'),
+      path.resolve(process.cwd(), 'fondoDiamond.png'),
+      path.resolve(process.cwd(), '../fondoDiamond.png')
+    ];
     
-    if (fs.existsSync(fondoDiamondPath)) {
+    let fondoDiamondPath = null;
+    for (const ruta of posiblesRutasFondo) {
+      if (fs.existsSync(ruta)) {
+        fondoDiamondPath = ruta;
+        debug('✅ Fondo Diamond encontrado en:', fondoDiamondPath);
+        break;
+      }
+    }
+    
+    if (fondoDiamondPath) {
       try {
         const fondoBuffer = fs.readFileSync(fondoDiamondPath);
         const fondoBase64 = `data:image/png;base64,${fondoBuffer.toString('base64')}`;
@@ -918,26 +948,7 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
         logger.error('❌ Error al cargar fondo Diamond:', error);
       }
     } else {
-      debug('⚠️ Archivo fondoDiamond.png no encontrado en:', fondoDiamondPath);
-      // Intentar ruta alternativa desde la raíz del proyecto
-      const fondoDiamondPathAlt = path.join(__dirname, '../../../../fondoDiamond.png');
-      debug('🔍 Intentando ruta alternativa:', fondoDiamondPathAlt);
-      if (fs.existsSync(fondoDiamondPathAlt)) {
-        try {
-          const fondoBuffer = fs.readFileSync(fondoDiamondPathAlt);
-          const fondoBase64 = `data:image/png;base64,${fondoBuffer.toString('base64')}`;
-          fondoStyle = `background-image: url("${fondoBase64}");
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                opacity: 1;
-                display: block;`;
-          hasBackground = true;
-          debug('✅ Fondo Diamond cargado desde ruta alternativa');
-        } catch (error) {
-          logger.error('❌ Error al cargar fondo Diamond desde ruta alternativa:', error);
-        }
-      }
+      debug('⚠️ Archivo fondoDiamond.png no encontrado en ninguna de las rutas:', posiblesRutasFondo);
     }
   }
 
@@ -987,9 +998,24 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
       }
     }
   } else {
-    // Fondo para Diamond
-    const fondoDiamondPath = path.join(__dirname, '../../../fondoDiamond.png');
-    if (fs.existsSync(fondoDiamondPath)) {
+    // Fondo para Diamond - package-card
+    // Intentar múltiples rutas posibles para el fondo de Diamond
+    const posiblesRutasFondo = [
+      path.join(__dirname, '../../../fondoDiamond.png'),
+      path.join(__dirname, '../../../../fondoDiamond.png'),
+      path.resolve(process.cwd(), 'fondoDiamond.png'),
+      path.resolve(process.cwd(), '../fondoDiamond.png')
+    ];
+    
+    let fondoDiamondPath = null;
+    for (const ruta of posiblesRutasFondo) {
+      if (fs.existsSync(ruta)) {
+        fondoDiamondPath = ruta;
+        break;
+      }
+    }
+    
+    if (fondoDiamondPath) {
       try {
         const fondoDiamondBuffer = fs.readFileSync(fondoDiamondPath);
         const fondoDiamondBase64 = `data:image/png;base64,${fondoDiamondBuffer.toString('base64')}`;
@@ -998,10 +1024,13 @@ async function generarFacturaProformaHTML(datos, tipo = 'oferta', lang = 'es') {
               background-position: center;
               background-repeat: no-repeat;
               opacity: 1;`;
+        debug('✅ Fondo Diamond para package-card cargado correctamente');
       } catch (error) {
         logger.error('Error al cargar fondo Diamond:', error);
         packageCardBackground = '';
       }
+    } else {
+      debug('⚠️ Fondo Diamond para package-card no encontrado');
     }
   }
 
