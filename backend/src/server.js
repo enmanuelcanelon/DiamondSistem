@@ -330,6 +330,47 @@ const startServer = async () => {
     await prisma.$queryRaw`SELECT 1`;
     logger.info('✅ Conexión a la base de datos establecida');
 
+    // Verificar e inicializar salones y paquetes si no existen
+    const { execSync } = require('child_process');
+    const pathModule = require('path');
+
+    try {
+      logger.info('🔍 Verificando datos esenciales de base de datos...');
+
+      const salonesCount = await prisma.salones.count({ where: { activo: true } });
+      const paquetesCount = await prisma.paquetes.count({ where: { activo: true } });
+      const paquetesSalonesCount = await prisma.paquetes_salones.count({ where: { disponible: true } });
+
+      const backendDir = pathModule.resolve(__dirname, '..');
+
+      // Si no hay salones, crearlos
+      if (salonesCount === 0) {
+        logger.warn('⚠️  No se encontraron salones. Inicializando...');
+        execSync('node scripts/crear_salones.js', {
+          stdio: 'inherit',
+          cwd: backendDir
+        });
+        logger.info('✅ Salones inicializados');
+      } else {
+        logger.info(`✅ Salones: ${salonesCount} encontrados`);
+      }
+
+      // Si no hay relaciones paquetes-salones, crearlas
+      if (paquetesCount > 0 && salonesCount > 0 && paquetesSalonesCount === 0) {
+        logger.warn('⚠️  No se encontraron relaciones paquetes-salones. Inicializando...');
+        execSync('node scripts/crear_paquetes_salones.js', {
+          stdio: 'inherit',
+          cwd: backendDir
+        });
+        logger.info('✅ Relaciones paquetes-salones inicializadas');
+      } else if (paquetesSalonesCount > 0) {
+        logger.info(`✅ Relaciones paquetes-salones: ${paquetesSalonesCount} encontradas`);
+      }
+    } catch (initError) {
+      logger.error('⚠️  Error al verificar/inicializar datos:', initError.message);
+      // Continuar con el servidor incluso si hay error en la inicialización
+    }
+
     // Configurar job de asignación automática de inventario
     // Se ejecuta diariamente a las 2:00 AM
     cron.schedule('0 2 * * *', async () => {

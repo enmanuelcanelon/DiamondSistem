@@ -497,38 +497,45 @@ function CrearOferta() {
     if (formData.salon_id && formData.salon_id !== 'otro' && salonSeleccionado) {
       const nombreSalon = salonSeleccionado.nombre?.toLowerCase().trim() || '';
       const esDiamond = nombreSalon.includes('diamond');
-      
+
       // Si NO es Diamond, eliminar servicios exclusivos de Diamond de servicios adicionales
-      if (!esDiamond && serviciosSeleccionados.length > 0) {
-        const serviciosExclusivosDiamond = [
-          'Lounge Set + Coctel Dream',
-          'Terraza decorada'
-        ];
-        
-        const serviciosAEliminar = serviciosSeleccionados.filter(sel => {
-          const servicioData = servicios?.find(s => s.id === parseInt(sel.servicio_id));
-          return servicioData && serviciosExclusivosDiamond.includes(servicioData.nombre);
-        });
-        
-        if (serviciosAEliminar.length > 0) {
-          const nuevosServicios = serviciosSeleccionados.filter(sel => {
+      // FIX: Usar forma funcional de setState para evitar stale closure
+      if (!esDiamond) {
+        setServiciosSeleccionados(prevServicios => {
+          if (prevServicios.length === 0) return prevServicios;
+
+          const serviciosExclusivosDiamond = [
+            'Lounge Set + Coctel Dream',
+            'Terraza decorada'
+          ];
+
+          const serviciosAEliminar = prevServicios.filter(sel => {
             const servicioData = servicios?.find(s => s.id === parseInt(sel.servicio_id));
-            return !servicioData || !serviciosExclusivosDiamond.includes(servicioData.nombre);
+            return servicioData && serviciosExclusivosDiamond.includes(servicioData.nombre);
           });
-          
-          setServiciosSeleccionados(nuevosServicios);
-          
-          // Actualizar formData
-          setFormData(prev => ({
-            ...prev,
-            servicios_adicionales: nuevosServicios.map(s => ({
-              servicio_id: parseInt(s.servicio_id),
-              cantidad: parseInt(s.cantidad),
-              precio_ajustado: s.precio_ajustado ? parseFloat(s.precio_ajustado) : null,
-              opcion_seleccionada: s.opcion_seleccionada || null,
-            })).filter(s => s.servicio_id)
-          }));
-        }
+
+          if (serviciosAEliminar.length > 0) {
+            const nuevosServicios = prevServicios.filter(sel => {
+              const servicioData = servicios?.find(s => s.id === parseInt(sel.servicio_id));
+              return !servicioData || !serviciosExclusivosDiamond.includes(servicioData.nombre);
+            });
+
+            // Actualizar formData
+            setFormData(prev => ({
+              ...prev,
+              servicios_adicionales: nuevosServicios.map(s => ({
+                servicio_id: parseInt(s.servicio_id),
+                cantidad: parseInt(s.cantidad),
+                precio_ajustado: s.precio_ajustado ? parseFloat(s.precio_ajustado) : null,
+                opcion_seleccionada: s.opcion_seleccionada || null,
+              })).filter(s => s.servicio_id)
+            }));
+
+            return nuevosServicios;
+          }
+
+          return prevServicios;
+        });
       }
     }
   }, [formData.salon_id, salonSeleccionado, servicios]);
@@ -604,54 +611,56 @@ function CrearOferta() {
     }
 
     const { necesarias } = calcularHorasExtras();
-    
+
     if (necesarias > 0) {
       const horaExtraServicio = servicios.find(s => s.nombre === 'Hora Extra');
       if (!horaExtraServicio) return;
 
-      const servicioExistente = serviciosSeleccionados.find(
-        s => s.servicio_id === horaExtraServicio.id
-      );
+      // FIX: Usar forma funcional de setState para evitar stale closure y duplicación
+      setServiciosSeleccionados(prevServicios => {
+        const servicioExistente = prevServicios.find(
+          s => s.servicio_id === horaExtraServicio.id
+        );
 
-      const cantidadAgregada = servicioExistente?.cantidad || 0;
+        const cantidadAgregada = servicioExistente?.cantidad || 0;
 
-      // Si faltan horas extras, agregarlas automáticamente
-      if (cantidadAgregada < necesarias) {
-        if (servicioExistente) {
-          // Si ya existe, solo actualizar la cantidad (mantener el precio_ajustado si fue editado)
-          setServiciosSeleccionados(
-            serviciosSeleccionados.map(s =>
+        // Si faltan horas extras, agregarlas automáticamente
+        if (cantidadAgregada < necesarias) {
+          if (servicioExistente) {
+            // Si ya existe, solo actualizar la cantidad (mantener el precio_ajustado si fue editado)
+            return prevServicios.map(s =>
               s.servicio_id === horaExtraServicio.id
                 ? { ...s, cantidad: necesarias }
                 : s
-            )
-          );
-        } else {
-          // Si no existe, agregarlo con la cantidad necesaria y precio por defecto de $800 (editable)
-          setServiciosSeleccionados([
-            ...serviciosSeleccionados,
-            {
-              servicio_id: horaExtraServicio.id,
-              cantidad: necesarias,
-              opcion_seleccionada: '',
-              precio_ajustado: 800.00 // Precio por defecto de $800, editable
-            }
-          ]);
-        }
-      } else if (cantidadAgregada > necesarias) {
-        // Si hay más horas extras de las necesarias, reducir a las necesarias
-        // (pero no eliminar completamente si el usuario las agregó manualmente)
-        if (cantidadAgregada > necesarias + 1) {
-          // Solo reducir si hay más de 1 hora extra de diferencia
-          setServiciosSeleccionados(
-            serviciosSeleccionados.map(s =>
+            );
+          } else {
+            // Si no existe, agregarlo con la cantidad necesaria y precio por defecto de $800 (editable)
+            return [
+              ...prevServicios,
+              {
+                servicio_id: horaExtraServicio.id,
+                cantidad: necesarias,
+                opcion_seleccionada: '',
+                precio_ajustado: 800.00 // Precio por defecto de $800, editable
+              }
+            ];
+          }
+        } else if (cantidadAgregada > necesarias) {
+          // Si hay más horas extras de las necesarias, reducir a las necesarias
+          // (pero no eliminar completamente si el usuario las agregó manualmente)
+          if (cantidadAgregada > necesarias + 1) {
+            // Solo reducir si hay más de 1 hora extra de diferencia
+            return prevServicios.map(s =>
               s.servicio_id === horaExtraServicio.id
                 ? { ...s, cantidad: necesarias }
                 : s
-            )
-          );
+            );
+          }
         }
-      }
+
+        // Si no se necesita cambio, retornar el estado anterior
+        return prevServicios;
+      });
     }
     // Nota: No eliminamos automáticamente las horas extras si no se necesitan,
     // para permitir que el usuario las mantenga si las agregó manualmente
