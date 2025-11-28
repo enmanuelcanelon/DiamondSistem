@@ -2330,13 +2330,21 @@ function CrearOferta() {
         return;
       }
       
-      // NO bloquear eventos de Google Calendar / Otros SOLO si NO tienen un salón asignado
-      // Si un evento de Google Calendar tiene un salón asignado y coincide con el salón seleccionado,
-      // SÍ debe bloquear horas porque es un evento real en ese salón
-      const tieneSalonAsignado = evento.salones?.id || evento.salones?.nombre || evento.salon || evento.ubicacion;
-      
-      if ((evento.es_google_calendar || evento.id?.toString().startsWith('google_')) && !tieneSalonAsignado) {
-        return; // No bloquear horas para eventos de Google Calendar sin salón
+      // FIX: Solo bloquear eventos de Google Calendar que tengan un salón asignado Y que coincida con el salón seleccionado
+      // Los eventos de Google Calendar sin salón o con salón diferente NO deben bloquear horas
+      if (evento.es_google_calendar || evento.id?.toString().startsWith('google_')) {
+        const tieneSalonAsignado = evento.salones?.id || evento.salones?.nombre || evento.salon || evento.ubicacion;
+        
+        // Si no tiene salón asignado, no bloquear
+        if (!tieneSalonAsignado) {
+          return;
+        }
+        
+        // Si tiene salón pero no coincide con el seleccionado, no bloquear (ya se verifica más abajo con perteneceAlSalon)
+        // Pero si es un evento de citas (es_citas) sin salón específico, no bloquear
+        if (evento.es_citas && !tieneSalonAsignado) {
+          return;
+        }
       }
       
       // Verificar si el evento pertenece al salón seleccionado
@@ -2386,6 +2394,22 @@ function CrearOferta() {
       // Solo considerar eventos del salón seleccionado
       if (!perteneceAlSalon) {
         return;
+      }
+      
+      // FIX: Los eventos que vienen de /eventos/todos-vendedores son solo de Google Calendar
+      // Solo bloquear si:
+      // 1. Es un evento de Google Calendar con salón asignado que coincide (ya verificado arriba)
+      // 2. NO es un evento de citas sin salón específico
+      // 3. Tiene horas válidas (hora_inicio y hora_fin)
+      
+      // Si es un evento de citas sin salón específico, no bloquear
+      if (evento.es_citas && !evento.salones?.id && !evento.salones?.nombre && !evento.salon && !evento.ubicacion) {
+        return; // No bloquear horas para citas sin salón asignado
+      }
+      
+      // Si es un evento de Google Calendar pero no tiene información de salón válida, no bloquear
+      if (evento.es_google_calendar && !perteneceAlSalon) {
+        return; // Ya se verifica arriba, pero por seguridad
       }
       
       // Función helper para extraer la hora de diferentes formatos
@@ -4333,8 +4357,20 @@ function CrearOferta() {
                 return !estaActivo && !estaActivoPorNombre;
               }) || [];
 
-              // Agrupar por categoría
-              const serviciosPorCategoria = serviciosDisponibles.reduce((acc, servicio) => {
+              // FIX: Deduplicar servicios por ID antes de agrupar por categoría
+              // Esto previene servicios duplicados que puedan pasar el filtro
+              const serviciosUnicos = [];
+              const idsVistos = new Set();
+              serviciosDisponibles.forEach(servicio => {
+                const servicioId = parseInt(servicio.id);
+                if (!idsVistos.has(servicioId)) {
+                  idsVistos.add(servicioId);
+                  serviciosUnicos.push(servicio);
+                }
+              });
+
+              // Agrupar por categoría usando servicios únicos
+              const serviciosPorCategoria = serviciosUnicos.reduce((acc, servicio) => {
                 const categoria = servicio.categoria || 'Otros';
                 if (!acc[categoria]) {
                   acc[categoria] = [];
