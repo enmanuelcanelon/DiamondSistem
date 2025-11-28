@@ -173,14 +173,17 @@ router.post('/disponibilidad', authenticate, requireVendedor, async (req, res, n
     });
 
     // Función helper para extraer fecha sin problemas de zona horaria
+    // CRÍTICO: PostgreSQL DATE se almacena SIN zona horaria (solo YYYY-MM-DD)
+    // Prisma devuelve campos DATE como Date objects con hora 00:00:00 en UTC
+    // Por lo tanto, debemos usar métodos UTC para extraer la fecha correctamente
     const extraerFechaStr = (fecha) => {
       if (!fecha) return '';
       if (fecha instanceof Date) {
-        // CRÍTICO: Usar métodos locales en lugar de toISOString() para evitar problemas de zona horaria
-        // toISOString() convierte a UTC y puede cambiar el día
-        const año = fecha.getFullYear();
-        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-        const dia = String(fecha.getDate()).padStart(2, '0');
+        // IMPORTANTE: Usar métodos UTC para campos DATE de PostgreSQL
+        // ya que se almacenan sin zona horaria y Prisma los interpreta como UTC
+        const año = fecha.getUTCFullYear();
+        const mes = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+        const dia = String(fecha.getUTCDate()).padStart(2, '0');
         return `${año}-${mes}-${dia}`;
       } else if (typeof fecha === 'string') {
         // Si es string, extraer solo la parte de fecha
@@ -363,14 +366,17 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     });
     
     // Función helper para extraer fecha sin problemas de zona horaria
+    // CRÍTICO: PostgreSQL DATE se almacena SIN zona horaria (solo YYYY-MM-DD)
+    // Prisma devuelve campos DATE como Date objects con hora 00:00:00 en UTC
+    // Por lo tanto, debemos usar métodos UTC para extraer la fecha correctamente
     const extraerFechaStr = (fecha) => {
       if (!fecha) return '';
       if (fecha instanceof Date) {
-        // CRÍTICO: Usar métodos locales en lugar de toISOString() para evitar problemas de zona horaria
-        // toISOString() convierte a UTC y puede cambiar el día
-        const año = fecha.getFullYear();
-        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-        const dia = String(fecha.getDate()).padStart(2, '0');
+        // IMPORTANTE: Usar métodos UTC para campos DATE de PostgreSQL
+        // ya que se almacenan sin zona horaria y Prisma los interpreta como UTC
+        const año = fecha.getUTCFullYear();
+        const mes = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+        const dia = String(fecha.getUTCDate()).padStart(2, '0');
         return `${año}-${mes}-${dia}`;
       } else if (typeof fecha === 'string') {
         // Si es string, extraer solo la parte de fecha
@@ -379,20 +385,20 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       return '';
     };
     
+    debugLog('🔍 Consultando horarios ocupados para salón', salon_id, 'en fecha', fechaEventoStr);
     debugLog('📋 Total contratos obtenidos para salón', salon_id, ':', todosContratos.length);
     todosContratos.forEach(c => {
       const fechaStr = extraerFechaStr(c.fecha_evento);
-      debugLog(`  - Contrato ${c.codigo_contrato || c.id}: fecha ${fechaStr} (raw: ${c.fecha_evento})`);
+      debugLog(`  - Contrato ${c.codigo_contrato || c.id}: fecha BD=${fechaStr} (raw: ${c.fecha_evento})`);
     });
 
     // Filtrar contratos que están en la misma fecha exacta
     const contratosMismaFecha = todosContratos.filter(contrato => {
       const fechaContratoStr = extraerFechaStr(contrato.fecha_evento);
       const coincide = fechaContratoStr === fechaEventoStr;
+      // Solo loggear si coincide para reducir ruido
       if (coincide) {
-        debugLog(`  ✅ Contrato ${contrato.codigo_contrato || contrato.id} coincide con fecha ${fechaEventoStr}`);
-      } else {
-        debugLog(`  ❌ Contrato ${contrato.codigo_contrato || contrato.id} NO coincide: fecha contrato ${fechaContratoStr} vs fecha consultada ${fechaEventoStr}`);
+        debugLog(`  ✅ Contrato ${contrato.codigo_contrato || contrato.id} COINCIDE: fecha BD=${fechaContratoStr} == fecha consultada=${fechaEventoStr}`);
       }
       return coincide;
     });
@@ -493,16 +499,25 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     });
 
     // Crear rango de fecha para Google Calendar (necesario para la función)
-    const fechaEventoDate = new Date(fechaEventoStr + 'T00:00:00');
+    // IMPORTANTE: Usar zona horaria UTC explícita para evitar problemas de zona horaria del servidor
+    // La fecha se interpreta como medianoche en UTC para asegurar consistencia
+    const fechaEventoDate = new Date(fechaEventoStr + 'T00:00:00Z');
     const fechaInicio = new Date(fechaEventoDate);
-    fechaInicio.setHours(0, 0, 0, 0);
+    fechaInicio.setUTCHours(0, 0, 0, 0);
     const fechaFin = new Date(fechaEventoDate);
-    fechaFin.setHours(23, 59, 59, 999);
+    fechaFin.setUTCHours(23, 59, 59, 999);
 
     // Obtener eventos de Google Calendar del mismo día
     let eventosGoogleCalendar = [];
     try {
+      debugLog(`🔍 Buscando eventos en Google Calendar desde ${fechaInicio.toISOString()} hasta ${fechaFin.toISOString()}`);
       const todosEventosCalendar = await obtenerEventosTodosVendedores(fechaInicio, fechaFin);
+      debugLog(`📅 Eventos obtenidos de Google Calendar: ${todosEventosCalendar.length}`);
+      if (todosEventosCalendar.length > 0) {
+        todosEventosCalendar.forEach(e => {
+          debugLog(`   - "${e.titulo}" | Ubicación: "${e.ubicacion}" | Inicio: ${e.fecha_inicio}`);
+        });
+      }
 
       // Filtrar eventos que coincidan con el salón
       // Función robusta para normalizar y comparar nombres de salón
@@ -796,62 +811,17 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
       }
     };
 
-    // Procesar contratos (solo los que están en la misma fecha)
-    // CRÍTICO: Si hay eventos de Google Calendar para el mismo día y salón, verificar si el contrato está mal guardado
-    // Si un contrato tiene hora_fin 00:00 pero hora_inicio es temprano (antes de 20:00),
-    // probablemente está mal guardado y deberíamos usar el evento de Google Calendar si existe
-    const contratosParaProcesar = contratosMismaFecha.filter(contrato => {
-      const horaFinMin = toMinutes(contrato.hora_fin);
-      const horaInicioMin = toMinutes(contrato.hora_inicio);
-      
-      // Si el contrato tiene hora_fin 00:00 y hora_inicio es temprano (antes de 20:00),
-      // probablemente está mal guardado
-      if (horaFinMin === 0 && horaInicioMin > 0 && horaInicioMin < 1200) {
-        // Verificar si hay un evento de Google Calendar para el mismo día y salón
-        // Si existe, el contrato está mal guardado y el evento de Google Calendar lo reemplazará
-        const hayEventoGoogleCalendar = eventosGoogleCalendar.length > 0;
-        if (hayEventoGoogleCalendar) {
-          debugLog(`  ⚠️ Contrato ${contrato.codigo_contrato || contrato.id} tiene hora_fin 00:00 pero hora_inicio es temprano (${extraerHora(contrato.hora_inicio)})`);
-          debugLog(`     Esto sugiere que el contrato está mal guardado.`);
-          debugLog(`     Hay ${eventosGoogleCalendar.length} evento(s) de Google Calendar para este día y salón.`);
-          debugLog(`     Ignorando el contrato mal guardado y usando el evento de Google Calendar en su lugar.`);
-          return false; // Ignorar este contrato mal guardado
-        }
-      }
-      return true; // Procesar este contrato
-    });
-    
-    contratosParaProcesar.forEach(contrato => {
-      // Calcular horas adicionales del contrato
-      const horasAdicionales = obtenerHorasAdicionales(contrato.contratos_servicios || []);
-      
-      // Logging para debug
-      const horaInicioStr = extraerHora(contrato.hora_inicio);
-      const horaFinStr = extraerHora(contrato.hora_fin);
-      
-      const horaFinMin = toMinutes(contrato.hora_fin);
-      const horaInicioMin = toMinutes(contrato.hora_inicio);
-      
-      // Si el evento termina a medianoche (00:00) y hora_inicio es tarde (después de 20:00),
-      // entonces es un evento que realmente cruza medianoche
-      if (horaFinMin === 0 && horaInicioMin >= 1200) {
-        debugLog(`  ⚠️ ADVERTENCIA: Contrato ${contrato.codigo_contrato || contrato.id} tiene hora_fin 00:00 (medianoche)`);
-        debugLog(`     Esto significa que el evento termina a medianoche del día siguiente.`);
-        debugLog(`     Procesando de todas formas, pero bloqueando solo hasta 23:59 del día consultado.`);
-      }
-      
-      debugLog('📅 Procesando contrato:', contrato.codigo_contrato || contrato.id, 
-        'de', horaInicioStr, 'a', horaFinStr, 
-        horasAdicionales > 0 ? `(+${horasAdicionales}h extras)` : '');
-      debugLog(`  🔍 Detalles: hora_inicio minutos: ${horaInicioMin}, hora_fin minutos: ${horaFinMin}`);
-      procesarEvento(contrato.hora_inicio, contrato.hora_fin, horasAdicionales);
-    });
+    // =====================================================================
+    // IMPORTANTE: NO procesar contratos de la BD para bloquear horas
+    // Solo usar eventos de Google Calendar como fuente de verdad
+    // Los contratos pueden no estar sincronizados con Google Calendar
+    // =====================================================================
+    debugLog('ℹ️ Contratos de BD ignorados - Solo se usan eventos de Google Calendar para bloquear horas');
+    debugLog(`   (Se encontraron ${contratosMismaFecha.length} contratos en BD para esta fecha, pero NO se procesarán)`);
 
-    // IMPORTANTE: Las ofertas NO bloquean horas - solo los contratos bloquean horas
-    // Una oferta es solo una propuesta, no un evento confirmado
-    // Solo cuando se convierte en contrato es que bloquea el horario
-    // Por lo tanto, NO procesamos ofertas aquí
-    // debugLog('ℹ️ Ofertas no bloquean horas - solo contratos confirmados bloquean horarios');
+    // COMENTADO: No procesar contratos de la BD
+    // const contratosParaProcesar = contratosMismaFecha.filter(...)
+    // contratosParaProcesar.forEach(contrato => { ... });
 
     // Procesar eventos de Google Calendar
     eventosGoogleCalendar.forEach(evento => {

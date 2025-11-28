@@ -447,11 +447,19 @@ router.get('/eventos/citas/:mes/:año', authenticate, requireVendedor, async (re
       return fechaA - fechaB;
     });
 
-    // Agrupar eventos por día
+    // Agrupar eventos por día - IMPORTANTE: usar zona horaria de Miami
     const eventosPorDia = {};
     todosLosEventos.forEach(evento => {
       const fecha = new Date(evento.fecha_evento);
-      const dia = fecha.getDate();
+      if (isNaN(fecha.getTime())) return;
+
+      // Usar Intl.DateTimeFormat para obtener el día en zona horaria de Miami
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        day: 'numeric'
+      });
+      const dia = parseInt(formatter.format(fecha), 10);
+
       if (!eventosPorDia[dia]) {
         eventosPorDia[dia] = [];
       }
@@ -549,7 +557,9 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
     // Obtener eventos de Google Calendar de todos los vendedores (sin detalles)
     let eventosGoogleCalendar = [];
     try {
+      logger.info(`📅 [todos-vendedores] Buscando eventos desde ${fechaInicio.toISOString()} hasta ${fechaFin.toISOString()}`);
       eventosGoogleCalendar = await obtenerEventosTodosVendedores(fechaInicio, fechaFin);
+      logger.info(`📅 [todos-vendedores] Eventos Google Calendar obtenidos: ${eventosGoogleCalendar.length}`);
     } catch (error) {
       logger.warn('Error al obtener eventos de Google Calendar:', error);
     }
@@ -560,27 +570,21 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
       // COMENTADO: No incluir contratos de BD
       // ...contratos.map(c => ({...})),
       ...eventosGoogleCalendar.map(e => {
-        // Para eventos de todo el día, parsear la fecha correctamente
-        let fechaEvento;
-        if (e.es_todo_el_dia && e.fecha_inicio) {
-          const fechaStr = e.fecha_inicio.split('T')[0];
-          const [year, month, day] = fechaStr.split('-').map(Number);
-          fechaEvento = new Date(year, month - 1, day);
-        } else {
-          fechaEvento = new Date(e.fecha_inicio);
-        }
-        
         return {
         id: `google_${e.id}`,
-        fecha_evento: fechaEvento,
+        // IMPORTANTE: Guardar fecha_evento como string ISO para evitar problemas de zona horaria
+        fecha_evento: e.fecha_inicio, // Mantener como string ISO original
         fecha_inicio: e.fecha_inicio,
         fecha_fin: e.fecha_fin,
-        hora_inicio: new Date(e.fecha_inicio),
-        hora_fin: new Date(e.fecha_fin),
+        // hora_inicio y hora_fin como strings ISO (el frontend los parsea correctamente)
+        hora_inicio: e.fecha_inicio,
+        hora_fin: e.fecha_fin,
         salon: e.ubicacion || null,
+        salones: { nombre: e.ubicacion || null }, // Agregar estructura salones para compatibilidad
         ubicacion: e.ubicacion || null,
         location: e.ubicacion || null,
         summary: e.titulo || null,
+        titulo: e.titulo || null,
         descripcion: e.descripcion || null,
         creador: e.creador || null,
         organizador: e.organizador || null,
@@ -591,33 +595,50 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
         calendario: e.calendario || 'principal',
         tipo: 'google_calendar',
         es_google_calendar: true,
-        es_todo_el_dia: e.es_todo_el_dia || false, // Incluir flag de todo el día
-        timeZone: e.timeZone || 'America/New_York' // Incluir zona horaria
+        es_todo_el_dia: e.es_todo_el_dia || false,
+        timeZone: e.timeZone || 'America/New_York'
         };
       })
     ];
 
-    // Agrupar por día
+    // Agrupar por día - IMPORTANTE: usar zona horaria de Miami para evitar problemas
     const eventosPorDia = {};
     eventosCombinados.forEach(evento => {
-      let fecha;
-      
-      // Para eventos de todo el día, parsear la fecha correctamente
-      if (evento.es_todo_el_dia && evento.fecha_inicio) {
-        // Extraer la fecha del string (formato: "2025-11-19T00:00:00-05:00")
-        const fechaStr = evento.fecha_inicio.split('T')[0];
-        const [year, month, day] = fechaStr.split('-').map(Number);
-        fecha = new Date(year, month - 1, day);
+      let dia;
+
+      // Usar fecha_inicio que es un string ISO (ej: "2025-11-28T19:00:00-05:00")
+      const fechaStr = evento.fecha_inicio || evento.fecha_evento;
+      if (!fechaStr) return;
+
+      // Para eventos de todo el día, la fecha puede venir sin hora
+      if (evento.es_todo_el_dia && typeof fechaStr === 'string' && !fechaStr.includes('T')) {
+        // Formato "2025-11-19" - extraer día directamente
+        const [, , day] = fechaStr.split('-').map(Number);
+        dia = day;
       } else {
-        fecha = new Date(evento.fecha_evento);
+        // Para otros eventos, parsear y usar zona horaria de Miami
+        const fecha = new Date(fechaStr);
+        if (!isNaN(fecha.getTime())) {
+          const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            day: 'numeric'
+          });
+          dia = parseInt(formatter.format(fecha), 10);
+        }
       }
-      
-      const dia = fecha.getDate();
-      if (!eventosPorDia[dia]) {
-        eventosPorDia[dia] = [];
+
+      if (dia) {
+        if (!eventosPorDia[dia]) {
+          eventosPorDia[dia] = [];
+        }
+        eventosPorDia[dia].push(evento);
       }
-      eventosPorDia[dia].push(evento);
     });
+
+    // Logging para debug
+    logger.info(`📅 [todos-vendedores] Mes: ${mesFiltro}, Año: ${añoFiltro}`);
+    logger.info(`📅 [todos-vendedores] Total eventos combinados: ${eventosCombinados.length}`);
+    logger.info(`📅 [todos-vendedores] Días con eventos: ${Object.keys(eventosPorDia).join(', ') || 'ninguno'}`);
 
     res.json({
       success: true,

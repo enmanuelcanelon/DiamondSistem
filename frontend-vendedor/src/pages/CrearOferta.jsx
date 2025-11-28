@@ -4327,44 +4327,53 @@ function CrearOferta() {
                 const estaEnPaquete = paqueteSeleccionado?.paquetes_servicios?.some(
                   ps => parseInt(ps.servicio_id) === parseInt(s.id)
                 );
-                
-                // REGLA: Permitir mostrar upgrades según reglas del paquete
-                const esUpgradeDisponible = 
-                  (s.nombre === 'Licor Premium' && reglasPaquete.permiteUpgradeLicor && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Licor House')) ||
-                  (s.nombre === 'Decoración Plus' && reglasPaquete.permiteUpgradeDecoracion && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Decoracion House')) ||
-                  (s.nombre === 'Foto y Video 5 Horas' && reglasPaquete.permiteFotoVideo && !reglasPaquete.excluyeFoto5hSiTiene3h && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Foto y Video 3 Horas'));
-                
-                if (!estaEnPaquete) return true; // Si no está en el paquete, está disponible
-                
-                // Si está en el paquete, mostrarlo si es un upgrade disponible O si NO fue seleccionado en un grupo excluyente
-                if (esUpgradeDisponible) return true; // Permitir mostrar upgrades
-                
+
                 // FIX: Comparar correctamente los IDs (convertir a número para evitar problemas de tipos)
-                // Aplicar para TODOS los paquetes, no solo Deluxe
+                // Verificar si el servicio está ACTIVO en el paquete (seleccionado en grupos excluyentes)
                 const estaActivo = serviciosPaqueteActivos.some(ps => {
                   const psId = parseInt(ps.servicio_id || ps.servicios?.id || ps.id);
                   const sId = parseInt(s.id);
                   return psId === sId;
                 });
-                
+
                 // También verificar por nombre del servicio como fallback (por si hay problemas con IDs)
                 const estaActivoPorNombre = serviciosPaqueteActivos.some(ps => {
                   const nombrePs = ps.servicios?.nombre || ps.nombre;
                   return nombrePs === s.nombre;
                 });
-                
-                // NO mostrar si está activo (ya está en el paquete seleccionado)
-                return !estaActivo && !estaActivoPorNombre;
+
+                // REGLA: Permitir mostrar upgrades según reglas del paquete
+                const esUpgradeDisponible =
+                  (s.nombre === 'Licor Premium' && reglasPaquete.permiteUpgradeLicor && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Licor House')) ||
+                  (s.nombre === 'Decoración Plus' && reglasPaquete.permiteUpgradeDecoracion && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Decoracion House')) ||
+                  (s.nombre === 'Foto y Video 5 Horas' && reglasPaquete.permiteFotoVideo && !reglasPaquete.excluyeFoto5hSiTiene3h && serviciosPaqueteActivos.some(ps => ps.servicios?.nombre === 'Foto y Video 3 Horas'));
+
+                // Si NO está en el paquete, está disponible como servicio adicional
+                if (!estaEnPaquete) return true;
+
+                // Si está en el paquete Y está activo (seleccionado), NO mostrar (ya está incluido)
+                if (estaActivo || estaActivoPorNombre) return false;
+
+                // Si está en el paquete pero NO está activo, verificar si es un upgrade permitido
+                if (esUpgradeDisponible) return true;
+
+                // Si está en el paquete pero NO está activo y NO es upgrade, NO mostrar
+                // (es un servicio del grupo excluyente que no fue seleccionado)
+                return false;
               }) || [];
 
-              // FIX: Deduplicar servicios por ID antes de agrupar por categoría
+              // FIX: Deduplicar servicios por ID Y por nombre antes de agrupar por categoría
               // Esto previene servicios duplicados que puedan pasar el filtro
               const serviciosUnicos = [];
               const idsVistos = new Set();
+              const nombresVistos = new Set();
               serviciosDisponibles.forEach(servicio => {
                 const servicioId = parseInt(servicio.id);
-                if (!idsVistos.has(servicioId)) {
+                const servicioNombre = servicio.nombre?.toLowerCase().trim();
+                // Solo agregar si no hemos visto ni el ID ni el nombre
+                if (!idsVistos.has(servicioId) && !nombresVistos.has(servicioNombre)) {
                   idsVistos.add(servicioId);
+                  if (servicioNombre) nombresVistos.add(servicioNombre);
                   serviciosUnicos.push(servicio);
                 }
               });

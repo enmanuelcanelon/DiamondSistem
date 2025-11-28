@@ -851,14 +851,15 @@ async function obtenerEventosCalendarioCitas(vendedorId, fechaInicio, fechaFin) 
         updated: evento.updated || null
       };
     })
-    .filter(evento => {
-      // Filtrar solo eventos creados por este vendedor
-      // El creador o organizador debe coincidir con el email del vendedor
-      const emailCreador = evento.creador?.toLowerCase() || '';
-      const emailOrganizador = evento.organizador?.toLowerCase() || '';
-      const emailVendedor = vendedor.email?.toLowerCase() || '';
-      return emailCreador === emailVendedor || emailOrganizador === emailVendedor;
-    });
+    // NOTA: NO filtrar por creador/organizador - el calendario CITAS es compartido
+    // y TODOS los eventos deben bloquear horas, sin importar quién los creó
+
+    logger.info(`📅 Calendario CITAS: ${eventos.length} eventos encontrados entre ${timeMin} y ${timeMax}`);
+    if (eventos.length > 0) {
+      eventos.forEach(e => {
+        logger.info(`   - "${e.titulo}" | Ubicación: "${e.ubicacion}" | ${e.fecha_inicio}`);
+      });
+    }
 
     return eventos;
   } catch (error) {
