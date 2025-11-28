@@ -4299,9 +4299,9 @@ function CrearOferta() {
                   }
                 }
                 
-                // Verificar si está en el paquete
+                // Verificar si está en el paquete (comparar como números para evitar problemas de tipos)
                 const estaEnPaquete = paqueteSeleccionado?.paquetes_servicios?.some(
-                  ps => ps.servicio_id === s.id
+                  ps => parseInt(ps.servicio_id) === parseInt(s.id)
                 );
                 
                 // REGLA: Permitir mostrar upgrades según reglas del paquete
@@ -4315,8 +4315,22 @@ function CrearOferta() {
                 // Si está en el paquete, mostrarlo si es un upgrade disponible O si NO fue seleccionado en un grupo excluyente
                 if (esUpgradeDisponible) return true; // Permitir mostrar upgrades
                 
-                const estaActivo = serviciosPaqueteActivos.some(ps => ps.servicio_id === s.id);
-                return !estaActivo; // Mostrar solo si NO está activo
+                // FIX: Comparar correctamente los IDs (convertir a número para evitar problemas de tipos)
+                // Aplicar para TODOS los paquetes, no solo Deluxe
+                const estaActivo = serviciosPaqueteActivos.some(ps => {
+                  const psId = parseInt(ps.servicio_id || ps.servicios?.id || ps.id);
+                  const sId = parseInt(s.id);
+                  return psId === sId;
+                });
+                
+                // También verificar por nombre del servicio como fallback (por si hay problemas con IDs)
+                const estaActivoPorNombre = serviciosPaqueteActivos.some(ps => {
+                  const nombrePs = ps.servicios?.nombre || ps.nombre;
+                  return nombrePs === s.nombre;
+                });
+                
+                // NO mostrar si está activo (ya está en el paquete seleccionado)
+                return !estaActivo && !estaActivoPorNombre;
               }) || [];
 
               // Agrupar por categoría

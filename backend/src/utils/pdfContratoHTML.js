@@ -1311,18 +1311,27 @@ async function generarContratoHTML(contrato, lang = 'es') {
   if (!logoPath || !fs.existsSync(logoPath)) {
     if (!esRevolution) {
       // Intentar múltiples rutas posibles para el logo de Diamond
+      // Priorizar rutas relativas desde __dirname (más confiables en producción)
       const posiblesRutasLogo = [
-        path.join(__dirname, '../../../7.png'),
-        path.join(__dirname, '../../../../7.png'),
-        path.resolve(process.cwd(), '7.png'),
-        path.resolve(process.cwd(), '../7.png')
+        path.join(__dirname, '../templates/assets/7.png'), // Primero buscar en assets (como Revolution)
+        path.join(__dirname, '../../../7.png'), // Raíz del proyecto (desde backend/src/utils)
+        path.join(__dirname, '../../../../7.png'), // Raíz alternativa
+        path.resolve(process.cwd(), '7.png'), // Directorio de trabajo actual
+        path.resolve(process.cwd(), '../7.png'), // Directorio padre
+        path.resolve(process.cwd(), 'backend/7.png'), // Si estamos en raíz, buscar en backend
+        path.resolve(process.cwd(), 'backend/src/templates/assets/7.png') // Assets desde raíz
       ];
       
       for (const ruta of posiblesRutasLogo) {
         if (fs.existsSync(ruta)) {
           logoPath = ruta;
+          debug('✅ Logo Diamond encontrado en:', logoPath);
           break;
         }
+      }
+      
+      if (!logoPath) {
+        debug('⚠️ Logo Diamond no encontrado en ninguna de las rutas:', posiblesRutasLogo);
       }
     }
   }
@@ -1370,11 +1379,15 @@ async function generarContratoHTML(contrato, lang = 'es') {
   } else {
     // Fondo para Diamond - fondoDiamond.png (igual que ofertas)
     // Intentar múltiples rutas posibles para el fondo de Diamond
+    // Priorizar rutas relativas desde __dirname (más confiables en producción)
     const posiblesRutasFondo = [
-      path.join(__dirname, '../../../fondoDiamond.png'),
-      path.join(__dirname, '../../../../fondoDiamond.png'),
-      path.resolve(process.cwd(), 'fondoDiamond.png'),
-      path.resolve(process.cwd(), '../fondoDiamond.png')
+      path.join(__dirname, '../templates/assets/fondoDiamond.png'), // Primero buscar en assets (como Revolution)
+      path.join(__dirname, '../../../fondoDiamond.png'), // Raíz del proyecto (desde backend/src/utils)
+      path.join(__dirname, '../../../../fondoDiamond.png'), // Raíz alternativa
+      path.resolve(process.cwd(), 'fondoDiamond.png'), // Directorio de trabajo actual
+      path.resolve(process.cwd(), '../fondoDiamond.png'), // Directorio padre
+      path.resolve(process.cwd(), 'backend/fondoDiamond.png'), // Si estamos en raíz, buscar en backend
+      path.resolve(process.cwd(), 'backend/src/templates/assets/fondoDiamond.png') // Assets desde raíz
     ];
     
     let fondoDiamondPath = null;
@@ -1429,11 +1442,15 @@ async function generarContratoHTML(contrato, lang = 'es') {
   } else {
     // Fondo para Diamond - package-card
     // Intentar múltiples rutas posibles para el fondo de Diamond
+    // Priorizar rutas relativas desde __dirname (más confiables en producción)
     const posiblesRutasFondo = [
-      path.join(__dirname, '../../../fondoDiamond.png'),
-      path.join(__dirname, '../../../../fondoDiamond.png'),
-      path.resolve(process.cwd(), 'fondoDiamond.png'),
-      path.resolve(process.cwd(), '../fondoDiamond.png')
+      path.join(__dirname, '../templates/assets/fondoDiamond.png'), // Primero buscar en assets (como Revolution)
+      path.join(__dirname, '../../../fondoDiamond.png'), // Raíz del proyecto (desde backend/src/utils)
+      path.join(__dirname, '../../../../fondoDiamond.png'), // Raíz alternativa
+      path.resolve(process.cwd(), 'fondoDiamond.png'), // Directorio de trabajo actual
+      path.resolve(process.cwd(), '../fondoDiamond.png'), // Directorio padre
+      path.resolve(process.cwd(), 'backend/fondoDiamond.png'), // Si estamos en raíz, buscar en backend
+      path.resolve(process.cwd(), 'backend/src/templates/assets/fondoDiamond.png') // Assets desde raíz
     ];
     
     let fondoDiamondPath = null;
