@@ -14,8 +14,10 @@
     "inventario:abastecer": "node scripts/abastecerSalones.js",
     "db:clean": "node scripts/clean-database.js",
     "db:reiniciar": "node scripts/reiniciar_bd_limpia.js",
+    "db:recrear-catalogo": "node scripts/recrear_paquetes_servicios.js",
     "db:init": "node scripts/inicializar_bd_completo.js",
     "db:verificar-duplicados": "node scripts/verificar_duplicados_servicios.js",
+    "db:eliminar-duplicados": "node scripts/eliminar_solo_duplicados.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
