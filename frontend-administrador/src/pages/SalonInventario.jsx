@@ -1086,7 +1086,7 @@ function SalonInventario() {
   )
 }
 
-{/* Modales de Acción */ }
+{/* Modales de Acción */}
 {
   showModalAccion && (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1335,8 +1335,9 @@ function SalonInventario() {
                           </div>
                         </button>
                         {estaExpandida && (
-                              {/* Desktop Table */}
-                              <div className="hidden md:block overflow-x-auto">
+                          <>
+                            {/* Desktop Table */}
+                            <div className="hidden md:block overflow-x-auto">
                                 <table className="min-w-full text-sm">
                                   <thead className="bg-gray-50">
                                     <tr>
@@ -1476,6 +1477,7 @@ function SalonInventario() {
                                   );
                                 })}
                               </div>
+                          </>
                         )}
                       </div>
                     );
