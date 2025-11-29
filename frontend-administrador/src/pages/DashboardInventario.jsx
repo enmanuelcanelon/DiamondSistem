@@ -1203,8 +1203,9 @@ function DashboardInventario() {
                                   </div>
                                 </button>
                                 {estaExpandida && (
-                                  {/* Desktop Table */ }
-                                  < div className="hidden md:block overflow-x-auto">
+                                  <>
+                                    {/* Desktop Table */}
+                                    <div className="hidden md:block overflow-x-auto">
                                 <table className="min-w-full text-sm">
                                   <thead className="bg-gray-50">
                                     <tr>
@@ -1272,10 +1273,10 @@ function DashboardInventario() {
                                     })}
                                   </tbody>
                                 </table>
-                              </div>
+                                    </div>
 
-                                  {/* Mobile Cards */ }
-                            <div className="md:hidden space-y-2 p-2">
+                                    {/* Mobile Cards */}
+                                    <div className="md:hidden space-y-2 p-2">
                               {itemsCategoria.map((item) => {
                                 const cantidadDisponible = parseFloat(item.cantidad_actual);
                                 const estaSeleccionado = itemsSeleccionados[item.item_id];
@@ -1335,7 +1336,8 @@ function DashboardInventario() {
                                   </div>
                                 );
                               })}
-                            </div>
+                                    </div>
+                                  </>
                                 )}
                         </div>
                         );
