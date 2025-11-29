@@ -870,8 +870,9 @@ function SalonInventario() {
                                 </div>
                               </button>
                               {estaExpandida && (
-                                {/* Desktop Table */ }
-                                < div className="hidden md:block overflow-x-auto">
+                                <>
+                                  {/* Desktop Table */}
+                                  <div className="hidden md:block overflow-x-auto">
                               <table className="min-w-full text-sm">
                                 <thead className="bg-gray-50">
                                   <tr>
@@ -890,10 +891,10 @@ function SalonInventario() {
                                   ))}
                                 </tbody>
                               </table>
-                            </div>
+                                  </div>
 
-                                {/* Mobile Cards */ }
-                          <div className="md:hidden space-y-2 p-2">
+                                  {/* Mobile Cards */}
+                                  <div className="md:hidden space-y-2 p-2">
                             {itemsCategoria.map((item, idx) => (
                               <div key={idx} className="bg-gray-50 p-3 rounded border border-gray-100">
                                 <div className="font-medium text-gray-900 text-sm">{item.item_nombre}</div>
@@ -903,7 +904,8 @@ function SalonInventario() {
                                 </div>
                               </div>
                             ))}
-                          </div>
+                                  </div>
+                                </>
                               )}
                       </div>
                       );
