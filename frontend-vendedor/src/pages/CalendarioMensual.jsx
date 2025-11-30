@@ -934,7 +934,7 @@ function CalendarioMensual() {
         </div>
 
         {/* Sidebar derecho - Oculto en móvil */}
-        <div className="hidden md:flex md:w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-y-auto flex-col">
+        <div className="hidden md:flex md:w-64 lg:w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-y-auto flex-col h-full">
           {/* Leyenda y Filtros */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-800">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Filtros por Salón</h3>
