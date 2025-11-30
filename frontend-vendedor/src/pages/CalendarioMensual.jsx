@@ -638,7 +638,57 @@ function CalendarioMensual() {
       </div>
 
       {/* Contenido principal */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Filtros móviles - Solo visible en móvil */}
+        <div className="md:hidden border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-3">
+          <h3 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-2">Filtros por Salón</h3>
+          <div className="flex flex-wrap gap-2">
+            <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
+              <input
+                type="checkbox"
+                checked={filtrosSalones.doral}
+                onChange={(e) => setFiltrosSalones(prev => ({ ...prev, doral: e.target.checked }))}
+                className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+              />
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+              <span className="text-gray-700 dark:text-gray-300">Doral</span>
+            </label>
+
+            <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
+              <input
+                type="checkbox"
+                checked={filtrosSalones.kendall}
+                onChange={(e) => setFiltrosSalones(prev => ({ ...prev, kendall: e.target.checked }))}
+                className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
+              <span className="text-gray-700 dark:text-gray-300">Kendall</span>
+            </label>
+
+            <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
+              <input
+                type="checkbox"
+                checked={filtrosSalones.diamond}
+                onChange={(e) => setFiltrosSalones(prev => ({ ...prev, diamond: e.target.checked }))}
+                className="w-3.5 h-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+              />
+              <div className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />
+              <span className="text-gray-700 dark:text-gray-300">Diamond</span>
+            </label>
+
+            <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
+              <input
+                type="checkbox"
+                checked={filtrosSalones.otros}
+                onChange={(e) => setFiltrosSalones(prev => ({ ...prev, otros: e.target.checked }))}
+                className="w-3.5 h-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <div className="w-2.5 h-2.5 rounded-full bg-purple-500 flex-shrink-0" />
+              <span className="text-gray-700 dark:text-gray-300">Otros</span>
+            </label>
+          </div>
+        </div>
+
         {/* Calendario principal */}
         <div className="flex-1 overflow-auto">
           {vista === 'mes' && (
@@ -880,8 +930,8 @@ function CalendarioMensual() {
           })()}
         </div>
 
-        {/* Sidebar derecho */}
-        <div className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-y-auto flex flex-col">
+        {/* Sidebar derecho - Oculto en móvil */}
+        <div className="hidden md:flex md:w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-y-auto flex-col">
           {/* Leyenda y Filtros */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-800">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Filtros por Salón</h3>
