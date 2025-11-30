@@ -19,7 +19,10 @@ Este documento contiene las credenciales de todos los usuarios del sistema.
 
 | Código | Nombre | Email | Password | URL Login |
 |--------|--------|-------|----------|-----------|
-| GER001 | Mario | mario@diamondsistem.com | `Mario2025!` | https://diamondsistem-gerente.vercel.app |
+| GER001 | Mariel | mariel.gerente@diamondsistem.com | `MarielGer2025!` | https://diamondsistem-gerente.vercel.app |
+| GER002 | Charo | charo.gerente@diamondsistem.com | `CharoGer2025!` | https://diamondsistem-gerente.vercel.app |
+| GER003 | Ana | ana.gerente@diamondsistem.com | `AnaGer2025!` | https://diamondsistem-gerente.vercel.app |
+| GER004 | Mario | mario@diamondsistem.com | `Mario2025!` | https://diamondsistem-gerente.vercel.app |
 
 ### 👨‍💼 MANAGERS
 
