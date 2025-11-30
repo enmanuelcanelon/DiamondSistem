@@ -23,11 +23,35 @@ const prisma = new PrismaClient();
 const USUARIOS = {
   vendedores: [
     {
-      nombre_completo: 'Cecilia',
+      nombre_completo: 'Ana',
       codigo_usuario: 'VEN001',
-      email: 'cecilia@diamondsistem.com',
+      email: 'ana@diamondsistem.com',
       telefono: '+1-305-555-0101',
-      password: 'Cecilia2025!',
+      password: 'Ana2025!',
+      comision_porcentaje: 3.00
+    },
+    {
+      nombre_completo: 'Mariel',
+      codigo_usuario: 'VEN002',
+      email: 'mariel@diamondsistem.com',
+      telefono: '+1-305-555-0102',
+      password: 'Mariel2025!',
+      comision_porcentaje: 3.00
+    },
+    {
+      nombre_completo: 'Alejandra',
+      codigo_usuario: 'VEN003',
+      email: 'alejandra@diamondsistem.com',
+      telefono: '+1-305-555-0103',
+      password: 'Alejandra2025!',
+      comision_porcentaje: 3.00
+    },
+    {
+      nombre_completo: 'Charo',
+      codigo_usuario: 'VEN004',
+      email: 'charo@diamondsistem.com',
+      telefono: '+1-305-555-0104',
+      password: 'Charo2025!',
       comision_porcentaje: 3.00
     },
     // PRUEBA001 ya existe, no lo recreamos
@@ -35,31 +59,10 @@ const USUARIOS = {
 
   gerentes: [
     {
-      nombre_completo: 'Charo',
-      codigo_usuario: 'GER001',
-      email: 'charo@diamondsistem.com',
-      telefono: '+1-305-555-0201',
-      password: 'Charo2025!'
-    },
-    {
-      nombre_completo: 'Mariel',
-      codigo_usuario: 'GER002',
-      email: 'mariel@diamondsistem.com',
-      telefono: '+1-305-555-0202',
-      password: 'Mariel2025!'
-    },
-    {
-      nombre_completo: 'Ana',
-      codigo_usuario: 'GER003',
-      email: 'ana@diamondsistem.com',
-      telefono: '+1-305-555-0203',
-      password: 'Ana2025!'
-    },
-    {
       nombre_completo: 'Mario',
-      codigo_usuario: 'GER004',
+      codigo_usuario: 'GER001',
       email: 'mario@diamondsistem.com',
-      telefono: '+1-305-555-0204',
+      telefono: '+1-305-555-0201',
       password: 'Mario2025!'
     }
   ],

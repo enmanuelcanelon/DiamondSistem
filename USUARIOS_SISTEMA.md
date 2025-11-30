@@ -8,17 +8,17 @@ Este documento contiene las credenciales de todos los usuarios del sistema.
 
 | Código | Nombre | Email | Password | URL Login |
 |--------|--------|-------|----------|-----------|
-| VEN001 | Cecilia | cecilia@diamondsistem.com | `Cecilia2025!` | https://diamondsistem-vendedor.vercel.app |
+| VEN001 | Ana | ana@diamondsistem.com | `Ana2025!` | https://diamondsistem-vendedor.vercel.app |
+| VEN002 | Mariel | mariel@diamondsistem.com | `Mariel2025!` | https://diamondsistem-vendedor.vercel.app |
+| VEN003 | Alejandra | alejandra@diamondsistem.com | `Alejandra2025!` | https://diamondsistem-vendedor.vercel.app |
+| VEN004 | Charo | charo@diamondsistem.com | `Charo2025!` | https://diamondsistem-vendedor.vercel.app |
 | PRUEBA001 | Prueba | prueba@diamondsistem.com | `prueba123` | https://diamondsistem-vendedor.vercel.app |
 
 ### 👔 GERENTES
 
 | Código | Nombre | Email | Password | URL Login |
 |--------|--------|-------|----------|-----------|
-| GER001 | Charo | charo@diamondsistem.com | `Charo2025!` | https://diamondsistem-gerente.vercel.app |
-| GER002 | Mariel | mariel@diamondsistem.com | `Mariel2025!` | https://diamondsistem-gerente.vercel.app |
-| GER003 | Ana | ana@diamondsistem.com | `Ana2025!` | https://diamondsistem-gerente.vercel.app |
-| GER004 | Mario | mario@diamondsistem.com | `Mario2025!` | https://diamondsistem-gerente.vercel.app |
+| GER001 | Mario | mario@diamondsistem.com | `Mario2025!` | https://diamondsistem-gerente.vercel.app |
 
 ### 👨‍💼 MANAGERS
 
