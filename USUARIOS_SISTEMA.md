@@ -12,6 +12,7 @@ Este documento contiene las credenciales de todos los usuarios del sistema.
 | VEN002 | Mariel | mariel@diamondsistem.com | `Mariel2025!` | https://diamondsistem-vendedor.vercel.app |
 | VEN003 | Alejandra | alejandra@diamondsistem.com | `Alejandra2025!` | https://diamondsistem-vendedor.vercel.app |
 | VEN004 | Charo | charo@diamondsistem.com | `Charo2025!` | https://diamondsistem-vendedor.vercel.app |
+| VEN005 | Cecilia | cecilia@diamondsistem.com | `Cecilia2025!` | https://diamondsistem-vendedor.vercel.app |
 | PRUEBA001 | Prueba | prueba@diamondsistem.com | `prueba123` | https://diamondsistem-vendedor.vercel.app |
 
 ### 👔 GERENTES
