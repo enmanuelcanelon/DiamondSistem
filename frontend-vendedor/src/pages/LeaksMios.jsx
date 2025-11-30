@@ -13,7 +13,8 @@ import {
   AlertCircle,
   Trash2,
   ArrowLeft,
-  Trophy
+  Trophy,
+  Calendar
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../config/api';

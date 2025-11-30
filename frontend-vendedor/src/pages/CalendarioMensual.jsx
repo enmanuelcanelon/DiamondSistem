@@ -638,296 +638,299 @@ function CalendarioMensual() {
       </div>
 
       {/* Contenido principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Filtros móviles - Solo visible en móvil */}
-        <div className="md:hidden border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-3">
-          <h3 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-2">Filtros por Salón</h3>
-          <div className="flex flex-wrap gap-2">
-            <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
-              <input
-                type="checkbox"
-                checked={filtrosSalones.doral}
-                onChange={(e) => setFiltrosSalones(prev => ({ ...prev, doral: e.target.checked }))}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
-              />
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
-              <span className="text-gray-700 dark:text-gray-300">Doral</span>
-            </label>
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {/* Filtros móviles - Solo visible en móvil */}
+          <div className="md:hidden border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-3">
+            <h3 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-2">Filtros por Salón</h3>
+            <div className="flex flex-wrap gap-2">
+              <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
+                <input
+                  type="checkbox"
+                  checked={filtrosSalones.doral}
+                  onChange={(e) => setFiltrosSalones(prev => ({ ...prev, doral: e.target.checked }))}
+                  className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                />
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Doral</span>
+              </label>
 
-            <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
-              <input
-                type="checkbox"
-                checked={filtrosSalones.kendall}
-                onChange={(e) => setFiltrosSalones(prev => ({ ...prev, kendall: e.target.checked }))}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
-              <span className="text-gray-700 dark:text-gray-300">Kendall</span>
-            </label>
+              <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
+                <input
+                  type="checkbox"
+                  checked={filtrosSalones.kendall}
+                  onChange={(e) => setFiltrosSalones(prev => ({ ...prev, kendall: e.target.checked }))}
+                  className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Kendall</span>
+              </label>
 
-            <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
-              <input
-                type="checkbox"
-                checked={filtrosSalones.diamond}
-                onChange={(e) => setFiltrosSalones(prev => ({ ...prev, diamond: e.target.checked }))}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-              />
-              <div className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />
-              <span className="text-gray-700 dark:text-gray-300">Diamond</span>
-            </label>
+              <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
+                <input
+                  type="checkbox"
+                  checked={filtrosSalones.diamond}
+                  onChange={(e) => setFiltrosSalones(prev => ({ ...prev, diamond: e.target.checked }))}
+                  className="w-3.5 h-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                />
+                <div className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Diamond</span>
+              </label>
 
-            <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
-              <input
-                type="checkbox"
-                checked={filtrosSalones.otros}
-                onChange={(e) => setFiltrosSalones(prev => ({ ...prev, otros: e.target.checked }))}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-              <div className="w-2.5 h-2.5 rounded-full bg-purple-500 flex-shrink-0" />
-              <span className="text-gray-700 dark:text-gray-300">Otros</span>
-            </label>
+              <label className="flex items-center gap-1.5 cursor-pointer bg-gray-50 dark:bg-gray-900/50 px-2 py-1.5 rounded text-xs">
+                <input
+                  type="checkbox"
+                  checked={filtrosSalones.otros}
+                  onChange={(e) => setFiltrosSalones(prev => ({ ...prev, otros: e.target.checked }))}
+                  className="w-3.5 h-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <div className="w-2.5 h-2.5 rounded-full bg-purple-500 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">Otros</span>
+              </label>
+            </div>
           </div>
-        </div>
 
-        {/* Calendario principal */}
-        <div className="flex-1 overflow-auto">
-          {vista === 'mes' && (
-            <>
-              {/* Días de la semana */}
-              <div className="sticky top-0 z-10 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
-                <div className="grid grid-cols-7">
-                  {diasSemana.map((dia, index) => (
-                    <div
-                      key={dia}
-                      className={`
-                        p-2 text-xs font-medium text-center
-                        ${index === 0 || index === 6
-                          ? 'text-gray-500 dark:text-gray-400'
-                          : 'text-gray-700 dark:text-gray-300'
-                        }
-                      `}
-                    >
-                      {dia}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Grid del calendario mensual */}
-              <div className="grid grid-cols-7">
-                {renderizarCalendario()}
-              </div>
-            </>
-          )}
-
-          {vista === 'semana' && (() => {
-            const diasSemanaActual = obtenerDiasSemana();
-            return (
+          {/* Calendario principal */}
+          <div className="flex-1 overflow-auto">
+            {vista === 'mes' && (
               <>
+                {/* Días de la semana */}
                 <div className="sticky top-0 z-10 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
                   <div className="grid grid-cols-7">
                     {diasSemana.map((dia, index) => (
                       <div
                         key={dia}
                         className={`
-                          p-2 text-xs font-medium text-center
-                          ${index === 0 || index === 6
+                        p-2 text-xs font-medium text-center
+                        ${index === 0 || index === 6
                             ? 'text-gray-500 dark:text-gray-400'
                             : 'text-gray-700 dark:text-gray-300'
                           }
-                        `}
+                      `}
                       >
                         {dia}
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-7 h-full">
-                  {diasSemanaActual.map((dia, index) => {
-                    const diaNum = dia.getDate();
-                    const mesDia = dia.getMonth() + 1;
-                    const añoDia = dia.getFullYear();
 
-                    // Obtener eventos del día correcto (puede ser de otro mes)
-                    let eventosDelDia = [];
-                    if (mesDia === mesSeleccionado && añoDia === añoSeleccionado) {
-                      eventosDelDia = obtenerEventosDelDia(diaNum, false);
-                    } else {
-                      // Si el día es de otro mes, necesitamos obtener los eventos de ese mes
-                      // Por ahora, dejamos vacío - se puede mejorar después
-                      eventosDelDia = [];
-                    }
+                {/* Grid del calendario mensual */}
+                <div className="grid grid-cols-7">
+                  {renderizarCalendario()}
+                </div>
+              </>
+            )}
 
-                    const esHoy = diaNum === fechaActual.getDate() &&
-                      mesDia === fechaActual.getMonth() + 1 &&
-                      añoDia === fechaActual.getFullYear();
-                    const estaSeleccionado = diaSeleccionado === diaNum && mesDia === mesSeleccionado;
+            {vista === 'semana' && (() => {
+              const diasSemanaActual = obtenerDiasSemana();
+              return (
+                <>
+                  <div className="sticky top-0 z-10 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
+                    <div className="grid grid-cols-7">
+                      {diasSemana.map((dia, index) => (
+                        <div
+                          key={dia}
+                          className={`
+                          p-2 text-xs font-medium text-center
+                          ${index === 0 || index === 6
+                              ? 'text-gray-500 dark:text-gray-400'
+                              : 'text-gray-700 dark:text-gray-300'
+                            }
+                        `}
+                        >
+                          {dia}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-7 h-full">
+                    {diasSemanaActual.map((dia, index) => {
+                      const diaNum = dia.getDate();
+                      const mesDia = dia.getMonth() + 1;
+                      const añoDia = dia.getFullYear();
 
-                    return (
-                      <div
-                        key={index}
-                        onClick={() => setDiaSeleccionado(diaNum === diaSeleccionado ? null : diaNum)}
-                        className={`
+                      // Obtener eventos del día correcto (puede ser de otro mes)
+                      let eventosDelDia = [];
+                      if (mesDia === mesSeleccionado && añoDia === añoSeleccionado) {
+                        eventosDelDia = obtenerEventosDelDia(diaNum, false);
+                      } else {
+                        // Si el día es de otro mes, necesitamos obtener los eventos de ese mes
+                        // Por ahora, dejamos vacío - se puede mejorar después
+                        eventosDelDia = [];
+                      }
+
+                      const esHoy = diaNum === fechaActual.getDate() &&
+                        mesDia === fechaActual.getMonth() + 1 &&
+                        añoDia === fechaActual.getFullYear();
+                      const estaSeleccionado = diaSeleccionado === diaNum && mesDia === mesSeleccionado;
+
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => setDiaSeleccionado(diaNum === diaSeleccionado ? null : diaNum)}
+                          className={`
                           border-r border-b border-gray-200 dark:border-gray-800 p-2
                           transition-colors cursor-pointer min-h-[600px]
                           ${estaSeleccionado
-                            ? 'bg-blue-50 dark:bg-blue-950/20'
-                            : esHoy
-                              ? 'bg-blue-50/50 dark:bg-blue-950/10'
-                              : 'hover:bg-gray-50 dark:hover:bg-gray-900/50'
-                          }
+                              ? 'bg-blue-50 dark:bg-blue-950/20'
+                              : esHoy
+                                ? 'bg-blue-50/50 dark:bg-blue-950/10'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-900/50'
+                            }
                         `}
-                      >
-                        <div className={`
+                        >
+                          <div className={`
                           text-sm font-medium mb-2
                           ${esHoy
-                            ? 'text-blue-600 dark:text-blue-400 font-bold'
-                            : estaSeleccionado
-                              ? 'text-blue-600 dark:text-blue-400'
-                              : 'text-gray-700 dark:text-gray-300'
-                          }
+                              ? 'text-blue-600 dark:text-blue-400 font-bold'
+                              : estaSeleccionado
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-gray-700 dark:text-gray-300'
+                            }
                         `}>
-                          {diaNum} {nombresMeses[mesDia - 1]}
-                        </div>
-                        <div className="space-y-1">
-                          {eventosDelDia.map((evento, idx) => {
-                            const color = obtenerColorEvento(evento);
-                            return (
-                              <div
-                                key={evento.id || idx}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEventoSeleccionado(evento);
-                                  setMostrarModalEvento(true);
-                                }}
-                                className={`
+                            {diaNum} {nombresMeses[mesDia - 1]}
+                          </div>
+                          <div className="space-y-1">
+                            {eventosDelDia.map((evento, idx) => {
+                              const color = obtenerColorEvento(evento);
+                              return (
+                                <div
+                                  key={evento.id || idx}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEventoSeleccionado(evento);
+                                    setMostrarModalEvento(true);
+                                  }}
+                                  className={`
                                   ${color.bg} ${color.border} ${color.text}
                                   text-xs px-2 py-1 rounded-r cursor-pointer
                                   hover:opacity-80 transition-opacity
                                 `}
-                              >
-                                <div className="flex items-center gap-1">
-                                  <div className={`w-1.5 h-1.5 rounded-full ${color.dot} flex-shrink-0`} />
-                                  <span className="truncate">
-                                    {(() => {
-                                      // Calcular horas adicionales y hora fin con extras
-                                      const horasAdicionales = evento.horas_adicionales || obtenerHorasAdicionales(evento.contratos_servicios || []);
-                                      const horaFinConExtras = calcularHoraFinConExtras(evento.hora_fin, horasAdicionales);
-                                      const tipoEvento = evento.tipo_evento_contrato || evento.ofertas?.tipo_evento || evento.clientes?.tipo_evento;
-                                      return (
-                                        <>
-                                          {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
-                                          {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
-                                          {tipoEvento && (
-                                            <span className="text-xs opacity-75 ml-1">({tipoEvento})</span>
-                                          )}
-                                        </>
-                                      );
-                                    })()}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            );
-          })()}
-
-          {vista === 'dia' && (() => {
-            const diaActual = obtenerDiasSemana()[0];
-            const diaNum = diaActual.getDate();
-            const eventosDelDia = obtenerEventosDelDia(diaNum, false);
-            const esHoy = diaNum === fechaActual.getDate() &&
-              mesSeleccionado === fechaActual.getMonth() + 1 &&
-              añoSeleccionado === fechaActual.getFullYear();
-
-            return (
-              <div className="p-6">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    {diasSemanaCompletos[diaActual.getDay()]}, {diaNum} de {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
-                  </h2>
-                  {esHoy && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300">
-                      Hoy
-                    </Badge>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  {eventosDelDia.length > 0 ? (
-                    eventosDelDia.map((evento, index) => {
-                      const color = obtenerColorEvento(evento);
-                      // Calcular horas adicionales y hora fin con extras (igual que en contratos)
-                      const horasAdicionales = evento.horas_adicionales || obtenerHorasAdicionales(evento.contratos_servicios || []);
-                      const horaFinConExtras = calcularHoraFinConExtras(evento.hora_fin, horasAdicionales);
-                      const duracion = calcularDuracion(evento.hora_inicio, horaFinConExtras);
-                      // Usar tipo_evento de la oferta si está disponible, sino del cliente
-                      const tipoEvento = evento.tipo_evento_contrato || evento.ofertas?.tipo_evento || evento.clientes?.tipo_evento;
-                      return (
-                        <div
-                          key={evento.id || index}
-                          onClick={() => {
-                            setEventoSeleccionado(evento);
-                            setMostrarModalEvento(true);
-                          }}
-                          className={`
-                            ${color.bg} ${color.border} ${color.text}
-                            rounded-r-lg p-4 cursor-pointer hover:shadow-md transition-all
-                          `}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`w-3 h-3 rounded-full ${color.dot} mt-1 flex-shrink-0`} />
-                            <div className="flex-1">
-                              <div className="font-semibold text-base mb-2">
-                                {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
-                                {tipoEvento && (
-                                  <span className="text-sm font-normal text-gray-600 dark:text-gray-400 ml-2 capitalize">({tipoEvento})</span>
-                                )}
-                              </div>
-                              <div className="space-y-1 text-sm">
-                                {evento.es_todo_el_dia ? (
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4" />
-                                    <span className="font-medium">Todo el día</span>
-                                  </div>
-                                ) : evento.hora_inicio && (
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4" />
-                                    <span>
-                                      {formatearHora(evento.hora_inicio)}
-                                      {horaFinConExtras && ` - ${formatearHora(horaFinConExtras)}`}
-                                      {duracion > 0 && ` (${Math.round(duracion * 10) / 10}h)`}
+                                >
+                                  <div className="flex items-center gap-1">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${color.dot} flex-shrink-0`} />
+                                    <span className="truncate">
+                                      {(() => {
+                                        // Calcular horas adicionales y hora fin con extras
+                                        const horasAdicionales = evento.horas_adicionales || obtenerHorasAdicionales(evento.contratos_servicios || []);
+                                        const horaFinConExtras = calcularHoraFinConExtras(evento.hora_fin, horasAdicionales);
+                                        const tipoEvento = evento.tipo_evento_contrato || evento.ofertas?.tipo_evento || evento.clientes?.tipo_evento;
+                                        return (
+                                          <>
+                                            {evento.es_todo_el_dia ? '📅 Todo el día: ' : `${formatearHora(evento.hora_inicio)} `}
+                                            {evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}
+                                            {tipoEvento && (
+                                              <span className="text-xs opacity-75 ml-1">({tipoEvento})</span>
+                                            )}
+                                          </>
+                                        );
+                                      })()}
                                     </span>
                                   </div>
-                                )}
-                                {evento.salones?.nombre && (
-                                  <div className="flex items-center gap-2">
-                                    <MapPin className="w-4 h-4" />
-                                    <span>{evento.salones.nombre}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       );
-                    })
-                  ) : (
-                    <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                      <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">No hay eventos programados</p>
-                      <p className="text-sm mt-2">Este día está libre</p>
-                    </div>
-                  )}
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+
+            {vista === 'dia' && (() => {
+              const diaActual = obtenerDiasSemana()[0];
+              const diaNum = diaActual.getDate();
+              const eventosDelDia = obtenerEventosDelDia(diaNum, false);
+              const esHoy = diaNum === fechaActual.getDate() &&
+                mesSeleccionado === fechaActual.getMonth() + 1 &&
+                añoSeleccionado === fechaActual.getFullYear();
+
+              return (
+                <div className="p-6">
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      {diasSemanaCompletos[diaActual.getDay()]}, {diaNum} de {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
+                    </h2>
+                    {esHoy && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300">
+                        Hoy
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {eventosDelDia.length > 0 ? (
+                      eventosDelDia.map((evento, index) => {
+                        const color = obtenerColorEvento(evento);
+                        // Calcular horas adicionales y hora fin con extras (igual que en contratos)
+                        const horasAdicionales = evento.horas_adicionales || obtenerHorasAdicionales(evento.contratos_servicios || []);
+                        const horaFinConExtras = calcularHoraFinConExtras(evento.hora_fin, horasAdicionales);
+                        const duracion = calcularDuracion(evento.hora_inicio, horaFinConExtras);
+                        // Usar tipo_evento de la oferta si está disponible, sino del cliente
+                        const tipoEvento = evento.tipo_evento_contrato || evento.ofertas?.tipo_evento || evento.clientes?.tipo_evento;
+                        return (
+                          <div
+                            key={evento.id || index}
+                            onClick={() => {
+                              setEventoSeleccionado(evento);
+                              setMostrarModalEvento(true);
+                            }}
+                            className={`
+                            ${color.bg} ${color.border} ${color.text}
+                            rounded-r-lg p-4 cursor-pointer hover:shadow-md transition-all
+                          `}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-3 h-3 rounded-full ${color.dot} mt-1 flex-shrink-0`} />
+                              <div className="flex-1">
+                                <div className="font-semibold text-base mb-2">
+                                  {evento.clientes?.nombre_completo || evento.summary || 'Evento'}
+                                  {tipoEvento && (
+                                    <span className="text-sm font-normal text-gray-600 dark:text-gray-400 ml-2 capitalize">({tipoEvento})</span>
+                                  )}
+                                </div>
+                                <div className="space-y-1 text-sm">
+                                  {evento.es_todo_el_dia ? (
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="w-4 h-4" />
+                                      <span className="font-medium">Todo el día</span>
+                                    </div>
+                                  ) : evento.hora_inicio && (
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="w-4 h-4" />
+                                      <span>
+                                        {formatearHora(evento.hora_inicio)}
+                                        {horaFinConExtras && ` - ${formatearHora(horaFinConExtras)}`}
+                                        {duracion > 0 && ` (${Math.round(duracion * 10) / 10}h)`}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {evento.salones?.nombre && (
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="w-4 h-4" />
+                                      <span>{evento.salones.nombre}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                        <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                        <p className="text-lg font-medium">No hay eventos programados</p>
+                        <p className="text-sm mt-2">Este día está libre</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
+          </div>
+
         </div>
 
         {/* Sidebar derecho - Oculto en móvil */}
