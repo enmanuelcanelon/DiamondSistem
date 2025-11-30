@@ -40,6 +40,14 @@ const USUARIOS = {
       telefono: '+1-305-555-0104',
       password: 'Charo2025!',
       comision_porcentaje: 3.00
+    },
+    {
+      nombre_completo: 'Cecilia',
+      codigo_usuario: 'VEN005',
+      email: 'cecilia@diamondsistem.com',
+      telefono: '+1-305-555-0105',
+      password: 'Cecilia2025!',
+      comision_porcentaje: 3.00
     }
   ],
   gerentes: [
