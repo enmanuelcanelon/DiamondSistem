@@ -52,10 +52,31 @@ const USUARIOS = {
   ],
   gerentes: [
     {
-      nombre_completo: 'Mario',
+      nombre_completo: 'Mariel',
       codigo_usuario: 'GER001',
-      email: 'mario@diamondsistem.com',
+      email: 'mariel.gerente@diamondsistem.com',
       telefono: '+1-305-555-0201',
+      password: 'MarielGer2025!'
+    },
+    {
+      nombre_completo: 'Charo',
+      codigo_usuario: 'GER002',
+      email: 'charo.gerente@diamondsistem.com',
+      telefono: '+1-305-555-0202',
+      password: 'CharoGer2025!'
+    },
+    {
+      nombre_completo: 'Ana',
+      codigo_usuario: 'GER003',
+      email: 'ana.gerente@diamondsistem.com',
+      telefono: '+1-305-555-0203',
+      password: 'AnaGer2025!'
+    },
+    {
+      nombre_completo: 'Mario',
+      codigo_usuario: 'GER004',
+      email: 'mario@diamondsistem.com',
+      telefono: '+1-305-555-0204',
       password: 'Mario2025!'
     }
   ],
