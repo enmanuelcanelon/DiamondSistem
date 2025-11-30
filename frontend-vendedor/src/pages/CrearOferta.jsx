@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, ChevronRight, ChevronLeft, CheckCircle2, Calendar, Clock, MapPin, Mail, Phone, Users, Filter, FilterX, AlertCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Calculator, Plus, Minus, Save, Loader2, UserPlus, X, ChevronRight, ChevronLeft, CheckCircle2, Check, Calendar, Clock, MapPin, Mail, Phone, Users, Filter, FilterX, AlertCircle, XCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import ModalCrearCliente from '../components/ModalCrearCliente';
@@ -2773,10 +2773,10 @@ function CrearOferta() {
               >
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-bold z-10 transition-all duration-300 shadow-sm ${activo
-                      ? 'bg-primary text-primary-foreground ring-4 ring-primary/20 scale-110'
-                      : completado
-                        ? 'bg-green-500 text-white hover:bg-green-600'
-                        : 'bg-muted text-muted-foreground border-2 border-muted'
+                    ? 'bg-primary text-primary-foreground ring-4 ring-primary/20 scale-110'
+                    : completado
+                      ? 'bg-green-500 text-white hover:bg-green-600'
+                      : 'bg-muted text-muted-foreground border-2 border-muted'
                     }`}
                 >
                   {completado && !activo ? (
