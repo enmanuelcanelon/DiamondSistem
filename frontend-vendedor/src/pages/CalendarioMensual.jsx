@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Calendar, 
-  ChevronLeft, 
-  ChevronRight, 
-  Clock, 
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
   Loader2,
   MapPin,
   CheckCircle2,
@@ -147,7 +147,7 @@ function CalendarioMensual() {
   const obtenerDiasSemana = () => {
     const hoy = new Date();
     let fechaBase;
-    
+
     if (vista === 'dia') {
       fechaBase = diaSeleccionado
         ? new Date(añoSeleccionado, mesSeleccionado - 1, diaSeleccionado)
@@ -159,12 +159,12 @@ function CalendarioMensual() {
     } else {
       fechaBase = new Date(añoSeleccionado, mesSeleccionado - 1, 1);
     }
-    
+
     if (vista === 'semana') {
       const diaSemana = fechaBase.getDay();
       const inicioSemana = new Date(fechaBase);
       inicioSemana.setDate(fechaBase.getDate() - diaSemana + (semanaSeleccionada * 7));
-      
+
       const dias = [];
       for (let i = 0; i < 7; i++) {
         const dia = new Date(inicioSemana);
@@ -196,7 +196,7 @@ function CalendarioMensual() {
 
   const obtenerEventosDelDia = (dia) => {
     let eventosPorDia = {};
-    
+
     // Obtener eventos según el tipo de calendario seleccionado
     if (tipoCalendario === 'general') {
       eventosPorDia = calendarioTodos?.eventos_por_dia || {};
@@ -206,9 +206,9 @@ function CalendarioMensual() {
       // tipoCalendario === 'vendedor'
       eventosPorDia = calendarioVendedor?.eventos_por_dia || {};
     }
-    
+
     const eventos = eventosPorDia[dia] || [];
-    
+
     // Para el calendario vendedor, mostrar solo contratos de la base de datos
     // Para otros tipos de calendario (leads), mostrar eventos de Google Calendar
     let eventosFiltrados = eventos;
@@ -223,7 +223,7 @@ function CalendarioMensual() {
         return evento.es_google_calendar === true || evento.calendario === 'principal' || evento.calendario === 'citas';
       });
     }
-    
+
     // Filtrar eventos según los filtros de salones activos
     return eventosFiltrados.filter(evento => {
       let nombreSalon = '';
@@ -234,10 +234,10 @@ function CalendarioMensual() {
       } else if (evento.ubicacion) {
         nombreSalon = String(evento.ubicacion).toLowerCase();
       }
-      
+
       // Normalizar el nombre del salón
       nombreSalon = nombreSalon.toLowerCase().trim().replace(/\s+/g, ' ');
-      
+
       // Verificar si el evento coincide con algún filtro activo
       // PRIORIDAD: Diamond debe verificarse ANTES que Doral porque "DIAMOND AT DORAL" contiene ambas palabras
       if (nombreSalon.includes('diamond')) {
@@ -264,7 +264,7 @@ function CalendarioMensual() {
     // Colores por salón (buscar en diferentes formatos y campos)
     // Intentar obtener el nombre del salón de diferentes formas
     let nombreSalon = '';
-    
+
     // Intentar múltiples formas de obtener el nombre del salón
     if (evento.salones?.nombre) {
       nombreSalon = String(evento.salones.nombre);
@@ -276,10 +276,10 @@ function CalendarioMensual() {
       // Para eventos de Google Calendar que pueden tener ubicacion
       nombreSalon = String(evento.ubicacion);
     }
-    
+
     // Normalizar a minúsculas y limpiar (remover espacios extra)
     nombreSalon = nombreSalon.toLowerCase().trim().replace(/\s+/g, ' ');
-    
+
     // Naranja = Diamond (claro y visible)
     // PRIORIDAD: Diamond debe verificarse ANTES que Doral porque "DIAMOND AT DORAL" contiene ambas palabras
     // Si dice "diamond at doral" o "diamond at doral 1", es Diamond
@@ -291,7 +291,7 @@ function CalendarioMensual() {
         dot: 'bg-orange-500'
       };
     }
-    
+
     // Verde = Doral (claro y visible)
     // Solo clasificar como Doral si NO contiene "diamond"
     // "doral 1", "doral", "doral 2", etc. son Doral
@@ -303,7 +303,7 @@ function CalendarioMensual() {
         dot: 'bg-green-500'
       };
     }
-    
+
     // Azul = Kendall (claro y visible)
     if (nombreSalon && (nombreSalon.includes('kendall') || nombreSalon.includes('kendal') || nombreSalon.includes('kentall'))) {
       return {
@@ -313,7 +313,7 @@ function CalendarioMensual() {
         dot: 'bg-blue-500'
       };
     }
-    
+
     // Morado = Otros (Google Calendar y otros eventos sin salón específico)
     if (evento.es_google_calendar || evento.id?.toString().startsWith('google_')) {
       return {
@@ -323,7 +323,7 @@ function CalendarioMensual() {
         dot: 'bg-purple-500'
       };
     }
-    
+
     // Si no es uno de los salones específicos, usar estado de pago
     switch (evento.estado_pago) {
       case 'completado':
@@ -375,9 +375,9 @@ function CalendarioMensual() {
     for (let dia = 1; dia <= diasEnMes; dia++) {
       const eventosDelDia = obtenerEventosDelDia(dia, false);
       const eventosTodosDelDia = obtenerEventosDelDia(dia, true);
-      const esHoy = dia === fechaActual.getDate() && 
-                    mesSeleccionado === fechaActual.getMonth() + 1 && 
-                    añoSeleccionado === fechaActual.getFullYear();
+      const esHoy = dia === fechaActual.getDate() &&
+        mesSeleccionado === fechaActual.getMonth() + 1 &&
+        añoSeleccionado === fechaActual.getFullYear();
       const estaSeleccionado = diaSeleccionado === dia;
 
       dias.push(
@@ -387,22 +387,22 @@ function CalendarioMensual() {
           className={`
             min-h-[120px] border-r border-b border-gray-200 dark:border-gray-800 p-1
             transition-colors cursor-pointer
-            ${estaSeleccionado 
-              ? 'bg-blue-50 dark:bg-blue-950/20' 
+            ${estaSeleccionado
+              ? 'bg-blue-50 dark:bg-blue-950/20'
               : esHoy
-              ? 'bg-blue-50/50 dark:bg-blue-950/10'
-              : 'hover:bg-gray-50 dark:hover:bg-gray-900/50'
+                ? 'bg-blue-50/50 dark:bg-blue-950/10'
+                : 'hover:bg-gray-50 dark:hover:bg-gray-900/50'
             }
           `}
         >
           {/* Número del día */}
           <div className={`
             text-sm font-medium mb-1 px-1
-            ${esHoy 
-              ? 'text-blue-600 dark:text-blue-400 font-bold' 
+            ${esHoy
+              ? 'text-blue-600 dark:text-blue-400 font-bold'
               : estaSeleccionado
-              ? 'text-blue-600 dark:text-blue-400'
-              : 'text-gray-700 dark:text-gray-300'
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-700 dark:text-gray-300'
             }
           `}>
             {dia}
@@ -425,7 +425,7 @@ function CalendarioMensual() {
                     text-xs px-2 py-0.5 rounded-r cursor-pointer
                     hover:opacity-80 transition-opacity truncate
                   `}
-                    title={`${evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}${evento.es_todo_el_dia ? ' - Todo el día' : ` - ${formatearHora(evento.hora_inicio)}`} - ${evento.salones?.nombre || evento.salon || evento.ubicacion || 'Sin salón'}`}
+                  title={`${evento.clientes?.nombre_completo || evento.titulo || evento.summary || 'Evento'}${evento.es_todo_el_dia ? ' - Todo el día' : ` - ${formatearHora(evento.hora_inicio)}`} - ${evento.salones?.nombre || evento.salon || evento.ubicacion || 'Sin salón'}`}
                 >
                   <div className="flex items-center gap-1">
                     <div className={`w-1.5 h-1.5 rounded-full ${color.dot} flex-shrink-0`} />
@@ -450,7 +450,7 @@ function CalendarioMensual() {
                 </div>
               );
             })}
-            
+
             {/* Indicador de más eventos */}
             {eventosDelDia.length > 3 && (
               <div className="text-xs text-gray-500 dark:text-gray-400 px-2 py-0.5">
@@ -475,9 +475,9 @@ function CalendarioMensual() {
 
   const eventosDiaSeleccionado = diaSeleccionado ? obtenerEventosDelDia(diaSeleccionado) : [];
 
-  const isLoading = tipoCalendario === 'general' ? cargandoTodos : 
-                    tipoCalendario === 'leads' ? cargandoLeads : 
-                    cargandoVendedor;
+  const isLoading = tipoCalendario === 'general' ? cargandoTodos :
+    tipoCalendario === 'leads' ? cargandoLeads :
+      cargandoVendedor;
 
   if (isLoading) {
     return (
@@ -485,7 +485,7 @@ function CalendarioMensual() {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
           <p className="text-muted-foreground">Cargando calendario...</p>
-      </div>
+        </div>
       </div>
     );
   }
@@ -493,139 +493,145 @@ function CalendarioMensual() {
   return (
     <div className="flex-1 h-screen flex flex-col bg-white dark:bg-gray-950">
       {/* Header estilo Google Calendar */}
-      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 md:px-6 py-3 md:py-4">
+        <div className="flex flex-col gap-3 md:gap-0 md:flex-row md:items-center md:justify-between">
           {/* Logo y título */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between md:justify-start gap-4">
             <div className="flex items-center gap-2">
-              <Calendar className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <h1 className="text-2xl font-normal text-gray-900 dark:text-gray-100">Calendario</h1>
+              <Calendar className="w-6 h-6 md:w-8 md:h-8 text-blue-600 dark:text-blue-400" />
+              <h1 className="text-xl md:text-2xl font-normal text-gray-900 dark:text-gray-100">Calendario</h1>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm md:text-base text-gray-500 dark:text-gray-400 md:ml-0">
               {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
             </div>
           </div>
 
-          {/* Controles */}
-          <div className="flex items-center gap-2">
-            {/* Selector de tipo de calendario */}
-            <Select value={tipoCalendario} onValueChange={setTipoCalendario}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue>
-                  {tipoCalendario === 'general' ? '📅 General' : 
-                   tipoCalendario === 'leads' ? '📋 Leads (CITAS)' : 
-                   '👤 Vendedor'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {/* Calendario General oculto para vendedores - disponible solo para gerentes */}
-                {/* <SelectItem value="general">📅 Calendario General</SelectItem> */}
-                <SelectItem value="vendedor">👤 Calendario Vendedor</SelectItem>
-                <SelectItem value="leads">📋 Calendario Leads (CITAS)</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {/* Botón de refrescar */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleRefrescar}
-              disabled={refrescar}
-              className="h-8 w-8"
-              title="Refrescar eventos de Google Calendar"
-            >
-              <RefreshCw className={`h-4 w-4 ${refrescar ? 'animate-spin' : ''}`} />
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={irAlMesActual}
-              className="text-sm"
-            >
-              Hoy
-            </Button>
-            <div className="flex items-center border border-gray-300 dark:border-gray-700 rounded">
+          {/* Controles - Responsive */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {/* Fila 1: Selector de calendario y refrescar */}
+            <div className="flex items-center gap-2">
+              {/* Selector de tipo de calendario */}
+              <Select value={tipoCalendario} onValueChange={setTipoCalendario}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue>
+                    {tipoCalendario === 'general' ? '📅 General' :
+                      tipoCalendario === 'leads' ? '📋 Leads (CITAS)' :
+                        '👤 Vendedor'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vendedor">👤 Calendario Vendedor</SelectItem>
+                  <SelectItem value="leads">📋 Calendario Leads (CITAS)</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Botón de refrescar */}
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
-                className="h-8 w-8 rounded-none rounded-l"
-                onClick={() => {
-                  if (vista === 'semana') {
-                    cambiarSemana('anterior');
-                  } else if (vista === 'dia') {
-                    const nuevoDia = new Date(añoSeleccionado, mesSeleccionado - 1, diaSeleccionado || fechaActual.getDate());
-                    nuevoDia.setDate(nuevoDia.getDate() - 1);
-                    setMesSeleccionado(nuevoDia.getMonth() + 1);
-                    setAñoSeleccionado(nuevoDia.getFullYear());
-                    setDiaSeleccionado(nuevoDia.getDate());
-                  } else {
-                    cambiarMes('anterior');
-                  }
-                }}
+                onClick={handleRefrescar}
+                disabled={refrescar}
+                className="h-9 w-9 flex-shrink-0"
+                title="Refrescar eventos de Google Calendar"
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-none rounded-r"
-                onClick={() => {
-                  if (vista === 'semana') {
-                    cambiarSemana('siguiente');
-                  } else if (vista === 'dia') {
-                    const nuevoDia = new Date(añoSeleccionado, mesSeleccionado - 1, diaSeleccionado || fechaActual.getDate());
-                    nuevoDia.setDate(nuevoDia.getDate() + 1);
-                    setMesSeleccionado(nuevoDia.getMonth() + 1);
-                    setAñoSeleccionado(nuevoDia.getFullYear());
-                    setDiaSeleccionado(nuevoDia.getDate());
-                  } else {
-                    cambiarMes('siguiente');
-                  }
-                }}
-              >
-                <ChevronRight className="h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 ${refrescar ? 'animate-spin' : ''}`} />
               </Button>
             </div>
-            <div className="flex items-center gap-1 border border-gray-300 dark:border-gray-700 rounded overflow-hidden">
+
+            {/* Fila 2: Navegación y vista */}
+            <div className="flex items-center gap-2">
               <Button
-                variant={vista === 'mes' ? 'default' : 'ghost'}
+                variant="outline"
                 size="sm"
-                className="rounded-none border-0"
-                onClick={() => {
-                  setVista('mes');
-                  setDiaSeleccionado(null);
-                }}
+                onClick={irAlMesActual}
+                className="text-sm flex-shrink-0"
               >
-                Mes
+                Hoy
               </Button>
-              <Button
-                variant={vista === 'semana' ? 'default' : 'ghost'}
-                size="sm"
-                className="rounded-none border-0"
-                onClick={() => {
-                  setVista('semana');
-                  setSemanaSeleccionada(0);
-                  if (!diaSeleccionado) {
-                    setDiaSeleccionado(fechaActual.getDate());
-                  }
-                }}
-              >
-                Semana
-              </Button>
-              <Button
-                variant={vista === 'dia' ? 'default' : 'ghost'}
-                size="sm"
-                className="rounded-none border-0"
-                onClick={() => {
-                  setVista('dia');
-                  if (!diaSeleccionado) {
-                    setDiaSeleccionado(fechaActual.getDate());
-                  }
-                }}
-              >
-                Día
-              </Button>
+
+              <div className="flex items-center border border-gray-300 dark:border-gray-700 rounded">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-none rounded-l"
+                  onClick={() => {
+                    if (vista === 'semana') {
+                      cambiarSemana('anterior');
+                    } else if (vista === 'dia') {
+                      const nuevoDia = new Date(añoSeleccionado, mesSeleccionado - 1, diaSeleccionado || fechaActual.getDate());
+                      nuevoDia.setDate(nuevoDia.getDate() - 1);
+                      setMesSeleccionado(nuevoDia.getMonth() + 1);
+                      setAñoSeleccionado(nuevoDia.getFullYear());
+                      setDiaSeleccionado(nuevoDia.getDate());
+                    } else {
+                      cambiarMes('anterior');
+                    }
+                  }}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-none rounded-r"
+                  onClick={() => {
+                    if (vista === 'semana') {
+                      cambiarSemana('siguiente');
+                    } else if (vista === 'dia') {
+                      const nuevoDia = new Date(añoSeleccionado, mesSeleccionado - 1, diaSeleccionado || fechaActual.getDate());
+                      nuevoDia.setDate(nuevoDia.getDate() + 1);
+                      setMesSeleccionado(nuevoDia.getMonth() + 1);
+                      setAñoSeleccionado(nuevoDia.getFullYear());
+                      setDiaSeleccionado(nuevoDia.getDate());
+                    } else {
+                      cambiarMes('siguiente');
+                    }
+                  }}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-1 border border-gray-300 dark:border-gray-700 rounded overflow-hidden">
+                <Button
+                  variant={vista === 'mes' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="rounded-none border-0 text-xs sm:text-sm px-2 sm:px-3"
+                  onClick={() => {
+                    setVista('mes');
+                    setDiaSeleccionado(null);
+                  }}
+                >
+                  Mes
+                </Button>
+                <Button
+                  variant={vista === 'semana' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="rounded-none border-0 text-xs sm:text-sm px-2 sm:px-3 hidden sm:inline-flex"
+                  onClick={() => {
+                    setVista('semana');
+                    setSemanaSeleccionada(0);
+                    if (!diaSeleccionado) {
+                      setDiaSeleccionado(fechaActual.getDate());
+                    }
+                  }}
+                >
+                  Semana
+                </Button>
+                <Button
+                  variant={vista === 'dia' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="rounded-none border-0 text-xs sm:text-sm px-2 sm:px-3"
+                  onClick={() => {
+                    setVista('dia');
+                    if (!diaSeleccionado) {
+                      setDiaSeleccionado(fechaActual.getDate());
+                    }
+                  }}
+                >
+                  Día
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -645,8 +651,8 @@ function CalendarioMensual() {
                       key={dia}
                       className={`
                         p-2 text-xs font-medium text-center
-                        ${index === 0 || index === 6 
-                          ? 'text-gray-500 dark:text-gray-400' 
+                        ${index === 0 || index === 6
+                          ? 'text-gray-500 dark:text-gray-400'
                           : 'text-gray-700 dark:text-gray-300'
                         }
                       `}
@@ -655,7 +661,7 @@ function CalendarioMensual() {
                     </div>
                   ))}
                 </div>
-            </div>
+              </div>
 
               {/* Grid del calendario mensual */}
               <div className="grid grid-cols-7">
@@ -675,8 +681,8 @@ function CalendarioMensual() {
                         key={dia}
                         className={`
                           p-2 text-xs font-medium text-center
-                          ${index === 0 || index === 6 
-                            ? 'text-gray-500 dark:text-gray-400' 
+                          ${index === 0 || index === 6
+                            ? 'text-gray-500 dark:text-gray-400'
                             : 'text-gray-700 dark:text-gray-300'
                           }
                         `}
@@ -691,7 +697,7 @@ function CalendarioMensual() {
                     const diaNum = dia.getDate();
                     const mesDia = dia.getMonth() + 1;
                     const añoDia = dia.getFullYear();
-                    
+
                     // Obtener eventos del día correcto (puede ser de otro mes)
                     let eventosDelDia = [];
                     if (mesDia === mesSeleccionado && añoDia === añoSeleccionado) {
@@ -701,10 +707,10 @@ function CalendarioMensual() {
                       // Por ahora, dejamos vacío - se puede mejorar después
                       eventosDelDia = [];
                     }
-                    
-                    const esHoy = diaNum === fechaActual.getDate() && 
-                                  mesDia === fechaActual.getMonth() + 1 && 
-                                  añoDia === fechaActual.getFullYear();
+
+                    const esHoy = diaNum === fechaActual.getDate() &&
+                      mesDia === fechaActual.getMonth() + 1 &&
+                      añoDia === fechaActual.getFullYear();
                     const estaSeleccionado = diaSeleccionado === diaNum && mesDia === mesSeleccionado;
 
                     return (
@@ -714,21 +720,21 @@ function CalendarioMensual() {
                         className={`
                           border-r border-b border-gray-200 dark:border-gray-800 p-2
                           transition-colors cursor-pointer min-h-[600px]
-                          ${estaSeleccionado 
-                            ? 'bg-blue-50 dark:bg-blue-950/20' 
+                          ${estaSeleccionado
+                            ? 'bg-blue-50 dark:bg-blue-950/20'
                             : esHoy
-                            ? 'bg-blue-50/50 dark:bg-blue-950/10'
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-900/50'
+                              ? 'bg-blue-50/50 dark:bg-blue-950/10'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-900/50'
                           }
                         `}
                       >
                         <div className={`
                           text-sm font-medium mb-2
-                          ${esHoy 
-                            ? 'text-blue-600 dark:text-blue-400 font-bold' 
+                          ${esHoy
+                            ? 'text-blue-600 dark:text-blue-400 font-bold'
                             : estaSeleccionado
-                            ? 'text-blue-600 dark:text-blue-400'
-                            : 'text-gray-700 dark:text-gray-300'
+                              ? 'text-blue-600 dark:text-blue-400'
+                              : 'text-gray-700 dark:text-gray-300'
                           }
                         `}>
                           {diaNum} {nombresMeses[mesDia - 1]}
@@ -786,9 +792,9 @@ function CalendarioMensual() {
             const diaActual = obtenerDiasSemana()[0];
             const diaNum = diaActual.getDate();
             const eventosDelDia = obtenerEventosDelDia(diaNum, false);
-            const esHoy = diaNum === fechaActual.getDate() && 
-                          mesSeleccionado === fechaActual.getMonth() + 1 && 
-                          añoSeleccionado === fechaActual.getFullYear();
+            const esHoy = diaNum === fechaActual.getDate() &&
+              mesSeleccionado === fechaActual.getMonth() + 1 &&
+              añoSeleccionado === fechaActual.getFullYear();
 
             return (
               <div className="p-6">
@@ -868,8 +874,8 @@ function CalendarioMensual() {
                       <p className="text-sm mt-2">Este día está libre</p>
                     </div>
                   )}
+                </div>
               </div>
-            </div>
             );
           })()}
         </div>
@@ -879,7 +885,7 @@ function CalendarioMensual() {
           {/* Leyenda y Filtros */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-800">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Filtros por Salón</h3>
-            
+
             {/* Filtros */}
             <div className="space-y-2 mb-4">
               <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/50 p-2 rounded">
@@ -894,7 +900,7 @@ function CalendarioMensual() {
                   <span className="text-sm text-gray-700 dark:text-gray-300">Doral</span>
                 </div>
               </label>
-              
+
               <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/50 p-2 rounded">
                 <input
                   type="checkbox"
@@ -907,7 +913,7 @@ function CalendarioMensual() {
                   <span className="text-sm text-gray-700 dark:text-gray-300">Kendall</span>
                 </div>
               </label>
-              
+
               <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/50 p-2 rounded">
                 <input
                   type="checkbox"
@@ -920,7 +926,7 @@ function CalendarioMensual() {
                   <span className="text-sm text-gray-700 dark:text-gray-300">Diamond</span>
                 </div>
               </label>
-              
+
               <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/50 p-2 rounded">
                 <input
                   type="checkbox"
@@ -961,7 +967,7 @@ function CalendarioMensual() {
                 </div>
               </div>
             </div>
-            
+
             {/* Días de la semana */}
             <div className="grid grid-cols-7 gap-1 mb-1">
               {diasSemana.map((dia) => (
@@ -973,28 +979,28 @@ function CalendarioMensual() {
                 </div>
               ))}
             </div>
-            
+
             {/* Grid del calendario */}
             <div className="grid grid-cols-7 gap-1">
               {(() => {
                 const { diasEnMes, diaInicioSemana } = obtenerDiasDelMes();
                 const dias = [];
-                
+
                 // Días vacíos al inicio
                 for (let i = 0; i < diaInicioSemana; i++) {
                   dias.push(
                     <div key={`empty-${i}`} className="aspect-square"></div>
                   );
                 }
-                
+
                 // Días del mes
                 for (let dia = 1; dia <= diasEnMes; dia++) {
-                  const esHoy = dia === fechaActual.getDate() && 
-                                mesSeleccionado === fechaActual.getMonth() + 1 && 
-                                añoSeleccionado === fechaActual.getFullYear();
+                  const esHoy = dia === fechaActual.getDate() &&
+                    mesSeleccionado === fechaActual.getMonth() + 1 &&
+                    añoSeleccionado === fechaActual.getFullYear();
                   const estaSeleccionado = diaSeleccionado === dia;
                   const tieneEventos = obtenerEventosDelDia(dia, false).length > 0;
-                  
+
                   dias.push(
                     <button
                       key={dia}
@@ -1008,8 +1014,8 @@ function CalendarioMensual() {
                         ${estaSeleccionado
                           ? 'bg-blue-600 text-white'
                           : esHoy
-                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
                         }
                       `}
                     >
@@ -1020,7 +1026,7 @@ function CalendarioMensual() {
                     </button>
                   );
                 }
-                
+
                 return dias;
               })()}
             </div>
@@ -1219,20 +1225,20 @@ function CalendarioMensual() {
                 )}
 
                 {/* Título del Evento (para Google Calendar) */}
-                {eventoSeleccionado.es_google_calendar && (eventoSeleccionado.titulo || eventoSeleccionado.summary) && 
-                 (eventoSeleccionado.titulo || eventoSeleccionado.summary) !== (eventoSeleccionado.clientes?.nombre_completo || '') && (
-                  <>
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Título del Evento</h3>
-                      <div className="pl-6">
-                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
-                          {eventoSeleccionado.titulo || eventoSeleccionado.summary}
-                        </span>
+                {eventoSeleccionado.es_google_calendar && (eventoSeleccionado.titulo || eventoSeleccionado.summary) &&
+                  (eventoSeleccionado.titulo || eventoSeleccionado.summary) !== (eventoSeleccionado.clientes?.nombre_completo || '') && (
+                    <>
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Título del Evento</h3>
+                        <div className="pl-6">
+                          <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                            {eventoSeleccionado.titulo || eventoSeleccionado.summary}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
+                      <Separator />
+                    </>
+                  )}
 
                 {/* Fecha y Hora */}
                 <div>
@@ -1247,7 +1253,7 @@ function CalendarioMensual() {
                         {(() => {
                           // Para eventos de todo el día, parsear la fecha correctamente
                           let fechaParaMostrar = eventoSeleccionado.fecha_evento || eventoSeleccionado.fecha_inicio || eventoSeleccionado.hora_inicio;
-                          
+
                           if (eventoSeleccionado.es_todo_el_dia && eventoSeleccionado.fecha_inicio) {
                             // Si es evento de todo el día, usar la fecha directamente sin conversión de zona horaria
                             // La fecha viene como "2025-11-19T00:00:00-05:00", extraer solo la parte de fecha
@@ -1255,7 +1261,7 @@ function CalendarioMensual() {
                             const [year, month, day] = fechaStr.split('-').map(Number);
                             fechaParaMostrar = new Date(year, month - 1, day);
                           }
-                          
+
                           return new Date(fechaParaMostrar).toLocaleDateString('es-ES', {
                             weekday: 'long',
                             year: 'numeric',
@@ -1283,7 +1289,7 @@ function CalendarioMensual() {
                             const horaFinConExtras = calcularHoraFinConExtras(eventoSeleccionado.hora_fin || eventoSeleccionado.fecha_fin, horasAdicionales);
                             const inicio = eventoSeleccionado.hora_inicio || eventoSeleccionado.fecha_inicio;
                             const duracion = calcularDuracion(inicio, horaFinConExtras);
-                            
+
                             return (
                               <>
                                 {formatearHora(inicio)}
@@ -1334,8 +1340,8 @@ function CalendarioMensual() {
                             eventoSeleccionado.estado_pago === 'completado'
                               ? 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300'
                               : eventoSeleccionado.estado_pago === 'parcial'
-                              ? 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300'
-                              : 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300'
+                                ? 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                : 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300'
                           }
                         >
                           {eventoSeleccionado.estado_pago === 'completado' && <CheckCircle2 className="w-3 h-3 mr-1" />}
@@ -1405,15 +1411,15 @@ function CalendarioMensual() {
                             eventoSeleccionado.estado === 'confirmed'
                               ? 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300'
                               : eventoSeleccionado.estado === 'tentative'
-                              ? 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300'
-                              : 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900/30 dark:text-gray-300'
+                                ? 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                : 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900/30 dark:text-gray-300'
                           }
                         >
                           {eventoSeleccionado.estado === 'confirmed' && <CheckCircle2 className="w-3 h-3 mr-1" />}
                           {eventoSeleccionado.estado === 'tentative' && <AlertCircle className="w-3 h-3 mr-1" />}
-                          {eventoSeleccionado.estado === 'confirmed' ? 'Confirmado' : 
-                           eventoSeleccionado.estado === 'tentative' ? 'Tentativo' : 
-                           eventoSeleccionado.estado === 'cancelled' ? 'Cancelado' : eventoSeleccionado.estado}
+                          {eventoSeleccionado.estado === 'confirmed' ? 'Confirmado' :
+                            eventoSeleccionado.estado === 'tentative' ? 'Tentativo' :
+                              eventoSeleccionado.estado === 'cancelled' ? 'Cancelado' : eventoSeleccionado.estado}
                         </Badge>
                       </div>
                     </div>
@@ -1456,9 +1462,9 @@ function CalendarioMensual() {
                     <div className="pl-6">
                       <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300">
                         {eventoSeleccionado.calendario === 'principal' ? 'Calendario Principal' :
-                         eventoSeleccionado.calendario === 'citas' ? 'Calendario CITAS' :
-                         eventoSeleccionado.calendario === 'contratos' ? 'Contratos' :
-                         eventoSeleccionado.calendario}
+                          eventoSeleccionado.calendario === 'citas' ? 'Calendario CITAS' :
+                            eventoSeleccionado.calendario === 'contratos' ? 'Contratos' :
+                              eventoSeleccionado.calendario}
                       </Badge>
                     </div>
                   </div>
@@ -1478,21 +1484,21 @@ function CalendarioMensual() {
                   </Button>
                 )}
                 {/* Solo mostrar botón "Ver Contrato Completo" si es un contrato real, no un lead/cita */}
-                {!eventoSeleccionado.es_google_calendar && 
-                 eventoSeleccionado.calendario !== 'citas' && 
-                 !eventoSeleccionado.es_citas &&
-                 eventoSeleccionado.id &&
-                 !String(eventoSeleccionado.id).startsWith('leak_') &&
-                 !String(eventoSeleccionado.id).startsWith('google_') && (
-                  <Button
-                    onClick={() => {
-                      navigate(`/contratos/${eventoSeleccionado.id}`);
-                      setMostrarModalEvento(false);
-                    }}
-                  >
-                    Ver Contrato Completo
-                  </Button>
-                )}
+                {!eventoSeleccionado.es_google_calendar &&
+                  eventoSeleccionado.calendario !== 'citas' &&
+                  !eventoSeleccionado.es_citas &&
+                  eventoSeleccionado.id &&
+                  !String(eventoSeleccionado.id).startsWith('leak_') &&
+                  !String(eventoSeleccionado.id).startsWith('google_') && (
+                    <Button
+                      onClick={() => {
+                        navigate(`/contratos/${eventoSeleccionado.id}`);
+                        setMostrarModalEvento(false);
+                      }}
+                    >
+                      Ver Contrato Completo
+                    </Button>
+                  )}
                 <Button variant="outline" onClick={() => setMostrarModalEvento(false)}>
                   Cerrar
                 </Button>
