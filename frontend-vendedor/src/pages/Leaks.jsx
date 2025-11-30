@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Loader2, 
+import {
+  Loader2,
   UserPlus,
   CheckCircle,
   XCircle,
@@ -100,54 +100,70 @@ function Leaks() {
       ) : (
         <>
           {/* Métricas principales */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="bg-card relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4 border-l-blue-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="pb-2 relative z-10">
+                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                   Leads Disponibles
                 </CardTitle>
+                <div className="absolute top-4 right-4 p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
+                  <UserPlus className="w-4 h-4" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsData?.stats?.totalDisponibles || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Sin asignar</p>
+              <CardContent className="pt-0 relative z-10">
+                <div className="text-3xl font-bold tracking-tight">{statsData?.stats?.totalDisponibles || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1 font-medium">Sin asignar</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+            <Card className="bg-card relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4 border-l-purple-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="pb-2 relative z-10">
+                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                   Mis Leads
                 </CardTitle>
+                <div className="absolute top-4 right-4 p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full text-purple-600 dark:text-purple-400">
+                  <Target className="w-4 h-4" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsData?.stats?.totalMios || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Asignados a mí</p>
+              <CardContent className="pt-0 relative z-10">
+                <div className="text-3xl font-bold tracking-tight">{statsData?.stats?.totalMios || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1 font-medium">Asignados a mí</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+            <Card className="bg-card relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4 border-l-emerald-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent dark:from-emerald-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="pb-2 relative z-10">
+                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                   Convertidos
                 </CardTitle>
+                <div className="absolute top-4 right-4 p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-full text-emerald-600 dark:text-emerald-400">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsData?.stats?.leaksConvertidos || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">
+              <CardContent className="pt-0 relative z-10">
+                <div className="text-3xl font-bold tracking-tight">{statsData?.stats?.leaksConvertidos || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1 font-medium">
                   Tasa: {statsData?.stats?.tasaConversion || '0%'}
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Pendientes de Contacto
+            <Card className="bg-card relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4 border-l-amber-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="pb-2 relative z-10">
+                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  Pendientes
                 </CardTitle>
+                <div className="absolute top-4 right-4 p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-600 dark:text-amber-400">
+                  <Clock className="w-4 h-4" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsData?.stats?.pendientesContacto || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Requieren seguimiento</p>
+              <CardContent className="pt-0 relative z-10">
+                <div className="text-3xl font-bold tracking-tight">{statsData?.stats?.pendientesContacto || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1 font-medium">Requieren seguimiento</p>
               </CardContent>
             </Card>
           </div>
@@ -187,16 +203,16 @@ function Leaks() {
                           dataKey="value"
                         >
                           {statsData.stats.porEstado.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
+                            <Cell
+                              key={`cell-${index}`}
                               fill={COLORS[index % COLORS.length]}
                               stroke="hsl(var(--background))"
                               strokeWidth={2}
                             />
                           ))}
                         </Pie>
-                        <Tooltip 
-                          contentStyle={{ 
+                        <Tooltip
+                          contentStyle={{
                             backgroundColor: 'hsl(var(--popover))',
                             border: '1px solid hsl(var(--border))',
                             borderRadius: '6px',
@@ -207,8 +223,8 @@ function Leaks() {
                             props.payload.name
                           ]}
                         />
-                        <Legend 
-                          verticalAlign="bottom" 
+                        <Legend
+                          verticalAlign="bottom"
                           height={36}
                           formatter={(value, entry) => (
                             <span style={{ color: 'hsl(var(--foreground))', fontSize: '12px' }}>

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Phone, 
-  Mail, 
-  Users, 
-  Loader2, 
+import {
+  Phone,
+  Mail,
+  Users,
+  Loader2,
   Eye,
   UserPlus,
   Trash2,
@@ -36,7 +36,7 @@ import { es } from 'date-fns/locale';
 // Función helper para parsear fechas sin problemas de timezone
 const parsearFechaLocal = (fecha) => {
   if (!fecha) return null;
-  
+
   // Si es un string en formato YYYY-MM-DD, parsearlo como fecha local
   if (typeof fecha === 'string') {
     // Extraer solo la parte de fecha (antes de T o espacio)
@@ -47,7 +47,7 @@ const parsearFechaLocal = (fecha) => {
       return new Date(year, month - 1, day);
     }
   }
-  
+
   // Si es un objeto Date, extraer año, mes, día y crear nueva fecha local
   if (fecha instanceof Date) {
     const year = fecha.getFullYear();
@@ -55,7 +55,7 @@ const parsearFechaLocal = (fecha) => {
     const day = fecha.getDate();
     return new Date(year, month, day);
   }
-  
+
   // Si es un string ISO con timezone, extraer solo la parte de fecha
   if (typeof fecha === 'string') {
     const datePart = fecha.split('T')[0].split(' ')[0];
@@ -64,7 +64,7 @@ const parsearFechaLocal = (fecha) => {
       return new Date(year, month - 1, day);
     }
   }
-  
+
   // Último recurso: parsear normalmente y luego extraer año/mes/día
   const date = new Date(fecha);
   if (!isNaN(date.getTime())) {
@@ -73,7 +73,7 @@ const parsearFechaLocal = (fecha) => {
     const day = date.getDate();
     return new Date(year, month, day);
   }
-  
+
   return null;
 };
 
@@ -123,8 +123,8 @@ function LeaksDisponibles() {
   };
 
   // Query para leaks disponibles
-  const { 
-    data: disponiblesData, 
+  const {
+    data: disponiblesData,
     isLoading: isLoadingDisponibles,
     isRefetching: isRefetchingDisponibles,
     refetch: refetchDisponibles
@@ -184,7 +184,7 @@ function LeaksDisponibles() {
           };
         }
       );
-      
+
       // Invalidar y forzar refetch inmediato para actualización automática
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['leaks-disponibles'], refetchType: 'active' }),
@@ -318,125 +318,211 @@ function LeaksDisponibles() {
     }
 
     return (
-      <Table className="w-full">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[50px] text-center">#</TableHead>
-            <TableHead className="w-[80px]">Fecha Rec.</TableHead>
-            <TableHead className="w-[140px]">Nombre</TableHead>
-            <TableHead className="w-[110px]">Teléfono</TableHead>
-            <TableHead className="w-[160px]">Email</TableHead>
-            <TableHead className="w-[100px]">Tipo</TableHead>
-            <TableHead className="w-[70px]">Invit.</TableHead>
-            <TableHead className="w-[80px]">Salón</TableHead>
-            <TableHead className="w-[100px]">Fecha Evento</TableHead>
-            <TableHead className="w-[120px]">Fuente</TableHead>
-            <TableHead className="w-[110px]">Estado</TableHead>
-            <TableHead className="w-[140px]">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {leaks.map((leak, index) => {
-            return (
-              <TableRow key={leak.id}>
-                <TableCell className="text-center text-sm font-medium text-muted-foreground">
-                  {index + 1}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                  {leak.fecha_recepcion ? format(parsearFechaLocal(leak.fecha_recepcion), 'yyyy-MM-dd') : '-'}
-                </TableCell>
-                <TableCell className="font-medium text-sm">
-                  <div className="truncate max-w-[120px]" title={leak.nombre_completo}>
-                    {leak.nombre_completo}
+      <>
+        {/* Vista Móvil: Cards */}
+        <div className="grid grid-cols-1 gap-4 md:hidden">
+          {leaks.map((leak) => (
+            <Card key={leak.id} className="overflow-hidden border-l-4 border-l-primary">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-lg">{leak.nombre_completo}</h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>{leak.fecha_evento ? format(parsearFechaLocal(leak.fecha_evento), 'dd/MM/yyyy') : 'Sin fecha'}</span>
+                    </div>
                   </div>
-                </TableCell>
-                <TableCell className="text-xs">
-                  <div className="flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate">{leak.telefono}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs">
-                  <div className="flex items-center gap-1">
-                    <Mail className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate max-w-[140px]" title={leak.email}>
-                      {leak.email}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs">
-                  <div className="truncate max-w-[100px]" title={leak.tipo_evento || '-'}>
-                    {leak.tipo_evento || '-'}
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs">
-                  <div className="flex items-center gap-1">
-                    <Users className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                    {leak.cantidad_invitados || '-'}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-xs">
-                    {leak.salon_preferido === '?' ? 'Desconocido' : (leak.salon_preferido || '-')}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                  {leak.fecha_evento ? format(parsearFechaLocal(leak.fecha_evento), 'yyyy-MM-dd') : '-'}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  <div className="truncate max-w-[100px]" title={leak.fuente || '-'}>
-                    {leak.fuente || '-'}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant={leak.estado === 'Nuevo' ? 'default' : 'secondary'}>
                     {leak.estado || 'Nuevo'}
                   </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      onClick={() => handleTomarLeak(leak.id)}
-                      disabled={tomarLeakMutation.isPending || leakTomandoId === leak.id}
-                      className="h-7 text-xs px-2"
-                    >
-                      {leakTomandoId === leak.id ? (
-                        <>
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          Tomando...
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-3 h-3 mr-1" />
-                          Tomar
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleVerDetalle(leak)}
-                      className="h-9 w-9 p-0"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEliminarLeak(leak.id, leak.nombre_completo)}
-                      disabled={eliminarLeakMutation.isPending}
-                      className="h-9 w-9 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3 h-3 text-muted-foreground" />
+                    <span className="truncate">{leak.telefono}</span>
                   </div>
-                </TableCell>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-3 h-3 text-muted-foreground" />
+                    <span>{leak.cantidad_invitados || '-'} inv.</span>
+                  </div>
+                  <div className="flex items-center gap-2 col-span-2">
+                    <Mail className="w-3 h-3 text-muted-foreground" />
+                    <span className="truncate">{leak.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 col-span-2">
+                    <Badge variant="outline" className="text-xs font-normal">
+                      {leak.salon_preferido === '?' ? 'Desconocido' : (leak.salon_preferido || '-')}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">• {leak.tipo_evento || '-'}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t mt-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleTomarLeak(leak.id)}
+                    disabled={tomarLeakMutation.isPending || leakTomandoId === leak.id}
+                    className="flex-1"
+                  >
+                    {leakTomandoId === leak.id ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        Tomando...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-3 h-3 mr-1" />
+                        Tomar
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleVerDetalle(leak)}
+                    className="px-3"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleEliminarLeak(leak.id, leak.nombre_completo)}
+                    disabled={eliminarLeakMutation.isPending}
+                    className="px-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Vista Desktop: Tabla */}
+        <div className="hidden md:block rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px] text-center">#</TableHead>
+                <TableHead className="w-[80px]">Fecha Rec.</TableHead>
+                <TableHead className="w-[140px]">Nombre</TableHead>
+                <TableHead className="w-[110px]">Teléfono</TableHead>
+                <TableHead className="w-[160px]">Email</TableHead>
+                <TableHead className="w-[100px]">Tipo</TableHead>
+                <TableHead className="w-[70px]">Invit.</TableHead>
+                <TableHead className="w-[80px]">Salón</TableHead>
+                <TableHead className="w-[100px]">Fecha Evento</TableHead>
+                <TableHead className="w-[120px]">Fuente</TableHead>
+                <TableHead className="w-[110px]">Estado</TableHead>
+                <TableHead className="w-[140px]">Acciones</TableHead>
               </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {leaks.map((leak, index) => {
+                return (
+                  <TableRow key={leak.id}>
+                    <TableCell className="text-center text-sm font-medium text-muted-foreground">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {leak.fecha_recepcion ? format(parsearFechaLocal(leak.fecha_recepcion), 'yyyy-MM-dd') : '-'}
+                    </TableCell>
+                    <TableCell className="font-medium text-sm">
+                      <div className="truncate max-w-[120px]" title={leak.nombre_completo}>
+                        {leak.nombre_completo}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div className="flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <span className="truncate">{leak.telefono}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div className="flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <span className="truncate max-w-[140px]" title={leak.email}>
+                          {leak.email}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div className="truncate max-w-[100px]" title={leak.tipo_evento || '-'}>
+                        {leak.tipo_evento || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        {leak.cantidad_invitados || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {leak.salon_preferido === '?' ? 'Desconocido' : (leak.salon_preferido || '-')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {leak.fecha_evento ? format(parsearFechaLocal(leak.fecha_evento), 'yyyy-MM-dd') : '-'}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <div className="truncate max-w-[100px]" title={leak.fuente || '-'}>
+                        {leak.fuente || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {leak.estado || 'Nuevo'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          onClick={() => handleTomarLeak(leak.id)}
+                          disabled={tomarLeakMutation.isPending || leakTomandoId === leak.id}
+                          className="h-7 text-xs px-2"
+                        >
+                          {leakTomandoId === leak.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              Tomando...
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="w-3 h-3 mr-1" />
+                              Tomar
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleVerDetalle(leak)}
+                          className="h-9 w-9 p-0"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEliminarLeak(leak.id, leak.nombre_completo)}
+                          disabled={eliminarLeakMutation.isPending}
+                          className="h-9 w-9 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </>
     );
   };
 
@@ -550,9 +636,9 @@ function LeaksDisponibles() {
               <Select value={filtroSalon} onValueChange={setFiltroSalon}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Todos">
-                    {filtroSalon === '?' ? 'Desconocido' : 
-                     filtroSalon === '' ? 'Todos' :
-                     filtroSalon || 'Todos'}
+                    {filtroSalon === '?' ? 'Desconocido' :
+                      filtroSalon === '' ? 'Todos' :
+                        filtroSalon || 'Todos'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -569,9 +655,9 @@ function LeaksDisponibles() {
               <Select value={ordenarPorFechaEvento || 'none'} onValueChange={(value) => setOrdenarPorFechaEvento(value === 'none' ? '' : value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue>
-                    {ordenarPorFechaEvento === 'desc' ? 'Más reciente' : 
-                     ordenarPorFechaEvento === 'asc' ? 'Más antigua' : 
-                     'No usar'}
+                    {ordenarPorFechaEvento === 'desc' ? 'Más reciente' :
+                      ordenarPorFechaEvento === 'asc' ? 'Más antigua' :
+                        'No usar'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -586,9 +672,9 @@ function LeaksDisponibles() {
               <Select value={ordenarPorFechaRecepcion || 'none'} onValueChange={(value) => setOrdenarPorFechaRecepcion(value === 'none' ? '' : value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue>
-                    {ordenarPorFechaRecepcion === 'desc' ? 'Más reciente' : 
-                     ordenarPorFechaRecepcion === 'asc' ? 'Más antigua' : 
-                     'No usar'}
+                    {ordenarPorFechaRecepcion === 'desc' ? 'Más reciente' :
+                      ordenarPorFechaRecepcion === 'asc' ? 'Más antigua' :
+                        'No usar'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -599,7 +685,7 @@ function LeaksDisponibles() {
               </Select>
             </div>
           </div>
-          
+
           {/* Filtro por Mes y Año */}
           <div className="flex items-center gap-2">
             <Button
@@ -610,7 +696,7 @@ function LeaksDisponibles() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            
+
             <Select
               value={mesSeleccionado.toString()}
               onValueChange={(value) => setMesSeleccionado(parseInt(value))}

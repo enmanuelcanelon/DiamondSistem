@@ -19,10 +19,10 @@ const buttonSizes = {
 const Button = React.forwardRef(
   ({ className = "", variant = "default", size = "default", asChild = false, ...props }, ref) => {
     const Comp = asChild ? React.Fragment : "button"
-    const baseClasses = "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-    
+    const baseClasses = "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
+
     const classes = `${baseClasses} ${buttonVariants[variant] || buttonVariants.default} ${buttonSizes[size] || buttonSizes.default} ${className}`
-    
+
     if (asChild) {
       const { children, variant, size, asChild: _, ...restProps } = props;
       // Filtrar props que no deben pasarse al hijo
@@ -37,7 +37,7 @@ const Button = React.forwardRef(
         ref: ref,
       })
     }
-    
+
     return <button className={classes} ref={ref} {...props} />
   }
 )

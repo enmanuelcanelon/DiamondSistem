@@ -34,7 +34,7 @@ function Ofertas() {
   const calcularFechasPorMes = (mes, año) => {
     const fechaInicio = new Date(año, mes - 1, 1);
     const fechaFin = new Date(año, mes, 0, 23, 59, 59);
-    
+
     return {
       desde: fechaInicio.toISOString().split('T')[0],
       hasta: fechaFin.toISOString().split('T')[0]
@@ -68,7 +68,7 @@ function Ofertas() {
     setMesSeleccionado(fechaActual.getMonth() + 1);
     setAñoSeleccionado(fechaActual.getFullYear());
   };
-  
+
   // Scroll infinito con useInfiniteQuery
   const {
     data,
@@ -108,7 +108,7 @@ function Ofertas() {
   const valorPendiente = ofertas
     .filter(o => o.estado === 'pendiente')
     .reduce((sum, o) => sum + parseFloat(o.total_final || 0), 0);
-  const tasaConversion = totalOfertas > 0 
+  const tasaConversion = totalOfertas > 0
     ? ((ofertasAceptadas / totalOfertas) * 100).toFixed(1)
     : '0.0';
 
@@ -153,7 +153,7 @@ function Ofertas() {
   // Mutation para crear contrato
   const crearContratoMutation = useMutation({
     mutationFn: async ({ ofertaId, planPago }) => {
-      const response = await api.post('/contratos', { 
+      const response = await api.post('/contratos', {
         oferta_id: ofertaId,
         tipo_pago: planPago.tipo_pago,
         numero_plazos: planPago.numero_plazos,
@@ -206,9 +206,9 @@ function Ofertas() {
   };
 
   const handleConfirmarPlanPago = (planPago) => {
-    crearContratoMutation.mutate({ 
-      ofertaId: ofertaSeleccionada.id, 
-      planPago 
+    crearContratoMutation.mutate({
+      ofertaId: ofertaSeleccionada.id,
+      planPago
     });
   };
 
@@ -218,7 +218,7 @@ function Ofertas() {
         params: { lang: 'es' },
         responseType: 'blob'
       });
-      
+
       // Crear un blob URL y descargar
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
@@ -251,14 +251,14 @@ function Ofertas() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header */}
-      <div className="flex items-center justify-between space-y-2">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Ofertas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Ofertas</h2>
+          <p className="text-sm md:text-base text-muted-foreground">
             Gestiona tus propuestas comerciales
           </p>
         </div>
-        <Button size="lg" asChild className="whitespace-nowrap">
+        <Button size="lg" asChild className="w-full md:w-auto whitespace-nowrap">
           <Link to="/ofertas/nueva">
             <Plus className="h-5 w-5 mr-2" />
             Nueva Oferta
@@ -267,100 +267,76 @@ function Ofertas() {
       </div>
 
       {/* Panel de Métricas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total de Ofertas */}
-        <Card className="bg-card relative">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="bg-card relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4 border-l-blue-500">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               Ofertas
             </CardTitle>
-            <Badge 
-              variant="outline" 
-              className="absolute top-4 right-4 h-6 px-2 rounded-full border bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-            >
-              <div className="flex items-center gap-1">
-                <FileText className="w-3 h-3" />
-                <span className="text-xs font-semibold">
-                  {totalOfertas > 0 ? `+${totalOfertas}` : totalOfertas}
-                </span>
-              </div>
-            </Badge>
+            <div className="absolute top-4 right-4 p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
+              <FileText className="w-4 h-4" />
+            </div>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{totalOfertas}</div>
-            <p className="text-xs text-muted-foreground mt-1">Ofertas</p>
+          <CardContent className="pt-0 relative z-10">
+            <div className="text-3xl font-bold tracking-tight">{totalOfertas}</div>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">Total de ofertas</p>
           </CardContent>
         </Card>
 
         {/* Pendientes */}
-        <Card className="bg-card relative">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="bg-card relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4 border-l-amber-500">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               Pendiente
             </CardTitle>
-            <Badge 
-              variant="outline" 
-              className="absolute top-4 right-4 h-6 px-2 rounded-full border bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-            >
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                <span className="text-xs font-semibold">
-                  {ofertasPendientes > 0 ? `+${ofertasPendientes}` : ofertasPendientes}
-                </span>
-              </div>
-            </Badge>
+            <div className="absolute top-4 right-4 p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-600 dark:text-amber-400">
+              <Clock className="w-4 h-4" />
+            </div>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{ofertasPendientes}</div>
-            <p className="text-xs text-muted-foreground mt-1">Pendiente</p>
+          <CardContent className="pt-0 relative z-10">
+            <div className="text-3xl font-bold tracking-tight">{ofertasPendientes}</div>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">
+              ${valorPendiente.toLocaleString()} en espera
+            </p>
           </CardContent>
         </Card>
 
         {/* Aceptadas */}
-        <Card className="bg-card relative">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="bg-card relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4 border-l-emerald-500">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent dark:from-emerald-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               Aceptada
             </CardTitle>
-            <Badge 
-              variant="outline" 
-              className="absolute top-4 right-4 h-6 px-2 rounded-full border bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-            >
-              <div className="flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                <span className="text-xs font-semibold">
-                  {ofertasAceptadas > 0 ? `+${ofertasAceptadas}` : ofertasAceptadas}
-                </span>
-              </div>
-            </Badge>
+            <div className="absolute top-4 right-4 p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-full text-emerald-600 dark:text-emerald-400">
+              <CheckCircle className="w-4 h-4" />
+            </div>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{ofertasAceptadas}</div>
-            <p className="text-xs text-muted-foreground mt-1">Aceptada</p>
+          <CardContent className="pt-0 relative z-10">
+            <div className="text-3xl font-bold tracking-tight">{ofertasAceptadas}</div>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">
+              Tasa: {tasaConversion}%
+            </p>
           </CardContent>
         </Card>
 
         {/* Rechazadas */}
-        <Card className="bg-card relative">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="bg-card relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4 border-l-red-500">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               Rechazada
             </CardTitle>
-            <Badge 
-              variant="outline" 
-              className="absolute top-4 right-4 h-6 px-2 rounded-full border bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
-            >
-              <div className="flex items-center gap-1">
-                <XCircle className="w-3 h-3" />
-                <span className="text-xs font-semibold">
-                  {ofertasRechazadas > 0 ? `-${ofertasRechazadas}` : ofertasRechazadas}
-                </span>
-              </div>
-            </Badge>
+            <div className="absolute top-4 right-4 p-2 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 dark:text-red-400">
+              <XCircle className="w-4 h-4" />
+            </div>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{ofertasRechazadas}</div>
-            <p className="text-xs text-muted-foreground mt-1">Rechazada</p>
+          <CardContent className="pt-0 relative z-10">
+            <div className="text-3xl font-bold tracking-tight">{ofertasRechazadas}</div>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">Ofertas rechazadas</p>
           </CardContent>
         </Card>
       </div>
@@ -368,7 +344,7 @@ function Ofertas() {
       {/* Búsqueda y filtros */}
       <Card>
         <CardContent className="pt-6 space-y-4">
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input
@@ -380,7 +356,7 @@ function Ofertas() {
               />
             </div>
             <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
@@ -391,7 +367,7 @@ function Ofertas() {
               </SelectContent>
             </Select>
           </div>
-          
+
           {/* Filtro por Mes y Año */}
           <div className="flex items-center gap-2">
             <Button
@@ -402,7 +378,7 @@ function Ofertas() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            
+
             <Select value={mesSeleccionado.toString()} onValueChange={(value) => setMesSeleccionado(parseInt(value))}>
               <SelectTrigger className="w-auto min-w-[180px] [&>span]:line-clamp-none [&>span]:whitespace-nowrap">
                 <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -500,158 +476,158 @@ function Ofertas() {
         <div className="space-y-4">
           {ofertas.map((oferta) => {
             // Determinar color del borde izquierdo según estado
-            const colorBorde = oferta.estado === 'aceptada' 
-              ? 'border-l-green-500' 
-              : oferta.estado === 'pendiente' 
-              ? 'border-l-yellow-500'
-              : 'border-l-red-500';
-            
+            const colorBorde = oferta.estado === 'aceptada'
+              ? 'border-l-green-500'
+              : oferta.estado === 'pendiente'
+                ? 'border-l-yellow-500'
+                : 'border-l-red-500';
+
             return (
-            <Card key={oferta.id} className={`hover:shadow-md transition-shadow border-l-4 ${colorBorde}`}>
-              <CardContent className="pt-6">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-base font-semibold text-foreground">
-                        {oferta.codigo_oferta}
-                      </h3>
-                      <Badge variant="outline" className={getEstadoColor(oferta.estado)}>
-                        {oferta.estado.charAt(0).toUpperCase() + oferta.estado.slice(1)}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Cliente: <span className="font-medium text-foreground">{oferta.clientes?.nombre_completo}</span>
-                      {oferta.homenajeado && (
-                        <span className="ml-2 text-foreground">
-                          {oferta.homenajeado}
-                        </span>
-                      )}
-                    </p>
-                    {oferta.tipo_evento && (
-                      <p className="text-xs text-muted-foreground mb-1">
-                        Tipo de evento: <span className="font-medium text-foreground capitalize">{oferta.tipo_evento}</span>
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
-                      {oferta.fecha_evento && (
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {new Date(oferta.fecha_evento).toLocaleDateString('es-ES', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </div>
-                      )}
-                      {oferta.hora_inicio && oferta.hora_fin && (
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span className="font-medium text-foreground">
-                            {(() => {
-                              // Calcular horas adicionales y hora fin con extras (igual que en contratos)
-                              const horasAdicionales = obtenerHorasAdicionales(oferta.ofertas_servicios_adicionales || []);
-                              const horaFinConExtras = calcularHoraFinConExtras(oferta.hora_fin, horasAdicionales);
-                              const duracion = calcularDuracion(oferta.hora_inicio, horaFinConExtras);
-                              
-                              return (
-                                <>
-                                  {formatearHora(oferta.hora_inicio)} - {formatearHora(horaFinConExtras)}
-                                  {duracion > 0 && (() => {
-                                    const horasEnteras = Math.floor(duracion);
-                                    const minutos = Math.round((duracion - horasEnteras) * 60);
-                                    if (minutos > 0 && minutos < 60) {
-                                      return ` (${horasEnteras}h ${minutos}m)`;
-                                    }
-                                    return ` (${horasEnteras}h)`;
-                                  })()}
-                                </>
-                              );
-                            })()}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-foreground">{oferta.cantidad_invitados} invitados</span>
+              <Card key={oferta.id} className={`hover:shadow-md transition-shadow border-l-4 ${colorBorde}`}>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-base font-semibold text-foreground">
+                          {oferta.codigo_oferta}
+                        </h3>
+                        <Badge variant="outline" className={getEstadoColor(oferta.estado)}>
+                          {oferta.estado.charAt(0).toUpperCase() + oferta.estado.slice(1)}
+                        </Badge>
                       </div>
-                      {(oferta.lugar_salon || oferta.salones?.nombre) && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-foreground font-medium">
-                            {oferta.lugar_salon || oferta.salones?.nombre}
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Cliente: <span className="font-medium text-foreground">{oferta.clientes?.nombre_completo}</span>
+                        {oferta.homenajeado && (
+                          <span className="ml-2 text-foreground">
+                            {oferta.homenajeado}
                           </span>
-                        </div>
-                      )}
-                      {oferta.paquetes?.nombre && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">Paquete: {oferta.paquetes.nombre}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="lg:text-right">
-                    <div className="mb-2">
-                      <p className="text-sm text-muted-foreground">Total</p>
-                      <p className="text-xl font-bold text-foreground">
-                        ${parseFloat(oferta.total_final).toLocaleString()}
+                        )}
                       </p>
+                      {oferta.tipo_evento && (
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Tipo de evento: <span className="font-medium text-foreground capitalize">{oferta.tipo_evento}</span>
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
+                        {oferta.fecha_evento && (
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {new Date(oferta.fecha_evento).toLocaleDateString('es-ES', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </div>
+                        )}
+                        {oferta.hora_inicio && oferta.hora_fin && (
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span className="font-medium text-foreground">
+                              {(() => {
+                                // Calcular horas adicionales y hora fin con extras (igual que en contratos)
+                                const horasAdicionales = obtenerHorasAdicionales(oferta.ofertas_servicios_adicionales || []);
+                                const horaFinConExtras = calcularHoraFinConExtras(oferta.hora_fin, horasAdicionales);
+                                const duracion = calcularDuracion(oferta.hora_inicio, horaFinConExtras);
+
+                                return (
+                                  <>
+                                    {formatearHora(oferta.hora_inicio)} - {formatearHora(horaFinConExtras)}
+                                    {duracion > 0 && (() => {
+                                      const horasEnteras = Math.floor(duracion);
+                                      const minutos = Math.round((duracion - horasEnteras) * 60);
+                                      if (minutos > 0 && minutos < 60) {
+                                        return ` (${horasEnteras}h ${minutos}m)`;
+                                      }
+                                      return ` (${horasEnteras}h)`;
+                                    })()}
+                                  </>
+                                );
+                              })()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-foreground">{oferta.cantidad_invitados} invitados</span>
+                        </div>
+                        {(oferta.lugar_salon || oferta.salones?.nombre) && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-foreground font-medium">
+                              {oferta.lugar_salon || oferta.salones?.nombre}
+                            </span>
+                          </div>
+                        )}
+                        {oferta.paquetes?.nombre && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Paquete: {oferta.paquetes.nombre}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="lg:text-right">
+                      <div className="mb-2">
+                        <p className="text-sm text-muted-foreground">Total</p>
+                        <p className="text-xl font-bold text-foreground">
+                          ${parseFloat(oferta.total_final).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Acciones - Todos los botones juntos */}
-                <div className="mt-4 pt-4 border-t flex gap-2 flex-wrap">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDescargarPDF(oferta.id, oferta.codigo_oferta)}
-                    className="whitespace-nowrap"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Descargar PDF
-                  </Button>
-
-                  {oferta.estado === 'pendiente' && (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => handleAceptar(oferta)}
-                        className="!border-green-500 !text-green-600 hover:!bg-green-50 dark:!border-green-500 dark:!text-green-400 dark:hover:!bg-green-950/20 whitespace-nowrap"
-                      >
-                        Aceptar Oferta
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        onClick={() => handleRechazar(oferta.id)}
-                        disabled={rechazarMutation.isPending}
-                        className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20 whitespace-nowrap"
-                      >
-                        {rechazarMutation.isPending ? 'Rechazando...' : 'Rechazar'}
-                      </Button>
-                    </>
-                  )}
-
-                  {oferta.estado === 'aceptada' && !oferta.contratos?.length && (
+                  {/* Acciones - Todos los botones juntos */}
+                  <div className="mt-4 pt-4 border-t flex gap-2 flex-wrap">
                     <Button
                       variant="outline"
-                      onClick={() => handleCrearContrato(oferta)}
-                      disabled={crearContratoMutation.isPending}
+                      onClick={() => handleDescargarPDF(oferta.id, oferta.codigo_oferta)}
                       className="whitespace-nowrap"
                     >
-                      {crearContratoMutation.isPending ? 'Creando...' : 'Plan de Pago →'}
+                      <Download className="w-4 h-4 mr-2" />
+                      Descargar PDF
                     </Button>
-                  )}
 
-                  {oferta.estado === 'aceptada' && oferta.contratos?.length > 0 && (
-                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Contrato ya creado
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    {oferta.estado === 'pendiente' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleAceptar(oferta)}
+                          className="!border-green-500 !text-green-600 hover:!bg-green-50 dark:!border-green-500 dark:!text-green-400 dark:hover:!bg-green-950/20 whitespace-nowrap"
+                        >
+                          Aceptar Oferta
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleRechazar(oferta.id)}
+                          disabled={rechazarMutation.isPending}
+                          className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20 whitespace-nowrap"
+                        >
+                          {rechazarMutation.isPending ? 'Rechazando...' : 'Rechazar'}
+                        </Button>
+                      </>
+                    )}
+
+                    {oferta.estado === 'aceptada' && !oferta.contratos?.length && (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleCrearContrato(oferta)}
+                        disabled={crearContratoMutation.isPending}
+                        className="whitespace-nowrap"
+                      >
+                        {crearContratoMutation.isPending ? 'Creando...' : 'Plan de Pago →'}
+                      </Button>
+                    )}
+
+                    {oferta.estado === 'aceptada' && oferta.contratos?.length > 0 && (
+                      <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Contrato ya creado
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
-          
+
           {/* Observador para scroll infinito */}
           <div ref={observerTarget} className="h-10 flex items-center justify-center py-4">
             {isFetchingNextPage && (
@@ -661,7 +637,7 @@ function Ofertas() {
               </div>
             )}
           </div>
-          
+
           {/* Indicador de fin */}
           {!hasNextPage && ofertas.length > 0 && (
             <div className="text-center py-4 text-muted-foreground text-sm">

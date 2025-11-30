@@ -19,7 +19,7 @@ import { es } from 'date-fns/locale';
 
 function Dashboard() {
   const { user } = useAuthStore();
-  
+
   // Estado para el mes y año seleccionado
   const fechaActual = new Date();
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1);
@@ -64,9 +64,9 @@ function Dashboard() {
           año: añoSeleccionado
         }
       });
-      
+
       const statsData = response.data?.estadisticas || {};
-      
+
       // Calcular período anterior para comparación
       let mesAnterior = mesSeleccionado - 1;
       let añoAnterior = añoSeleccionado;
@@ -74,7 +74,7 @@ function Dashboard() {
         mesAnterior = 12;
         añoAnterior = añoSeleccionado - 1;
       }
-      
+
       // Obtener stats del mes anterior para comparación (solo si es necesario)
       let datosAnteriores = {
         clientes: 0,
@@ -83,7 +83,7 @@ function Dashboard() {
         ventas: 0,
         comisiones: 0
       };
-      
+
       try {
         const responseAnterior = await api.get(`/vendedores/${user.id}/stats/mes`, {
           params: {
@@ -91,7 +91,7 @@ function Dashboard() {
             año: añoAnterior
           }
         });
-        
+
         const statsAnteriores = responseAnterior.data?.estadisticas || {};
         datosAnteriores = {
           clientes: statsAnteriores.clientes?.total || 0,
@@ -103,7 +103,7 @@ function Dashboard() {
       } catch (error) {
         // Si falla, usar valores por defecto
       }
-      
+
       // Formatear datos para compatibilidad con el código existente
       return {
         clientes: {
@@ -157,7 +157,7 @@ function Dashboard() {
       const fechaInicioMes = new Date(añoSeleccionado, mesSeleccionado - 1, 1);
       fechaInicioMes.setHours(0, 0, 0, 0);
       const fechaFinMes = new Date(añoSeleccionado, mesSeleccionado, 0, 23, 59, 59);
-      
+
       // Obtener todos los contratos creados en el mes seleccionado (fecha_creacion_contrato)
       const response = await api.get('/contratos', {
         params: {
@@ -167,27 +167,27 @@ function Dashboard() {
           fecha_creacion_hasta: fechaFinMes.toISOString().split('T')[0]
         }
       });
-      
+
       // Filtrar contratos por fecha_creacion_contrato del mes seleccionado
       const todosContratos = response.data?.data || [];
       const contratosFiltrados = todosContratos.filter(contrato => {
         if (!contrato.fecha_creacion_contrato) return false;
-        
+
         const fechaCreacion = new Date(contrato.fecha_creacion_contrato);
         const fechaCreacionNormalizada = new Date(fechaCreacion.getFullYear(), fechaCreacion.getMonth(), fechaCreacion.getDate());
         const fechaInicioNormalizada = new Date(fechaInicioMes.getFullYear(), fechaInicioMes.getMonth(), fechaInicioMes.getDate());
         const fechaFinNormalizada = new Date(fechaFinMes.getFullYear(), fechaFinMes.getMonth(), fechaFinMes.getDate());
-        
+
         return fechaCreacionNormalizada >= fechaInicioNormalizada && fechaCreacionNormalizada <= fechaFinNormalizada;
       });
-      
+
       // Ordenar por fecha_creacion_contrato descendente (más recientes primero)
       contratosFiltrados.sort((a, b) => {
         const fechaA = new Date(a.fecha_creacion_contrato || 0);
         const fechaB = new Date(b.fecha_creacion_contrato || 0);
         return fechaB - fechaA;
       });
-      
+
       return {
         ...response.data,
         data: contratosFiltrados // Mostrar todos los contratos del mes
@@ -262,24 +262,24 @@ function Dashboard() {
 
   // Descargar reporte
   const descargarReporte = async () => {
-                    try {
-                      const response = await api.get(`/vendedores/${user.id}/reporte-mensual/${mesSeleccionado}/${añoSeleccionado}`, {
-                        responseType: 'blob'
-                      });
-                      
-                      const blob = new Blob([response.data], { type: 'application/pdf' });
-                      const url = window.URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = `Reporte-Mensual-${nombresMeses[mesSeleccionado - 1]}-${añoSeleccionado}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      window.URL.revokeObjectURL(url);
-                    } catch (error) {
-                      console.error('Error al descargar reporte:', error);
-                      alert('Error al descargar el reporte');
-                    }
+    try {
+      const response = await api.get(`/vendedores/${user.id}/reporte-mensual/${mesSeleccionado}/${añoSeleccionado}`, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Reporte-Mensual-${nombresMeses[mesSeleccionado - 1]}-${añoSeleccionado}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error al descargar reporte:', error);
+      alert('Error al descargar el reporte');
+    }
   };
 
   // Calcular tasa de conversión como número
@@ -317,14 +317,14 @@ function Dashboard() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* Header mejorado */}
-      <div className="flex items-center justify-between space-y-2">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-sm md:text-base text-muted-foreground">
             Resumen de {nombresMeses[mesSeleccionado - 1]} {añoSeleccionado}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <Button
             variant="outline"
             size="sm"
@@ -351,7 +351,7 @@ function Dashboard() {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
+
           <Select value={mesSeleccionado.toString()} onValueChange={(value) => setMesSeleccionado(parseInt(value))}>
             <SelectTrigger className="w-auto min-w-[180px] [&>span]:line-clamp-none [&>span]:whitespace-nowrap">
               <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -431,14 +431,14 @@ function Dashboard() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => {
             const cambio = stat.cambio || 0;
             const esPositivo = cambio > 0;
             const esNegativo = cambio < 0;
             const esCero = cambio === 0;
             const cambioAbsoluto = Math.abs(cambio);
-            
+
             // "Ofertas Pendientes" siempre debe ser amarillo
             const esOfertasPendientes = stat.name === 'Ofertas Pendientes';
             const badgeColorClass = esOfertasPendientes
@@ -448,18 +448,19 @@ function Dashboard() {
                 : esNegativo
                   ? 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
                   : 'bg-gray-50 dark:bg-gray-950/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-800';
-            
+
             return (
-              <Card key={stat.name} className="bg-card relative">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+              <Card key={stat.name} className="bg-card relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4" style={{ borderLeftColor: esPositivo ? '#10b981' : esNegativo ? '#ef4444' : esOfertasPendientes ? '#f59e0b' : '#6b7280' }}>
+                <div className={`absolute inset-0 bg-gradient-to-br ${esPositivo ? 'from-emerald-50/50 to-transparent dark:from-emerald-950/20' : esNegativo ? 'from-red-50/50 to-transparent dark:from-red-950/20' : esOfertasPendientes ? 'from-amber-50/50 to-transparent dark:from-amber-950/20' : 'from-gray-50/50 to-transparent dark:from-gray-950/20'} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                <CardHeader className="pb-2 relative z-10">
+                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                     {stat.name}
                   </CardTitle>
                   {/* Indicador de rendimiento/KPI - Esquina superior derecha */}
                   {!esCero && (
-                    <Badge 
-                      variant="outline" 
-                      className={`absolute top-4 right-4 h-6 px-2 rounded-full border ${badgeColorClass}`}
+                    <Badge
+                      variant="outline"
+                      className={`absolute top-4 right-4 h-6 px-2 rounded-full border ${badgeColorClass} shadow-sm`}
                     >
                       <div className="flex items-center gap-1">
                         {esPositivo ? (
@@ -467,29 +468,29 @@ function Dashboard() {
                         ) : (
                           <TrendingDown className="w-3 h-3" />
                         )}
-                        <span className="text-xs font-semibold">
+                        <span className="text-xs font-bold">
                           {esPositivo ? '+' : '-'}{cambioAbsoluto}
                         </span>
-                </div>
+                      </div>
                     </Badge>
                   )}
                   {esCero && (
-                    <Badge 
-                      variant="outline" 
+                    <Badge
+                      variant="outline"
                       className={`absolute top-4 right-4 h-6 px-2 rounded-full border ${badgeColorClass}`}
                     >
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-semibold">
-                          0
+                          -
                         </span>
-              </div>
+                      </div>
                     </Badge>
                   )}
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="text-2xl font-bold">{stat.value}</div>
+                <CardContent className="pt-0 relative z-10">
+                  <div className="text-3xl font-bold tracking-tight">{stat.value}</div>
                   {stat.descripcion && (
-                    <p className="text-xs text-muted-foreground mt-1">{stat.descripcion}</p>
+                    <p className="text-xs text-muted-foreground mt-1 font-medium">{stat.descripcion}</p>
                   )}
                 </CardContent>
               </Card>
@@ -499,9 +500,9 @@ function Dashboard() {
       )}
 
       {/* Información detallada - Layout mejorado */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
         {/* Ofertas - Ocupa más espacio */}
-        <Card className="col-span-4">
+        <Card className="col-span-1 lg:col-span-4">
           <CardHeader>
             <div>
               <CardTitle>Estado de Ofertas</CardTitle>
@@ -513,19 +514,19 @@ function Dashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Pendientes</span>
                 <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                {stats?.ofertas?.pendientes || 0}
+                  {stats?.ofertas?.pendientes || 0}
                 </Badge>
-            </div>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Aceptadas</span>
                 <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
-                {stats?.ofertas?.aceptadas || 0}
+                  {stats?.ofertas?.aceptadas || 0}
                 </Badge>
-            </div>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Rechazadas</span>
                 <Badge variant="outline" className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
-                {stats?.ofertas?.rechazadas || 0}
+                  {stats?.ofertas?.rechazadas || 0}
                 </Badge>
               </div>
               <Separator />
@@ -536,7 +537,7 @@ function Dashboard() {
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     <span className="font-semibold">{stats?.ofertas?.tasa_conversion || '0%'}</span>
                   </div>
-            </div>
+                </div>
                 {/* Gráfico de Tasa de Conversión */}
                 <div className="h-[200px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -547,51 +548,51 @@ function Dashboard() {
                         const fechaInicioMes = new Date(añoSeleccionado, mesSeleccionado - 1, 1);
                         const fechaFinMes = new Date(añoSeleccionado, mesSeleccionado, 0);
                         const semanasEnMes = Math.ceil(fechaFinMes.getDate() / 7);
-                        
+
                         for (let i = 0; i < semanasEnMes; i++) {
                           const semanaInicio = new Date(fechaInicioMes);
                           semanaInicio.setDate(semanaInicio.getDate() + (i * 7));
                           const semanaFin = new Date(semanaInicio);
                           semanaFin.setDate(semanaFin.getDate() + 6);
-                          
+
                           // Verificar si la semana actual está dentro del mes
                           if (semanaInicio <= fechaFinMes) {
                             const fechaActual = new Date();
-                            const esSemanaActual = fechaActual >= semanaInicio && fechaActual <= semanaFin && 
-                                                   fechaActual.getMonth() === mesSeleccionado - 1 &&
-                                                   fechaActual.getFullYear() === añoSeleccionado;
-                            
-                            datosGrafico.push({ 
-                              name: `Sem ${i + 1}`, 
-                              value: esSemanaActual ? tasaConversion : 0 
+                            const esSemanaActual = fechaActual >= semanaInicio && fechaActual <= semanaFin &&
+                              fechaActual.getMonth() === mesSeleccionado - 1 &&
+                              fechaActual.getFullYear() === añoSeleccionado;
+
+                            datosGrafico.push({
+                              name: `Sem ${i + 1}`,
+                              value: esSemanaActual ? tasaConversion : 0
                             });
                           }
                         }
-                        
+
                         return datosGrafico;
                       })()}
                       margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient id="colorConversion" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis 
-                        dataKey="name" 
+                      <XAxis
+                        dataKey="name"
                         tick={{ fill: 'hsl(var(--muted-foreground))' }}
                         style={{ fontSize: '12px' }}
                       />
-                      <YAxis 
+                      <YAxis
                         domain={[0, 100]}
                         tick={{ fill: 'hsl(var(--muted-foreground))' }}
                         style={{ fontSize: '12px' }}
                         label={{ value: '%', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))' }}
                       />
-                      <Tooltip 
-                        contentStyle={{ 
+                      <Tooltip
+                        contentStyle={{
                           backgroundColor: 'hsl(var(--popover))',
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '6px'
@@ -607,14 +608,14 @@ function Dashboard() {
                       />
                     </AreaChart>
                   </ResponsiveContainer>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
           </CardContent>
         </Card>
 
         {/* Comisiones - Ocupa menos espacio */}
-        <Card className="col-span-3">
+        <Card className="col-span-1 lg:col-span-3">
           <CardHeader>
             <CardTitle>Comisiones</CardTitle>
             <CardDescription>Resumen de Comisiones</CardDescription>
@@ -624,7 +625,7 @@ function Dashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Porcentaje</span>
                 <Badge variant="secondary">
-                {stats?.finanzas?.comision_porcentaje || 0}%
+                  {stats?.finanzas?.comision_porcentaje || 0}%
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
@@ -633,8 +634,8 @@ function Dashboard() {
                   {mostrarDatos
                     ? `$${parseFloat(stats?.comisiones?.total || stats?.finanzas?.total_comisiones || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : '••••••'}
-              </span>
-            </div>
+                </span>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Desbloqueadas</span>
                 <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
@@ -650,12 +651,12 @@ function Dashboard() {
                     ? `$${parseFloat(stats?.comisiones?.pendientes || stats?.finanzas?.total_comisiones_pendientes || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : '••••••'}
                 </Badge>
-            </div>
+              </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Contratos Pagados</span>
                 <Badge variant="default">
-                {stats?.contratos?.pagados_completo || 0}
+                  {stats?.contratos?.pagados_completo || 0}
                 </Badge>
               </div>
 
@@ -677,12 +678,12 @@ function Dashboard() {
                               {mostrarDatos
                                 ? `$${item.total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                 : '••••••'}
-              </span>
-            </div>
+                            </span>
+                          </div>
                         );
                       })}
-          </div>
-        </div>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -697,27 +698,51 @@ function Dashboard() {
           <CardDescription>Accesos directos a las funciones más utilizadas</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <Link
               to="/clientes/nuevo"
-              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-auto flex-col gap-3 py-6`}
+              className="relative group overflow-hidden rounded-xl border bg-card p-6 text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50"
             >
-              <Users className="h-5 w-5" />
-            <span className="font-medium">Nuevo Cliente</span>
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-950/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative flex flex-col items-center gap-3 text-center">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <span className="font-semibold block">Nuevo Cliente</span>
+                  <span className="text-xs text-muted-foreground">Registrar un nuevo prospecto</span>
+                </div>
+              </div>
             </Link>
             <Link
               to="/ofertas/nueva"
-              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-auto flex-col gap-3 py-6`}
+              className="relative group overflow-hidden rounded-xl border bg-card p-6 text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50"
             >
-              <FileText className="h-5 w-5" />
-            <span className="font-medium">Nueva Oferta</span>
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent dark:from-purple-950/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative flex flex-col items-center gap-3 text-center">
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <span className="font-semibold block">Nueva Oferta</span>
+                  <span className="text-xs text-muted-foreground">Crear propuesta comercial</span>
+                </div>
+              </div>
             </Link>
             <Link
               to="/contratos"
-              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${buttonVariants.outline} h-auto flex-col gap-3 py-6`}
+              className="relative group overflow-hidden rounded-xl border bg-card p-6 text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50"
             >
-              <FileCheck className="h-5 w-5" />
-            <span className="font-medium">Ver Contratos</span>
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-transparent dark:from-emerald-950/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative flex flex-col items-center gap-3 text-center">
+                <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-full text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-300">
+                  <FileCheck className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <span className="font-semibold block">Ver Contratos</span>
+                  <span className="text-xs text-muted-foreground">Administrar contratos activos</span>
+                </div>
+              </div>
             </Link>
           </div>
         </CardContent>
@@ -745,74 +770,76 @@ function Dashboard() {
               {[...Array(5)].map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
-        </div>
+            </div>
           ) : contratos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No hay contratos para el mes seleccionado
-      </div>
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Fecha Evento</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Estado de Pago</TableHead>
-                  <TableHead className="text-right">Monto Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contratos.map((contrato) => (
-                  <TableRow key={contrato.id} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell className="font-medium">
-                      <Link 
-                        to={`/contratos/${contrato.id}`}
-                        className="hover:underline"
-                      >
-                        {contrato.codigo_contrato}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      {contrato.clientes?.nombre_completo || 'Sin cliente'}
-                    </TableCell>
-                    <TableCell>
-                      {contrato.fecha_evento 
-                        ? format(new Date(contrato.fecha_evento), 'dd/MM/yyyy', { locale: es })
-                        : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="outline" 
-                        className={getEstadoContratoColor(contrato.estado)}
-                      >
-                        {contrato.estado.charAt(0).toUpperCase() + contrato.estado.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="outline" 
-                        className={getEstadoPagoColor(contrato.estado_pago)}
-                      >
-                        {contrato.estado_pago === 'pagado' 
-                          ? 'Pagado' 
-                          : contrato.estado_pago === 'parcial' 
-                          ? 'Pago Parcial' 
-                          : 'Pendiente'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {mostrarDatos 
-                        ? `$${parseFloat(contrato.total_contrato || 0).toLocaleString('es-ES', { 
-                            minimumFractionDigits: 2, 
-                            maximumFractionDigits: 2 
-                          })}`
-                        : '••••••'}
-                    </TableCell>
+            <div className="relative w-full overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Fecha Evento</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Estado de Pago</TableHead>
+                    <TableHead className="text-right">Monto Total</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {contratos.map((contrato) => (
+                    <TableRow key={contrato.id} className="cursor-pointer hover:bg-muted/50">
+                      <TableCell className="font-medium">
+                        <Link
+                          to={`/contratos/${contrato.id}`}
+                          className="hover:underline"
+                        >
+                          {contrato.codigo_contrato}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        {contrato.clientes?.nombre_completo || 'Sin cliente'}
+                      </TableCell>
+                      <TableCell>
+                        {contrato.fecha_evento
+                          ? format(new Date(contrato.fecha_evento), 'dd/MM/yyyy', { locale: es })
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={getEstadoContratoColor(contrato.estado)}
+                        >
+                          {contrato.estado.charAt(0).toUpperCase() + contrato.estado.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={getEstadoPagoColor(contrato.estado_pago)}
+                        >
+                          {contrato.estado_pago === 'pagado'
+                            ? 'Pagado'
+                            : contrato.estado_pago === 'parcial'
+                              ? 'Pago Parcial'
+                              : 'Pendiente'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {mostrarDatos
+                          ? `$${parseFloat(contrato.total_contrato || 0).toLocaleString('es-ES', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          })}`
+                          : '••••••'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

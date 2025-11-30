@@ -1,9 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Diamond, 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
+import {
+  Diamond,
+  LayoutDashboard,
+  Users,
+  FileText,
   FileCheck,
   LogOut,
   Menu,
@@ -95,16 +95,16 @@ function Layout() {
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar para móvil */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-background border-r">
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-y-0 left-0 flex w-[280px] flex-col bg-background border-r shadow-xl transition-transform duration-300 ease-in-out">
             <div className="flex h-16 items-center gap-3 px-6 border-b">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <Diamond className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="text-lg font-semibold text-foreground">Party Venue</span>
-              <button 
-                onClick={() => setSidebarOpen(false)} 
+              <button
+                onClick={() => setSidebarOpen(false)}
                 className="ml-auto p-2 text-muted-foreground hover:text-foreground rounded-lg"
               >
                 <X className="w-5 h-5" />
@@ -129,11 +129,10 @@ function Layout() {
                         navigate(item.href);
                         setSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        active
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }`}
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 touch-manipulation ${active
+                        ? 'bg-primary text-primary-foreground shadow-md translate-x-1'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1'
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <Icon className="h-5 w-5" />
@@ -166,11 +165,10 @@ function Layout() {
                         navigate(item.href);
                         setSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        active
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 touch-manipulation ${active
+                        ? 'bg-primary text-primary-foreground shadow-md translate-x-1'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1'
+                        }`}
                     >
                       <Icon className="h-5 w-5" />
                       <span>{item.name}</span>
@@ -196,11 +194,10 @@ function Layout() {
                         navigate(item.href);
                         setSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        active
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 touch-manipulation ${active
+                        ? 'bg-primary text-primary-foreground shadow-md translate-x-1'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1'
+                        }`}
                     >
                       <Icon className="h-5 w-5" />
                       <span>{item.name}</span>
@@ -224,11 +221,10 @@ function Layout() {
                         navigate(item.href);
                         setSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        active
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 touch-manipulation ${active
+                        ? 'bg-primary text-primary-foreground shadow-md translate-x-1'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1'
+                        }`}
                     >
                       <Icon className="h-5 w-5" />
                       <span>{item.name}</span>
@@ -254,12 +250,13 @@ function Layout() {
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition"
               >
                 <LogOut className="h-4 w-4" />
-                  <span>Cerrar Sesión</span>
+                <span>Cerrar Sesión</span>
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div >
+      )
+      }
 
       {/* Sidebar para desktop */}
       <div className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${sidebarCollapsed ? 'lg:w-16' : 'lg:w-64'}`}>
@@ -273,7 +270,7 @@ function Layout() {
               <span className="text-lg font-semibold text-foreground whitespace-nowrap">Party Venue</span>
             )}
           </div>
-          
+
           {/* Botón para colapsar/expandir */}
           <Button
             variant="ghost"
@@ -288,7 +285,7 @@ function Layout() {
               <ChevronLeft className="h-4 w-4" />
             )}
           </Button>
-          
+
           {/* Navegación con secciones */}
           <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
             {/* Sección Principal */}
@@ -309,13 +306,11 @@ function Layout() {
                     key={item.name}
                     onClick={() => navigate(item.href)}
                     title={sidebarCollapsed ? item.name : ''}
-                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${
-                      sidebarCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
-                    } ${
-                      active
+                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${sidebarCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
+                      } ${active
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3 flex-1">
                       <Icon className="h-5 w-5 flex-shrink-0" />
@@ -348,13 +343,11 @@ function Layout() {
                     key={item.name}
                     onClick={() => navigate(item.href)}
                     title={sidebarCollapsed ? item.name : ''}
-                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${
-                      sidebarCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
-                    } ${
-                      active
+                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${sidebarCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
+                      } ${active
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
+                      }`}
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     {!sidebarCollapsed && <span>{item.name}</span>}
@@ -380,13 +373,11 @@ function Layout() {
                     key={item.name}
                     onClick={() => navigate(item.href)}
                     title={sidebarCollapsed ? item.name : ''}
-                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${
-                      sidebarCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
-                    } ${
-                      active
+                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${sidebarCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
+                      } ${active
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
+                      }`}
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     {!sidebarCollapsed && <span>{item.name}</span>}
@@ -412,13 +403,11 @@ function Layout() {
                     key={item.name}
                     onClick={() => navigate(item.href)}
                     title={sidebarCollapsed ? item.name : ''}
-                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${
-                      sidebarCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
-                    } ${
-                      active
+                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${sidebarCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
+                      } ${active
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
+                      }`}
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     {!sidebarCollapsed && <span>{item.name}</span>}
@@ -427,7 +416,7 @@ function Layout() {
               })}
             </div>
           </nav>
-          
+
           {/* Usuario y logout */}
           <div className={`border-t transition-all duration-300 ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
             {!sidebarCollapsed ? (
@@ -474,15 +463,15 @@ function Layout() {
       {/* Contenido principal */}
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
         {/* Header móvil */}
-        <div className="sticky top-0 z-10 flex h-16 items-center gap-x-4 border-b bg-white px-4 shadow-sm lg:hidden">
+        <div className="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 shadow-sm lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 text-gray-700"
+            className="p-2 -ml-2 text-foreground hover:bg-accent rounded-md"
           >
             <Menu className="w-6 h-6" />
           </button>
-          <div className="flex-1 text-center">
-            <span className="text-lg font-semibold text-gray-900">Party Venue</span>
+          <div className="flex-1 text-center pr-8">
+            <span className="text-lg font-semibold text-foreground">Party Venue</span>
           </div>
         </div>
 
@@ -491,7 +480,7 @@ function Layout() {
           <Outlet />
         </main>
       </div>
-    </div>
+    </div >
   );
 }
 
