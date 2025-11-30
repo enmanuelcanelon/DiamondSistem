@@ -821,7 +821,7 @@ router.get('/ofertas/:id', authenticate, requireGerente, async (req, res, next) 
           select: {
             id: true,
             nombre_completo: true,
-            codigo_usuario: true,
+            codigo_vendedor: true,
             email: true
           }
         },
