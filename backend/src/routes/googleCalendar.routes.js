@@ -555,14 +555,33 @@ router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor
     // const contratos = await prisma.contratos.findMany({...});
 
     // Obtener eventos de Google Calendar de todos los vendedores (sin detalles)
-    let eventosGoogleCalendar = [];
+    let eventosGoogleCalendarRaw = [];
     try {
       logger.info(`📅 [todos-vendedores] Buscando eventos desde ${fechaInicio.toISOString()} hasta ${fechaFin.toISOString()}`);
-      eventosGoogleCalendar = await obtenerEventosTodosVendedores(fechaInicio, fechaFin);
-      logger.info(`📅 [todos-vendedores] Eventos Google Calendar obtenidos: ${eventosGoogleCalendar.length}`);
+      eventosGoogleCalendarRaw = await obtenerEventosTodosVendedores(fechaInicio, fechaFin);
+      logger.info(`📅 [todos-vendedores] Eventos Google Calendar raw obtenidos: ${eventosGoogleCalendarRaw.length}`);
     } catch (error) {
       logger.warn('Error al obtener eventos de Google Calendar:', error);
     }
+
+    // IMPORTANTE: Deduplicar eventos por ID
+    // Los eventos pueden venir duplicados si múltiples vendedores comparten el mismo calendario
+    // (ej: revolutionpartyvenueleads@gmail.com compartido entre vendedores)
+    const eventosVistos = new Set();
+    const eventosGoogleCalendar = eventosGoogleCalendarRaw.filter(evento => {
+      // Usar el ID original del evento (sin el prefijo "google_")
+      const eventoId = evento.id;
+      
+      if (eventosVistos.has(eventoId)) {
+        logger.debug(`📅 [deduplicación] Evento duplicado eliminado: ${evento.titulo} (${eventoId})`);
+        return false; // Ya lo vimos, eliminarlo
+      }
+      
+      eventosVistos.add(eventoId);
+      return true;
+    });
+
+    logger.info(`📅 [todos-vendedores] Eventos después de deduplicación: ${eventosGoogleCalendar.length} (eliminados ${eventosGoogleCalendarRaw.length - eventosGoogleCalendar.length} duplicados)`);
 
     // IMPORTANTE: Solo incluir eventos de Google Calendar
     // NO incluir contratos ni ofertas de la base de datos porque tienen bugs

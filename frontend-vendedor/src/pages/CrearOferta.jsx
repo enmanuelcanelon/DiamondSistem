@@ -6,6 +6,18 @@ import api from '../config/api';
 import ModalCrearCliente from '../components/ModalCrearCliente';
 import CalendarioSelector from '../components/CalendarioSelector';
 import { calcularDuracion, formatearHora } from '../utils/formatters';
+import {
+  deduplicarEventos,
+  obtenerNombreSalon,
+  filtrarEventosPorSalon,
+  filtrarEventosPasados,
+  obtenerColorEvento,
+  obtenerDiasDelMes as obtenerDiasDelMesHelper,
+  formatearFechaParaInput as formatearFechaHelper,
+  nombresMeses,
+  diasSemana,
+  diasSemanaCompletos
+} from '../utils/calendarioHelpers';
 import useAuthStore from '../store/useAuthStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -51,6 +63,7 @@ function CrearOferta() {
   const [precioBaseAjustado, setPrecioBaseAjustado] = useState('');
   const [ajusteTemporadaCustom, setAjusteTemporadaCustom] = useState('');
   const [tarifaServicioCustom, setTarifaServicioCustom] = useState('');
+  const [errorServiceFee, setErrorServiceFee] = useState('');
   const [mostrarAjusteTemporada, setMostrarAjusteTemporada] = useState(false);
   const [mostrarAjustePrecioBase, setMostrarAjustePrecioBase] = useState(false);
   const [mostrarAjusteServicios, setMostrarAjusteServicios] = useState(false);
@@ -2165,22 +2178,10 @@ function CrearOferta() {
   // ============================================
   // FUNCIONES DEL CALENDARIO - PASO 2
   // ============================================
+  // Nota: nombresMeses, diasSemana, diasSemanaCompletos, deduplicarEventos, etc.
+  // ahora se importan desde calendarioHelpers.js para evitar código duplicado
 
-  const nombresMeses = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-
-  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-  const diasSemanaCompletos = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-
-  const obtenerDiasDelMes = () => {
-    const primerDia = new Date(añoCalendario, mesCalendario - 1, 1);
-    const diasEnMes = new Date(añoCalendario, mesCalendario, 0).getDate();
-    const diaInicioSemana = primerDia.getDay();
-    return { diasEnMes, diaInicioSemana };
-  };
-
+  // Obtener eventos de un día específico con todos los filtros aplicados
   const obtenerEventosDelDia = (dia) => {
     if (!eventosCalendario?.eventos_por_dia) {
       return [];
@@ -2188,73 +2189,36 @@ function CrearOferta() {
 
     let eventos = eventosCalendario.eventos_por_dia[dia] || [];
 
-    // IMPORTANTE: Solo mostrar eventos de Google Calendar (es_google_calendar: true)
+    // 1. Solo mostrar eventos de Google Calendar
     // NO mostrar contratos ni ofertas de la base de datos porque tienen bugs
     eventos = eventos.filter(evento => {
-      // Solo incluir eventos de Google Calendar
-      return evento.es_google_calendar === true || evento.calendario === 'principal' || evento.calendario === 'citas';
+      return evento.es_google_calendar === true || 
+             evento.calendario === 'principal' || 
+             evento.calendario === 'citas';
     });
 
-    // Filtrar eventos pasados - solo mostrar eventos de hoy en adelante (hora Miami)
-    const ahoraMiami = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-    const hoyMiami = new Date(ahoraMiami.getFullYear(), ahoraMiami.getMonth(), ahoraMiami.getDate());
-    hoyMiami.setHours(0, 0, 0, 0);
+    // 2. Deduplicar eventos por ID usando helper
+    // El backend ya deduplica, pero aplicamos una capa adicional de seguridad
+    eventos = deduplicarEventos(eventos);
 
-    eventos = eventos.filter(evento => {
-      let fechaEvento;
-      if (evento.fecha_evento) {
-        fechaEvento = new Date(evento.fecha_evento);
-      } else if (evento.fecha_inicio) {
-        fechaEvento = new Date(evento.fecha_inicio);
-      } else if (evento.hora_inicio) {
-        fechaEvento = new Date(evento.hora_inicio);
-      } else {
-        return false;
-      }
+    // 3. Filtrar eventos pasados usando helper
+    eventos = filtrarEventosPasados(eventos);
 
-      const fechaEventoMiami = new Date(fechaEvento.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    // 4. Filtrar por salones activos usando helper
+    eventos = filtrarEventosPorSalon(eventos, filtrosSalones);
 
-      if (evento.es_todo_el_dia) {
-        const fechaEventoSolo = new Date(fechaEventoMiami.getFullYear(), fechaEventoMiami.getMonth(), fechaEventoMiami.getDate());
-        fechaEventoSolo.setHours(0, 0, 0, 0);
-        return fechaEventoSolo >= hoyMiami;
-      }
-
-      return fechaEventoMiami >= hoyMiami;
-    });
-
-    // Filtrar eventos según los filtros de salones activos (igual que en CalendarioMensual)
-    return eventos.filter(evento => {
-      let nombreSalon = '';
-      if (evento.salones?.nombre) {
-        nombreSalon = String(evento.salones.nombre).toLowerCase();
-      } else if (evento.salon) {
-        nombreSalon = String(evento.salon).toLowerCase();
-      } else if (evento.ubicacion) {
-        nombreSalon = String(evento.ubicacion).toLowerCase();
-      }
-
-      // Normalizar el nombre del salón
-      nombreSalon = nombreSalon.toLowerCase().trim().replace(/\s+/g, ' ');
-
-      // Verificar si el evento coincide con algún filtro activo
-      // PRIORIDAD: Diamond debe verificarse ANTES que Doral porque "DIAMOND AT DORAL" contiene ambas palabras
-      if (nombreSalon.includes('diamond')) {
-        return filtrosSalones.diamond;
-      }
-      // Solo clasificar como Doral si NO contiene "diamond"
-      if (nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
-        return filtrosSalones.doral;
-      }
-      if (nombreSalon.includes('kendall') || nombreSalon.includes('kendal') || nombreSalon.includes('kentall')) {
-        return filtrosSalones.kendall;
-      }
-      // Si no coincide con ningún salón específico, usar el filtro "otros"
-      return filtrosSalones.otros;
-    });
+    return eventos;
   };
 
-  // Función para calcular horas ocupadas desde los eventos del calendario
+  // NOTA: Esta función `calcularHorasOcupadasDesdeCalendario` NO se usa actualmente
+  // El cálculo de horas ocupadas se hace correctamente en el backend mediante
+  // el endpoint /salones/horarios-ocupados que llama obtenerHorasOcupadas()
+  // 
+  // Esta función del frontend tiene bugs de zona horaria y lógica duplicada
+  // Se mantiene comentada temporalmente por si se necesita referencia futura
+  // 
+  // TODO: Eliminar completamente en una refactorización futura si se confirma que no se usa
+  /* 
   const calcularHorasOcupadasDesdeCalendario = (dia, salonId) => {
     if (!dia || !salonId || salonId === 'otro' || !eventosCalendario?.eventos_por_dia) {
       return [];
@@ -2491,69 +2455,12 @@ function CrearOferta() {
     const horasFinales = Array.from(horasOcupadas).sort((a, b) => a - b);
     return horasFinales;
   };
+  */
 
-  const obtenerColorEvento = (evento) => {
-    let nombreSalon = '';
-    if (evento.salones?.nombre) {
-      nombreSalon = String(evento.salones.nombre).toLowerCase();
-    } else if (evento.salon) {
-      nombreSalon = String(evento.salon).toLowerCase();
-    } else if (evento.ubicacion) {
-      nombreSalon = String(evento.ubicacion).toLowerCase();
-    }
-
-    nombreSalon = nombreSalon.toLowerCase().trim().replace(/\s+/g, ' ');
-
-    // Naranja = Diamond
-    if (nombreSalon && nombreSalon.includes('diamond')) {
-      return {
-        bg: 'bg-orange-50 dark:bg-orange-900/20',
-        border: 'border-l-4 border-orange-500',
-        text: 'text-orange-800 dark:text-orange-200',
-        dot: 'bg-orange-500'
-      };
-    }
-
-    // Verde = Doral
-    if (nombreSalon && nombreSalon.includes('doral') && !nombreSalon.includes('diamond')) {
-      return {
-        bg: 'bg-green-50 dark:bg-green-900/20',
-        border: 'border-l-4 border-green-500',
-        text: 'text-green-800 dark:text-green-200',
-        dot: 'bg-green-500'
-      };
-    }
-
-    // Azul = Kendall
-    if (nombreSalon && (nombreSalon.includes('kendall') || nombreSalon.includes('kendal') || nombreSalon.includes('kentall'))) {
-      return {
-        bg: 'bg-blue-50 dark:bg-blue-900/20',
-        border: 'border-l-4 border-blue-500',
-        text: 'text-blue-800 dark:text-blue-200',
-        dot: 'bg-blue-500'
-      };
-    }
-
-    // Morado = Otros (Google Calendar)
-    if (evento.es_google_calendar || evento.id?.toString().startsWith('google_')) {
-      return {
-        bg: 'bg-purple-50 dark:bg-purple-900/20',
-        border: 'border-l-4 border-purple-500',
-        text: 'text-purple-800 dark:text-purple-200',
-        dot: 'bg-purple-500'
-      };
-    }
-
-    return {
-      bg: 'bg-purple-50 dark:bg-purple-900/20',
-      border: 'border-l-4 border-purple-500',
-      text: 'text-purple-800 dark:text-purple-200',
-      dot: 'bg-purple-500'
-    };
-  };
+  // Nota: obtenerColorEvento ahora se importa desde calendarioHelpers.js
 
   const renderizarCalendario = () => {
-    const { diasEnMes, diaInicioSemana } = obtenerDiasDelMes();
+    const { diasEnMes, diaInicioSemana } = obtenerDiasDelMesHelper(mesCalendario, añoCalendario);
     const dias = [];
 
     // Días vacíos al inicio
@@ -2576,7 +2483,7 @@ function CrearOferta() {
           key={dia}
           onClick={() => {
             if (esFechaValida(dia)) {
-              const fechaStr = formatearFechaParaInput(dia);
+              const fechaStr = formatearFechaParaInputLocal(dia);
               // Si se hace click en el mismo día ya seleccionado, deseleccionar
               if (dia === diaSeleccionadoCalendario) {
                 setDiaSeleccionadoCalendario(null);
@@ -2696,6 +2603,7 @@ function CrearOferta() {
   // Generar lista de años (desde 2025 en adelante)
   const añosDisponibles = Array.from({ length: 11 }, (_, i) => 2025 + i);
 
+  // Verifica si una fecha es válida (no es pasada)
   const esFechaValida = (dia) => {
     const ahoraMiami = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
     const hoyMiami = new Date(ahoraMiami.getFullYear(), ahoraMiami.getMonth(), ahoraMiami.getDate());
@@ -2717,8 +2625,9 @@ function CrearOferta() {
     return dia === ahoraMiami.getDate() && mesCalendario === ahoraMiami.getMonth() + 1 && añoCalendario === ahoraMiami.getFullYear();
   };
 
-  const formatearFechaParaInput = (dia) => {
-    return `${añoCalendario}-${String(mesCalendario).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+  // Nota: Wrapper local que usa el helper importado desde calendarioHelpers
+  const formatearFechaParaInputLocal = (dia) => {
+    return formatearFechaHelper(dia, mesCalendario, añoCalendario);
   };
 
   const eventosDiaSeleccionado = diaSeleccionadoCalendario ? obtenerEventosDelDia(diaSeleccionadoCalendario) : [];
@@ -4782,25 +4691,55 @@ function CrearOferta() {
                   <Input
                     id="tarifa_servicio_custom"
                     type="number"
+                    inputMode="decimal"
                     value={tarifaServicioCustom}
                     onChange={(e) => {
+                      // Permitir escribir cualquier valor temporalmente (mejor UX en móvil)
+                      setTarifaServicioCustom(e.target.value);
+                      // Limpiar error si el usuario está editando
+                      if (errorServiceFee) {
+                        setErrorServiceFee('');
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Validar solo cuando el usuario termina de escribir (onBlur)
                       const valor = parseFloat(e.target.value);
-                      if (valor >= 15 && valor <= 18) {
-                        setTarifaServicioCustom(e.target.value);
-                      } else if (e.target.value === '' || isNaN(valor)) {
-                        setTarifaServicioCustom('');
+                      
+                      if (e.target.value === '' || isNaN(valor)) {
+                        // Valor vacío es válido (usará el default)
+                        setErrorServiceFee('');
+                        return;
+                      }
+                      
+                      if (valor < 15 || valor > 18) {
+                        setErrorServiceFee('El Service Fee debe estar entre 15% y 18%');
                       } else {
-                        alert('⚠️ El Service Fee debe estar entre 15% y 18%');
+                        setErrorServiceFee('');
                       }
                     }}
                     min="15"
                     max="18"
                     step="0.1"
                     placeholder={precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || "18.00"}
+                    className={errorServiceFee ? 'border-red-500 focus:ring-red-500' : ''}
+                    style={{ fontSize: '16px' }} // Prevenir zoom en iOS
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Porcentaje del Service Fee (15% - 18%). Por defecto: {precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || 18}%
-                  </p>
+                  {errorServiceFee ? (
+                    <p className="text-xs text-red-600 flex items-center gap-1">
+                      <span className="text-red-500">⚠️</span>
+                      {errorServiceFee}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Porcentaje del Service Fee (15% - 18%). Por defecto: {precioCalculado?.desglose?.impuestos?.tarifaServicio?.porcentaje || 18}%
+                    </p>
+                  )}
+                  {tarifaServicioCustom && !errorServiceFee && parseFloat(tarifaServicioCustom) >= 15 && parseFloat(tarifaServicioCustom) <= 18 && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <span className="text-green-500">✓</span>
+                      Service Fee configurado: {parseFloat(tarifaServicioCustom).toFixed(1)}%
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

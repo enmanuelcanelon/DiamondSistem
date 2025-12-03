@@ -499,13 +499,12 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
     });
 
     // Crear rango de fecha para Google Calendar (necesario para la función)
-    // IMPORTANTE: Usar zona horaria UTC explícita para evitar problemas de zona horaria del servidor
-    // La fecha se interpreta como medianoche en UTC para asegurar consistencia
-    const fechaEventoDate = new Date(fechaEventoStr + 'T00:00:00Z');
-    const fechaInicio = new Date(fechaEventoDate);
-    fechaInicio.setUTCHours(0, 0, 0, 0);
-    const fechaFin = new Date(fechaEventoDate);
-    fechaFin.setUTCHours(23, 59, 59, 999);
+    // IMPORTANTE: Usar zona horaria de Miami (America/New_York) para asegurar que se capturen
+    // TODOS los eventos del día en zona horaria local
+    // Ejemplo: para 2025-12-05, queremos desde 2025-12-05 00:00:00 hasta 2025-12-05 23:59:59 EN MIAMI
+    // No en UTC, porque eso causaría que se pierdan eventos después de las 7 PM
+    const fechaInicio = new Date(`${fechaEventoStr}T00:00:00-05:00`); // Medianoche en Miami (EST)
+    const fechaFin = new Date(`${fechaEventoStr}T23:59:59-05:00`); // Fin del día en Miami (EST)
 
     // Obtener eventos de Google Calendar del mismo día
     let eventosGoogleCalendar = [];
@@ -537,7 +536,7 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         return String(nombre)
           .toLowerCase()
           .trim()
-          .replace(/\s+/g, ' ') // Normalizar espacios múltiples
+          .replace(/\s+/g, ' ') // Normalizar espacios múltiples a uno solo
           .replace(/[^\w\s]/g, '') // Eliminar caracteres especiales excepto letras, números y espacios
           .replace(/\s+/g, ' ') // Normalizar espacios de nuevo
           .trim();
@@ -556,56 +555,88 @@ router.get('/horarios-ocupados', authenticate, requireVendedor, async (req, res,
         
         // Si no hay ubicación, no incluir el evento
         if (!ubicacion || ubicacion.trim() === '') {
+          debugLog(`  ⏭️ Evento "${evento.titulo}" sin ubicación - saltando`);
           return false;
         }
         
-        // Mapeo de variantes comunes de nombres de salón
+        // MEJORADO: Mapeo expandido de variantes comunes de nombres de salón
         const variantesSalones = {
           'kendall': ['kendall', 'kendal', 'kentall'],
-          'doral': ['doral'],
-          'diamond': ['diamond', 'dmd']
+          'doral': ['doral', 'doral 1', 'doral 2', 'doral1', 'doral2'],
+          'diamond': [
+            'diamond', 
+            'dmd',
+            'diamond at doral',
+            'diamond art doral',
+            'diamondatdoral',
+            'diamondartdoral'
+          ]
         };
         
-        // Función para verificar si dos nombres coinciden (considerando variantes)
+        // Función mejorada para verificar si dos nombres coinciden
         const nombresCoinciden = (nombre1, nombre2) => {
           if (!nombre1 || !nombre2) return false;
           
           // Comparación exacta normalizada
-          if (nombre1 === nombre2) return true;
-          
-          // Verificar si uno contiene al otro
-          if (nombre1.includes(nombre2) || nombre2.includes(nombre1)) {
-            // Verificar que no sea un falso positivo (ej: "doral" en "diamond at doral")
-            // PRIORIDAD: Diamond debe verificarse ANTES que Doral
-            if (nombre1.includes('diamond') && nombre2.includes('doral') && !nombre2.includes('diamond')) {
-              return false; // "doral" no coincide con "diamond at doral"
-            }
-            if (nombre2.includes('diamond') && nombre1.includes('doral') && !nombre1.includes('diamond')) {
-              return false; // "doral" no coincide con "diamond at doral"
-            }
+          if (nombre1 === nombre2) {
+            debugLog(`    ✓ Match exacto: "${nombre1}" === "${nombre2}"`);
             return true;
           }
           
-          // Verificar variantes comunes
+          // PRIORIDAD 1: Verificar variantes conocidas primero
           for (const [salonBase, variantes] of Object.entries(variantesSalones)) {
             const nombre1EsVariante = variantes.some(v => nombre1.includes(v));
             const nombre2EsVariante = variantes.some(v => nombre2.includes(v));
             
             if (nombre1EsVariante && nombre2EsVariante) {
               // Ambos son variantes del mismo salón base
-              return true;
+              // IMPORTANTE: Para Diamond, verificar que realmente sea Diamond
+              if (salonBase === 'diamond') {
+                // Ambos deben contener 'diamond' explícitamente
+                const ambosContienenDiamond = nombre1.includes('diamond') && nombre2.includes('diamond');
+                if (ambosContienenDiamond) {
+                  debugLog(`    ✓ Match Diamond: "${nombre1}" ↔ "${nombre2}"`);
+                  return true;
+                }
+              } else if (salonBase === 'doral') {
+                // Ambos contienen 'doral' pero ninguno debe contener 'diamond'
+                const ambosContienenDoral = nombre1.includes('doral') && nombre2.includes('doral');
+                const algunoContieneDiamond = nombre1.includes('diamond') || nombre2.includes('diamond');
+                if (ambosContienenDoral && !algunoContieneDiamond) {
+                  debugLog(`    ✓ Match Doral: "${nombre1}" ↔ "${nombre2}"`);
+                  return true;
+                }
+              } else {
+                // Para Kendall y otros, si ambos son variantes, es match
+                debugLog(`    ✓ Match ${salonBase}: "${nombre1}" ↔ "${nombre2}"`);
+                return true;
+              }
             }
           }
           
+          // PRIORIDAD 2: Verificar si uno contiene al otro (con cuidado de Diamond/Doral)
+          if (nombre1.includes(nombre2) || nombre2.includes(nombre1)) {
+            // Evitar falsos positivos Diamond/Doral
+            if (nombre1.includes('diamond') && nombre2.includes('doral') && !nombre2.includes('diamond')) {
+              debugLog(`    ✗ Falso positivo evitado: "${nombre1}" vs "${nombre2}" (Diamond vs Doral)`);
+              return false;
+            }
+            if (nombre2.includes('diamond') && nombre1.includes('doral') && !nombre1.includes('diamond')) {
+              debugLog(`    ✗ Falso positivo evitado: "${nombre1}" vs "${nombre2}" (Doral vs Diamond)`);
+              return false;
+            }
+            debugLog(`    ✓ Match por inclusión: "${nombre1}" ↔ "${nombre2}"`);
+            return true;
+          }
+          
+          debugLog(`    ✗ No coinciden: "${nombre1}" vs "${nombre2}"`);
           return false;
         };
         
         const coincide = nombresCoinciden(nombreSalon, ubicacion);
         
-        // Logging detallado para debug
-        if (todosEventosCalendar.length <= 5 || coincide) {
-          debugLog(`  📍 Evento: "${evento.titulo}" | Ubicación raw: "${ubicacionRaw}" | Ubicación normalizada: "${ubicacion}" | Coincide: ${coincide}`);
-        }
+        // Logging detallado SIEMPRE para debug (no solo cuando hay pocos eventos)
+        debugLog(`  📍 Evento: "${evento.titulo}" | Ubicación raw: "${ubicacionRaw}" | Ubicación normalizada: "${ubicacion}" | Salón buscado: "${nombreSalon}" | Coincide: ${coincide}`);
         
         return coincide;
       });

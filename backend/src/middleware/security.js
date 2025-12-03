@@ -16,6 +16,7 @@ const generalLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Deshabilitar validación del trust proxy (ya está configurado en Express)
   // Excluir rutas que tienen su propio rate limiter
   skip: (req) => {
     return req.path.startsWith('/api/mensajes') || 
@@ -36,6 +37,7 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true, // No contar requests exitosos
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Deshabilitar validación del trust proxy
 });
 
 // Rate limiting para creación de recursos (prevenir spam)
@@ -48,6 +50,7 @@ const createLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Deshabilitar validación del trust proxy
 });
 
 // Rate limiting más permisivo para fotos (muchas imágenes se cargan a la vez)
@@ -60,6 +63,7 @@ const fotosLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Deshabilitar validación del trust proxy
   skip: (req) => {
     // No aplicar rate limiting a archivos estáticos de imágenes
     return req.path.startsWith('/fotos/servicios');
@@ -76,6 +80,7 @@ const mensajesLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Deshabilitar validación del trust proxy
 });
 
 // Rate limiting permisivo para leaks (múltiples vendedores, auto-refresh, etc.)
@@ -88,6 +93,7 @@ const leaksLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Deshabilitar validación del trust proxy
   // Usar keyGenerator para diferenciar por usuario autenticado si es posible
   keyGenerator: (req) => {
     // Si hay usuario autenticado, usar su ID, sino usar IP con helper para IPv6
