@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5176, // Puerto específico para gerente
+    fs: {
+      allow: ['..'],
+    },
   },
   resolve: {
     alias: {
@@ -18,7 +21,11 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['zustand', 'axios', 'react', 'react-dom'],
+    include: ['zustand', 'axios', 'react', 'react-dom', 'lucide-react'],
+    exclude: [],
+    esbuildOptions: {
+      plugins: [],
+    },
   },
 })
 

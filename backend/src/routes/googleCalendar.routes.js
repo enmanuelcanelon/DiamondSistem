@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticate, requireVendedor, requireManager } = require('../middleware/auth');
+const { authenticate, requireVendedor, requireManager, requireVendedorOrGerente } = require('../middleware/auth');
 const { getAuthUrl, getTokensFromCode, getPrimaryCalendarId } = require('../utils/googleCalendarOAuth');
 const { obtenerEventosPorMes, obtenerEventosPorDia, obtenerEventosTodosVendedores, verificarDisponibilidad, crearEventoContrato } = require('../utils/googleCalendarService');
 const { encrypt } = require('../utils/encryption');
@@ -532,9 +532,9 @@ router.get('/eventos/todos/:mes/:año', authenticate, requireManager, async (req
 /**
  * @route   GET /api/google-calendar/eventos/todos-vendedores/:mes/:año
  * @desc    Obtener todos los eventos de todos los vendedores (solo fecha, hora, salón - sin detalles)
- * @access  Private (Vendedor)
+ * @access  Private (Vendedor o Gerente)
  */
-router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedor, async (req, res, next) => {
+router.get('/eventos/todos-vendedores/:mes/:año', authenticate, requireVendedorOrGerente, async (req, res, next) => {
   try {
     const { mes, año } = req.params;
     const mesFiltro = parseInt(mes);

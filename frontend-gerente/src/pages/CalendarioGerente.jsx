@@ -5,7 +5,6 @@ import api from '@shared/config/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 
 function CalendarioGerente() {
@@ -206,14 +205,14 @@ function CalendarioGerente() {
         {/* Selector de tipo de calendario */}
         <div className="flex items-center gap-4">
           <label className="text-sm font-medium text-gray-700">Tipo de Calendario:</label>
-          <Select
+          <select
             value={tipoCalendario}
             onChange={(e) => setTipoCalendario(e.target.value)}
-            className="w-[200px]"
+            className="w-[200px] px-3 py-2 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
           >
             <option value="general">📅 Calendario General</option>
             <option value="contratos">📋 Calendario Contratos</option>
-          </Select>
+          </select>
           {tipoCalendario === 'general' && (
             <Button
               variant="outline"
