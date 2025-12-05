@@ -147,6 +147,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
         contratos: {
           select: {
             cliente_id: true,
+            usuario_id: true,
             vendedor_id: true
           }
         }
@@ -155,6 +156,20 @@ router.put('/:id', authenticate, async (req, res, next) => {
 
     if (!eventoExistente) {
       throw new NotFoundError('Evento no encontrado');
+    }
+
+    // Verificar permisos: cliente propietario o vendedor propietario del contrato
+    if (req.user.tipo === 'cliente') {
+      if (eventoExistente.contratos.cliente_id !== req.user.id) {
+        throw new ValidationError('No tienes permiso para actualizar este evento');
+      }
+    } else if (req.user.tipo === 'vendedor') {
+      // Verificar permisos: debe ser el usuario asignado (usuario_id) o el vendedor asignado (vendedor_id deprecated)
+      if (!(eventoExistente.contratos.usuario_id === req.user.id || eventoExistente.contratos.vendedor_id === req.user.id)) {
+        throw new ValidationError('No tienes permiso para actualizar este evento');
+      }
+    } else {
+      throw new ValidationError('Solo clientes propietarios o vendedores pueden actualizar eventos');
     }
 
     // Actualizar evento

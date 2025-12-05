@@ -1543,6 +1543,7 @@ router.put('/:id/notas', authenticate, requireVendedor, async (req, res, next) =
       where: { id: parseInt(id) },
       select: {
         id: true,
+        usuario_id: true,
         vendedor_id: true,
       },
     });
