@@ -947,6 +947,20 @@ function CrearOferta() {
       if ((name === 'hora_inicio' || name === 'hora_fin') && formData.paquete_id && paqueteSeleccionado) {
         const esPaqueteEspecial = paqueteSeleccionado.nombre?.toLowerCase().includes('especial');
         if (esPaqueteEspecial) {
+          // Verificar también el tipo de evento
+          const tipoEventoActual = tipoEvento === 'Otro' ? tipoEventoOtro : tipoEvento;
+          const esBabyShower = tipoEventoActual === 'Baby Shower';
+
+          if (!esBabyShower) {
+            setFormData({
+              ...formData,
+              paquete_id: '',
+              [name]: value,
+            });
+            toast.error('El paquete "Especial" solo está disponible para eventos tipo "Baby Shower".');
+            return;
+          }
+
           const horaInicio = name === 'hora_inicio' ? value : formData.hora_inicio;
           const horaFin = name === 'hora_fin' ? value : formData.hora_fin;
 
@@ -2787,6 +2801,18 @@ function CrearOferta() {
                     <Select
                       value={tipoEvento}
                       onValueChange={(value) => {
+                        // Si hay un paquete "Especial" seleccionado y se cambia a un tipo que no sea "Baby Shower", deseleccionar el paquete
+                        if (formData.paquete_id && paqueteSeleccionado?.nombre?.toLowerCase().includes('especial')) {
+                          const nuevoTipoEvento = value === 'Otro' ? tipoEventoOtro : value;
+                          if (nuevoTipoEvento !== 'Baby Shower') {
+                            setFormData(prev => ({
+                              ...prev,
+                              paquete_id: ''
+                            }));
+                            toast.error('El paquete "Especial" solo está disponible para eventos tipo "Baby Shower". El paquete ha sido removido.');
+                          }
+                        }
+
                         setTipoEvento(value);
                         if (value !== 'Otro') {
                           setTipoEventoOtro('');
@@ -2811,7 +2837,21 @@ function CrearOferta() {
                         <Input
                           type="text"
                           value={tipoEventoOtro}
-                          onChange={(e) => setTipoEventoOtro(e.target.value)}
+                          onChange={(e) => {
+                            const nuevoValor = e.target.value;
+                            setTipoEventoOtro(nuevoValor);
+
+                            // Si hay un paquete "Especial" seleccionado y se cambia a un tipo que no sea "Baby Shower", deseleccionar el paquete
+                            if (formData.paquete_id && paqueteSeleccionado?.nombre?.toLowerCase().includes('especial') && tipoEvento === 'Otro') {
+                              if (nuevoValor !== 'Baby Shower') {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  paquete_id: ''
+                                }));
+                                toast.error('El paquete "Especial" solo está disponible para eventos tipo "Baby Shower". El paquete ha sido removido.');
+                              }
+                            }
+                          }}
                           placeholder="Seleccionar..."
                         // NO actualizar el cliente automáticamente
                         // Cada oferta tiene su propio tipo_evento independiente
@@ -3439,10 +3479,17 @@ function CrearOferta() {
                           }
 
                           // Si es paquete "Especial", solo mostrarlo si:
-                          // 1. La hora de inicio está entre 10:00 AM y 5:00 PM
-                          // 2. La hora de fin es a las 5:00 PM o antes
+                          // 1. El tipo de evento es "Baby Shower"
+                          // 2. La hora de inicio está entre 10:00 AM y 5:00 PM
+                          // 3. La hora de fin es a las 5:00 PM o antes
                           const esPaqueteEspecial = p.nombre?.toLowerCase().includes('especial');
                           if (esPaqueteEspecial) {
+                            // Verificar que el tipo de evento sea "Baby Shower"
+                            const tipoEventoActual = tipoEvento === 'Otro' ? tipoEventoOtro : tipoEvento;
+                            if (tipoEventoActual !== 'Baby Shower') {
+                              return false;
+                            }
+
                             // Si no hay hora de inicio o hora de fin, no mostrar el paquete "Especial"
                             if (!formData.hora_inicio || !formData.hora_fin) {
                               return false;

@@ -134,7 +134,6 @@ FROM servicios WHERE nombre IN (
     'Decoracion House',
     'Utensilios',
     'Cake',
-    'DJ Profesional',
     'Comida / a Menu',
     'Pantalla LED',
     'Luces Stage',
@@ -208,10 +207,10 @@ FROM servicios WHERE nombre IN (
     'Número Lumínico'
 );
 
--- Photobooth (escoger uno)
+-- Photobooth (definido por salón: Diamond=Print, Kendall/Doral=360)
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
-SELECT 3, id, 1, TRUE, 'Escoger entre Photobooth 360 o Photobooth Print'
-FROM servicios WHERE nombre IN ('Photobooth 360', 'Photobooth Print');
+SELECT 3, id, 1, TRUE, 'Photobooth definido por salón - Diamond=Print, Kendall/Doral=360'
+FROM servicios WHERE nombre = 'Photobooth Print';
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 3, id, 4, TRUE, '4 personas de servicio incluidas'
@@ -253,10 +252,10 @@ FROM servicios WHERE nombre IN (
     'Número Lumínico'
 );
 
--- Photobooth (escoger uno)
+-- Photobooth (definido por salón: Diamond=Print, Kendall/Doral=360)
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
-SELECT 4, id, 1, TRUE, 'Escoger entre Photobooth 360 o Photobooth Print'
-FROM servicios WHERE nombre IN ('Photobooth 360', 'Photobooth Print');
+SELECT 4, id, 1, TRUE, 'Photobooth definido por salón - Diamond=Print, Kendall/Doral=360'
+FROM servicios WHERE nombre = 'Photobooth Print';
 
 INSERT INTO paquetes_servicios (paquete_id, servicio_id, cantidad, incluido_gratis, notas)
 SELECT 4, id, 4, TRUE, '4 personas de servicio incluidas'
