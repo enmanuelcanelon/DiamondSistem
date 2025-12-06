@@ -37,14 +37,28 @@ export function generarNombreEvento(contrato) {
   // Formatear fecha si existe
   let fechaFormateada = '';
   if (contrato.fecha_evento) {
-    const fecha = new Date(contrato.fecha_evento);
     const meses = [
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
-    const dia = fecha.getDate();
-    const mes = meses[fecha.getMonth()];
-    const año = fecha.getFullYear();
+    
+    const fechaStr = contrato.fecha_evento;
+    let dia, mes, año;
+    
+    // Extraer fecha directamente del string ISO para evitar problemas de timezone
+    if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+      const [datePart] = fechaStr.split('T');
+      const [yearStr, monthStr, dayStr] = datePart.split('-');
+      dia = parseInt(dayStr, 10);
+      mes = meses[parseInt(monthStr, 10) - 1];
+      año = parseInt(yearStr, 10);
+    } else {
+      const fecha = new Date(fechaStr);
+      dia = fecha.getDate();
+      mes = meses[fecha.getMonth()];
+      año = fecha.getFullYear();
+    }
+    
     fechaFormateada = ` - ${dia} ${mes} ${año}`;
   }
   
