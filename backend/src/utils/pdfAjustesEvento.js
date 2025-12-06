@@ -86,6 +86,7 @@ function mapearServiciosPaquete(servicios, contrato) {
   const todosServicios = servicios.map(s => s.nombre);
   
   return {
+    // Paquete / Decoración
     pantalla: todosServicios.some(n => n.includes('pantalla') || n.includes('led') || n.includes('tv')),
     dj: todosServicios.some(n => n.includes('dj') || n.includes('disc jockey')),
     colores: todosServicios.some(n => n.includes('color') || n.includes('iluminación') || n.includes('luces')),
@@ -103,6 +104,18 @@ function mapearServiciosPaquete(servicios, contrato) {
     chispas: todosServicios.some(n => n.includes('chispa') || n.includes('spark')),
     maestro_ceremonia: todosServicios.some(n => n.includes('maestro') || n.includes('ceremonia') || n.includes('coordinador')),
     fotos_video: todosServicios.some(n => n.includes('foto') || n.includes('video') || n.includes('fotografía')),
+    
+    // Catering
+    mini_postres: todosServicios.some(n => n.includes('mini') && (n.includes('dulce') || n.includes('postre'))),
+    appetizers: todosServicios.some(n => n.includes('pasapalo') || n.includes('appetizer') || n.includes('finger food')),
+    mesa_quesos: todosServicios.some(n => n.includes('queso') || n.includes('cheese')),
+    comida: todosServicios.some(n => n.includes('comida') || n.includes('menu') || n.includes('catering') || n.includes('proteina') || n.includes('plato')),
+    
+    // Bar
+    licores: todosServicios.some(n => n.includes('licor') || n.includes('liquor') || n.includes('bar abierto') || n.includes('open bar')),
+    vinos: todosServicios.some(n => n.includes('vino') || n.includes('wine')),
+    cocteles_sin_alcohol: todosServicios.some(n => (n.includes('coctel') || n.includes('cocktail')) && (n.includes('sin alcohol') || n.includes('mocktail') || n.includes('virgin'))),
+    sodas_agua_jugos: todosServicios.some(n => n.includes('soda') || n.includes('agua') || n.includes('jugo') || n.includes('refresco') || n.includes('bebida')),
   };
 }
 
@@ -181,25 +194,99 @@ function generarPDFAjustesEvento(ajustes, contrato) {
   agregarSeccion('1. INFORMATIVO DE EVENTOS');
   
   const clienteNombre = contrato?.clientes?.nombre_completo || '';
-  const fechaEvento = contrato?.fecha_evento 
-    ? new Date(contrato.fecha_evento).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    : '';
-  const tipoEvento = contrato?.clientes?.tipo_evento || '';
+  
+  // Formatear fecha del evento correctamente (evitar problemas de timezone)
+  let fechaEvento = '';
+  if (contrato?.fecha_evento) {
+    try {
+      // Convertir a string si es objeto Date
+      let fechaStr = contrato.fecha_evento;
+      if (fechaStr instanceof Date) {
+        fechaStr = fechaStr.toISOString();
+      } else {
+        fechaStr = String(fechaStr);
+      }
+      
+      if (fechaStr.includes('T')) {
+        const [datePart] = fechaStr.split('T');
+        const [year, month, day] = datePart.split('-');
+        fechaEvento = `${day}/${month}/${year}`;
+      } else if (fechaStr.includes('-')) {
+        const [year, month, day] = fechaStr.split('-');
+        fechaEvento = `${day}/${month}/${year}`;
+      } else {
+        fechaEvento = fechaStr;
+      }
+    } catch (e) {
+      fechaEvento = '';
+    }
+  }
+  
+  // Tipo de evento: buscar en ofertas primero, luego en contrato, luego en clientes
+  const tipoEvento = contrato?.ofertas?.tipo_evento || contrato?.tipo_evento || contrato?.clientes?.tipo_evento || '';
   const homenajeado = contrato?.homenajeado || ajustes?.invitado_honor || '';
   const cantidadInvitados = contrato?.cantidad_invitados || 0;
   const cantidadAdultos = cantidadInvitados - (ajustes?.cantidad_teenagers || 0);
   const cantidadTeens = ajustes?.cantidad_teenagers || 0;
   const contacto = contrato?.clientes?.telefono || contrato?.clientes?.email || '';
   const salon = contrato?.salones?.nombre || contrato?.lugar_salon || '';
-  const horaInicio = contrato?.hora_inicio 
-    ? new Date(`2000-01-01T${contrato.hora_inicio}`).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-    : '';
-  const horaFin = contrato?.hora_fin 
-    ? new Date(`2000-01-01T${contrato.hora_fin}`).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-    : '';
-  const vendedor = contrato?.vendedores?.nombre_completo || '';
+  
+  // Formatear horas correctamente
+  const formatearHora = (hora) => {
+    if (!hora) return '';
+    try {
+      let horaStr = hora;
+      if (hora instanceof Date) {
+        horaStr = hora.toISOString();
+      } else {
+        horaStr = String(hora);
+      }
+      
+      let hour = 0;
+      let minute = '00';
+      
+      // Si es un DateTime ISO completo (ej: "1970-01-01T20:00:00.000Z")
+      if (horaStr.includes('T')) {
+        const timePart = horaStr.split('T')[1];
+        if (timePart) {
+          const parts = timePart.split(':');
+          hour = parseInt(parts[0] || '0', 10);
+          minute = (parts[1] || '00').substring(0, 2);
+        }
+      }
+      // Si es solo hora (ej: "20:00:00")
+      else if (horaStr.includes(':')) {
+        const parts = horaStr.split(':');
+        hour = parseInt(parts[0] || '0', 10);
+        minute = (parts[1] || '00').substring(0, 2);
+      }
+      else {
+        return horaStr;
+      }
+      
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${minute} ${ampm}`;
+    } catch (e) {
+      return '';
+    }
+  };
+  
+  const horaInicio = formatearHora(contrato?.hora_inicio);
+  const horaFin = formatearHora(contrato?.hora_fin);
+  
+  // Vendedor: buscar en vendedores o usuarios
+  const vendedor = contrato?.vendedores?.nombre_completo || contrato?.usuarios?.nombre_completo || '';
   const tematica = ajustes?.tematica || '';
   const colorVestido = ajustes?.vestido_nina || '';
+  
+  // Verificar si es XV años o Sweet 16 para mostrar color del vestido
+  const tipoEventoLower = (tipoEvento || '').toLowerCase();
+  const esQuinceOSweet16 = tipoEventoLower.includes('quince') || 
+                           tipoEventoLower.includes('xv') || 
+                           tipoEventoLower.includes('15') ||
+                           tipoEventoLower.includes('sweet 16') ||
+                           tipoEventoLower.includes('sweet16');
 
   agregarCampo('NOMBRE:', clienteNombre);
   agregarCampo('FECHA:', fechaEvento);
@@ -213,53 +300,79 @@ function generarPDFAjustesEvento(ajustes, contrato) {
   agregarCampo('HORA DE INICIO:', horaInicio);
   agregarCampo('HORA DE TERMINA:', horaFin);
   agregarCampo('VENDEDOR:', vendedor);
-  agregarCampo('FINAL REALIZADO POR:', '');
   agregarCampo('TEMATICA:', tematica);
-  agregarCampo('COLOR DEL VESTIDO:', colorVestido);
+  // Solo mostrar color del vestido para XV años o Sweet 16
+  if (esQuinceOSweet16) {
+    agregarCampo('COLOR DEL VESTIDO:', colorVestido);
+  }
 
   // ============================================
-  // 2. PAQUETE
+  // 2. PAQUETE (Solo muestra servicios contratados)
   // ============================================
   agregarSeccion('2. PAQUETE');
   
-  agregarCampo('PANTALLA:', serviciosMapeados.pantalla ? '✓' : '');
-  agregarCampo('DJ:', serviciosMapeados.dj ? '✓' : '');
-  agregarCampo('COLORES:', serviciosMapeados.colores ? '✓' : '');
-  agregarCampo('STAGE:', serviciosMapeados.stage ? '✓' : '');
-  agregarCampo('RUNNERS:', serviciosMapeados.runners ? (ajustes?.runner_tipo || '✓') : '');
-  agregarCampo('CHARGERS:', serviciosMapeados.chargers ? '✓' : '');
-  
-  let servilletasTexto = '';
-  if (serviciosMapeados.servilletas && ajustes?.servilletas && Array.isArray(ajustes.servilletas) && ajustes.servilletas.length > 0) {
-    servilletasTexto = ajustes.servilletas.map(s => s.color).join(', ');
-  } else if (serviciosMapeados.servilletas) {
-    servilletasTexto = '✓';
+  // Solo mostrar servicios que el evento realmente tiene (sin "Si", solo el label)
+  if (serviciosMapeados.pantalla) {
+    agregarCampo('PANTALLA:', 'Incluido');
   }
-  agregarCampo('SERVILLETAS:', servilletasTexto);
-  
-  agregarCampo('CENTRO DE MESA:', serviciosMapeados.centro_mesa ? (ajustes?.centro_mesa_1 || '✓') : '');
-  agregarCampo('MESA DE REGALOS:', serviciosMapeados.mesa_regalos ? '✓' : '');
-  
-  let limosinaTexto = '';
+  if (serviciosMapeados.dj) {
+    agregarCampo('DJ:', 'Incluido');
+  }
+  if (serviciosMapeados.colores) {
+    agregarCampo('COLORES:', 'Incluido');
+  }
+  if (serviciosMapeados.stage) {
+    agregarCampo('STAGE:', ajustes?.stage_tipo || 'Incluido');
+  }
+  if (serviciosMapeados.runners) {
+    agregarCampo('RUNNERS:', ajustes?.runner_tipo || 'Incluido');
+  }
+  if (serviciosMapeados.chargers) {
+    agregarCampo('CHARGERS:', 'Incluido');
+  }
+  if (serviciosMapeados.servilletas) {
+    let servilletasTexto = 'Incluido';
+    if (ajustes?.servilletas && Array.isArray(ajustes.servilletas) && ajustes.servilletas.length > 0) {
+      servilletasTexto = ajustes.servilletas.map(s => s.color).join(', ');
+    }
+    agregarCampo('SERVILLETAS:', servilletasTexto);
+  }
+  if (serviciosMapeados.centro_mesa) {
+    agregarCampo('CENTRO DE MESA:', ajustes?.centro_mesa_1 || 'Incluido');
+  }
+  if (serviciosMapeados.mesa_regalos) {
+    agregarCampo('MESA DE REGALOS:', 'Incluido');
+  }
   if (serviciosMapeados.limosina) {
+    let limosinaTexto = 'Incluido';
     if (ajustes?.hora_limosina) {
-      const hora = typeof ajustes.hora_limosina === 'string' 
+      limosinaTexto = typeof ajustes.hora_limosina === 'string' 
         ? ajustes.hora_limosina 
         : new Date(`2000-01-01T${ajustes.hora_limosina}`).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-      limosinaTexto = hora;
-    } else {
-      limosinaTexto = '✓';
     }
+    agregarCampo('LIMOSINA:', limosinaTexto);
   }
-  agregarCampo('LIMOSINA:', limosinaTexto);
-  
-  agregarCampo('PHOTOBOOTH:', serviciosMapeados.photobooth ? (contrato?.photobooth_tipo || '✓') : '');
-  agregarCampo('HORA LOCA:', serviciosMapeados.hora_loca ? '✓' : '');
-  agregarCampo('MAPPING:', serviciosMapeados.mapping ? '✓' : '');
-  agregarCampo('HUMO:', serviciosMapeados.humo ? '✓' : '');
-  agregarCampo('CHISPAS:', serviciosMapeados.chispas ? '✓' : '');
-  agregarCampo('MAESTRO DE CEREMONIA:', serviciosMapeados.maestro_ceremonia ? '✓' : '');
-  agregarCampo('FOTOS Y VIDEO:', serviciosMapeados.fotos_video ? '✓' : '');
+  if (serviciosMapeados.photobooth) {
+    agregarCampo('PHOTOBOOTH:', contrato?.photobooth_tipo || 'Incluido');
+  }
+  if (serviciosMapeados.hora_loca) {
+    agregarCampo('HORA LOCA:', 'Incluido');
+  }
+  if (serviciosMapeados.mapping) {
+    agregarCampo('MAPPING:', 'Incluido');
+  }
+  if (serviciosMapeados.humo) {
+    agregarCampo('HUMO:', 'Incluido');
+  }
+  if (serviciosMapeados.chispas) {
+    agregarCampo('CHISPAS:', 'Incluido');
+  }
+  if (serviciosMapeados.maestro_ceremonia) {
+    agregarCampo('MAESTRO DE CEREMONIA:', 'Incluido');
+  }
+  if (serviciosMapeados.fotos_video) {
+    agregarCampo('FOTOS Y VIDEO:', 'Incluido');
+  }
 
   // ============================================
   // 3. CATERING
@@ -272,28 +385,74 @@ function generarPDFAjustesEvento(ajustes, contrato) {
   const tortaTexto = [disenoTorta, saborTorta, pisosTorta].filter(Boolean).join(' - ') || '';
   
   agregarCampo('CAKE:', tortaTexto);
-  agregarCampo('MESA DE MINIPOSTRES:', '');
-  agregarCampo('APPETIZERS:', '');
-  agregarCampo('MESA DE QUESOS:', '');
-  agregarCampo('CATERING:', '');
-  agregarCampo('  ENSALADA:', ajustes?.entrada || '');
+  
+  // Mini postres - solo si está incluido
+  if (serviciosMapeados.mini_postres) {
+    agregarCampo('MESA DE MINIPOSTRES:', 'Incluido');
+  }
+  
+  // Appetizers - solo si está incluido
+  if (serviciosMapeados.appetizers) {
+    agregarCampo('APPETIZERS:', 'Incluido');
+  }
+  
+  // Mesa de quesos - solo si está incluido
+  if (serviciosMapeados.mesa_quesos) {
+    agregarCampo('MESA DE QUESOS:', 'Incluido');
+  }
+  
+  // Catering / Comida
+  if (serviciosMapeados.comida) {
+    agregarCampo('CATERING:', 'Incluido');
+  }
+  agregarCampo('  ENSALADA:', ajustes?.entrada || 'Cesar');
   agregarCampo('  PROTEINA:', ajustes?.plato_principal || '');
   agregarCampo('  SIDE:', ajustes?.acompanamientos || ajustes?.acompanamiento_seleccionado || '');
-  agregarCampo('  SIDE:', '');
-  agregarCampo('  PAN Y MANTEQUILLA:', '✓');
+  agregarCampo('  PAN Y MANTEQUILLA:', 'Incluido');
 
   // ============================================
   // 4. BAR
   // ============================================
   agregarSeccion('4. BAR');
   
-  agregarCampo('LICORES:', ajustes?.bebidas_incluidas || '');
-  agregarCampo('VINOS:', '');
-  agregarCampo('COCKTELES SIN ALCOHOL:', '');
-  agregarCampo('SODAS, AGUA Y JUGOS:', '✓');
-  agregarCampo('CHAMPAÑA:', '');
-  agregarCampo('SIDRA:', '');
-  agregarCampo('OBSERVACIONES BAR:', ajustes?.notas_menu || '');
+  // Licores - solo si está incluido
+  if (serviciosMapeados.licores) {
+    agregarCampo('LICORES:', ajustes?.bebidas_incluidas || 'Incluido');
+  }
+  
+  // Vinos - solo si está incluido
+  if (serviciosMapeados.vinos) {
+    agregarCampo('VINOS:', 'Incluido');
+  }
+  
+  // Cocteles sin alcohol - solo si está incluido
+  if (serviciosMapeados.cocteles_sin_alcohol) {
+    agregarCampo('COCKTELES SIN ALCOHOL:', 'Incluido');
+  }
+  
+  // Sodas, agua y jugos - siempre incluido
+  agregarCampo('SODAS, AGUA Y JUGOS:', 'Incluido');
+  
+  // Sidra y/o Champaña - solo mostrar lo que tiene el evento
+  const seleccionSidraChampana = contrato?.ofertas?.seleccion_sidra_champana || contrato?.seleccion_sidra_champana || '';
+  if (seleccionSidraChampana) {
+    const seleccion = seleccionSidraChampana.toLowerCase();
+    if (seleccion.includes('champana') || seleccion.includes('champaña') || seleccion === 'champagne') {
+      agregarCampo('CHAMPANA:', 'Incluido');
+    }
+    if (seleccion.includes('sidra') || seleccion === 'cider') {
+      agregarCampo('SIDRA:', 'Incluido');
+    }
+    // Si tiene ambos
+    if (seleccion === 'ambos' || seleccion === 'both') {
+      agregarCampo('CHAMPANA:', 'Incluido');
+      agregarCampo('SIDRA:', 'Incluido');
+    }
+  }
+  
+  if (ajustes?.notas_menu) {
+    agregarCampo('OBSERVACIONES BAR:', ajustes.notas_menu);
+  }
 
   // ============================================
   // 5. MESAS
@@ -338,11 +497,11 @@ function generarPDFAjustesEvento(ajustes, contrato) {
       if (protocolo.nombre_homenajeado) {
         agregarCampo('Nombre del Homenajeado:', protocolo.nombre_homenajeado);
       }
-      agregarCampo('Cambio de Zapatilla:', protocolo.cambio_zapatilla ? 'Sí' : 'No');
-      agregarCampo('Baile con Papá:', protocolo.baile_papa ? 'Sí' : 'No');
-      agregarCampo('Baile con Mamá:', protocolo.baile_mama ? 'Sí' : 'No');
-      agregarCampo('Ceremonia de Velas:', protocolo.ceremonia_velas ? 'Sí' : 'No');
-      agregarCampo('Brindis:', protocolo.brindis ? 'Sí' : 'No');
+      if (protocolo.cambio_zapatilla) agregarCampo('Cambio de Zapatilla:', 'Incluido');
+      if (protocolo.baile_papa) agregarCampo('Baile con Papa:', 'Incluido');
+      if (protocolo.baile_mama) agregarCampo('Baile con Mama:', 'Incluido');
+      if (protocolo.ceremonia_velas) agregarCampo('Ceremonia de Velas:', 'Incluido');
+      if (protocolo.brindis) agregarCampo('Brindis:', 'Incluido');
       agregarCampo('Hora de Cena:', protocolo.hora_cena || '');
       agregarCampo('Hora Loca:', protocolo.hora_loca || '');
       agregarCampo('Hora de Fin:', protocolo.hora_fin || '');
