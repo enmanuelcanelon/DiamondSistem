@@ -512,12 +512,31 @@ function Ofertas() {
                         {oferta.fecha_evento && (
                           <div className="flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5" />
-                            {new Date(oferta.fecha_evento).toLocaleDateString('es-ES', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              timeZone: 'America/New_York' // Usar zona horaria de Miami para consistencia
-                            })}
+                            {(() => {
+                              // Extraer la fecha directamente del string ISO para evitar problemas de zona horaria
+                              // El formato viene como "2025-12-30T17:00:00.000Z" o similar
+                              const fechaStr = oferta.fecha_evento;
+                              let year, month, day;
+                              
+                              if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+                                // Extraer YYYY-MM-DD del inicio del string ISO
+                                const [datePart] = fechaStr.split('T');
+                                [year, month, day] = datePart.split('-').map(Number);
+                              } else {
+                                // Fallback: usar Date con zona horaria de Miami
+                                const fecha = new Date(fechaStr);
+                                return fecha.toLocaleDateString('es-ES', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  timeZone: 'America/New_York'
+                                });
+                              }
+                              
+                              // Formatear manualmente
+                              const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                              return `${day} ${meses[month - 1]} ${year}`;
+                            })()}
                           </div>
                         )}
                         {oferta.hora_inicio && oferta.hora_fin && (
