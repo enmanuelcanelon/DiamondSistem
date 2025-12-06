@@ -515,7 +515,8 @@ function Ofertas() {
                             {new Date(oferta.fecha_evento).toLocaleDateString('es-ES', {
                               day: 'numeric',
                               month: 'short',
-                              year: 'numeric'
+                              year: 'numeric',
+                              timeZone: 'America/New_York' // Usar zona horaria de Miami para consistencia
                             })}
                           </div>
                         )}
@@ -524,14 +525,13 @@ function Ofertas() {
                             <Clock className="w-3.5 h-3.5" />
                             <span className="font-medium text-foreground">
                               {(() => {
-                                // Calcular horas adicionales y hora fin con extras (igual que en contratos)
-                                const horasAdicionales = obtenerHorasAdicionales(oferta.ofertas_servicios_adicionales || []);
-                                const horaFinConExtras = calcularHoraFinConExtras(oferta.hora_fin, horasAdicionales);
-                                const duracion = calcularDuracion(oferta.hora_inicio, horaFinConExtras);
+                                // NOTA: En ofertas, hora_fin ya es la hora final real que el usuario seleccionó
+                                // (incluye las horas extras que haya agregado). NO debemos sumar nada más.
+                                const duracion = calcularDuracion(oferta.hora_inicio, oferta.hora_fin);
 
                                 return (
                                   <>
-                                    {formatearHora(oferta.hora_inicio)} - {formatearHora(horaFinConExtras)}
+                                    {formatearHora(oferta.hora_inicio)} - {formatearHora(oferta.hora_fin)}
                                     {duracion > 0 && (() => {
                                       const horasEnteras = Math.floor(duracion);
                                       const minutos = Math.round((duracion - horasEnteras) * 60);
