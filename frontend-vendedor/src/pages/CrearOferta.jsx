@@ -4150,8 +4150,12 @@ function CrearOferta() {
 
                   // EXCEPCIÓN: Servicios de categoría "Personal" siempre deben estar disponibles como extra
                   // Incluso si ya está en el paquete, se puede agregar más personal
+                  // NOTA: Verificamos TANTO por categoría COMO por nombre para mayor robustez
+                  // (en caso de que categoria sea NULL en la base de datos)
                   const categoriaServicio = s.categoria?.toLowerCase() || '';
-                  if (categoriaServicio === 'personal' || categoriaServicio.includes('personal')) {
+                  const esPersonalPorCategoria = categoriaServicio === 'personal' || categoriaServicio.includes('personal');
+                  const esPersonalPorNombre = s.nombre === 'Bartender' || s.nombre === 'Personal de Atención' || s.nombre === 'Personal de Servicio' || s.nombre === 'Coordinador de Eventos';
+                  if (esPersonalPorCategoria || esPersonalPorNombre) {
                     return true;
                   }
 
