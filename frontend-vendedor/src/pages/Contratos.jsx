@@ -632,11 +632,19 @@ function Contratos() {
                       {contrato.fecha_evento && (
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5" />
-                          {new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
+                          {(() => {
+                            // Extraer fecha del string ISO para evitar problemas de zona horaria
+                            const fechaStr = contrato.fecha_evento;
+                            const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                            if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+                              const [datePart] = fechaStr.split('T');
+                              const [year, month, day] = datePart.split('-').map(Number);
+                              return `${day} ${meses[month - 1]} ${year}`;
+                            }
+                            return new Date(fechaStr).toLocaleDateString('es-ES', {
+                              day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/New_York'
+                            });
+                          })()}
                         </div>
                       )}
                       {contrato.hora_inicio && contrato.hora_fin && (

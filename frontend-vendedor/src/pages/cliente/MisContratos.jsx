@@ -129,11 +129,18 @@ function MisContratos() {
               <div>
                 <p className="text-xs text-gray-600">Fecha del Evento</p>
                 <p className="font-semibold text-gray-900">
-                  {new Date(contrato.fecha_evento).toLocaleDateString('es-ES', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
+                  {(() => {
+                    const fechaStr = contrato.fecha_evento;
+                    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+                    if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+                      const [datePart] = fechaStr.split('T');
+                      const [year, month, day] = datePart.split('-').map(Number);
+                      return `${day} de ${meses[month - 1]} de ${year}`;
+                    }
+                    return new Date(fechaStr).toLocaleDateString('es-ES', {
+                      day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/New_York'
+                    });
+                  })()}
                 </p>
               </div>
             </div>

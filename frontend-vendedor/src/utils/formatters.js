@@ -160,22 +160,55 @@ export const formatearMoneda = (amount) => {
 };
 
 /**
- * Formatea una fecha
- * @param {string} dateString - Fecha en formato ISO
+ * Formatea una fecha extrayendo directamente del string ISO para evitar problemas de zona horaria
+ * @param {string} dateString - Fecha en formato ISO (ej: "2025-12-30T17:00:00.000Z")
  * @param {object} options - Opciones de formateo
  * @returns {string} Fecha formateada
  */
 export const formatearFecha = (dateString, options = {}) => {
   if (!dateString) return 'N/A';
   
-  const defaultOptions = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    ...options
-  };
+  // Extraer la fecha directamente del string ISO para evitar problemas de zona horaria
+  const mesesCortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const mesesLargos = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   
-  return new Date(dateString).toLocaleDateString('es-ES', defaultOptions);
+  let year, month, day;
+  
+  if (typeof dateString === 'string' && dateString.includes('T')) {
+    // Formato ISO: "2025-12-30T17:00:00.000Z"
+    const [datePart] = dateString.split('T');
+    [year, month, day] = datePart.split('-').map(Number);
+  } else if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    // Formato simple: "2025-12-30"
+    [year, month, day] = dateString.split('-').map(Number);
+  } else {
+    // Fallback: usar Date con zona horaria de Miami
+    const fecha = new Date(dateString);
+    return fecha.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: options.month || 'long',
+      day: 'numeric',
+      weekday: options.weekday,
+      timeZone: 'America/New_York'
+    });
+  }
+  
+  // Formatear según las opciones
+  const usarMesCorto = options.month === 'short';
+  const mostrarDiaSemana = options.weekday === 'long';
+  
+  let resultado = '';
+  
+  if (mostrarDiaSemana) {
+    // Calcular el día de la semana
+    const fecha = new Date(year, month - 1, day);
+    resultado += diasSemana[fecha.getDay()] + ', ';
+  }
+  
+  resultado += `${day} de ${usarMesCorto ? mesesCortos[month - 1] : mesesLargos[month - 1]} de ${year}`;
+  
+  return resultado;
 };
 
 /**

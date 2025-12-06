@@ -179,12 +179,20 @@ function ChecklistManager() {
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
                         <span>
-                          {new Date(contrato.eventos.fecha_evento).toLocaleDateString('es-ES', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                          {(() => {
+                            const fechaStr = contrato.eventos.fecha_evento;
+                            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+                            const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+                            if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+                              const [datePart] = fechaStr.split('T');
+                              const [year, month, day] = datePart.split('-').map(Number);
+                              const fecha = new Date(year, month - 1, day);
+                              return `${dias[fecha.getDay()]}, ${day} de ${meses[month - 1]} de ${year}`;
+                            }
+                            return new Date(fechaStr).toLocaleDateString('es-ES', {
+                              weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/New_York'
+                            });
+                          })()}
                         </span>
                       </div>
                     )}
