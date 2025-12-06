@@ -553,10 +553,10 @@ router.post('/', authenticate, requireVendedor, async (req, res, next) => {
            usuario_id: req.user.id, // Usar usuario_id (nueva relación con usuarios)
            paquete_id: parseInt(datos.paquete_id),
            salon_id: datos.salon_id ? parseInt(datos.salon_id) : null,
-           // IMPORTANTE: Guardar fecha con hora mediodía para evitar problemas de zona horaria
-           // new Date("2026-02-26") se interpreta como UTC medianoche, que en Miami es el día anterior
-           // Al usar T12:00:00 evitamos este problema
-           fecha_evento: new Date(`${datos.fecha_evento}T12:00:00`),
+           // IMPORTANTE: Guardar fecha con hora mediodía UTC para evitar problemas de zona horaria
+           // Usamos T17:00:00Z (5 PM UTC) = 12 PM hora de Miami (EST)
+           // Esto asegura que la fecha sea correcta en cualquier zona horaria
+           fecha_evento: new Date(`${datos.fecha_evento}T17:00:00Z`),
           // IMPORTANTE: Guardar horas con Z (UTC) para que Prisma las lea correctamente
           // El usuario ingresa horas en formato hora local de Miami (ej: "18:00" = 6 PM hora de Miami)
           // PostgreSQL TIME se almacena sin zona horaria, y Prisma siempre lo devuelve como UTC
@@ -812,8 +812,9 @@ router.put('/:id', authenticate, requireVendedor, async (req, res, next) => {
         data: {
           cliente_id: parseInt(datos.cliente_id),
           paquete_id: parseInt(datos.paquete_id),
-          // IMPORTANTE: Guardar fecha con hora mediodía para evitar problemas de zona horaria
-          fecha_evento: new Date(`${datos.fecha_evento}T12:00:00`),
+          // IMPORTANTE: Guardar fecha con hora mediodía UTC para evitar problemas de zona horaria
+          // Usamos T17:00:00Z (5 PM UTC) = 12 PM hora de Miami (EST)
+          fecha_evento: new Date(`${datos.fecha_evento}T17:00:00Z`),
           // IMPORTANTE: Guardar horas con Z (UTC) para que Prisma las lea correctamente
           // El usuario ingresa horas en formato hora local de Miami (ej: "18:00" = 6 PM hora de Miami)
           // PostgreSQL TIME se almacena sin zona horaria, y Prisma siempre lo devuelve como UTC

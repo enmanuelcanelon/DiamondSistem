@@ -525,16 +525,34 @@ function Ofertas() {
                             <Clock className="w-3.5 h-3.5" />
                             <span className="font-medium text-foreground">
                               {(() => {
-                                // NOTA: En ofertas, hora_fin ya es la hora final real que el usuario seleccionó
-                                // (incluye las horas extras que haya agregado). NO debemos sumar nada más.
-                                const duracion = calcularDuracion(oferta.hora_inicio, oferta.hora_fin);
+                                // Calcular la duración que el usuario seleccionó
+                                const duracionSeleccionada = calcularDuracion(oferta.hora_inicio, oferta.hora_fin);
+                                
+                                // Obtener duración base del paquete
+                                const duracionPaquete = oferta.paquetes?.duracion_horas || 4;
+                                
+                                // Calcular horas extras "implícitas" en la selección del usuario
+                                // (si seleccionó más tiempo que el paquete, esas horas ya están en hora_fin)
+                                const horasExtrasImplicitas = Math.max(0, Math.ceil(duracionSeleccionada - duracionPaquete));
+                                
+                                // Obtener horas extras reales de los servicios adicionales
+                                const horasExtrasEnServicios = obtenerHorasAdicionales(oferta.ofertas_servicios_adicionales || []);
+                                
+                                // Solo sumar las horas extras que NO están ya incluidas en hora_fin
+                                const horasExtrasAdicionales = Math.max(0, horasExtrasEnServicios - horasExtrasImplicitas);
+                                
+                                // Calcular hora fin real y duración total
+                                const horaFinReal = horasExtrasAdicionales > 0 
+                                  ? calcularHoraFinConExtras(oferta.hora_fin, horasExtrasAdicionales)
+                                  : oferta.hora_fin;
+                                const duracionTotal = calcularDuracion(oferta.hora_inicio, horaFinReal);
 
                                 return (
                                   <>
-                                    {formatearHora(oferta.hora_inicio)} - {formatearHora(oferta.hora_fin)}
-                                    {duracion > 0 && (() => {
-                                      const horasEnteras = Math.floor(duracion);
-                                      const minutos = Math.round((duracion - horasEnteras) * 60);
+                                    {formatearHora(oferta.hora_inicio)} - {formatearHora(horaFinReal)}
+                                    {duracionTotal > 0 && (() => {
+                                      const horasEnteras = Math.floor(duracionTotal);
+                                      const minutos = Math.round((duracionTotal - horasEnteras) * 60);
                                       if (minutos > 0 && minutos < 60) {
                                         return ` (${horasEnteras}h ${minutos}m)`;
                                       }
