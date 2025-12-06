@@ -548,7 +548,15 @@ function ComisionesVendedor() {
                                   <TableCell className="text-muted-foreground">{comision.cliente}</TableCell>
                                   <TableCell>
                                     {comision.fecha_evento 
-                                      ? format(new Date(comision.fecha_evento), 'dd/MM/yyyy', { locale: es })
+                                      ? (() => {
+                                          const fechaStr = comision.fecha_evento;
+                                          if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+                                            const [datePart] = fechaStr.split('T');
+                                            const [year, month, day] = datePart.split('-');
+                                            return `${day}/${month}/${year}`;
+                                          }
+                                          return format(new Date(fechaStr), 'dd/MM/yyyy', { locale: es });
+                                        })()
                                       : '-'}
                                   </TableCell>
                                   <TableCell className="text-right">
@@ -605,7 +613,15 @@ function ComisionesVendedor() {
                                   <TableCell className="text-muted-foreground">{comision.cliente}</TableCell>
                                   <TableCell>
                                     {comision.fecha_evento 
-                                      ? format(new Date(comision.fecha_evento), 'dd/MM/yyyy', { locale: es })
+                                      ? (() => {
+                                          const fechaStr = comision.fecha_evento;
+                                          if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+                                            const [datePart] = fechaStr.split('T');
+                                            const [year, month, day] = datePart.split('-');
+                                            return `${day}/${month}/${year}`;
+                                          }
+                                          return format(new Date(fechaStr), 'dd/MM/yyyy', { locale: es });
+                                        })()
                                       : '-'}
                                   </TableCell>
                                   <TableCell className="text-right">

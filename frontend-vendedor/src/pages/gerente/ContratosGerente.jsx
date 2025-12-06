@@ -172,7 +172,15 @@ function ContratosGerente() {
                         <Calendar className="w-4 h-4" />
                         <span>
                           {contrato.fecha_evento 
-                            ? format(new Date(contrato.fecha_evento), 'dd/MM/yyyy', { locale: es })
+                            ? (() => {
+                                const fechaStr = contrato.fecha_evento;
+                                if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+                                  const [datePart] = fechaStr.split('T');
+                                  const [year, month, day] = datePart.split('-');
+                                  return `${day}/${month}/${year}`;
+                                }
+                                return format(new Date(fechaStr), 'dd/MM/yyyy', { locale: es });
+                              })()
                             : 'Sin fecha'}
                         </span>
                       </div>

@@ -1305,22 +1305,25 @@ function CalendarioMensual() {
                       <span className="text-sm text-gray-900 dark:text-gray-100">
                         {(() => {
                           // Para eventos de todo el día, parsear la fecha correctamente
-                          let fechaParaMostrar = eventoSeleccionado.fecha_evento || eventoSeleccionado.fecha_inicio || eventoSeleccionado.hora_inicio;
-
-                          if (eventoSeleccionado.es_todo_el_dia && eventoSeleccionado.fecha_inicio) {
-                            // Si es evento de todo el día, usar la fecha directamente sin conversión de zona horaria
-                            // La fecha viene como "2025-11-19T00:00:00-05:00", extraer solo la parte de fecha
-                            const fechaStr = eventoSeleccionado.fecha_inicio.split('T')[0];
-                            const [year, month, day] = fechaStr.split('-').map(Number);
-                            fechaParaMostrar = new Date(year, month - 1, day);
+                          const fechaStr = eventoSeleccionado.fecha_evento || eventoSeleccionado.fecha_inicio || eventoSeleccionado.hora_inicio;
+                          
+                          const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+                          const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+                          
+                          // Extraer fecha del string ISO para evitar problemas de zona horaria
+                          if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+                            const [datePart] = fechaStr.split('T');
+                            const [year, month, day] = datePart.split('-').map(Number);
+                            const fecha = new Date(year, month - 1, day);
+                            return `${dias[fecha.getDay()]}, ${day} de ${meses[month - 1]} de ${year}`;
                           }
-
-                          return new Date(fechaParaMostrar).toLocaleDateString('es-ES', {
+                          
+                          return new Date(fechaStr).toLocaleDateString('es-ES', {
                             weekday: 'long',
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
-                            timeZone: eventoSeleccionado.timeZone || 'America/New_York'
+                            timeZone: 'America/New_York'
                           });
                         })()}
                       </span>
