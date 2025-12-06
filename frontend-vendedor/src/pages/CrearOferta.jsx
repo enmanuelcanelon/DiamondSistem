@@ -4148,10 +4148,30 @@ function CrearOferta() {
                   // EXCEPCIÓN: "Hora Extra" siempre debe estar disponible (se puede contratar múltiples veces)
                   if (s.nombre === 'Hora Extra') return true;
 
-                  // EXCEPCIÓN: Personal (Bartender y Personal de Atención) siempre debe estar disponible como extra
+                  // EXCEPCIÓN: Servicios de categoría "Personal" siempre deben estar disponibles como extra
                   // Incluso si ya está en el paquete, se puede agregar más personal
-                  if (s.nombre === 'Bartender' || s.nombre === 'Personal de Atención' || s.nombre === 'Personal de Servicio') {
+                  const categoriaServicio = s.categoria?.toLowerCase() || '';
+                  if (categoriaServicio === 'personal' || categoriaServicio.includes('personal')) {
                     return true;
+                  }
+
+                  // ====================================================================
+                  // REGLA PRINCIPAL: Si el servicio ya está ACTIVO en el paquete, NO mostrarlo
+                  // Esta verificación temprana evita que servicios del paquete aparezcan como adicionales
+                  // NOTA: serviciosPaqueteActivos solo contiene los servicios realmente seleccionados
+                  // (en grupos excluyentes como Photobooth 360/Print, solo contiene el seleccionado)
+                  // ====================================================================
+                  const estaActivoEnPaqueteVerificacion = serviciosPaqueteActivos.some(ps => {
+                    const psId = parseInt(ps.servicio_id || ps.servicios?.id || ps.id);
+                    const sId = parseInt(s.id);
+                    return psId === sId;
+                  }) || serviciosPaqueteActivos.some(ps => {
+                    const nombrePs = ps.servicios?.nombre || ps.nombre;
+                    return nombrePs === s.nombre;
+                  });
+
+                  if (estaActivoEnPaqueteVerificacion) {
+                    return false; // NO mostrar servicios que ya están activos en el paquete
                   }
 
                   // REGLA ESPECIAL: Si el paquete tiene Photobooth 360 o Print seleccionado, NO mostrar el seleccionado en servicios adicionales
