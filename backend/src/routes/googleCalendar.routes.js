@@ -58,17 +58,25 @@ router.get('/auth/callback', async (req, res, next) => {
   try {
     const { code, state, error } = req.query;
 
+    // Obtener FRONTEND_URL asegurando que tenga protocolo
+    let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    if (frontendUrl && !frontendUrl.startsWith('http')) {
+      frontendUrl = `https://${frontendUrl}`;
+    }
+    // Remover trailing slash si existe
+    frontendUrl = frontendUrl.replace(/\/$/, '');
+
     if (error) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/configuracion?google_calendar_error=${encodeURIComponent(error)}`);
+      return res.redirect(`${frontendUrl}/configuracion?google_calendar_error=${encodeURIComponent(error)}`);
     }
 
     if (!code || !state) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/configuracion?google_calendar_error=missing_params`);
+      return res.redirect(`${frontendUrl}/configuracion?google_calendar_error=missing_params`);
     }
 
     const vendedorId = parseInt(state);
     if (isNaN(vendedorId)) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/configuracion?google_calendar_error=invalid_state`);
+      return res.redirect(`${frontendUrl}/configuracion?google_calendar_error=invalid_state`);
     }
 
     // Verificar que el vendedor existe
@@ -80,7 +88,7 @@ router.get('/auth/callback', async (req, res, next) => {
     });
 
     if (!vendedor) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/configuracion?google_calendar_error=vendedor_not_found`);
+      return res.redirect(`${frontendUrl}/configuracion?google_calendar_error=vendedor_not_found`);
     }
 
     // Intercambiar código por tokens
@@ -109,10 +117,16 @@ router.get('/auth/callback', async (req, res, next) => {
     logger.info(`✅ Google Calendar conectado para vendedor ${vendedorId}`);
 
     // Redirigir al frontend con éxito
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/configuracion?google_calendar_success=true`);
+    res.redirect(`${frontendUrl}/configuracion?google_calendar_success=true`);
   } catch (error) {
     logger.error('Error en callback de OAuth:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/configuracion?google_calendar_error=${encodeURIComponent(error.message)}`);
+    // Obtener frontendUrl de nuevo en caso de error
+    let errorFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    if (errorFrontendUrl && !errorFrontendUrl.startsWith('http')) {
+      errorFrontendUrl = `https://${errorFrontendUrl}`;
+    }
+    errorFrontendUrl = errorFrontendUrl.replace(/\/$/, '');
+    res.redirect(`${errorFrontendUrl}/configuracion?google_calendar_error=${encodeURIComponent(error.message)}`);
   }
 });
 
