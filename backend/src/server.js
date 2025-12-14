@@ -13,10 +13,20 @@ const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const fs = require('fs');
 
+// Configuración centralizada
+const config = require('./config');
+
 // Logger estructurado
 const logger = require('./utils/logger');
 
-// Importar rutas
+// Validar configuración crítica al inicio
+try {
+  config.validateConfig();
+  config.printConfigSummary();
+} catch (error) {
+  console.error('❌ Error al validar configuración:', error);
+  process.exit(1);
+}
 const vendedoresRoutes = require('./routes/vendedores.routes');
 const clientesRoutes = require('./routes/clientes.routes');
 const paquetesRoutes = require('./routes/paquetes.routes');
@@ -56,14 +66,7 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
-// Configuración centralizada
-const config = require('./config');
-
-// Validar configuración crítica al inicio
-config.validateConfig();
-config.printConfigSummary();
-
-// Inicializar Express
+// Importar rutas
 const app = express();
 
 // Trust proxy - Necesario para Railway y otros servicios que usan proxy reverso

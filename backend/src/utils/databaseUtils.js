@@ -7,7 +7,6 @@
 
 const { PrismaClient } = require('@prisma/client');
 const logger = require('../middleware/logger');
-const config = require('../config');
 
 class DatabaseUtils {
   constructor() {

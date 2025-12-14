@@ -3,9 +3,9 @@
  * DIAMONDSISTEM - Configuración Centralizada
  * Todas las configuraciones del sistema en un solo lugar
  * ============================================
+ * 
+ * NOTA: Este módulo NO carga dotenv, debe ser cargado antes por server.js
  */
-
-require('dotenv').config();
 
 /**
  * Configuración de la aplicación
@@ -238,24 +238,37 @@ const cache = {
  * Función para validar configuración crítica
  */
 const validateConfig = () => {
-  const required = [
+  const critical = [
     { key: 'database.url', value: database.url },
     { key: 'auth.jwt.secret', value: auth.jwt.secret },
+  ];
+
+  const optional = [
     { key: 'email.auth.user', value: email.auth.user },
     { key: 'email.auth.pass', value: email.auth.pass },
   ];
 
-  const missing = required.filter(item => !item.value);
+  const missingCritical = critical.filter(item => !item.value);
+  const missingOptional = optional.filter(item => !item.value);
 
-  if (missing.length > 0) {
-    console.error('❌ Variables de entorno requeridas faltantes:');
-    missing.forEach(item => {
+  if (missingCritical.length > 0) {
+    console.error('❌ Variables de entorno críticas faltantes:');
+    missingCritical.forEach(item => {
       console.error(`   - ${item.key}`);
     });
+    console.error('\n⚠️  El servidor no puede iniciar sin estas variables.');
     process.exit(1);
   }
 
-  console.log('✅ Configuración validada correctamente');
+  if (missingOptional.length > 0) {
+    console.warn('\n⚠️  Variables de entorno opcionales faltantes:');
+    missingOptional.forEach(item => {
+      console.warn(`   - ${item.key}`);
+    });
+    console.warn('⚠️  Algunas funcionalidades pueden no estar disponibles.\n');
+  }
+
+  console.log('✅ Configuración crítica validada correctamente');
 };
 
 /**
