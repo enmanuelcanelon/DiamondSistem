@@ -11,7 +11,7 @@ const os = require('os');
 const cron = require('node-cron');
 const { getPrismaClient } = require('../config/database');
 const { asignarInventarioAutomatico } = require('../jobs/inventarioAutoAsignacion');
-const logger = require('../middleware/logger');
+const logger = require('./logger'); // Corrección: logger está en utils/, no en middleware/
 
 class ServerInitializer {
   constructor(prisma) {
