@@ -32,7 +32,7 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  if (err.code?.startsWith('P')) {
+  if (typeof err.code === 'string' && err.code.startsWith('P')) {
     return res.status(400).json({
       error: 'Error de base de datos',
       message: 'Ocurrió un error al procesar la solicitud',
