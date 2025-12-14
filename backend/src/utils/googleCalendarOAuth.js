@@ -8,7 +8,24 @@ const logger = require('./logger');
 // Configuración OAuth 2.0
 const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_OAUTH_REDIRECT_URI || 'http://localhost:5000/api/google-calendar/auth/callback';
+
+// Determinar REDIRECT_URI basado en el entorno
+const getRedirectUri = () => {
+  if (process.env.GOOGLE_OAUTH_REDIRECT_URI) {
+    return process.env.GOOGLE_OAUTH_REDIRECT_URI;
+  }
+  // Si hay BACKEND_URL o RAILWAY_PUBLIC_DOMAIN, usar producción
+  if (process.env.BACKEND_URL) {
+    return `${process.env.BACKEND_URL}/api/google-calendar/auth/callback`;
+  }
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/google-calendar/auth/callback`;
+  }
+  // Default local
+  return 'http://localhost:5000/api/google-calendar/auth/callback';
+};
+
+const REDIRECT_URI = getRedirectUri();
 
 /**
  * Crear cliente OAuth 2.0
