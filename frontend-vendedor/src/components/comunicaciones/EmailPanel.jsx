@@ -140,7 +140,7 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
   const abrirEmail = (email) => {
     setEmailSeleccionado(email);
     setVista(VIEWS.READ);
-    if (!email.leido) {
+    if (email.isUnread) {
       marcarLeidoMutation.mutate(email.id);
     }
   };
@@ -206,27 +206,27 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
             </div>
           ))}
         </div>
-      ) : bandejaData?.emails?.length > 0 ? (
+      ) : bandejaData?.data?.length > 0 ? (
         <div className="space-y-2">
-          {bandejaData.emails.map((email) => (
+          {bandejaData.data.map((email) => (
             <div 
               key={email.id}
               onClick={() => abrirEmail(email)}
               className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${
-                !email.leido ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' : ''
+                email.isUnread ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' : ''
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className={`truncate ${!email.leido ? 'font-semibold' : ''}`}>
+                    <p className={`truncate ${email.isUnread ? 'font-semibold' : ''}`}>
                       {email.de || email.from}
                     </p>
-                    {!email.leido && (
+                    {email.isUnread && (
                       <Badge variant="default" className="bg-blue-500 text-xs">Nuevo</Badge>
                     )}
                   </div>
-                  <p className={`text-sm truncate ${!email.leido ? 'font-medium' : 'text-muted-foreground'}`}>
+                  <p className={`text-sm truncate ${email.isUnread ? 'font-medium' : 'text-muted-foreground'}`}>
                     {email.asunto || email.subject}
                   </p>
                   <p className="text-xs text-muted-foreground truncate mt-1">
