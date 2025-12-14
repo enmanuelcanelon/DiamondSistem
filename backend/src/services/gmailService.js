@@ -14,6 +14,7 @@ const {
   createAuthenticatedClient,
   refreshAccessToken
 } = require('../utils/googleCalendarOAuth');
+const { encrypt, decrypt } = require('../utils/encryption');
 
 const prisma = getPrismaClient();
 
@@ -59,8 +60,15 @@ async function getGmailClient(usuarioId) {
       throw new Error('Usuario no ha conectado su cuenta de Google. Por favor, conecta tu cuenta primero.');
     }
 
+    // Desencriptar tokens
+    let accessToken = decrypt(usuario.google_access_token);
+    const refreshToken = decrypt(usuario.google_refresh_token);
+
+    if (!accessToken || !refreshToken) {
+      throw new Error('Error al desencriptar tokens de Google. Por favor, reconecta tu cuenta.');
+    }
+
     // Verificar si el token está expirado
-    let accessToken = usuario.google_access_token;
     const expiresAt = usuario.google_token_expires_at;
     const now = new Date();
 
@@ -68,14 +76,15 @@ async function getGmailClient(usuarioId) {
       logger.info('Token de Google expirado, refrescando...', { usuarioId });
       
       try {
-        const newTokens = await refreshAccessToken(usuario.google_refresh_token);
+        const newTokens = await refreshAccessToken(refreshToken);
         accessToken = newTokens.access_token;
 
-        // Actualizar tokens en la base de datos
+        // Encriptar y actualizar tokens en la base de datos
+        const accessTokenEncriptado = encrypt(accessToken);
         await prisma.usuarios.update({
           where: { id: usuarioId },
           data: {
-            google_access_token: accessToken,
+            google_access_token: accessTokenEncriptado,
             google_token_expires_at: new Date(newTokens.expiry_date)
           }
         });
@@ -86,7 +95,7 @@ async function getGmailClient(usuarioId) {
     }
 
     // Crear cliente autenticado
-    const authClient = createAuthenticatedClient(accessToken, usuario.google_refresh_token);
+    const authClient = createAuthenticatedClient(accessToken, refreshToken);
     if (!authClient) {
       throw new Error('No se pudo crear cliente OAuth de Google');
     }
