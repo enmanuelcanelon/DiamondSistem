@@ -39,9 +39,14 @@ function getAuthUrl(state) {
   }
 
   const scopes = [
+    // Calendar scopes
     'https://www.googleapis.com/auth/calendar.readonly',
     'https://www.googleapis.com/auth/calendar.events.readonly',
-    'https://www.googleapis.com/auth/calendar.events' // Permiso de escritura para crear eventos
+    'https://www.googleapis.com/auth/calendar.events',
+    // Gmail scopes
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.modify'
   ];
 
   return oauth2Client.generateAuthUrl({
