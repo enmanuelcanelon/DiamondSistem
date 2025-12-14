@@ -52,13 +52,14 @@ const inventarioRoutes = require('./routes/inventario.routes');
 const comisionesRoutes = require('./routes/comisiones.routes');
 const leaksRoutes = require('./routes/leaks.routes');
 const googleCalendarRoutes = require('./routes/googleCalendar.routes');
+const comunicacionesRoutes = require('./routes/comunicaciones.routes');
 
 // Jobs ahora manejados por ServerInitializer
 
 // Middleware personalizado
 const { errorHandler } = require('./middleware/errorHandler');
 const { requestLogger } = require('./middleware/logger');
-const { generalLimiter, authLimiter, fotosLimiter, mensajesLimiter, leaksLimiter } = require('./middleware/security');
+const { generalLimiter, authLimiter, fotosLimiter, mensajesLimiter, leaksLimiter, comunicacionesLimiter } = require('./middleware/security');
 
 // Crear directorio de logs si no existe
 const logsDir = path.join(__dirname, '../logs');
@@ -173,7 +174,8 @@ app.get('/', (req, res) => {
       invitados: '/api/invitados',
       playlist: '/api/playlist',
       ajustes: '/api/ajustes',
-      inventario: '/api/inventario'
+      inventario: '/api/inventario',
+      comunicaciones: '/api/comunicaciones'
     }
   });
 });
@@ -229,6 +231,8 @@ app.use('/api/inventario/comisiones', comisionesRoutes);
 // Rutas de leaks con rate limiting permisivo (múltiples vendedores, auto-refresh)
 app.use('/api/leaks', leaksLimiter, leaksRoutes);
 app.use('/api/google-calendar', googleCalendarRoutes);
+// Rutas de comunicaciones omnichannel (WhatsApp, SMS, llamadas, email)
+app.use('/api/comunicaciones', comunicacionesLimiter, comunicacionesRoutes);
 
 // Ruta 404 - Debe ir al final de todas las rutas
 app.use((req, res) => {
