@@ -43,9 +43,7 @@ const comisionesRoutes = require('./routes/comisiones.routes');
 const leaksRoutes = require('./routes/leaks.routes');
 const googleCalendarRoutes = require('./routes/googleCalendar.routes');
 
-// Jobs
-const cron = require('node-cron');
-const { asignarInventarioAutomatico } = require('./jobs/inventarioAutoAsignacion');
+// Jobs ahora manejados por ServerInitializer
 
 // Middleware personalizado
 const { errorHandler } = require('./middleware/errorHandler');
@@ -58,12 +56,17 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
+// Configuración centralizada
+const config = require('./config');
+
+// Validar configuración crítica al inicio
+config.validateConfig();
+config.printConfigSummary();
+
 // Inicializar Express
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Trust proxy - Necesario para Railway y otros servicios que usan proxy reverso
-// Esto permite que Express confíe en los headers X-Forwarded-* del proxy
 app.set('trust proxy', true);
 
 // Inicializar Prisma Client (singleton)
@@ -74,83 +77,11 @@ const prisma = getPrismaClient();
 // MIDDLEWARE GLOBAL DE SEGURIDAD
 // ============================================
 
-// Helmet - Headers de seguridad HTTP
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      // Removido 'http:' por seguridad - solo HTTPS en producción
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'", "https:"],
-      fontSrc: ["'self'", "https:", "data:"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
-    },
-  },
-  crossOriginEmbedderPolicy: false, // Permitir PDFs embebidos
-  crossOriginResourcePolicy: { policy: "cross-origin" }, // Permitir recursos cross-origin (imágenes)
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
-  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-}));
+// Helmet - Headers de seguridad HTTP (desde configuración centralizada)
+app.use(helmet(config.helmet));
 
-// CORS - Configuración simplificada y segura
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Permitir requests sin origin (mobile apps, Postman, etc.)
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    // Obtener orígenes permitidos de variables de entorno
-    const allowedOrigins = process.env.CORS_ORIGINS
-      ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
-      : [
-          // Desarrollo: permitir localhost en puertos comunes de Vite
-          /^http:\/\/localhost:\d+$/,
-          /^http:\/\/127\.0\.0\.1:\d+$/,
-          // Permitir IPs locales en cualquier puerto
-          /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
-          /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
-        ];
-
-    // Verificar si el origen está permitido
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (allowed instanceof RegExp) {
-        return allowed.test(origin);
-      }
-      return allowed === origin;
-    });
-
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      logger.warn(`CORS bloqueado: ${origin}`);
-      callback(new Error('No permitido por CORS'));
-    }
-  },
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'Accept',
-    'Origin',
-    'Access-Control-Request-Method',
-    'Access-Control-Request-Headers'
-  ],
-  exposedHeaders: ['Authorization'],
-  preflightContinue: false,
-};
-
-app.use(cors(corsOptions));
+// CORS - Configuración desde configuración centralizada
+app.use(cors(config.cors));
 
 // Rate limiting general (aumentado para uso normal)
 // Nota: Rutas específicas tienen sus propios limiters más permisivos
@@ -314,134 +245,14 @@ app.use(errorHandler);
 // INICIAR SERVIDOR
 // ============================================
 
-const startServer = async () => {
-  try {
-    // Verificar conexión a la base de datos (ya está conectado por el singleton)
-    await prisma.$queryRaw`SELECT 1`;
-    logger.info('✅ Conexión a la base de datos establecida');
+// Inicializador del servidor
+const { ServerInitializer } = require('./utils/serverInit');
+const serverInit = new ServerInitializer(prisma);
 
-    // Verificar e inicializar salones y paquetes si no existen
-    const { execSync } = require('child_process');
-    const pathModule = require('path');
+const startServer = () => serverInit.startServer(app, config.app.port);
 
-    try {
-      logger.info('🔍 Verificando datos esenciales de base de datos...');
-
-      const salonesCount = await prisma.salones.count({ where: { activo: true } });
-      const paquetesCount = await prisma.paquetes.count({ where: { activo: true } });
-      const paquetesSalonesCount = await prisma.paquetes_salones.count({ where: { disponible: true } });
-
-      const backendDir = pathModule.resolve(__dirname, '..');
-
-      // Si no hay salones, crearlos
-      if (salonesCount === 0) {
-        logger.warn('⚠️  No se encontraron salones. Inicializando...');
-        execSync('node scripts/crear_salones.js', {
-          stdio: 'inherit',
-          cwd: backendDir
-        });
-        logger.info('✅ Salones inicializados');
-      } else {
-        logger.info(`✅ Salones: ${salonesCount} encontrados`);
-      }
-
-      // Si no hay relaciones paquetes-salones, crearlas
-      if (paquetesCount > 0 && salonesCount > 0 && paquetesSalonesCount === 0) {
-        logger.warn('⚠️  No se encontraron relaciones paquetes-salones. Inicializando...');
-        execSync('node scripts/crear_paquetes_salones.js', {
-          stdio: 'inherit',
-          cwd: backendDir
-        });
-        logger.info('✅ Relaciones paquetes-salones inicializadas');
-      } else if (paquetesSalonesCount > 0) {
-        logger.info(`✅ Relaciones paquetes-salones: ${paquetesSalonesCount} encontradas`);
-      }
-    } catch (initError) {
-      logger.error('⚠️  Error al verificar/inicializar datos:', initError.message);
-      // Continuar con el servidor incluso si hay error en la inicialización
-    }
-
-    // Configurar job de asignación automática de inventario
-    // Se ejecuta diariamente a las 2:00 AM
-    cron.schedule('0 2 * * *', async () => {
-      logger.info('🔄 Ejecutando asignación automática de inventario...');
-      try {
-        const resultado = await asignarInventarioAutomatico();
-        logger.info(`✅ Asignación automática completada: ${resultado.asignados} contratos asignados`);
-      } catch (error) {
-        logger.error('❌ Error en asignación automática de inventario:', error);
-      }
-    }, {
-      scheduled: true,
-      timezone: "America/New_York" // Ajustar según tu zona horaria
-    });
-    logger.info('✅ Job de asignación automática de inventario configurado (diario a las 2:00 AM)');
-
-    // DESHABILITADO: Job de sincronización automática de leaks
-    // La sincronización ahora solo se ejecuta manualmente cuando el usuario hace clic en el botón
-    // El endpoint manual está disponible en POST /api/leaks/sincronizar
-    logger.info('ℹ️  Sincronización automática de leaks DESHABILITADA - Solo manual mediante botón');
-
-    // Iniciar el servidor
-    app.listen(PORT, '0.0.0.0', () => {
-      // Obtener IP de red para acceso multi-dispositivo
-      const os = require('os');
-      const networkInterfaces = os.networkInterfaces();
-      let localIP = 'localhost';
-      
-      // Buscar IP local (no loopback)
-      for (const interfaceName in networkInterfaces) {
-        const interfaces = networkInterfaces[interfaceName];
-        for (const iface of interfaces) {
-          if (iface.family === 'IPv4' && !iface.internal) {
-            localIP = iface.address;
-            break;
-          }
-        }
-        if (localIP !== 'localhost') break;
-      }
-      
-      logger.info('\n🚀 ============================================');
-      logger.info(`   DiamondSistem API v${process.env.APP_VERSION || '1.0.0'}`);
-      logger.info('   ============================================');
-      logger.info(`   🌐 Servidor local: http://localhost:${PORT}`);
-      logger.info(`   🌐 Servidor red:   http://${localIP}:${PORT}`);
-      logger.info(`   📊 Health check: http://localhost:${PORT}/health`);
-      logger.info(`   📚 API Docs: http://localhost:${PORT}/`);
-      logger.info(`   🔧 Entorno: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`   🔒 Seguridad: Helmet + Rate Limiting activado`);
-      logger.info('   ============================================\n');
-    });
-  } catch (error) {
-    logger.error('❌ Error al iniciar el servidor:', error);
-    process.exit(1);
-  }
-};
-
-// Manejo de cierre graceful
-process.on('SIGINT', async () => {
-  logger.info('\n⚠️  Cerrando servidor...');
-  await disconnectPrisma();
-  logger.info('✅ Conexión a la base de datos cerrada');
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  logger.info('\n⚠️  Cerrando servidor...');
-  await disconnectPrisma();
-  logger.info('✅ Conexión a la base de datos cerrada');
-  process.exit(0);
-});
-
-// Manejo de errores no capturados
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
-  process.exit(1);
-});
+// Configurar cierre graceful y manejo de errores
+serverInit.setupGracefulShutdown(disconnectPrisma);
 
 // Iniciar servidor
 startServer();
