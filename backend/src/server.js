@@ -99,71 +99,47 @@ app.use(helmet({
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
 
-// CORS - Configuración segura
+// CORS - Configuración simplificada y segura
 const corsOptions = {
   origin: (origin, callback) => {
-    // En desarrollo, permitir localhost y IPs locales para pruebas multi-dispositivo
-    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-      const allowedOrigins = process.env.CORS_ORIGINS 
-        ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
-        : [
-            // Frontends separados - cada uno en su puerto
-            'http://localhost:5173', // frontend-vendedor
-            'http://localhost:5174', // frontend-cliente
-            'http://localhost:5175', // frontend-manager
-            'http://localhost:5176', // frontend-gerente
-            'http://localhost:5177', // frontend-inventario
-            'http://localhost:3000',
-            'http://127.0.0.1:5173',
-            'http://127.0.0.1:5174',
-            'http://127.0.0.1:5175',
-            'http://127.0.0.1:5176',
-            'http://127.0.0.1:5177',
-            'http://127.0.0.1:3000',
-            // Permitir IPs locales (10.x.x.x, 192.168.x.x) en cualquier puerto
-            /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
-            /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
-          ];
-      
-      // Si no hay origin (misma origen, mobile apps, etc.), permitir
-      if (!origin) {
-        return callback(null, true);
+    // Permitir requests sin origin (mobile apps, Postman, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Obtener orígenes permitidos de variables de entorno
+    const allowedOrigins = process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+      : [
+          // Desarrollo: permitir localhost en puertos comunes de Vite
+          /^http:\/\/localhost:\d+$/,
+          /^http:\/\/127\.0\.0\.1:\d+$/,
+          // Permitir IPs locales en cualquier puerto
+          /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
+          /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
+        ];
+
+    // Verificar si el origen está permitido
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
       }
-      
-      // Verificar si el origen está permitido
-      const isAllowed = allowedOrigins.some(allowed => {
-        if (allowed instanceof RegExp) {
-          return allowed.test(origin);
-        }
-        return allowed === origin;
-      });
-      
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        logger.warn(`CORS bloqueado: ${origin}`);
-        callback(new Error('No permitido por CORS'));
-      }
+      return allowed === origin;
+    });
+
+    if (isAllowed) {
+      callback(null, true);
     } else {
-      // En producción, solo orígenes específicos
-      const allowedOrigins = process.env.CORS_ORIGINS 
-        ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
-        : ['http://localhost:5173'];
-      
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        logger.warn(`CORS bloqueado en producción: ${origin}`);
-        callback(new Error('No permitido por CORS'));
-      }
+      logger.warn(`CORS bloqueado: ${origin}`);
+      callback(new Error('No permitido por CORS'));
     }
   },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
+    'Content-Type',
+    'Authorization',
     'X-Requested-With',
     'Accept',
     'Origin',
@@ -471,6 +447,3 @@ process.on('uncaughtException', (error) => {
 startServer();
 
 module.exports = app;
-
-
-
