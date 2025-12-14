@@ -114,18 +114,9 @@ class ServerInitializer {
    */
   async startServer(app, PORT) {
     try {
-      // Verificar conexión a la base de datos
-      await this.prisma.$queryRaw`SELECT 1`;
-      logger.info('✅ Conexión a la base de datos establecida');
-
-      // Inicializar datos de base de datos
-      await this.initializeDatabaseData();
-
-      // Configurar jobs programados
-      this.setupScheduledJobs();
-
-      // Iniciar el servidor
-      app.listen(PORT, '0.0.0.0', () => {
+      // Iniciar el servidor PRIMERO (antes de verificar BD)
+      // Esto permite que el healthcheck pase mientras la BD se conecta
+      app.listen(PORT, '0.0.0.0', async () => {
         const localIP = this.getLocalIP();
 
         logger.info('\n🚀 ============================================');
@@ -138,6 +129,21 @@ class ServerInitializer {
         logger.info(`   🔧 Entorno: ${process.env.NODE_ENV || 'development'}`);
         logger.info(`   🔒 Seguridad: Helmet + Rate Limiting activado`);
         logger.info('   ============================================\n');
+
+        // Ahora verificar conexión a la base de datos (en background)
+        try {
+          await this.prisma.$queryRaw`SELECT 1`;
+          logger.info('✅ Conexión a la base de datos establecida');
+
+          // Inicializar datos de base de datos
+          await this.initializeDatabaseData();
+
+          // Configurar jobs programados
+          this.setupScheduledJobs();
+        } catch (dbError) {
+          logger.error('⚠️  Error al conectar con la base de datos:', dbError);
+          logger.warn('⚠️  El servidor está funcionando pero algunas funcionalidades pueden no estar disponibles');
+        }
       });
 
     } catch (error) {
