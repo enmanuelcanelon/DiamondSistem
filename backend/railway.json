@@ -5,10 +5,10 @@
   },
   "deploy": {
     "numReplicas": 1,
-    "startCommand": "npx prisma generate && node scripts/limpiar_duplicados_sql.js && npx prisma db push --accept-data-loss && node scripts/inicializar_bd_completo.js && node prisma/seed-production.js && npm start",
+    "startCommand": "npx prisma generate && npm start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/",
-    "healthcheckTimeout": 100
+    "healthcheckTimeout": 120
   }
 }
