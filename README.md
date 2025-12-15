@@ -31,8 +31,7 @@ La documentación completa del proyecto está organizada en la carpeta [`docs/`]
 - [Configuración de Emails](./docs/CONFIGURACION_EMAILS.md)
 
 ### 📱 Omnichannel
-- [Roadmap Omnichannel](./OMNICHANNEL_ROADMAP.md) - Estado y plan de implementación
-- [Pendientes Omnichannel](./OMNICHANNEL_PENDIENTES.md) - Tareas pendientes
+- [Guía para Agentes IA](./agente.md) - Estado completo del proyecto y tareas pendientes
 
 ### 📁 Estructura del Proyecto
 
