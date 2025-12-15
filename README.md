@@ -30,6 +30,10 @@ La documentación completa del proyecto está organizada en la carpeta [`docs/`]
 - [Sistema de Comisiones](./docs/SISTEMA_COMISIONES.md)
 - [Configuración de Emails](./docs/CONFIGURACION_EMAILS.md)
 
+### 📱 Omnichannel
+- [Roadmap Omnichannel](./OMNICHANNEL_ROADMAP.md) - Estado y plan de implementación
+- [Pendientes Omnichannel](./OMNICHANNEL_PENDIENTES.md) - Tareas pendientes
+
 ### 📁 Estructura del Proyecto
 
 ```
@@ -65,6 +69,12 @@ DiamondSistem/
 - ✅ Sistema de inventario automático
 - ✅ Chat en tiempo real
 - ✅ Generación automática de PDFs
+- ✅ **Sistema Omnichannel de Comunicaciones** (Nuevo)
+  - 📧 Email completo con Gmail API (Recibidos/Enviados)
+  - 💬 WhatsApp Business API con UI de chat
+  - 📞 Llamadas vía Twilio (WebRTC)
+  - 📱 SMS vía Twilio
+  - 📊 Historial unificado de comunicaciones
 
 ## 🛠️ Tecnologías
 
@@ -74,6 +84,10 @@ DiamondSistem/
 - **Deployment**: Railway, Docker
 - **Autenticación**: JWT
 - **Comunicación**: WebSockets
+- **Omnichannel**: 
+  - WhatsApp Business API (Meta Cloud API)
+  - Twilio (Llamadas y SMS)
+  - Gmail API (Email)
 
 ## 📞 Soporte
 
