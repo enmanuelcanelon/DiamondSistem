@@ -251,3 +251,4 @@ router.post('/webhook/voz', (req, res) => {
 - El historial debe poder filtrarse por lead_id, cliente_id o contrato_id
 - Los webhooks NO usan autenticación JWT, se validan por token/firma
 - El token de WhatsApp expira, considerar implementar refresh
+

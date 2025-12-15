@@ -13,6 +13,14 @@ export const comunicacionesService = {
       templateParams: options.templateParams || null
     }),
 
+  obtenerConversacionesWhatsApp: () =>
+    api.get('/comunicaciones/whatsapp/conversaciones'),
+
+  obtenerMensajesConversacion: (telefono, limit = 50) =>
+    api.get(`/comunicaciones/whatsapp/conversacion/${encodeURIComponent(telefono)}`, {
+      params: { limit }
+    }),
+
   // ================== VOZ / LLAMADAS ==================
   obtenerTokenVoz: () => 
     api.post('/comunicaciones/voz/token'),
@@ -36,9 +44,9 @@ export const comunicacionesService = {
     }),
 
   // ================== EMAIL ==================
-  obtenerBandeja: (maxResults = 20, query = '') => 
+  obtenerBandeja: (maxResults = 20, query = '', carpeta = 'inbox') => 
     api.get(`/comunicaciones/email/bandeja`, {
-      params: { maxResults, q: query }
+      params: { maxResults, q: query, carpeta }
     }),
   
   obtenerEmail: (emailId) => 

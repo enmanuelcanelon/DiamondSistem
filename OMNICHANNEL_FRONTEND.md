@@ -280,3 +280,4 @@ Colores sugeridos para cada canal:
 - 📞 Llamadas: `#3B82F6` (azul)
 - 💬 SMS: `#8B5CF6` (púrpura)
 - 📧 Email: `#EF4444` (rojo Gmail)
+

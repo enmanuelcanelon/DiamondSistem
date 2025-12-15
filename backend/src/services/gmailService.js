@@ -112,22 +112,44 @@ async function getGmailClient(usuarioId) {
 }
 
 /**
- * Obtener bandeja de entrada del usuario
+ * Obtener bandeja de entrada o enviados del usuario
  * @param {number} usuarioId - ID del usuario
  * @param {number} maxResults - Número máximo de resultados (default: 20)
  * @param {string} query - Query de búsqueda (opcional)
+ * @param {string} carpeta - Carpeta a consultar: 'inbox', 'sent', 'starred', 'important' (default: 'inbox')
  * @returns {Promise<Array>} Lista de emails
  */
-async function obtenerBandeja(usuarioId, maxResults = 20, query = '') {
+async function obtenerBandeja(usuarioId, maxResults = 20, query = '', carpeta = 'inbox') {
   const gmail = await getGmailClient(usuarioId);
 
   try {
-    // Listar mensajes
-    const listResponse = await gmail.users.messages.list({
+    // Mapear carpeta a labelId de Gmail
+    const labelMap = {
+      'inbox': 'INBOX',
+      'sent': 'SENT',
+      'draft': 'DRAFT',
+      'trash': 'TRASH',
+      'spam': 'SPAM',
+      'starred': 'STARRED',
+      'important': 'IMPORTANT'
+    };
+
+    const labelId = labelMap[carpeta] || 'INBOX';
+
+    // Configurar parámetros de la consulta
+    const listParams = {
       userId: 'me',
       maxResults: maxResults,
-      q: query || 'in:inbox'
-    });
+      labelIds: [labelId]
+    };
+
+    // Agregar query de búsqueda si existe
+    if (query && query.trim()) {
+      listParams.q = query.trim();
+    }
+
+    // Listar mensajes
+    const listResponse = await gmail.users.messages.list(listParams);
 
     const messages = listResponse.data.messages || [];
     
@@ -148,6 +170,8 @@ async function obtenerBandeja(usuarioId, maxResults = 20, query = '') {
         const headers = emailData.data.payload?.headers || [];
         const getHeader = (name) => headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
 
+        const labels = emailData.data.labelIds || [];
+
         return {
           id: emailData.data.id,
           threadId: emailData.data.threadId,
@@ -156,8 +180,13 @@ async function obtenerBandeja(usuarioId, maxResults = 20, query = '') {
           to: getHeader('To'),
           subject: getHeader('Subject'),
           date: getHeader('Date'),
-          labelIds: emailData.data.labelIds || [],
-          isUnread: (emailData.data.labelIds || []).includes('UNREAD')
+          labelIds: labels,
+          isUnread: labels.includes('UNREAD'),
+          isStarred: labels.includes('STARRED'),
+          isImportant: labels.includes('IMPORTANT'),
+          isSent: labels.includes('SENT'),
+          isInbox: labels.includes('INBOX'),
+          carpeta: carpeta
         };
       } catch (error) {
         logger.error('Error al obtener email:', { messageId: msg.id, error: error.message });
@@ -167,12 +196,12 @@ async function obtenerBandeja(usuarioId, maxResults = 20, query = '') {
 
     const emails = (await Promise.all(emailsPromises)).filter(e => e !== null);
 
-    logger.info('Bandeja de entrada obtenida', { usuarioId, count: emails.length });
+    logger.info('Bandeja obtenida', { usuarioId, carpeta, labelId, count: emails.length });
 
     return emails;
 
   } catch (error) {
-    logger.error('Error al obtener bandeja de entrada:', error);
+    logger.error('Error al obtener bandeja:', error);
     throw error;
   }
 }

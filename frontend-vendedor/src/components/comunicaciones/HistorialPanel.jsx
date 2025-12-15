@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   History, 
@@ -13,7 +13,15 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   RefreshCw,
-  Loader2
+  Loader2,
+  Clock,
+  User,
+  TrendingUp,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
+  Search,
+  X
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -21,7 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui
 import { Badge } from '../ui/badge';
 import { Skeleton } from '../ui/skeleton';
 import comunicacionesService from '../../services/comunicacionesService';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday, isThisWeek, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 // Icono de WhatsApp SVG
@@ -32,17 +40,11 @@ const WhatsAppIcon = ({ className = "w-4 h-4" }) => (
 );
 
 const CANALES = [
-  { value: '', label: 'Todos los canales' },
-  { value: 'whatsapp', label: 'WhatsApp', icon: WhatsAppIcon, color: 'text-[#25D366]' },
-  { value: 'sms', label: 'SMS', icon: MessageSquare, color: 'text-[#8B5CF6]' },
-  { value: 'voz', label: 'Llamadas', icon: Phone, color: 'text-blue-500' },
-  { value: 'email', label: 'Email', icon: Mail, color: 'text-[#EF4444]' }
-];
-
-const DIRECCIONES = [
-  { value: '', label: 'Todas' },
-  { value: 'entrante', label: 'Entrantes', icon: ArrowDownLeft },
-  { value: 'saliente', label: 'Salientes', icon: ArrowUpRight }
+  { value: '', label: 'Todos', icon: null },
+  { value: 'whatsapp', label: 'WhatsApp', icon: WhatsAppIcon, color: 'bg-[#25D366]', textColor: 'text-[#25D366]' },
+  { value: 'sms', label: 'SMS', icon: MessageSquare, color: 'bg-[#8B5CF6]', textColor: 'text-[#8B5CF6]' },
+  { value: 'voz', label: 'Llamadas', icon: Phone, color: 'bg-blue-500', textColor: 'text-blue-500' },
+  { value: 'email', label: 'Email', icon: Mail, color: 'bg-[#EF4444]', textColor: 'text-[#EF4444]' }
 ];
 
 const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) => {
@@ -53,6 +55,7 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
     hasta: ''
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
 
   // Query para obtener historial
   const { data: historialData, isLoading, refetch, isFetching } = useQuery({
@@ -76,269 +79,483 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
     refetchOnWindowFocus: false
   });
 
+  // Query para estadísticas
+  const { data: statsData } = useQuery({
+    queryKey: ['comunicaciones-stats'],
+    queryFn: async () => {
+      const response = await comunicacionesService.obtenerEstadisticas();
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !leadId && !clienteId && !contratoId // Solo si no hay filtro específico
+  });
+
+  // El backend devuelve { success, count, data: [...] }
+  const comunicaciones = historialData?.data || [];
+
+  // Filtrar por búsqueda
+  const comunicacionesFiltradas = useMemo(() => {
+    if (!busqueda.trim()) return comunicaciones;
+    const termino = busqueda.toLowerCase();
+    return comunicaciones.filter(com => 
+      com.destinatario?.toLowerCase().includes(termino) ||
+      com.contenido?.toLowerCase().includes(termino) ||
+      com.leaks?.nombre_completo?.toLowerCase().includes(termino) ||
+      com.clientes?.nombre_completo?.toLowerCase().includes(termino)
+    );
+  }, [comunicaciones, busqueda]);
+
+  // Estadísticas calculadas
+  const stats = useMemo(() => {
+    if (statsData?.stats) return statsData.stats;
+    
+    // Calcular desde los datos locales
+    const porCanal = {};
+    comunicaciones.forEach(com => {
+      porCanal[com.canal] = (porCanal[com.canal] || 0) + 1;
+    });
+    
+    return {
+      total: comunicaciones.length,
+      deHoy: comunicaciones.filter(c => isToday(new Date(c.fecha_creacion))).length,
+      porCanal: Object.entries(porCanal).map(([canal, cantidad]) => ({ canal, cantidad }))
+    };
+  }, [statsData, comunicaciones]);
+
   const getCanalInfo = (canal) => {
-    switch (canal) {
-      case 'whatsapp':
-        return { icon: WhatsAppIcon, color: 'bg-[#25D366]', label: 'WhatsApp' };
-      case 'sms':
-        return { icon: MessageSquare, color: 'bg-[#8B5CF6]', label: 'SMS' };
-      case 'voz':
-        return { icon: Phone, color: 'bg-blue-500', label: 'Llamada' };
-      case 'email':
-        return { icon: Mail, color: 'bg-[#EF4444]', label: 'Email' };
-      default:
-        return { icon: MessageSquare, color: 'bg-gray-500', label: canal };
+    const info = CANALES.find(c => c.value === canal);
+    if (info) {
+      return { 
+        icon: info.icon || MessageSquare, 
+        color: info.color || 'bg-gray-500', 
+        textColor: info.textColor || 'text-gray-500',
+        label: info.label 
+      };
     }
+    return { icon: MessageSquare, color: 'bg-gray-500', textColor: 'text-gray-500', label: canal };
   };
 
-  const getDireccionIcon = (direccion) => {
+  const getDireccionInfo = (direccion) => {
     switch (direccion) {
       case 'entrante':
-        return <ArrowDownLeft className="w-3 h-3 text-green-500" />;
+        return { icon: ArrowDownLeft, color: 'text-green-500', label: 'Recibido' };
       case 'saliente':
-        return <ArrowUpRight className="w-3 h-3 text-blue-500" />;
+        return { icon: ArrowUpRight, color: 'text-blue-500', label: 'Enviado' };
       default:
         return null;
     }
   };
 
-  const getEstadoLlamada = (estado) => {
+  const getEstadoInfo = (estado, canal) => {
+    if (canal !== 'voz') return null;
+    
     switch (estado) {
       case 'completed':
-        return { label: 'Completada', variant: 'default' };
+        return { label: 'Completada', color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' };
       case 'busy':
-        return { label: 'Ocupado', variant: 'secondary' };
+        return { label: 'Ocupado', color: 'text-yellow-500', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30' };
       case 'no-answer':
-        return { label: 'Sin respuesta', variant: 'destructive' };
+        return { label: 'Sin respuesta', color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/30' };
       case 'failed':
-        return { label: 'Fallida', variant: 'destructive' };
+        return { label: 'Fallida', color: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-900/30' };
+      case 'in-progress':
+        return { label: 'En curso', color: 'text-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' };
       default:
-        return { label: estado, variant: 'outline' };
+        return { label: estado, color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-900/30' };
     }
   };
 
   const formatearFecha = (fecha) => {
     if (!fecha) return '';
     const date = new Date(fecha);
-    const hoy = new Date();
-    const ayer = new Date(hoy);
-    ayer.setDate(ayer.getDate() - 1);
-
-    if (date.toDateString() === hoy.toDateString()) {
+    
+    if (isToday(date)) {
       return `Hoy ${format(date, 'HH:mm', { locale: es })}`;
-    } else if (date.toDateString() === ayer.toDateString()) {
+    }
+    if (isYesterday(date)) {
       return `Ayer ${format(date, 'HH:mm', { locale: es })}`;
     }
-    return format(date, "d 'de' MMM, HH:mm", { locale: es });
+    if (isThisWeek(date)) {
+      return format(date, "EEEE HH:mm", { locale: es });
+    }
+    return format(date, "d MMM, HH:mm", { locale: es });
   };
 
   const formatearDuracion = (segundos) => {
     if (!segundos) return '';
     const mins = Math.floor(segundos / 60);
     const secs = segundos % 60;
+    if (mins === 0) return `${secs}s`;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const comunicaciones = historialData?.comunicaciones || historialData || [];
+  // Agrupar por fecha
+  const comunicacionesAgrupadas = useMemo(() => {
+    const grupos = {};
+    comunicacionesFiltradas.forEach(com => {
+      const fecha = new Date(com.fecha_creacion);
+      let grupo;
+      
+      if (isToday(fecha)) {
+        grupo = 'Hoy';
+      } else if (isYesterday(fecha)) {
+        grupo = 'Ayer';
+      } else if (isThisWeek(fecha)) {
+        grupo = 'Esta semana';
+      } else {
+        grupo = format(fecha, "MMMM yyyy", { locale: es });
+      }
+      
+      if (!grupos[grupo]) grupos[grupo] = [];
+      grupos[grupo].push(com);
+    });
+    return grupos;
+  }, [comunicacionesFiltradas]);
 
   return (
-    <div className="space-y-6">
-      {/* Header con filtros */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-800">
-                <History className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+    <div className="space-y-4">
+      {/* Stats Cards - Solo si no hay filtro específico */}
+      {!leadId && !clienteId && !contratoId && stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Total */}
+          <Card className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Total</p>
+                  <p className="text-2xl font-bold">{stats.total || 0}</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                  <History className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-lg">Historial de comunicaciones</CardTitle>
-                <CardDescription>
-                  {leadId && 'Comunicaciones con este lead'}
-                  {clienteId && 'Comunicaciones con este cliente'}
-                  {contratoId && 'Comunicaciones de este contrato'}
-                  {!leadId && !clienteId && !contratoId && 'Todas tus comunicaciones'}
-                </CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="icon"
-                onClick={() => refetch()}
-                disabled={isFetching}
-              >
-                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className={showFilters ? 'bg-muted' : ''}
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Filtros
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        
-        {/* Panel de filtros */}
-        {showFilters && (
-          <CardContent className="border-t pt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Filtro por canal */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Canal</label>
-                <select
-                  value={filtros.canal}
-                  onChange={(e) => setFiltros(prev => ({ ...prev, canal: e.target.value }))}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  {CANALES.map(canal => (
-                    <option key={canal.value} value={canal.value}>{canal.label}</option>
-                  ))}
-                </select>
-              </div>
+            </CardContent>
+          </Card>
 
-              {/* Filtro por dirección */}
+          {/* Hoy */}
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Hoy</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.deHoy || 0}</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-green-200 dark:bg-green-700 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-300" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Por Canal - WhatsApp */}
+          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">WhatsApp</p>
+                  <p className="text-2xl font-bold text-[#25D366]">
+                    {stats.porCanal?.find(c => c.canal === 'whatsapp')?.cantidad || 0}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#25D366]/20 flex items-center justify-center">
+                  <WhatsAppIcon className="w-5 h-5 text-[#25D366]" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Por Canal - Llamadas */}
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Llamadas</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {stats.porCanal?.find(c => c.canal === 'voz')?.cantidad || 0}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-blue-200 dark:bg-blue-700 flex items-center justify-center">
+                  <Phone className="w-5 h-5 text-blue-600 dark:text-blue-300" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Filtros y búsqueda */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Búsqueda */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar en historial..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-10"
+              />
+              {busqueda && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => setBusqueda('')}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+
+            {/* Filtros rápidos por canal */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {CANALES.map(canal => {
+                const isActive = filtros.canal === canal.value;
+                const Icon = canal.icon;
+                return (
+                  <Button
+                    key={canal.value}
+                    variant={isActive ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFiltros(prev => ({ ...prev, canal: canal.value }))}
+                    className={`whitespace-nowrap ${isActive ? 'bg-[#EF4444] hover:bg-[#DC2626]' : ''}`}
+                  >
+                    {Icon && <Icon className="w-3.5 h-3.5 mr-1.5" />}
+                    {canal.label}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {/* Refrescar */}
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="flex-shrink-0"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+
+          {/* Filtros avanzados */}
+          <div className="mt-3 flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="text-xs"
+            >
+              <Filter className="w-3 h-3 mr-1.5" />
+              Más filtros
+              <ChevronDown className={`w-3 h-3 ml-1 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </Button>
+
+            {/* Badges de filtros activos */}
+            {(filtros.direccion || filtros.desde || filtros.hasta) && (
+              <div className="flex gap-1 flex-wrap">
+                {filtros.direccion && (
+                  <Badge variant="secondary" className="text-xs">
+                    {filtros.direccion === 'entrante' ? 'Recibidos' : 'Enviados'}
+                    <X 
+                      className="w-3 h-3 ml-1 cursor-pointer" 
+                      onClick={() => setFiltros(prev => ({ ...prev, direccion: '' }))}
+                    />
+                  </Badge>
+                )}
+                {filtros.desde && (
+                  <Badge variant="secondary" className="text-xs">
+                    Desde: {filtros.desde}
+                    <X 
+                      className="w-3 h-3 ml-1 cursor-pointer" 
+                      onClick={() => setFiltros(prev => ({ ...prev, desde: '' }))}
+                    />
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Dirección</label>
+                <label className="text-xs font-medium text-muted-foreground">Dirección</label>
                 <select
                   value={filtros.direccion}
                   onChange={(e) => setFiltros(prev => ({ ...prev, direccion: e.target.value }))}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  {DIRECCIONES.map(dir => (
-                    <option key={dir.value} value={dir.value}>{dir.label}</option>
-                  ))}
+                  <option value="">Todas</option>
+                  <option value="entrante">Recibidos</option>
+                  <option value="saliente">Enviados</option>
                 </select>
               </div>
-
-              {/* Filtro por fecha desde */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Desde</label>
+                <label className="text-xs font-medium text-muted-foreground">Desde</label>
                 <Input
                   type="date"
                   value={filtros.desde}
                   onChange={(e) => setFiltros(prev => ({ ...prev, desde: e.target.value }))}
+                  className="h-9"
                 />
               </div>
-
-              {/* Filtro por fecha hasta */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Hasta</label>
+                <label className="text-xs font-medium text-muted-foreground">Hasta</label>
                 <Input
                   type="date"
                   value={filtros.hasta}
                   onChange={(e) => setFiltros(prev => ({ ...prev, hasta: e.target.value }))}
+                  className="h-9"
                 />
               </div>
             </div>
-
-            <div className="flex justify-end mt-4">
-              <Button 
-                variant="ghost" 
-                onClick={() => setFiltros({ canal: '', direccion: '', desde: '', hasta: '' })}
-              >
-                Limpiar filtros
-              </Button>
-            </div>
-          </CardContent>
-        )}
+          )}
+        </CardContent>
       </Card>
 
-      {/* Timeline de comunicaciones */}
+      {/* Lista de comunicaciones */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="p-4 space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-start gap-4">
+                <div key={i} className="flex items-start gap-3 p-3">
                   <Skeleton className="w-10 h-10 rounded-full" />
-                  <div className="flex-1">
-                    <Skeleton className="h-4 w-1/4 mb-2" />
-                    <Skeleton className="h-4 w-3/4 mb-2" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-3 w-1/2" />
                   </div>
                 </div>
               ))}
             </div>
-          ) : comunicaciones.length > 0 ? (
-            <div className="relative">
-              {/* Línea vertical del timeline */}
-              <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
+          ) : comunicacionesFiltradas.length > 0 ? (
+            <div className="divide-y">
+              {Object.entries(comunicacionesAgrupadas).map(([grupo, items]) => (
+                <div key={grupo}>
+                  {/* Header del grupo */}
+                  <div className="px-4 py-2 bg-muted/50 sticky top-0 z-10">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {grupo}
+                    </p>
+                  </div>
+                  
+                  {/* Items del grupo */}
+                  <div className="divide-y">
+                    {items.map((com, index) => {
+                      const canalInfo = getCanalInfo(com.canal);
+                      const direccionInfo = getDireccionInfo(com.direccion);
+                      const estadoInfo = getEstadoInfo(com.estado, com.canal);
+                      const IconCanal = canalInfo.icon;
+                      const IconDireccion = direccionInfo?.icon;
 
-              <div className="space-y-6">
-                {comunicaciones.map((com, index) => {
-                  const canalInfo = getCanalInfo(com.canal);
-                  const IconComponent = canalInfo.icon;
-
-                  return (
-                    <div key={com.id || index} className="relative flex gap-4 pl-2">
-                      {/* Icono del canal */}
-                      <div className={`relative z-10 flex-shrink-0 w-8 h-8 rounded-full ${canalInfo.color} flex items-center justify-center`}>
-                        <IconComponent className="w-4 h-4 text-white" />
-                      </div>
-
-                      {/* Contenido */}
-                      <div className="flex-1 bg-muted/30 rounded-lg p-4 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className="text-xs">
-                              {canalInfo.label}
-                            </Badge>
-                            {com.direccion && (
-                              <div className="flex items-center gap-1">
-                                {getDireccionIcon(com.direccion)}
-                                <span className="text-xs text-muted-foreground capitalize">
-                                  {com.direccion}
-                                </span>
-                              </div>
-                            )}
-                            {com.canal === 'voz' && com.estado && (
-                              <Badge variant={getEstadoLlamada(com.estado).variant} className="text-xs">
-                                {getEstadoLlamada(com.estado).label}
-                              </Badge>
-                            )}
+                      return (
+                        <div 
+                          key={com.id || index} 
+                          className="flex items-start gap-3 p-4 hover:bg-muted/30 transition-colors"
+                        >
+                          {/* Avatar/Icono del canal */}
+                          <div className={`w-10 h-10 rounded-full ${canalInfo.color} flex items-center justify-center flex-shrink-0`}>
+                            <IconCanal className="w-5 h-5 text-white" />
                           </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {formatearFecha(com.fecha || com.createdAt)}
-                          </span>
+
+                          {/* Contenido */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                {/* Destinatario/Nombre */}
+                                <span className="font-medium truncate">
+                                  {com.leaks?.nombre_completo || com.clientes?.nombre_completo || com.destinatario || 'Desconocido'}
+                                </span>
+                                
+                                {/* Dirección */}
+                                {direccionInfo && (
+                                  <span className={`flex items-center gap-0.5 text-xs ${direccionInfo.color}`}>
+                                    <IconDireccion className="w-3 h-3" />
+                                    {direccionInfo.label}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Hora */}
+                              <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                                {format(new Date(com.fecha_creacion), 'HH:mm', { locale: es })}
+                              </span>
+                            </div>
+
+                            {/* Número/Email si es diferente del nombre */}
+                            {com.destinatario && (com.leaks?.nombre_completo || com.clientes?.nombre_completo) && (
+                              <p className="text-xs text-muted-foreground mb-1">
+                                {com.destinatario}
+                              </p>
+                            )}
+
+                            {/* Contenido */}
+                            {com.contenido && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {com.contenido}
+                              </p>
+                            )}
+
+                            {/* Info adicional */}
+                            <div className="flex items-center gap-3 mt-2">
+                              {/* Estado para llamadas */}
+                              {estadoInfo && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${estadoInfo.bgColor} ${estadoInfo.color}`}>
+                                  {estadoInfo.label}
+                                </span>
+                              )}
+                              
+                              {/* Duración para llamadas */}
+                              {com.canal === 'voz' && com.duracion_seg > 0 && (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Clock className="w-3 h-3" />
+                                  {formatearDuracion(com.duracion_seg)}
+                                </span>
+                              )}
+
+                              {/* Usuario que hizo la comunicación */}
+                              {com.usuarios?.nombre_completo && (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <User className="w-3 h-3" />
+                                  {com.usuarios.nombre_completo}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-
-                        {/* Número/Email */}
-                        {(com.telefono || com.email || com.hacia || com.desde_numero) && (
-                          <p className="text-sm font-medium mb-1">
-                            {com.telefono || com.email || com.hacia || com.desde_numero}
-                          </p>
-                        )}
-
-                        {/* Contenido del mensaje */}
-                        {(com.mensaje || com.asunto || com.contenido) && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {com.asunto && <strong>{com.asunto}: </strong>}
-                            {com.mensaje || com.contenido}
-                          </p>
-                        )}
-
-                        {/* Duración para llamadas */}
-                        {com.canal === 'voz' && com.duracion > 0 && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Duración: {formatearDuracion(com.duracion)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <History className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No hay comunicaciones registradas</p>
-              {(filtros.canal || filtros.direccion || filtros.desde || filtros.hasta) && (
-                <p className="text-sm mt-2">Intenta ajustar los filtros</p>
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <History className="w-8 h-8" />
+              </div>
+              <p className="font-medium">No hay comunicaciones</p>
+              <p className="text-sm mt-1">
+                {busqueda ? 'No se encontraron resultados' : 'Las comunicaciones aparecerán aquí'}
+              </p>
+              {(filtros.canal || filtros.direccion || filtros.desde || filtros.hasta || busqueda) && (
+                <Button 
+                  variant="link" 
+                  size="sm"
+                  onClick={() => {
+                    setFiltros({ canal: '', direccion: '', desde: '', hasta: '' });
+                    setBusqueda('');
+                  }}
+                  className="mt-2"
+                >
+                  Limpiar filtros
+                </Button>
               )}
             </div>
           )}
@@ -349,4 +566,3 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
 };
 
 export default HistorialPanel;
-

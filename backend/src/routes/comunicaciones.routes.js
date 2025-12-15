@@ -98,6 +98,141 @@ router.post('/whatsapp/enviar', authenticate, requireVendedor, validarTelefono, 
 });
 
 /**
+ * @route   GET /api/comunicaciones/whatsapp/conversaciones
+ * @desc    Obtener lista de conversaciones de WhatsApp del vendedor
+ * @access  Private (Vendedor)
+ */
+router.get('/whatsapp/conversaciones', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    // Obtener todas las comunicaciones de WhatsApp del vendedor, agrupadas por destinatario
+    const comunicaciones = await prisma.comunicaciones.findMany({
+      where: {
+        usuario_id: req.user.id,
+        canal: 'whatsapp'
+      },
+      orderBy: { fecha_creacion: 'desc' },
+      include: {
+        leaks: {
+          select: { id: true, nombre_completo: true, telefono: true }
+        },
+        clientes: {
+          select: { id: true, nombre_completo: true, telefono: true }
+        }
+      }
+    });
+
+    // Agrupar por destinatario (número de teléfono)
+    const conversacionesMap = new Map();
+    
+    comunicaciones.forEach(com => {
+      // Normalizar el teléfono (eliminar caracteres no numéricos)
+      const telefonoNormalizado = com.destinatario.replace(/\D/g, '');
+      const key = telefonoNormalizado.slice(-10); // Últimos 10 dígitos
+      
+      if (!conversacionesMap.has(key)) {
+        conversacionesMap.set(key, {
+          telefono: com.destinatario,
+          telefonoNormalizado: key,
+          nombre: com.leaks?.nombre_completo || com.clientes?.nombre_completo || null,
+          leadId: com.lead_id,
+          clienteId: com.cliente_id,
+          ultimoMensaje: com.contenido,
+          ultimaFecha: com.fecha_creacion,
+          direccion: com.direccion,
+          totalMensajes: 1,
+          noLeidos: com.direccion === 'entrante' && com.estado !== 'leido' ? 1 : 0
+        });
+      } else {
+        const conv = conversacionesMap.get(key);
+        conv.totalMensajes++;
+        if (com.direccion === 'entrante' && com.estado !== 'leido') {
+          conv.noLeidos++;
+        }
+        // Actualizar nombre si no lo tenía
+        if (!conv.nombre && (com.leaks?.nombre_completo || com.clientes?.nombre_completo)) {
+          conv.nombre = com.leaks?.nombre_completo || com.clientes?.nombre_completo;
+        }
+      }
+    });
+
+    // Convertir a array y ordenar por fecha del último mensaje
+    const conversaciones = Array.from(conversacionesMap.values())
+      .sort((a, b) => new Date(b.ultimaFecha) - new Date(a.ultimaFecha));
+
+    res.json({
+      success: true,
+      count: conversaciones.length,
+      data: conversaciones
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/comunicaciones/whatsapp/conversacion/:telefono
+ * @desc    Obtener mensajes de una conversación específica
+ * @access  Private (Vendedor)
+ */
+router.get('/whatsapp/conversacion/:telefono', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { telefono } = req.params;
+    const { limit = 50 } = req.query;
+
+    // Normalizar el teléfono para buscar
+    const telefonoNormalizado = telefono.replace(/\D/g, '');
+    const telefonoBusqueda = telefonoNormalizado.slice(-10);
+
+    // Buscar mensajes que contengan este teléfono
+    const mensajes = await prisma.comunicaciones.findMany({
+      where: {
+        usuario_id: req.user.id,
+        canal: 'whatsapp',
+        destinatario: {
+          contains: telefonoBusqueda
+        }
+      },
+      orderBy: { fecha_creacion: 'asc' }, // Orden cronológico para chat
+      take: parseInt(limit),
+      include: {
+        leaks: {
+          select: { id: true, nombre_completo: true }
+        },
+        clientes: {
+          select: { id: true, nombre_completo: true }
+        }
+      }
+    });
+
+    // Obtener info del contacto
+    const contacto = {
+      telefono: telefono,
+      nombre: mensajes[0]?.leaks?.nombre_completo || mensajes[0]?.clientes?.nombre_completo || null,
+      leadId: mensajes[0]?.lead_id || null,
+      clienteId: mensajes[0]?.cliente_id || null
+    };
+
+    res.json({
+      success: true,
+      contacto,
+      count: mensajes.length,
+      data: mensajes.map(m => ({
+        id: m.id,
+        contenido: m.contenido,
+        direccion: m.direccion,
+        estado: m.estado,
+        fecha: m.fecha_creacion,
+        sidExterno: m.sid_externo
+      }))
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * @route   GET /api/comunicaciones/webhook/whatsapp
  * @desc    Verificación de webhook de Meta (WhatsApp)
  * @access  Public (verificación de Meta)
@@ -463,12 +598,12 @@ router.post('/webhook/sms', async (req, res) => {
 
 /**
  * @route   GET /api/comunicaciones/email/bandeja
- * @desc    Obtener bandeja de entrada de emails
+ * @desc    Obtener bandeja de entrada o enviados de emails
  * @access  Private (Vendedor)
  */
 router.get('/email/bandeja', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    const { maxResults = 20, q } = req.query;
+    const { maxResults = 20, q, carpeta = 'inbox' } = req.query;
 
     if (!gmailService.isConfigured()) {
       throw new ValidationError('El servicio de email no está configurado');
@@ -477,12 +612,14 @@ router.get('/email/bandeja', authenticate, requireVendedor, async (req, res, nex
     const emails = await gmailService.obtenerBandeja(
       req.user.id, 
       parseInt(maxResults), 
-      q || ''
+      q || '',
+      carpeta // 'inbox' o 'sent'
     );
 
     res.json({
       success: true,
       count: emails.length,
+      carpeta: carpeta,
       data: emails
     });
 
