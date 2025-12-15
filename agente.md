@@ -284,8 +284,8 @@ WHATSAPP_BUSINESS_ACCOUNT_ID=713642941430059
 WHATSAPP_VERIFY_TOKEN=diamondsistem_webhook_2024
 
 # Google OAuth (Gmail + Calendar)
-GOOGLE_OAUTH_CLIENT_ID=***
-GOOGLE_OAUTH_CLIENT_SECRET=***
+GOOGLE_OAUTH_CLIENT_ID=905347216518-2qdics7eioppeabk19pbdehk77jl5biu.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=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
 GOOGLE_OAUTH_REDIRECT_URI=https://diamondsistem-production.up.railway.app/api/google-calendar/auth/callback
 
 # URLs
