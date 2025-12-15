@@ -22,8 +22,7 @@ const generalLimiter = rateLimit({
     return req.path.startsWith('/api/mensajes') || 
            req.path.startsWith('/api/fotos') ||
            req.path.startsWith('/api/auth') ||
-           req.path.startsWith('/api/leaks') || // Excluir leaks porque tiene su propio limiter más permisivo
-           req.path.startsWith('/api/comunicaciones'); // Excluir comunicaciones (tiene su propio limiter)
+           req.path.startsWith('/api/leaks'); // Excluir leaks porque tiene su propio limiter más permisivo
   }
 });
 
@@ -111,31 +110,12 @@ const leaksLimiter = rateLimit({
   },
 });
 
-// Rate limiting para comunicaciones (WhatsApp, SMS, llamadas, email)
-// Más permisivo para webhooks y comunicaciones en tiempo real
-const comunicacionesLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minuto
-  max: 200, // Máximo 200 requests por minuto
-  message: {
-    error: 'Demasiadas solicitudes de comunicaciones',
-    message: 'Has excedido el límite de solicitudes. Por favor intenta más tarde.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  validate: false,
-  // No aplicar rate limiting a webhooks (vienen de servicios externos)
-  skip: (req) => {
-    return req.path.includes('/webhook/');
-  }
-});
-
 module.exports = {
   generalLimiter,
   authLimiter,
   createLimiter,
   fotosLimiter,
   mensajesLimiter,
-  leaksLimiter,
-  comunicacionesLimiter
+  leaksLimiter
 };
 

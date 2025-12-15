@@ -29,7 +29,6 @@ const Leaks = lazy(() => import('./pages/Leaks'));
 const LeaksDisponibles = lazy(() => import('./pages/LeaksDisponibles'));
 const LeaksMios = lazy(() => import('./pages/LeaksMios'));
 const Configuracion = lazy(() => import('./pages/Configuracion'));
-const Comunicaciones = lazy(() => import('./pages/Comunicaciones'));
 
 // Componente de carga
 const PageLoader = () => (
@@ -185,7 +184,6 @@ function App() {
             <Route path="leads" element={<Suspense fallback={<PageLoader />}><Leaks /></Suspense>} />
             <Route path="leads/disponibles" element={<Suspense fallback={<PageLoader />}><LeaksDisponibles /></Suspense>} />
             <Route path="leads/misleads" element={<Suspense fallback={<PageLoader />}><LeaksMios /></Suspense>} />
-            <Route path="comunicaciones" element={<Suspense fallback={<PageLoader />}><Comunicaciones /></Suspense>} />
             <Route path="configuracion" element={<Suspense fallback={<PageLoader />}><Configuracion /></Suspense>} />
             <Route path="solicitudes/:id" element={<Suspense fallback={<PageLoader />}><DetalleSolicitud /></Suspense>} />
             <Route path="chat/:contratoId" element={<Suspense fallback={<PageLoader />}><ChatVendedor /></Suspense>} />
