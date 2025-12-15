@@ -352,16 +352,16 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
                   </div>
                   <Skeleton className="h-4 w-48" />
                   <Skeleton className="h-3 w-full" />
-                </div>
-              </div>
-            ))}
-          </div>
+      </div>
+            </div>
+          ))}
+        </div>
         ) : emails.length > 0 ? (
           <div className="divide-y">
             {emails.map((email) => (
-              <div 
-                key={email.id}
-                onClick={() => abrirEmail(email)}
+            <div 
+              key={email.id}
+              onClick={() => abrirEmail(email)}
                 className={`flex items-start gap-3 p-4 cursor-pointer transition-all hover:bg-muted/50 ${
                   email.isUnread 
                     ? 'bg-blue-50/50 dark:bg-blue-950/20' 
@@ -370,8 +370,8 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
                   emailSeleccionado?.id === email.id 
                     ? 'bg-[#EF4444]/5 border-l-2 border-l-[#EF4444]' 
                     : ''
-                }`}
-              >
+              }`}
+            >
                 {/* Avatar */}
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${
                   email.isUnread ? 'bg-[#EF4444]' : 'bg-gray-400'
@@ -413,18 +413,18 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
                 {email.isUnread && (
                   <div className="w-2 h-2 rounded-full bg-[#EF4444] flex-shrink-0 mt-2" />
                 )}
-              </div>
-            ))}
-          </div>
-        ) : (
+            </div>
+          ))}
+        </div>
+      ) : (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <Mail className="w-8 h-8" />
             </div>
             <p className="font-medium">No hay emails en {carpetaInfo.label.toLowerCase()}</p>
             <p className="text-sm mt-1">Los emails aparecerán aquí</p>
-          </div>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Alerta de error */}
@@ -432,13 +432,13 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
         <div className="p-4 border-t">
           <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
             <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-amber-800 dark:text-amber-200">Gmail no conectado</p>
+              <div className="text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-200">Gmail no conectado</p>
               <p className="text-amber-700 dark:text-amber-300 mt-0.5">
                 Ve a Configuración → Conectar cuenta de Google
-              </p>
+                </p>
+              </div>
             </div>
-          </div>
         </div>
       )}
     </div>
@@ -588,7 +588,7 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
             onClick={() => setVista(VIEWS.LIST)}
           >
             <X className="w-5 h-5" />
-          </Button>
+        </Button>
           <h3 className="font-semibold text-lg">Nuevo mensaje</h3>
         </div>
       </div>
@@ -599,12 +599,12 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
           {/* Para */}
           <div className="flex items-center border-b py-2">
             <label className="text-sm text-muted-foreground w-16">Para:</label>
-            <Input
-              type="email"
-              placeholder="destinatario@ejemplo.com"
-              value={nuevoEmail.destinatario}
-              onChange={(e) => setNuevoEmail(prev => ({ ...prev, destinatario: e.target.value }))}
-              disabled={enviarEmailMutation.isPending}
+          <Input
+            type="email"
+            placeholder="destinatario@ejemplo.com"
+            value={nuevoEmail.destinatario}
+            onChange={(e) => setNuevoEmail(prev => ({ ...prev, destinatario: e.target.value }))}
+            disabled={enviarEmailMutation.isPending}
               className="border-0 shadow-none focus-visible:ring-0 px-0"
             />
             <Button
@@ -616,30 +616,30 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
             >
               Cc/Cco
             </Button>
-          </div>
+        </div>
 
           {/* CC y BCC */}
           {mostrarCcBcc && (
             <>
               <div className="flex items-center border-b py-2">
                 <label className="text-sm text-muted-foreground w-16">Cc:</label>
-                <Input
-                  type="email"
-                  placeholder="cc@ejemplo.com"
-                  value={nuevoEmail.cc}
-                  onChange={(e) => setNuevoEmail(prev => ({ ...prev, cc: e.target.value }))}
-                  disabled={enviarEmailMutation.isPending}
+            <Input
+              type="email"
+              placeholder="cc@ejemplo.com"
+              value={nuevoEmail.cc}
+              onChange={(e) => setNuevoEmail(prev => ({ ...prev, cc: e.target.value }))}
+              disabled={enviarEmailMutation.isPending}
                   className="border-0 shadow-none focus-visible:ring-0 px-0"
-                />
-              </div>
+            />
+          </div>
               <div className="flex items-center border-b py-2">
                 <label className="text-sm text-muted-foreground w-16">Cco:</label>
-                <Input
-                  type="email"
-                  placeholder="bcc@ejemplo.com"
-                  value={nuevoEmail.bcc}
-                  onChange={(e) => setNuevoEmail(prev => ({ ...prev, bcc: e.target.value }))}
-                  disabled={enviarEmailMutation.isPending}
+            <Input
+              type="email"
+              placeholder="bcc@ejemplo.com"
+              value={nuevoEmail.bcc}
+              onChange={(e) => setNuevoEmail(prev => ({ ...prev, bcc: e.target.value }))}
+              disabled={enviarEmailMutation.isPending}
                   className="border-0 shadow-none focus-visible:ring-0 px-0"
                 />
               </div>
@@ -660,11 +660,11 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
         </div>
 
         {/* Cuerpo */}
-        <Textarea
-          placeholder="Escribe tu mensaje aquí..."
-          value={nuevoEmail.cuerpo}
-          onChange={(e) => setNuevoEmail(prev => ({ ...prev, cuerpo: e.target.value }))}
-          disabled={enviarEmailMutation.isPending}
+          <Textarea
+            placeholder="Escribe tu mensaje aquí..."
+            value={nuevoEmail.cuerpo}
+            onChange={(e) => setNuevoEmail(prev => ({ ...prev, cuerpo: e.target.value }))}
+            disabled={enviarEmailMutation.isPending}
           className="flex-1 mt-4 min-h-[200px] resize-none border-0 shadow-none focus-visible:ring-0"
         />
 
@@ -709,13 +709,13 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b">
           <div className="flex items-center gap-3">
-            <Button 
+          <Button 
               variant="ghost" 
               size="icon"
               onClick={() => setVista(VIEWS.READ)}
-            >
+          >
               <ArrowLeft className="w-5 h-5" />
-            </Button>
+          </Button>
             <h3 className="font-semibold">Responder a {extraerNombre(emailCompleto.from)}</h3>
           </div>
         </div>
@@ -725,7 +725,7 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
             <Reply className="w-4 h-4" />
             <span>Re: {emailCompleto.subject}</span>
-          </div>
+      </div>
           <p className="text-sm text-muted-foreground truncate">
             {emailCompleto.snippet}
           </p>
@@ -733,33 +733,33 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
 
         {/* Formulario de respuesta */}
         <form onSubmit={handleResponder} className="flex-1 flex flex-col p-4">
-          <Textarea
-            placeholder="Escribe tu respuesta..."
-            value={respuesta}
-            onChange={(e) => setRespuesta(e.target.value)}
+        <Textarea
+          placeholder="Escribe tu respuesta..."
+          value={respuesta}
+          onChange={(e) => setRespuesta(e.target.value)}
             disabled={responderEmailMutation.isPending}
             className="flex-1 min-h-[200px] resize-none"
             autoFocus
           />
 
           <div className="flex items-center justify-between pt-4">
-            <Button 
-              type="submit"
+          <Button 
+            type="submit"
               className="bg-[#EF4444] hover:bg-[#DC2626] text-white px-6"
-              disabled={responderEmailMutation.isPending || !respuesta.trim()}
-            >
-              {responderEmailMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Enviar respuesta
-                </>
-              )}
-            </Button>
+            disabled={responderEmailMutation.isPending || !respuesta.trim()}
+          >
+            {responderEmailMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Enviar respuesta
+              </>
+            )}
+          </Button>
             <Button 
               type="button" 
               variant="ghost" 
@@ -768,10 +768,10 @@ const EmailPanel = ({ email: emailInicial = '', nombre = '', leadId = null, clie
             >
               Cancelar
             </Button>
-          </div>
-        </form>
-      </div>
-    );
+        </div>
+      </form>
+    </div>
+  );
   };
 
   // ==================== RENDER PRINCIPAL ====================

@@ -222,7 +222,7 @@ const WhatsAppPanel = ({
   const conversacionesFiltradas = conversaciones.filter(conv => {
     if (!busqueda.trim()) return true;
     const termino = busqueda.toLowerCase();
-    return (
+  return (
       conv.nombre?.toLowerCase().includes(termino) ||
       conv.telefono?.includes(termino) ||
       conv.ultimoMensaje?.toLowerCase().includes(termino)
@@ -248,7 +248,7 @@ const WhatsAppPanel = ({
           <div className="flex items-center gap-2">
             <WhatsAppIcon className="w-6 h-6" />
             <span className="font-semibold">WhatsApp</span>
-          </div>
+            </div>
           <div className="flex items-center gap-1">
             <Button 
               variant="ghost" 
@@ -270,7 +270,7 @@ const WhatsAppPanel = ({
         </div>
 
         {/* Búsqueda */}
-        <div className="relative">
+              <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             placeholder="Buscar conversación..."
@@ -285,8 +285,8 @@ const WhatsAppPanel = ({
       {mostrarNuevoChat && (
         <div className="p-3 border-b bg-muted/50">
           <div className="flex items-center gap-2">
-            <Input
-              placeholder="+1234567890"
+                <Input
+                  placeholder="+1234567890"
               value={nuevoTelefono}
               onChange={(e) => setNuevoTelefono(e.target.value.replace(/[^\d+]/g, ''))}
               className="flex-1"
@@ -328,7 +328,7 @@ const WhatsAppPanel = ({
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center text-white font-semibold flex-shrink-0">
                   {obtenerInicial(conv.nombre, conv.telefono)}
-                </div>
+            </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
@@ -356,7 +356,7 @@ const WhatsAppPanel = ({
                 </div>
               </div>
             ))}
-          </div>
+            </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <MessageSquare className="w-12 h-12 mb-3 opacity-50" />
@@ -379,7 +379,7 @@ const WhatsAppPanel = ({
   const renderChat = () => (
     <div className={`flex-1 flex flex-col h-full ${vistaMovil === 'lista' ? 'hidden lg:flex' : 'flex'}`}>
       {conversacionActiva ? (
-        <>
+                <>
           {/* Header del chat */}
           <div className="flex items-center gap-3 p-3 border-b bg-[#F0F2F5] dark:bg-muted">
             <Button 

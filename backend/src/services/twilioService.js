@@ -182,7 +182,8 @@ async function enviarSMS(hacia, mensaje, desde = null) {
 
   const client = getClient();
   const haciaFormateado = formatearTelefono(hacia);
-  const desdeNumero = desde || TWILIO_PHONE_NUMBER;
+  // Usar el mismo número que las llamadas: Caller ID primero, luego Phone Number
+  const desdeNumero = desde || TWILIO_CALLER_ID || TWILIO_PHONE_NUMBER;
 
   try {
     const message = await client.messages.create({

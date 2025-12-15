@@ -168,7 +168,7 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
   const formatearFecha = (fecha) => {
     if (!fecha) return '';
     const date = new Date(fecha);
-    
+
     if (isToday(date)) {
       return `Hoy ${format(date, 'HH:mm', { locale: es })}`;
     }
@@ -250,7 +250,7 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
           {/* Por Canal - WhatsApp */}
           <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 border-0 shadow-sm">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-muted-foreground font-medium">WhatsApp</p>
                   <p className="text-2xl font-bold text-[#25D366]">
@@ -268,7 +268,7 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-0 shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div>
+              <div>
                   <p className="text-xs text-muted-foreground font-medium">Llamadas</p>
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {stats.porCanal?.find(c => c.canal === 'voz')?.cantidad || 0}
@@ -329,29 +329,29 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
             </div>
 
             {/* Refrescar */}
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => refetch()}
-              disabled={isFetching}
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => refetch()}
+                disabled={isFetching}
               className="flex-shrink-0"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </Button>
+              >
+                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+              </Button>
           </div>
 
           {/* Filtros avanzados */}
           <div className="mt-3 flex items-center gap-2">
-            <Button
+              <Button 
               variant="ghost"
               size="sm"
-              onClick={() => setShowFilters(!showFilters)}
+                onClick={() => setShowFilters(!showFilters)}
               className="text-xs"
-            >
+              >
               <Filter className="w-3 h-3 mr-1.5" />
               Más filtros
               <ChevronDown className={`w-3 h-3 ml-1 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-            </Button>
+              </Button>
 
             {/* Badges de filtros activos */}
             {(filtros.direccion || filtros.desde || filtros.hasta) && (
@@ -374,11 +374,11 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
                     />
                   </Badge>
                 )}
-              </div>
+            </div>
             )}
           </div>
-
-          {showFilters && (
+        
+        {showFilters && (
             <div className="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Dirección</label>
@@ -412,7 +412,7 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
               </div>
             </div>
           )}
-        </CardContent>
+          </CardContent>
       </Card>
 
       {/* Lista de comunicaciones */}
@@ -448,13 +448,13 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
                   {/* Items del grupo */}
                   <div className="divide-y">
                     {items.map((com, index) => {
-                      const canalInfo = getCanalInfo(com.canal);
+                  const canalInfo = getCanalInfo(com.canal);
                       const direccionInfo = getDireccionInfo(com.direccion);
                       const estadoInfo = getEstadoInfo(com.estado, com.canal);
                       const IconCanal = canalInfo.icon;
                       const IconDireccion = direccionInfo?.icon;
 
-                      return (
+                  return (
                         <div 
                           key={com.id || index} 
                           className="flex items-start gap-3 p-4 hover:bg-muted/30 transition-colors"
@@ -462,9 +462,9 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
                           {/* Avatar/Icono del canal */}
                           <div className={`w-10 h-10 rounded-full ${canalInfo.color} flex items-center justify-center flex-shrink-0`}>
                             <IconCanal className="w-5 h-5 text-white" />
-                          </div>
+                      </div>
 
-                          {/* Contenido */}
+                      {/* Contenido */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2 mb-1">
                               <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -485,21 +485,21 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
                               {/* Hora */}
                               <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                                 {format(new Date(com.fecha_creacion), 'HH:mm', { locale: es })}
-                              </span>
-                            </div>
+                          </span>
+                        </div>
 
                             {/* Número/Email si es diferente del nombre */}
                             {com.destinatario && (com.leaks?.nombre_completo || com.clientes?.nombre_completo) && (
                               <p className="text-xs text-muted-foreground mb-1">
                                 {com.destinatario}
-                              </p>
-                            )}
+                          </p>
+                        )}
 
                             {/* Contenido */}
                             {com.contenido && (
-                              <p className="text-sm text-muted-foreground line-clamp-2">
+                          <p className="text-sm text-muted-foreground line-clamp-2">
                                 {com.contenido}
-                              </p>
+                          </p>
                             )}
 
                             {/* Info adicional */}
@@ -509,15 +509,15 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${estadoInfo.bgColor} ${estadoInfo.color}`}>
                                   {estadoInfo.label}
                                 </span>
-                              )}
-                              
-                              {/* Duración para llamadas */}
+                        )}
+
+                        {/* Duración para llamadas */}
                               {com.canal === 'voz' && com.duracion_seg > 0 && (
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <Clock className="w-3 h-3" />
                                   {formatearDuracion(com.duracion_seg)}
                                 </span>
-                              )}
+                        )}
 
                               {/* Usuario que hizo la comunicación */}
                               {com.usuarios?.nombre_completo && (
@@ -527,11 +527,11 @@ const HistorialPanel = ({ leadId = null, clienteId = null, contratoId = null }) 
                                 </span>
                               )}
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
                 </div>
               ))}
             </div>
