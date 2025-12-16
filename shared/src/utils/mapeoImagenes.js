@@ -7,11 +7,11 @@
  */
 export function obtenerImagenTorta(diseno, pisos) {
   if (!diseno) return null;
-  
+
   const disenoLower = diseno.toLowerCase();
   const pisosNum = parseInt(pisos) || 2;
   const carpetaPisos = pisosNum >= 3 ? '3pisos' : '2pisos';
-  
+
   // Mapeo de diseños a nombres de archivo
   // Nota: "channel" puede ser "chanel" (2 pisos) o "channel" (3 pisos)
   const mapeo = {
@@ -20,10 +20,10 @@ export function obtenerImagenTorta(diseno, pisos) {
     'blanco': `cake_blanco_${pisosNum}pisos.webp`,
     'desnudo': `cake_desnudo_${pisosNum}pisos.webp`,
   };
-  
+
   const nombreArchivo = mapeo[disenoLower];
   if (!nombreArchivo) return null;
-  
+
   return `/fotos/servicios/torta/medium/${nombreArchivo}`;
 }
 
@@ -32,9 +32,9 @@ export function obtenerImagenTorta(diseno, pisos) {
  */
 export function obtenerImagenDecoracion(tipo, opcion) {
   if (!tipo || !opcion) return null;
-  
+
   const opcionLower = opcion.toLowerCase();
-  
+
   // Mapeo de tipos de decoración
   const mapeos = {
     'centro_mesa': {
@@ -95,14 +95,22 @@ export function obtenerImagenDecoracion(tipo, opcion) {
       'blancos': 'cojin_blanco.webp',
       'negros': 'cojin_negro.webp',
     },
+    'stage': {
+      'globos': 'https://images.unsplash.com/photo-1627662243285-b10899011af3?q=80&w=2000&auto=format&fit=crop',
+      'flores': 'https://images.unsplash.com/photo-1510076857177-7470076d4098?q=80&w=2000&auto=format&fit=crop',
+    },
   };
-  
+
   const mapeo = mapeos[tipo];
   if (!mapeo) return null;
-  
+
   const nombreArchivo = mapeo[opcionLower];
   if (!nombreArchivo) return null;
-  
+
+  if (nombreArchivo.startsWith('http')) {
+    return nombreArchivo;
+  }
+
   return `/fotos/servicios/decoracion/medium/${nombreArchivo}`;
 }
 
@@ -111,9 +119,9 @@ export function obtenerImagenDecoracion(tipo, opcion) {
  */
 export function obtenerImagenMenu(tipo, opcion) {
   if (!tipo || !opcion) return null;
-  
+
   const opcionLower = opcion.toLowerCase();
-  
+
   // Mapeo de platos principales
   const mapeos = {
     'plato_principal': {
@@ -152,17 +160,17 @@ export function obtenerImagenMenu(tipo, opcion) {
       'tuna tartar': 'menu_pasapalos_tunartartar.webp',
     },
   };
-  
+
   const mapeo = mapeos[tipo];
   if (!mapeo) return null;
-  
+
   // Buscar coincidencia parcial
   for (const [key, archivo] of Object.entries(mapeo)) {
     if (opcionLower.includes(key)) {
       return `/fotos/servicios/menu/medium/${archivo}`;
     }
   }
-  
+
   return null;
 }
 
@@ -171,9 +179,9 @@ export function obtenerImagenMenu(tipo, opcion) {
  */
 export function obtenerImagenBar(tipo, bebida) {
   if (!tipo || !bebida) return null;
-  
+
   const bebidaLower = bebida.toLowerCase();
-  
+
   // Mapeo de bebidas
   const mapeos = {
     'vino': {
@@ -229,17 +237,16 @@ export function obtenerImagenBar(tipo, bebida) {
       'sidra': 'sidra.webp',
     },
   };
-  
+
   const mapeo = mapeos[tipo];
   if (!mapeo) return null;
-  
+
   // Buscar coincidencia parcial
   for (const [key, archivo] of Object.entries(mapeo)) {
     if (bebidaLower.includes(key)) {
       return `/fotos/servicios/bar/medium/${archivo}`;
     }
   }
-  
+
   return null;
 }
-

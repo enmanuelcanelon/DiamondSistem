@@ -1,11 +1,11 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  ArrowLeft, 
-  Cake, 
-  Sparkles, 
-  UtensilsCrossed, 
-  Music2, 
+import {
+  ArrowLeft,
+  Cake,
+  Sparkles,
+  UtensilsCrossed,
+  Music2,
   Settings,
   Loader2,
   Calendar,
@@ -183,19 +183,19 @@ function AjustesEventoVendedor() {
         <div className="space-y-4">
           {/* Torta */}
           <SeccionTorta ajustes={ajustes} contrato={contrato} />
-          
+
           {/* Decoración */}
           <SeccionDecoracion ajustes={ajustes} contrato={contrato} />
-          
+
           {/* Menú */}
           <SeccionMenu ajustes={ajustes} contrato={contrato} />
-          
+
           {/* Música */}
           <SeccionMusica ajustes={ajustes} contrato={contrato} />
-          
+
           {/* Bar */}
           <SeccionBar ajustes={ajustes} contrato={contrato} />
-          
+
           {/* Final */}
           <SeccionOtros ajustes={ajustes} contrato={contrato} />
         </div>
@@ -214,7 +214,7 @@ function AjustesEventoVendedor() {
 // Componente para mostrar campo
 function Campo({ label, valor, icono }) {
   if (!valor) return null;
-  
+
   return (
     <div className="bg-muted/50 rounded-lg p-3 border border-border">
       <div className="flex items-start gap-2">
@@ -271,7 +271,7 @@ function SeccionTorta({ ajustes, contrato }) {
     'Kendall': 2,
     'Doral': 2
   };
-  
+
   const nombreSalon = contrato?.lugar_salon || contrato?.salones?.nombre || 'Diamond';
   const pisosAutomaticos = pisosPorSalon[nombreSalon] || 3;
 
@@ -327,7 +327,7 @@ function SeccionDecoracion({ ajustes, contrato }) {
   // Formatear servilletas si existen
   const formatearServilletas = () => {
     if (!ajustes?.servilletas || !Array.isArray(ajustes.servilletas)) return null;
-    
+
     return ajustes.servilletas.map((s, i) => (
       <span key={i} className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm mr-2 mb-2 capitalize">
         {s.color}: {s.cantidad}
@@ -368,7 +368,7 @@ function SeccionDecoracion({ ajustes, contrato }) {
             Decoración
           </CardTitle>
           {ajustes?.tipo_decoracion && (
-            <Badge 
+            <Badge
               variant="outline"
               className="text-xs"
             >
@@ -514,9 +514,9 @@ function SeccionDecoracion({ ajustes, contrato }) {
 function SeccionMenu({ ajustes, contrato }) {
   // Verificar si tiene menú/comida contratada
   const tieneMenu = tieneServicioContratado(contrato, ['comida', 'menú', 'menu', 'pasapalo', 'pasapalos', 'cena', 'almuerzo']);
-  
+
   const mostrarTeenagers = ajustes?.hay_teenagers && ajustes?.cantidad_teenagers > 0;
-  
+
   // Verificar si tiene pasapalos contratados
   const tienePasapalos = contrato?.contratos_servicios?.some(
     cs => cs.servicios?.nombre?.toLowerCase().includes('pasapalo')
@@ -547,7 +547,7 @@ function SeccionMenu({ ajustes, contrato }) {
       </Card>
     );
   }
-  
+
   return (
     <Card id="menu">
       <CardHeader className="pb-3">
@@ -577,7 +577,7 @@ function SeccionMenu({ ajustes, contrato }) {
             </div>
           </div>
         )}
-        
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           <Campo label="Tipo de Servicio" valor={ajustes?.tipo_servicio} />
           <Campo label="Entrada" valor={ajustes?.entrada} />
@@ -587,7 +587,7 @@ function SeccionMenu({ ajustes, contrato }) {
           <Campo label="Veganas" valor={ajustes?.opciones_veganas} />
           <Campo label="Restricciones" valor={ajustes?.restricciones_alimentarias} />
           <Campo label="Bebidas" valor={ajustes?.bebidas_incluidas} />
-          
+
           {/* Teenagers/Kids */}
           {mostrarTeenagers && (
             <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
@@ -605,16 +605,16 @@ function SeccionMenu({ ajustes, contrato }) {
                   <div>
                     <p className="text-[10px] text-muted-foreground">Pasta</p>
                     <p className="text-xs font-semibold text-foreground">
-                      {ajustes.teenagers_tipo_pasta === 'napolitana' ? 'Napolitana' : 
-                       ajustes.teenagers_tipo_pasta === 'alfredo' ? 'Alfredo' : 
-                       ajustes.teenagers_tipo_pasta}
+                      {ajustes.teenagers_tipo_pasta === 'napolitana' ? 'Napolitana' :
+                        ajustes.teenagers_tipo_pasta === 'alfredo' ? 'Alfredo' :
+                          ajustes.teenagers_tipo_pasta}
                     </p>
                   </div>
                 )}
               </div>
             </div>
           )}
-          
+
           <Campo label="Notas del Menú" valor={ajustes?.notas_menu} />
         </div>
       </CardContent>
@@ -631,7 +631,7 @@ function SeccionMusica({ ajustes, contrato }) {
   let bailesAdicionales = null;
   if (ajustes?.bailes_adicionales) {
     try {
-      const parsed = typeof ajustes.bailes_adicionales === 'string' 
+      const parsed = typeof ajustes.bailes_adicionales === 'string'
         ? JSON.parse(ajustes.bailes_adicionales)
         : ajustes.bailes_adicionales;
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -681,7 +681,7 @@ function SeccionMusica({ ajustes, contrato }) {
           <Campo label="Canción Sorpresa" valor={ajustes?.cancion_sorpresa} />
           <Campo label="Notas" valor={ajustes?.notas_entretenimiento} />
         </div>
-        
+
         {/* Bailes Adicionales */}
         {bailesAdicionales && bailesAdicionales.length > 0 && (
           <div className="mt-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
@@ -715,10 +715,10 @@ function SeccionBar({ ajustes, contrato }) {
     ...(contrato?.paquetes?.paquetes_servicios || []).map(ps => ps.servicios?.nombre)
   ].filter(Boolean);
 
-  const tieneLicorBasico = todosServicios.some(nombre => 
+  const tieneLicorBasico = todosServicios.some(nombre =>
     nombre?.toLowerCase().includes('licor básico') || nombre?.toLowerCase().includes('licor basico')
   );
-  const tieneLicorPremium = todosServicios.some(nombre => 
+  const tieneLicorPremium = todosServicios.some(nombre =>
     nombre?.toLowerCase().includes('licor premium')
   );
 
@@ -915,7 +915,7 @@ function SeccionOtros({ ajustes, contrato }) {
   let protocolo = null;
   if (ajustes?.protocolo) {
     try {
-      protocolo = typeof ajustes.protocolo === 'string' 
+      protocolo = typeof ajustes.protocolo === 'string'
         ? JSON.parse(ajustes.protocolo)
         : ajustes.protocolo;
     } catch (e) {
@@ -926,8 +926,8 @@ function SeccionOtros({ ajustes, contrato }) {
   // Determinar si es quinceañera
   const nombreEvento = contrato?.eventos?.nombre_evento?.toLowerCase() || '';
   const homenajeado = contrato?.homenajeado?.toLowerCase() || '';
-  const esQuinceanera = nombreEvento.includes('15') || nombreEvento.includes('quince') || 
-                        nombreEvento.includes('quinceañera') || homenajeado.includes('quince');
+  const esQuinceanera = nombreEvento.includes('15') || nombreEvento.includes('quince') ||
+    nombreEvento.includes('quinceañera') || homenajeado.includes('quince');
 
   // Formatear hora de limosina
   const formatearHoraLimosina = (hora) => {

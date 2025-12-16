@@ -45,7 +45,7 @@ function AjustesEvento() {
   const navigate = useNavigate();
   const contratoId = user?.contrato_id;
   const queryClient = useQueryClient();
-  
+
   const [tabActivo, setTabActivo] = useState('torta');
   const [guardando, setGuardando] = useState(false);
 
@@ -60,10 +60,10 @@ function AjustesEvento() {
   });
 
   // Calcular días hasta el evento
-  const diasHastaEvento = contrato?.fecha_evento 
+  const diasHastaEvento = contrato?.fecha_evento
     ? Math.floor((new Date(contrato.fecha_evento) - new Date()) / (1000 * 60 * 60 * 24))
     : null;
-  
+
   // Verificar si está bloqueado (menos de 10 días)
   const estaBloqueado = diasHastaEvento !== null && diasHastaEvento < 10;
 
@@ -141,7 +141,7 @@ function AjustesEvento() {
   const TabButton = ({ tab }) => {
     const Icon = tab.icon;
     const activo = tabActivo === tab.id;
-    
+
     return (
       <button
         onClick={() => setTabActivo(tab.id)}
@@ -183,7 +183,7 @@ function AjustesEvento() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in">
       {/* Toast Notifications */}
       <Toaster position="top-right" />
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
@@ -249,8 +249,8 @@ function AjustesEvento() {
                 ⚠️ Ajustes Bloqueados
               </h3>
               <p className="text-sm text-neutral-400 mb-2">
-                Faltan menos de 10 días para tu evento. Los ajustes están bloqueados para garantizar 
-                que todo esté listo a tiempo. Si necesitas hacer cambios urgentes, por favor contacta 
+                Faltan menos de 10 días para tu evento. Los ajustes están bloqueados para garantizar
+                que todo esté listo a tiempo. Si necesitas hacer cambios urgentes, por favor contacta
                 a tu asesor de eventos a través del chat.
               </p>
               <span className="px-3 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-full border border-red-500/30">
@@ -273,7 +273,7 @@ function AjustesEvento() {
                 Tiempo Limitado
               </h3>
               <p className="text-sm text-neutral-400">
-                Tu evento está próximo ({diasHastaEvento} días). Asegúrate de finalizar todos 
+                Tu evento está próximo ({diasHastaEvento} días). Asegúrate de finalizar todos
                 los ajustes pronto. Recuerda que no podrás modificar nada 10 días antes del evento.
               </p>
             </div>
@@ -301,50 +301,50 @@ function AjustesEvento() {
         </div>
 
         <div className="relative z-10 p-8 md:p-12">
-        {tabActivo === 'torta' && (
-          <SeccionTorta 
-            ajustes={ajustes} 
-            onGuardar={handleGuardar} 
-            guardando={guardando} 
-            estaBloqueado={estaBloqueado}
-            contrato={contrato}
-          />
-        )}
-        {tabActivo === 'decoracion' && (
-          <SeccionDecoracion 
-            ajustes={ajustes} 
-            onGuardar={handleGuardar} 
-            guardando={guardando} 
-            estaBloqueado={estaBloqueado}
-            contrato={contrato}
-          />
-        )}
-        {tabActivo === 'menu' && (
-          <SeccionMenu 
-            ajustes={ajustes} 
-            onGuardar={handleGuardar} 
-            guardando={guardando} 
-            estaBloqueado={estaBloqueado}
-            contrato={contrato}
-            tienePasapalos={tienePasapalos}
-          />
-        )}
-        {tabActivo === 'entretenimiento' && (
-          <SeccionEntretenimiento ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
-        )}
-        {tabActivo === 'bar' && (
-          <SeccionBar ajustes={ajustes} contrato={contrato} />
-        )}
-        {tabActivo === 'otros' && (
-          <SeccionOtros 
-            ajustes={ajustes} 
-            onGuardar={handleGuardar} 
-            guardando={guardando} 
-            estaBloqueado={estaBloqueado}
-            tieneLimosina={tieneLimosina}
-            contrato={contrato}
-          />
-        )}
+          {tabActivo === 'torta' && (
+            <SeccionTorta
+              ajustes={ajustes}
+              onGuardar={handleGuardar}
+              guardando={guardando}
+              estaBloqueado={estaBloqueado}
+              contrato={contrato}
+            />
+          )}
+          {tabActivo === 'decoracion' && (
+            <SeccionDecoracion
+              ajustes={ajustes}
+              onGuardar={handleGuardar}
+              guardando={guardando}
+              estaBloqueado={estaBloqueado}
+              contrato={contrato}
+            />
+          )}
+          {tabActivo === 'menu' && (
+            <SeccionMenu
+              ajustes={ajustes}
+              onGuardar={handleGuardar}
+              guardando={guardando}
+              estaBloqueado={estaBloqueado}
+              contrato={contrato}
+              tienePasapalos={tienePasapalos}
+            />
+          )}
+          {tabActivo === 'entretenimiento' && (
+            <SeccionEntretenimiento ajustes={ajustes} onGuardar={handleGuardar} guardando={guardando} estaBloqueado={estaBloqueado} />
+          )}
+          {tabActivo === 'bar' && (
+            <SeccionBar ajustes={ajustes} contrato={contrato} />
+          )}
+          {tabActivo === 'otros' && (
+            <SeccionOtros
+              ajustes={ajustes}
+              onGuardar={handleGuardar}
+              guardando={guardando}
+              estaBloqueado={estaBloqueado}
+              tieneLimosina={tieneLimosina}
+              contrato={contrato}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -359,7 +359,7 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
     'Kendall': 2,
     'Doral': 2
   };
-  
+
   const nombreSalon = contrato?.lugar_salon || contrato?.salones?.nombre || 'Diamond';
   const pisosAutomaticos = pisosPorSalon[nombreSalon] || 3;
 
@@ -409,7 +409,7 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
           {diseños.map((option) => {
             const imagenUrl = obtenerImagenTorta(option.value, pisosAutomaticos);
             const estaSeleccionado = datos.diseno_torta === option.value;
-            
+
             return (
               <div
                 key={option.value}
@@ -419,11 +419,10 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
                     setMostrarDisenoOtro(false);
                   }
                 }}
-                className={`group relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${
-                  estaSeleccionado
-                    ? 'ring-2 ring-white scale-[1.02] shadow-2xl'
-                    : 'hover:scale-[1.02] opacity-80 hover:opacity-100'
-                } ${estaBloqueado ? 'cursor-not-allowed opacity-50' : ''}`}
+                className={`group relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${estaSeleccionado
+                  ? 'ring-2 ring-white scale-[1.02] shadow-2xl'
+                  : 'hover:scale-[1.02] opacity-80 hover:opacity-100'
+                  } ${estaBloqueado ? 'cursor-not-allowed opacity-50' : ''}`}
               >
                 <img
                   src={imagenUrl}
@@ -571,7 +570,7 @@ function SeccionTorta({ ajustes, onGuardar, guardando, estaBloqueado, contrato }
 // ===== SECCIÓN MENÚ =====
 function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, tienePasapalos }) {
   const [pasoActual, setPasoActual] = useState(1);
-  
+
   const [datos, setDatos] = useState({
     entrada: 'Ensalada César', // Valor fijo por defecto
     plato_principal: ajustes?.plato_principal || '',
@@ -601,19 +600,19 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
   const pasoCompleto = (numero) => {
     const paso = PASOS.find(p => p.numero === numero);
     if (!paso) return false;
-    
+
     // Paso 1 (Entrada) - siempre completo porque es fijo
     if (numero === 1) return true;
-    
+
     // Paso 2 (Plato Principal) - debe estar seleccionado
     if (numero === 2) return datos.plato_principal && datos.plato_principal !== '';
-    
+
     // Paso 3 (Acompañamiento) - debe estar seleccionado (o el específico si aplica)
     if (numero === 3) {
       if (datos.acompanamiento_seleccionado) return true;
       return datos.acompanamientos && datos.acompanamientos !== '';
     }
-    
+
     // Paso 4 (Teenagers/Kids) - si no hay teenagers, está completo. Si hay, debe tener cantidad y tipo
     if (numero === 4) {
       if (!datos.hay_teenagers) return true;
@@ -621,10 +620,10 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
       if (datos.teenagers_tipo_comida === 'pasta' && !datos.teenagers_tipo_pasta) return false;
       return true;
     }
-    
+
     // Paso 5 (Restricciones) - siempre completo (opcional)
     if (numero === 5) return true;
-    
+
     return false;
   };
 
@@ -657,7 +656,7 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
     // Enviar solo los campos que Prisma reconoce
     // Si hay un acompañamiento seleccionado específico, usar ese, sino el general
     const acompanamientoFinal = datos.acompanamiento_seleccionado || datos.acompanamientos;
-    
+
     onGuardar('menu', {
       entrada: datos.entrada, // Siempre será "Ensalada César"
       plato_principal: datos.plato_principal,
@@ -677,41 +676,53 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
       case 1: // Entrada
         return (
           <div className="space-y-8">
-            <div className="mb-8">
+            <div className="mb-6">
               <h3 className="text-3xl font-bold text-white mb-2">Paso 1: Entrada (Incluida)</h3>
               <p className="text-xl text-neutral-400">Tu entrada está incluida por defecto</p>
             </div>
-            <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
-              <div className="flex items-center gap-4 mb-6 justify-center">
-                <span className="px-3 py-1 rounded-full bg-white/10 text-white text-base font-medium border border-white/20">
-                  🥗 {datos.entrada}
-                </span>
-                <span className="text-sm text-neutral-400">Incluida por defecto</span>
-              </div>
-              {datos.entrada === 'Ensalada César' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                  <div className="text-center">
-                    <div className="mb-3">
-                      <ImagenSeleccion
-                        urlImagen={obtenerImagenMenu('entrada', datos.entrada)}
-                        alt="Ensalada César"
-                        tamaño="extra-large"
-                      />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card Ensalada */}
+              <div className="group relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-white/50 ring-2 ring-white/20 shadow-2xl">
+                <img
+                  src={obtenerImagenMenu('entrada', datos.entrada) || '/fotos/servicios/menu/medium/menu_ensaladaCesar.webp'}
+                  alt="Ensalada César"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 w-full p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-3xl font-bold text-white">
+                      Ensalada César
+                    </h3>
+                    <div className="bg-white text-black rounded-full p-2">
+                      <Check size={20} strokeWidth={3} />
                     </div>
-                    <p className="font-semibold text-lg text-white">Ensalada César</p>
                   </div>
-                  <div className="text-center">
-                    <div className="mb-3">
-                      <ImagenSeleccion
-                        urlImagen={obtenerImagenMenu('pan', 'pan y mantequilla')}
-                        alt="Pan y Mantequilla"
-                        tamaño="extra-large"
-                      />
-                    </div>
-                    <p className="font-semibold text-lg text-white">Pan y Mantequilla</p>
-                  </div>
+                  <p className="text-sm text-neutral-300">Incluida por defecto</p>
                 </div>
-              )}
+              </div>
+
+              {/* Card Pan */}
+              <div className="group relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-white/50 ring-2 ring-white/20 shadow-2xl">
+                <img
+                  src={obtenerImagenMenu('pan', 'pan y mantequilla') || '/fotos/servicios/menu/medium/menu_panymantequilla.webp'}
+                  alt="Pan y Mantequilla"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 w-full p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-3xl font-bold text-white">
+                      Pan y Mantequilla
+                    </h3>
+                    <div className="bg-white text-black rounded-full p-2">
+                      <Check size={20} strokeWidth={3} />
+                    </div>
+                  </div>
+                  <p className="text-sm text-neutral-300">Incluida por defecto</p>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -719,321 +730,263 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
       case 2: // Plato Principal
         return (
           <div className="space-y-8">
-            <div className="mb-8">
+            <div className="mb-6">
               <h3 className="text-3xl font-bold text-white mb-2">Paso 2: Elige el Plato Principal</h3>
               <p className="text-xl text-neutral-400">Selecciona el plato principal que más te guste</p>
             </div>
-            <select
-              value={datos.plato_principal}
-              onChange={(e) => setDatos({ ...datos, plato_principal: e.target.value })}
-              disabled={estaBloqueado}
-              className="w-full px-4 py-3 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-8"
-            >
-              <option value="">Selecciona un plato principal...</option>
-              <option value="Pollo Strogonoff con una salsa cremosa y champiñones">
-                Pollo Strogonoff con una salsa cremosa y champiñones
-              </option>
-              <option value="Pollo Piccata">Pollo Piccata</option>
-              <option value="Bistec (Palomilla o Boliche) en salsa de vino">
-                Bistec (Palomilla o Boliche) en salsa de vino
-              </option>
-              <option value="Solomillo de Cerdo Marinado">
-                Solomillo de Cerdo Marinado
-              </option>
-            </select>
-            {datos.plato_principal && (
-              <div className="relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-white/20">
-                <img
-                  src={obtenerImagenMenu('plato_principal', datos.plato_principal)}
-                  alt={datos.plato_principal}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-                  <p className="text-lg font-medium text-white">{datos.plato_principal}</p>
-                </div>
-              </div>
-            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[
+                { value: 'Pollo Strogonoff con una salsa cremosa y champiñones', label: 'Pollo Strogonoff', desc: 'Con salsa cremosa y champiñones' },
+                { value: 'Pollo Piccata', label: 'Pollo Piccata', desc: 'Clásica preparación italiana' },
+                { value: 'Bistec (Palomilla o Boliche) en salsa de vino', label: 'Bistec en Salsa de Vino', desc: 'Palomilla o Boliche' },
+                { value: 'Solomillo de Cerdo Marinado', label: 'Solomillo de Cerdo', desc: 'Marinado a la perfección' },
+              ].map((opcion) => {
+                const estaSeleccionado = datos.plato_principal === opcion.value;
+                return (
+                  <div
+                    key={opcion.value}
+                    onClick={() => !estaBloqueado && setDatos({ ...datos, plato_principal: opcion.value })}
+                    className={cn(
+                      "group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 border-2",
+                      estaSeleccionado
+                        ? "border-white ring-2 ring-white/50 shadow-2xl scale-[1.02]"
+                        : "border-transparent opacity-70 hover:opacity-100 hover:scale-[1.02]"
+                    )}
+                  >
+                    <img
+                      src={obtenerImagenMenu('plato_principal', opcion.value)}
+                      alt={opcion.label}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+
+                    <div className="absolute bottom-0 left-0 w-full p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={cn(
+                          "font-bold text-xl",
+                          estaSeleccionado ? "text-white" : "text-white/90"
+                        )}>
+                          {opcion.label}
+                        </span>
+                        {estaSeleccionado && (
+                          <div className="bg-white text-black rounded-full p-1">
+                            <Check size={16} strokeWidth={3} />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm text-white/70">{opcion.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
 
       case 3: // Acompañamiento
         return (
           <div className="space-y-8">
-            <div className="mb-8">
+            <div className="mb-6">
               <h3 className="text-3xl font-bold text-white mb-2">Paso 3: Elige el Acompañamiento</h3>
-              <p className="text-xl text-neutral-400">Selecciona el acompañamiento que más te guste</p>
+              <p className="text-xl text-neutral-400">Selecciona el acompañamiento ideal para tu plato</p>
             </div>
-            <select
-              value={datos.acompanamientos}
-              onChange={(e) => setDatos({ ...datos, acompanamientos: e.target.value, acompanamiento_seleccionado: '' })}
-              disabled={estaBloqueado}
-              className="w-full px-4 py-3 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white placeholder:text-neutral-500 disabled:bg-neutral-700 disabled:cursor-not-allowed mb-4"
-            >
-              <option value="">Selecciona un acompañamiento...</option>
-              <option value="Arroz Blanco o Amarillo">Arroz Blanco o Amarillo</option>
-              <option value="Puré de Patatas o Patatas al Romero">
-                Puré de Patatas o Patatas al Romero
-              </option>
-              <option value="Verduras al Vapor">Verduras al Vapor</option>
-              <option value="Plátano Maduro">Plátano Maduro</option>
-            </select>
-            
-            {datos.acompanamientos === 'Arroz Blanco o Amarillo' && (
-              <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
-                <p className="text-lg font-semibold mb-4 text-center text-white">Selecciona el tipo de arroz:</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <button
-                    type="button"
-                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Arroz Blanco' })}
-                    disabled={estaBloqueado}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                {
+                  parent: 'Arroz Blanco o Amarillo',
+                  value: 'Arroz Blanco',
+                  label: 'Arroz Blanco',
+                  imgValue: 'arroz blanco'
+                },
+                {
+                  parent: 'Arroz Blanco o Amarillo',
+                  value: 'Arroz Amarillo',
+                  label: 'Arroz Amarillo',
+                  imgValue: 'arroz amarillo'
+                },
+                {
+                  parent: 'Puré de Patatas o Patatas al Romero',
+                  value: 'Puré de Patatas',
+                  label: 'Puré de Patatas',
+                  imgValue: 'puré de patatas'
+                },
+                {
+                  parent: 'Puré de Patatas o Patatas al Romero',
+                  value: 'Patatas al Romero',
+                  label: 'Patatas al Romero',
+                  imgValue: 'patatas al romero'
+                },
+                {
+                  parent: 'Verduras al Vapor',
+                  value: 'Verduras al Vapor',
+                  label: 'Verduras al Vapor',
+                  imgValue: 'verduras al vapor'
+                },
+                {
+                  parent: 'Plátano Maduro',
+                  value: 'Plátano Maduro',
+                  label: 'Plátano Maduro',
+                  imgValue: 'plátano maduro'
+                },
+              ].map((opcion) => {
+                // Check if selected: needs to match specific if provided, or parent if no specific (for simple ones)
+                const isSimple = opcion.parent === opcion.value;
+                const estaSeleccionado =
+                  (datos.acompanamiento_seleccionado === opcion.value) ||
+                  (!datos.acompanamiento_seleccionado && datos.acompanamientos === opcion.parent && datos.acompanamientos === opcion.value);
+
+                return (
+                  <div
+                    key={opcion.value}
+                    onClick={() => {
+                      if (!estaBloqueado) {
+                        setDatos({
+                          ...datos,
+                          acompanamientos: opcion.parent,
+                          acompanamiento_seleccionado: opcion.value !== opcion.parent ? opcion.value : ''
+                        });
+                      }
+                    }}
                     className={cn(
-                      "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                      datos.acompanamiento_seleccionado === 'Arroz Blanco'
-                        ? "border-white bg-white/10 shadow-lg"
-                        : "border-white/10 bg-neutral-800/50 hover:border-white/20"
+                      "group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 border-2",
+                      estaSeleccionado
+                        ? "border-white ring-2 ring-white/50 shadow-2xl scale-[1.02]"
+                        : "border-transparent opacity-70 hover:opacity-100 hover:scale-[1.02]"
                     )}
                   >
-                      <div className="mb-4 flex justify-center">
-              <ImagenSeleccion
-                          urlImagen={obtenerImagenMenu('acompanamiento', 'arroz blanco')}
-                          alt="Arroz Blanco"
-                          tamaño="large"
-                        />
-            </div>
-                      <p className="text-lg font-semibold mb-2 text-white">Arroz Blanco</p>
-                      {datos.acompanamiento_seleccionado === 'Arroz Blanco' && (
-                        <span className="text-xs px-2 py-1 rounded bg-white/20 text-white">Seleccionado</span>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Arroz Amarillo' })}
-                      disabled={estaBloqueado}
-                      className={cn(
-                        "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                        datos.acompanamiento_seleccionado === 'Arroz Amarillo'
-                          ? "border-white bg-white/10 shadow-lg"
-                          : "border-white/10 bg-neutral-800/50 hover:border-white/20"
-                      )}
-                    >
-                      <div className="mb-4 flex justify-center">
-              <ImagenSeleccion
-                          urlImagen={obtenerImagenMenu('acompanamiento', 'arroz amarillo')}
-                          alt="Arroz Amarillo"
-                          tamaño="large"
-                        />
-            </div>
-                      <p className="text-lg font-semibold mb-2 text-white">Arroz Amarillo</p>
-                      {datos.acompanamiento_seleccionado === 'Arroz Amarillo' && (
-                        <span className="text-xs px-2 py-1 rounded bg-white/20 text-white">Seleccionado</span>
-                      )}
-                    </button>
-                  </div>
-              </div>
-            )}
+                    <img
+                      src={obtenerImagenMenu('acompanamiento', opcion.imgValue)}
+                      alt={opcion.label}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
-            {datos.acompanamientos === 'Puré de Patatas o Patatas al Romero' && (
-              <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
-                <p className="text-lg font-semibold mb-4 text-center text-white">Selecciona el tipo de patatas:</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <button
-                    type="button"
-                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Puré de Patatas' })}
-                    disabled={estaBloqueado}
-                    className={cn(
-                      "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                      datos.acompanamiento_seleccionado === 'Puré de Patatas'
-                        ? "border-white bg-white/10 shadow-lg"
-                        : "border-white/10 bg-neutral-800/50 hover:border-white/20"
-                    )}
-                  >
-                    <div className="mb-4 flex justify-center">
-              <ImagenSeleccion
-                          urlImagen={obtenerImagenMenu('acompanamiento', 'puré de patatas')}
-                          alt="Puré de Patatas"
-                          tamaño="large"
-                        />
-            </div>
-                    <p className="text-lg font-semibold mb-2 text-white">Puré de Patatas</p>
-                    {datos.acompanamiento_seleccionado === 'Puré de Patatas' && (
-                      <span className="text-xs px-2 py-1 rounded bg-white/20 text-white">Seleccionado</span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => !estaBloqueado && setDatos({ ...datos, acompanamiento_seleccionado: 'Patatas al Romero' })}
-                    disabled={estaBloqueado}
-                    className={cn(
-                      "p-6 rounded-xl border-2 transition-all duration-200 hover:scale-105 text-center",
-                      datos.acompanamiento_seleccionado === 'Patatas al Romero'
-                        ? "border-white bg-white/10 shadow-lg"
-                        : "border-white/10 bg-neutral-800/50 hover:border-white/20"
-                    )}
-                  >
-                    <div className="mb-4 flex justify-center">
-              <ImagenSeleccion
-                          urlImagen={obtenerImagenMenu('acompanamiento', 'patatas al romero')}
-                          alt="Patatas al Romero"
-                          tamaño="large"
-                        />
-                      </div>
-                    <p className="text-lg font-semibold mb-2 text-white">Patatas al Romero</p>
-                    {datos.acompanamiento_seleccionado === 'Patatas al Romero' && (
-                      <span className="text-xs px-2 py-1 rounded bg-white/20 text-white">Seleccionado</span>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {datos.acompanamientos && 
-             datos.acompanamientos !== 'Arroz Blanco o Amarillo' && 
-             datos.acompanamientos !== 'Puré de Patatas o Patatas al Romero' && (
-              <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
-                <div className="text-center mb-4">
-                  <h4 className="text-xl font-bold mb-2 text-white">Vista Previa</h4>
-                  <p className="text-sm text-neutral-400">{datos.acompanamientos}</p>
-                </div>
-                <div className="flex justify-center">
-                  <ImagenSeleccion
-                    urlImagen={obtenerImagenMenu('acompanamiento', datos.acompanamientos)}
-                    alt={datos.acompanamientos}
-                    tamaño="extra-large"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 4: // Teenagers/Kids
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Paso 4: Teenagers/Kids</h3>
-              <p className="text-muted-foreground">Indica si habrá teenagers o niños en el evento</p>
-            </div>
-            <div className="bg-neutral-900 border border-white/10 rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <input
-                    type="checkbox"
-                    id="hay_teenagers"
-                    checked={datos.hay_teenagers}
-                    onChange={(e) => setDatos({ ...datos, hay_teenagers: e.target.checked, cantidad_teenagers: e.target.checked ? datos.cantidad_teenagers : 0 })}
-                    disabled={estaBloqueado}
-                    className="w-5 h-5 text-white border-white/20 rounded focus:ring-white/50 disabled:opacity-50"
-                  />
-                  <label htmlFor="hay_teenagers" className="text-lg font-semibold cursor-pointer text-white">
-                    ¿Habrá Teenagers/Kids en el evento?
-                  </label>
-                </div>
-
-                {datos.hay_teenagers && (
-                  <div className="space-y-4 mt-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-neutral-300">
-                        Cantidad de Teens/Kids *
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max={totalInvitados}
-                        value={datos.cantidad_teenagers}
-                        onChange={(e) => {
-                          const valor = parseInt(e.target.value) || 0;
-                          if (valor <= totalInvitados) {
-                            setDatos({ ...datos, cantidad_teenagers: valor });
-                          }
-                        }}
-                        disabled={estaBloqueado}
-                        className="w-full px-4 py-2 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white disabled:bg-neutral-700"
-                        required
-                      />
-                    </div>
-
-                    {datos.cantidad_teenagers > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-neutral-300">
-                          ¿Quieren pasta o menú? *
-                        </label>
-                        <div className="flex gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="teenagers_tipo_comida"
-                              value="pasta"
-                              checked={datos.teenagers_tipo_comida === 'pasta'}
-                              onChange={(e) => setDatos({ ...datos, teenagers_tipo_comida: e.target.value, teenagers_tipo_pasta: '' })}
-                              disabled={estaBloqueado}
-                              className="w-4 h-4 text-white border-white/20 focus:ring-white/50 disabled:opacity-50"
-                              required
-                            />
-                            <span className="text-sm font-medium text-white">Pasta</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="teenagers_tipo_comida"
-                              value="menu"
-                              checked={datos.teenagers_tipo_comida === 'menu'}
-                              onChange={(e) => setDatos({ ...datos, teenagers_tipo_comida: e.target.value, teenagers_tipo_pasta: '' })}
-                              disabled={estaBloqueado}
-                              className="w-4 h-4 text-white border-white/20 focus:ring-white/50 disabled:opacity-50"
-                              required
-                            />
-                            <span className="text-sm font-medium text-white">Menú</span>
-                          </label>
-                        </div>
-                      </div>
-                    )}
-
-                    {datos.cantidad_teenagers > 0 && datos.teenagers_tipo_comida === 'pasta' && (
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-neutral-300">
-                          Tipo de Pasta *
-                        </label>
-                        <select
-                          value={datos.teenagers_tipo_pasta}
-                          onChange={(e) => setDatos({ ...datos, teenagers_tipo_pasta: e.target.value })}
-                          disabled={estaBloqueado}
-                          className="w-full px-4 py-2 text-base border border-white/10 rounded-lg focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none bg-neutral-800/50 text-white disabled:bg-neutral-700"
-                          required
-                        >
-                          <option value="">Seleccionar tipo de pasta...</option>
-                          <option value="napolitana">Pasta Napolitana</option>
-                          <option value="alfredo">Pasta Alfredo</option>
-                        </select>
-                        {datos.teenagers_tipo_pasta && (
-                          <div className="mt-4 flex justify-center">
-                            <ImagenSeleccion
-                              urlImagen={obtenerImagenMenu('pasta', datos.teenagers_tipo_pasta)}
-                              alt={`Pasta ${datos.teenagers_tipo_pasta}`}
-                              tamaño="large"
-                            />
+                    <div className="absolute bottom-0 left-0 w-full p-6">
+                      <div className="flex items-center justify-between">
+                        <span className={cn(
+                          "font-bold text-xl",
+                          estaSeleccionado ? "text-white" : "text-white/90"
+                        )}>
+                          {opcion.label}
+                        </span>
+                        {estaSeleccionado && (
+                          <div className="bg-white text-black rounded-full p-1">
+                            <Check size={16} strokeWidth={3} />
                           </div>
                         )}
                       </div>
-                    )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
 
-                    {datos.cantidad_teenagers > 0 && (
-                      <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-4">
-                        <p className="text-sm font-medium text-white mb-2">
-                          📋 Resumen de platos:
-                        </p>
-                        <ul className="text-sm text-neutral-300 space-y-1">
-                          <li>• {invitadosAdultos} platos según selección de menú (adultos)</li>
-                          <li>
-                            • {datos.cantidad_teenagers} {datos.teenagers_tipo_comida === 'pasta' 
-                              ? `pasta(s) ${datos.teenagers_tipo_pasta === 'napolitana' ? 'Napolitana' : datos.teenagers_tipo_pasta === 'alfredo' ? 'Alfredo' : ''}`
-                              : 'menú(es) según selección'}
-                            {' '}(teens/kids)
-                          </li>
-                        </ul>
-                      </div>
-                    )}
+      case 4: // Teenagers
+        return (
+          <div className="space-y-8">
+            <div className="mb-6">
+              <h3 className="text-3xl font-bold text-white mb-2">Paso 4: Teenagers y Niños</h3>
+              <p className="text-xl text-neutral-400">¿Tendrás invitados adolescentes que prefieran un menú especial?</p>
             </div>
+
+            {/* Selector Sí/No */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div
+                onClick={() => !estaBloqueado && setDatos({ ...datos, hay_teenagers: true, cantidad_teenagers: datos.cantidad_teenagers || 1, teenagers_tipo_comida: 'pasta' })}
+                className={cn(
+                  "relative p-8 rounded-xl border-2 cursor-pointer transition-all duration-300 flex flex-col items-center justify-center gap-4 bg-neutral-800/30",
+                  datos.hay_teenagers
+                    ? "border-white bg-white/10"
+                    : "border-white/10 hover:border-white/30"
                 )}
+              >
+                <div className="p-4 rounded-full bg-blue-500/20 text-blue-400">
+                  <CheckCircle2 size={32} />
+                </div>
+                <h4 className="text-xl font-bold text-white">Sí, incluir menú Teenager</h4>
+                <p className="text-neutral-400 text-center">Seleccionaré un menú especial (Pasta/Menu) para ellos</p>
+              </div>
+
+              <div
+                onClick={() => !estaBloqueado && setDatos({ ...datos, hay_teenagers: false, cantidad_teenagers: 0, teenagers_tipo_comida: null, teenagers_tipo_pasta: null })}
+                className={cn(
+                  "relative p-8 rounded-xl border-2 cursor-pointer transition-all duration-300 flex flex-col items-center justify-center gap-4 bg-neutral-800/30",
+                  !datos.hay_teenagers
+                    ? "border-white bg-white/10"
+                    : "border-white/10 hover:border-white/30"
+                )}
+              >
+                <div className="p-4 rounded-full bg-neutral-500/20 text-neutral-400">
+                  <X size={32} />
+                </div>
+                <h4 className="text-xl font-bold text-white">No, todos comen igual</h4>
+                <p className="text-neutral-400 text-center">Todos mis invitados disfrutarán del menú general seleccionado</p>
+              </div>
             </div>
+
+            {datos.hay_teenagers && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-8 border-t border-white/10 pt-8"
+              >
+                {/* Cantidad */}
+                <div>
+                  <label className="block text-2xl font-bold text-white mb-4">¿Cuántos Teenagers son?</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalInvitados}
+                    value={datos.cantidad_teenagers}
+                    onChange={(e) => setDatos({ ...datos, cantidad_teenagers: parseInt(e.target.value) || 0 })}
+                    disabled={estaBloqueado}
+                    className="w-full md:w-48 px-4 py-4 text-3xl text-center border-2 border-white/20 rounded-xl focus:ring-4 focus:ring-white/10 focus:border-white outline-none bg-neutral-900 text-white placeholder:text-neutral-600 disabled:bg-neutral-800 transition-all font-bold"
+                  />
+                  <p className="text-sm text-neutral-500 mt-2 font-medium">Se restarán del total de {totalInvitados} invitados.</p>
+                </div>
+
+                {/* Selección de Salsa (Siempre visible si hay teenagers) */}
+                <div className="mt-8">
+                  <label className="block text-2xl font-bold text-white mb-6">Elige la Salsa para la Pasta</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {['Alfredo', 'Napolitana'].map(salsa => (
+                      <div
+                        key={salsa}
+                        onClick={() => !estaBloqueado && setDatos({ ...datos, teenagers_tipo_pasta: salsa })}
+                        className={cn(
+                          "group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 border-2",
+                          datos.teenagers_tipo_pasta === salsa
+                            ? "border-white ring-2 ring-white/50 shadow-2xl scale-[1.02]"
+                            : "border-transparent opacity-70 hover:opacity-100 hover:scale-[1.02]"
+                        )}
+                      >
+                        <img
+                          src={obtenerImagenMenu('pasta', salsa)}
+                          alt={salsa}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent pointer-events-none" />
+
+                        <div className="absolute bottom-0 left-0 w-full p-6 flex justify-between items-end">
+                          <span className={cn("text-2xl font-bold", datos.teenagers_tipo_pasta === salsa ? "text-white" : "text-white/90")}>
+                            {salsa}
+                          </span>
+                          {datos.teenagers_tipo_pasta === salsa && (
+                            <div className="bg-white text-black rounded-full p-2">
+                              <CheckCircle size={24} strokeWidth={3} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </div>
         );
 
@@ -1164,48 +1117,51 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
           </div>
         )}
 
-        {/* Indicador de Pasos Horizontal */}
-        <div className="bg-neutral-800/50 border border-white/10 rounded-xl p-6 mb-8">
-          <div className="flex items-center justify-between overflow-x-auto pb-2">
-            {PASOS.map((paso, index) => (
-              <div key={paso.numero} className="flex items-center flex-1 min-w-0">
-                <div className="flex flex-col items-center flex-1 min-w-0">
+        {/* Progress Steps */}
+        <div className="mb-12 w-full pb-4">
+          <div className="flex items-center justify-between w-full px-4">
+            {PASOS.map((paso, index) => {
+              const esActivo = pasoActual === paso.numero;
+              const esCompletado = pasoCompleto(paso.numero);
+
+              return (
+                <div key={paso.numero} className="relative flex flex-col items-center z-10 w-full">
+                  {/* Line Connector */}
+                  {index < PASOS.length - 1 && (
+                    <div className="absolute top-5 left-1/2 w-full h-[2px] -z-10 bg-neutral-800">
+                      <div
+                        className="h-full bg-green-500 transition-all duration-500"
+                        style={{
+                          width: esCompletado ? '100%' : '0%'
+                        }}
+                      />
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => irAPaso(paso.numero)}
-                    disabled={estaBloqueado || (paso.numero > pasoActual && !pasoCompleto(paso.numero - 1))}
+                    disabled={estaBloqueado || (!esCompletado && !esActivo && paso.numero > 1 && !pasoCompleto(paso.numero - 1))}
                     className={cn(
-                      "relative h-12 w-12 rounded-full border-2 transition-all font-semibold text-sm flex items-center justify-center",
-                      paso.numero === pasoActual
-                        ? "bg-white border-white text-black shadow-lg scale-110"
-                        : pasoCompleto(paso.numero)
-                        ? "bg-green-500/20 border-green-500 text-green-400 hover:scale-105 cursor-pointer"
-                        : paso.numero < pasoActual
-                        ? "bg-neutral-700 border-neutral-600 text-neutral-400 hover:scale-105 cursor-pointer"
-                        : "bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-50"
+                      "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300",
+                      esActivo
+                        ? "bg-white text-black border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                        : esCompletado
+                          ? "bg-green-500 text-white border-green-500 hover:bg-green-600"
+                          : "bg-neutral-800 text-neutral-500 border-neutral-700 hover:border-neutral-600"
                     )}
                   >
-                    {pasoCompleto(paso.numero) && paso.numero !== pasoActual ? (
-                      <CheckCircle className="h-6 w-6" />
-                    ) : (
-                      <span>{paso.numero}</span>
-                    )}
+                    {esCompletado && !esActivo ? <Check size={16} /> : paso.numero}
                   </button>
                   <span className={cn(
-                    "mt-2 text-xs font-medium text-center max-w-[80px] truncate",
-                    paso.numero === pasoActual ? "text-white font-semibold" : "text-neutral-400"
+                    "absolute -bottom-8 text-xs font-medium whitespace-nowrap transition-colors duration-300",
+                    esActivo ? "text-white scale-105 font-bold" : esCompletado ? "text-green-400" : "text-neutral-500"
                   )}>
                     {paso.titulo}
                   </span>
                 </div>
-                {index < PASOS.length - 1 && (
-                  <div className={cn(
-                    "flex-1 h-0.5 mx-2 transition-all min-w-[20px]",
-                    pasoCompleto(paso.numero) ? "bg-green-500" : "bg-neutral-700"
-                  )} />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -1271,10 +1227,10 @@ function SeccionMenu({ ajustes, onGuardar, guardando, estaBloqueado, contrato, t
 // ===== SECCIÓN MÚSICA =====
 function SeccionEntretenimiento({ ajustes, onGuardar, guardando, estaBloqueado }) {
   // Parsear bailes desde JSON o inicializar como array vacío
-  const bailesIniciales = ajustes?.bailes_adicionales 
-    ? (typeof ajustes.bailes_adicionales === 'string' 
-        ? JSON.parse(ajustes.bailes_adicionales) 
-        : ajustes.bailes_adicionales)
+  const bailesIniciales = ajustes?.bailes_adicionales
+    ? (typeof ajustes.bailes_adicionales === 'string'
+      ? JSON.parse(ajustes.bailes_adicionales)
+      : ajustes.bailes_adicionales)
     : [];
 
   const [datos, setDatos] = useState({
@@ -1653,10 +1609,10 @@ function SeccionBar({ ajustes, contrato }) {
     ...(contrato?.paquetes?.paquetes_servicios || []).map(ps => ps.servicios?.nombre)
   ].filter(Boolean);
 
-  const tieneLicorBasico = todosServicios.some(nombre => 
+  const tieneLicorBasico = todosServicios.some(nombre =>
     nombre?.toLowerCase().includes('licor básico') || nombre?.toLowerCase().includes('licor basico')
   );
-  const tieneLicorPremium = todosServicios.some(nombre => 
+  const tieneLicorPremium = todosServicios.some(nombre =>
     nombre?.toLowerCase().includes('licor premium')
   );
 
@@ -1712,10 +1668,10 @@ function SeccionBar({ ajustes, contrato }) {
   ];
 
   // Obtener productos según tipo de licor
-  const rones = tipoLicor === 'premium' 
-    ? ['Ron Bacardi Blanco', 'Ron Bacardi Gold'] 
+  const rones = tipoLicor === 'premium'
+    ? ['Ron Bacardi Blanco', 'Ron Bacardi Gold']
     : ['Ron Spice', 'Ron Blanco'];
-  
+
   const whisky = tipoLicor === 'premium' ? 'Whisky Black Label' : 'Whisky House';
 
   return (
@@ -1923,20 +1879,20 @@ function SeccionBar({ ajustes, contrato }) {
 // ===== SECCIÓN OTROS (FINAL) =====
 function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimosina, contrato }) {
   const [pasoActual, setPasoActual] = useState(1);
-  
+
   // Determinar si es evento de 15 años (quinceañera)
   const nombreEvento = contrato?.eventos?.nombre_evento?.toLowerCase() || '';
   const homenajeado = contrato?.homenajeado?.toLowerCase() || '';
-  const esQuinceanera = nombreEvento.includes('15') || nombreEvento.includes('quince') || 
-                        nombreEvento.includes('quinceañera') || homenajeado.includes('quince');
+  const esQuinceanera = nombreEvento.includes('15') || nombreEvento.includes('quince') ||
+    nombreEvento.includes('quinceañera') || homenajeado.includes('quince');
 
   // Estado del protocolo - parsear desde JSON o string
-  const protocoloInicial = ajustes?.protocolo 
+  const protocoloInicial = ajustes?.protocolo
     ? (typeof ajustes.protocolo === 'string' && ajustes.protocolo.startsWith('{')
-        ? JSON.parse(ajustes.protocolo || '{}')
-        : {})
+      ? JSON.parse(ajustes.protocolo || '{}')
+      : {})
     : {};
-  
+
   // Valores por defecto del protocolo
   const protocoloConDefaults = {
     hora_apertura: protocoloInicial.hora_apertura || '',
@@ -1982,25 +1938,25 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
   const pasoCompleto = (numero) => {
     const paso = PASOS.find(p => p.numero === numero);
     if (!paso) return false;
-    
+
     // Paso 1 (Información General) - siempre completo (opcional)
     if (numero === 1) return true;
-    
+
     // Paso 2 (Protocolo Básico) - requiere hora_apertura, hora_anuncio_padres, nombres_padres, hora_anuncio_homenajeado, nombre_homenajeado
     if (numero === 2) {
-      return datos.protocolo?.hora_apertura && 
-             datos.protocolo?.hora_anuncio_padres && 
-             datos.protocolo?.nombres_padres &&
-             datos.protocolo?.hora_anuncio_homenajeado &&
-             datos.protocolo?.nombre_homenajeado;
+      return datos.protocolo?.hora_apertura &&
+        datos.protocolo?.hora_anuncio_padres &&
+        datos.protocolo?.nombres_padres &&
+        datos.protocolo?.hora_anuncio_homenajeado &&
+        datos.protocolo?.nombre_homenajeado;
     }
-    
+
     // Paso 3 (Actividades Especiales) - siempre completo (tiene valores por defecto)
     if (numero === 3) return true;
-    
+
     // Paso 4 (Horarios) - siempre completo (opcional)
     if (numero === 4) return true;
-    
+
     return false;
   };
 
@@ -2096,7 +2052,7 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
               <h3 className="text-3xl font-bold text-white mb-2">Paso 1: Información General</h3>
               <p className="text-xl text-neutral-400">Completa la información adicional sobre tu evento</p>
             </div>
-            
+
             {/* Limosina (solo si está contratada) */}
             {tieneLimosina && (
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
@@ -2499,434 +2455,434 @@ function SeccionOtros({ ajustes, onGuardar, guardando, estaBloqueado, tieneLimos
 
       {/* Progress Steps */}
       <div className="mb-8 p-6 rounded-xl bg-neutral-900 border border-white/10">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col items-center flex-1">
-              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2">
-                <Check size={20} />
-              </div>
-              <span className="text-xs text-neutral-400">Información...</span>
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col items-center flex-1">
+            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2">
+              <Check size={20} />
             </div>
-            <div className="h-0.5 bg-green-500 flex-1 mx-2" />
-            <div className="flex flex-col items-center flex-1">
-              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2">
-                <Check size={20} />
-              </div>
-              <span className="text-xs text-neutral-400">Protocolo B...</span>
+            <span className="text-xs text-neutral-400">Información...</span>
+          </div>
+          <div className="h-0.5 bg-green-500 flex-1 mx-2" />
+          <div className="flex flex-col items-center flex-1">
+            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2">
+              <Check size={20} />
             </div>
-            <div className="h-0.5 bg-green-500 flex-1 mx-2" />
-            <div className="flex flex-col items-center flex-1">
-              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2">
-                <Check size={20} />
-              </div>
-              <span className="text-xs text-neutral-400">Actividades...</span>
+            <span className="text-xs text-neutral-400">Protocolo B...</span>
+          </div>
+          <div className="h-0.5 bg-green-500 flex-1 mx-2" />
+          <div className="flex flex-col items-center flex-1">
+            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white mb-2">
+              <Check size={20} />
             </div>
-            <div className="h-0.5 bg-neutral-700 flex-1 mx-2" />
-            <div className="flex flex-col items-center flex-1">
-              <div className="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center text-white mb-2">
-                4
-              </div>
-              <span className="text-xs text-neutral-400">Horarios</span>
+            <span className="text-xs text-neutral-400">Actividades...</span>
+          </div>
+          <div className="h-0.5 bg-neutral-700 flex-1 mx-2" />
+          <div className="flex flex-col items-center flex-1">
+            <div className="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center text-white mb-2">
+              4
             </div>
+            <span className="text-xs text-neutral-400">Horarios</span>
           </div>
         </div>
+      </div>
 
-        {/* Bento Grid for Final Details */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(200px,auto)] mb-8">
-          {/* Paso 1: Información General - Large Card */}
-          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 md:col-span-2 row-span-1 transition-all duration-300 hover:shadow-lg">
-            <div className="absolute inset-0 w-full h-full z-0">
-              <img
-                src="https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?q=80&w=2000&auto=format&fit=crop"
-                alt="Información General"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
-            </div>
-            <div className="relative z-10 h-full w-full p-6">
-              <div className="flex flex-col h-full">
-                <h3 className="text-sm text-neutral-400 mb-4 uppercase tracking-wider font-medium">Paso 1: Información General</h3>
-                <div className="grid grid-cols-1 gap-4 flex-1">
-                  <div>
-                    <div className="text-xs text-neutral-400 mb-1 font-medium">Items Especiales que Traerás</div>
-                    {!estaBloqueado ? (
-                      <textarea
-                        value={datos.items_especiales}
-                        onChange={(e) => setDatos({ ...datos, items_especiales: e.target.value })}
-                        onBlur={handleSubmit}
-                        placeholder="Ej: Flores, recuerdos, fotos..."
-                        className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
-                        rows={2}
-                      />
-                    ) : (
-                      <div className="text-sm text-white drop-shadow-sm">
-                        {datos.items_especiales || 'No especificado'}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-xs text-neutral-400 mb-1 font-medium">Sorpresas Planeadas</div>
-                    {!estaBloqueado ? (
-                      <textarea
-                        value={datos.sorpresas_planeadas}
-                        onChange={(e) => setDatos({ ...datos, sorpresas_planeadas: e.target.value })}
-                        onBlur={handleSubmit}
-                        placeholder="Ej: Sorpresa de video, presentación especial..."
-                        className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
-                        rows={2}
-                      />
-                    ) : (
-                      <div className="text-sm text-white drop-shadow-sm">
-                        {datos.sorpresas_planeadas || 'No especificado'}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-xs text-neutral-400 mb-1 font-medium">Observaciones Adicionales</div>
-                    {!estaBloqueado ? (
-                      <textarea
-                        value={datos.observaciones_adicionales}
-                        onChange={(e) => setDatos({ ...datos, observaciones_adicionales: e.target.value })}
-                        onBlur={handleSubmit}
-                        placeholder="Cualquier observación adicional..."
-                        className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
-                        rows={2}
-                      />
-                    ) : (
-                      <div className="text-sm text-white drop-shadow-sm">
-                        {datos.observaciones_adicionales || 'No especificado'}
-                      </div>
-                    )}
-                  </div>
+      {/* Bento Grid for Final Details */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(200px,auto)] mb-8">
+        {/* Paso 1: Información General - Large Card */}
+        <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 md:col-span-2 row-span-1 transition-all duration-300 hover:shadow-lg">
+          <div className="absolute inset-0 w-full h-full z-0">
+            <img
+              src="https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?q=80&w=2000&auto=format&fit=crop"
+              alt="Información General"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+          </div>
+          <div className="relative z-10 h-full w-full p-6">
+            <div className="flex flex-col h-full">
+              <h3 className="text-sm text-neutral-400 mb-4 uppercase tracking-wider font-medium">Paso 1: Información General</h3>
+              <div className="grid grid-cols-1 gap-4 flex-1">
+                <div>
+                  <div className="text-xs text-neutral-400 mb-1 font-medium">Items Especiales que Traerás</div>
+                  {!estaBloqueado ? (
+                    <textarea
+                      value={datos.items_especiales}
+                      onChange={(e) => setDatos({ ...datos, items_especiales: e.target.value })}
+                      onBlur={handleSubmit}
+                      placeholder="Ej: Flores, recuerdos, fotos..."
+                      className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
+                      rows={2}
+                    />
+                  ) : (
+                    <div className="text-sm text-white drop-shadow-sm">
+                      {datos.items_especiales || 'No especificado'}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-400 mb-1 font-medium">Sorpresas Planeadas</div>
+                  {!estaBloqueado ? (
+                    <textarea
+                      value={datos.sorpresas_planeadas}
+                      onChange={(e) => setDatos({ ...datos, sorpresas_planeadas: e.target.value })}
+                      onBlur={handleSubmit}
+                      placeholder="Ej: Sorpresa de video, presentación especial..."
+                      className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
+                      rows={2}
+                    />
+                  ) : (
+                    <div className="text-sm text-white drop-shadow-sm">
+                      {datos.sorpresas_planeadas || 'No especificado'}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-400 mb-1 font-medium">Observaciones Adicionales</div>
+                  {!estaBloqueado ? (
+                    <textarea
+                      value={datos.observaciones_adicionales}
+                      onChange={(e) => setDatos({ ...datos, observaciones_adicionales: e.target.value })}
+                      onBlur={handleSubmit}
+                      placeholder="Cualquier observación adicional..."
+                      className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
+                      rows={2}
+                    />
+                  ) : (
+                    <div className="text-sm text-white drop-shadow-sm">
+                      {datos.observaciones_adicionales || 'No especificado'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Paso 2: Protocolo Básico */}
-          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:shadow-lg">
-            <div className="absolute inset-0 w-full h-full z-0">
-              <img
-                src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=2000&auto=format&fit=crop"
-                alt="Protocolo"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
-            </div>
-            <div className="relative z-10 h-full w-full p-6">
-              <div className="flex flex-col h-full">
-                <h3 className="text-sm text-neutral-400 mb-3 uppercase tracking-wider font-medium">Paso 2: Protocolo Básico</h3>
-                <div className="space-y-3 flex-1">
-                  <div>
-                    <div className="text-xs text-neutral-400 mb-1 font-medium">🕐 Apertura del Salón</div>
-                    {!estaBloqueado ? (
+        {/* Paso 2: Protocolo Básico */}
+        <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:shadow-lg">
+          <div className="absolute inset-0 w-full h-full z-0">
+            <img
+              src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=2000&auto=format&fit=crop"
+              alt="Protocolo"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+          </div>
+          <div className="relative z-10 h-full w-full p-6">
+            <div className="flex flex-col h-full">
+              <h3 className="text-sm text-neutral-400 mb-3 uppercase tracking-wider font-medium">Paso 2: Protocolo Básico</h3>
+              <div className="space-y-3 flex-1">
+                <div>
+                  <div className="text-xs text-neutral-400 mb-1 font-medium">🕐 Apertura del Salón</div>
+                  {!estaBloqueado ? (
+                    <input
+                      type="time"
+                      value={datos.protocolo?.hora_apertura || ''}
+                      onChange={(e) => {
+                        actualizarProtocolo('hora_apertura', e.target.value);
+                        setTimeout(() => handleSubmit(e), 500);
+                      }}
+                      className="w-full px-3 py-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                    />
+                  ) : (
+                    <div className="text-base font-bold text-white drop-shadow-sm">
+                      {formatearHora(datos.protocolo?.hora_apertura)}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-400 mb-1 font-medium">👨‍👩‍👧 Anuncio de Padres</div>
+                  {!estaBloqueado ? (
+                    <>
                       <input
                         type="time"
-                        value={datos.protocolo?.hora_apertura || ''}
+                        value={datos.protocolo?.hora_anuncio_padres || ''}
                         onChange={(e) => {
-                          actualizarProtocolo('hora_apertura', e.target.value);
+                          actualizarProtocolo('hora_anuncio_padres', e.target.value);
                           setTimeout(() => handleSubmit(e), 500);
                         }}
-                        className="w-full px-3 py-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                        className="w-full px-3 py-2 mb-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
                       />
-                    ) : (
-                      <div className="text-base font-bold text-white drop-shadow-sm">
-                        {formatearHora(datos.protocolo?.hora_apertura)}
+                      <input
+                        type="text"
+                        value={datos.protocolo?.nombres_padres || ''}
+                        onChange={(e) => {
+                          actualizarProtocolo('nombres_padres', e.target.value);
+                          setTimeout(() => handleSubmit(e), 500);
+                        }}
+                        placeholder="Nombres"
+                        className="w-full px-3 py-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-xs focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm text-white drop-shadow-sm">
+                        {formatearHora(datos.protocolo?.hora_anuncio_padres)}
                       </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-xs text-neutral-400 mb-1 font-medium">👨‍👩‍👧 Anuncio de Padres</div>
-                    {!estaBloqueado ? (
-                      <>
-                        <input
-                          type="time"
-                          value={datos.protocolo?.hora_anuncio_padres || ''}
-                          onChange={(e) => {
-                            actualizarProtocolo('hora_anuncio_padres', e.target.value);
-                            setTimeout(() => handleSubmit(e), 500);
+                      <div className="text-xs text-neutral-300">
+                        {datos.protocolo?.nombres_padres || 'No especificado'}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-400 mb-1 font-medium">⭐ Anuncio Homenajeado</div>
+                  {!estaBloqueado ? (
+                    <>
+                      <input
+                        type="time"
+                        value={datos.protocolo?.hora_anuncio_homenajeado || ''}
+                        onChange={(e) => {
+                          actualizarProtocolo('hora_anuncio_homenajeado', e.target.value);
+                          setTimeout(() => handleSubmit(e), 500);
+                        }}
+                        className="w-full px-3 py-2 mb-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={datos.protocolo?.nombre_homenajeado || contrato?.homenajeado || ''}
+                        onChange={(e) => {
+                          actualizarProtocolo('nombre_homenajeado', e.target.value);
+                          setTimeout(() => handleSubmit(e), 500);
+                        }}
+                        placeholder="Nombre"
+                        className="w-full px-3 py-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-xs focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                      />
+                      {datos.protocolo?.acompanantes && (
+                        <div className="text-xs text-neutral-300 mt-1">
+                          ({datos.protocolo.acompanantes})
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm text-white drop-shadow-sm">
+                        {formatearHora(datos.protocolo?.hora_anuncio_homenajeado)}
+                      </div>
+                      <div className="text-xs text-neutral-300">
+                        {datos.protocolo?.nombre_homenajeado || contrato?.homenajeado || 'No especificado'}
+                        {datos.protocolo?.acompanantes && ` (${datos.protocolo.acompanantes})`}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Paso 3: Actividades Especiales - Large Card */}
+        <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 md:col-span-2 row-span-1 transition-all duration-300 hover:shadow-lg">
+          <div className="absolute inset-0 w-full h-full z-0">
+            <img
+              src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?q=80&w=2000&auto=format&fit=crop"
+              alt="Actividades"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+          </div>
+          <div className="relative z-10 h-full w-full p-8">
+            <div className="flex flex-col h-full justify-center">
+              <h3 className="text-sm text-neutral-400 mb-6 uppercase tracking-wider font-medium text-center">Paso 3: Actividades Especiales</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 items-start">
+                {/* Columna Izquierda: Bailes y Brindis */}
+                <div className="flex flex-col space-y-4">
+                  {!estaBloqueado ? (
+                    <div className="space-y-4">
+                      <div className="flex flex-col space-y-2">
+                        <div className="text-xs text-neutral-400 font-medium">💃 Baile con Papá</div>
+                        <PremiumToggle
+                          label=""
+                          value={datos.protocolo?.baile_papa}
+                          onChange={(val) => {
+                            actualizarProtocolo('baile_papa', val);
+                            setTimeout(() => handleSubmit({ preventDefault: () => { } }), 500);
                           }}
-                          className="w-full px-3 py-2 mb-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                          disabled={estaBloqueado}
                         />
-                        <input
-                          type="text"
-                          value={datos.protocolo?.nombres_padres || ''}
-                          onChange={(e) => {
-                            actualizarProtocolo('nombres_padres', e.target.value);
-                            setTimeout(() => handleSubmit(e), 500);
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <div className="text-xs text-neutral-400 font-medium">💃 Baile con Mamá</div>
+                        <PremiumToggle
+                          label=""
+                          value={datos.protocolo?.baile_mama}
+                          onChange={(val) => {
+                            actualizarProtocolo('baile_mama', val);
+                            setTimeout(() => handleSubmit({ preventDefault: () => { } }), 500);
                           }}
-                          placeholder="Nombres"
-                          className="w-full px-3 py-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-xs focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                          disabled={estaBloqueado}
                         />
-                      </>
-                    ) : (
-                      <>
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <div className="text-xs text-neutral-400 font-medium">🎤 Palabras / Brindis</div>
+                        <PremiumToggle
+                          label=""
+                          value={datos.protocolo?.brindis}
+                          onChange={(val) => {
+                            actualizarProtocolo('brindis', val);
+                            setTimeout(() => handleSubmit({ preventDefault: () => { } }), 500);
+                          }}
+                          disabled={estaBloqueado}
+                        />
+                        {datos.protocolo?.brindis === true && (
+                          <input
+                            type="text"
+                            value={datos.protocolo?.brindis_a_cargo || ''}
+                            onChange={(e) => {
+                              actualizarProtocolo('brindis_a_cargo', e.target.value);
+                              setTimeout(() => handleSubmit(e), 500);
+                            }}
+                            placeholder="A cargo de"
+                            className="w-full mt-2 px-3 py-2 bg-neutral-800/50 border border-white/5 rounded text-white placeholder:text-neutral-500 text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="text-xs text-neutral-400 mb-2 font-medium">💃 Baile con Papá</div>
                         <div className="text-sm text-white drop-shadow-sm">
-                          {formatearHora(datos.protocolo?.hora_anuncio_padres)}
+                          {datos.protocolo?.baile_papa ? '✓ Sí' : '✗ No'}
                         </div>
-                        <div className="text-xs text-neutral-300">
-                          {datos.protocolo?.nombres_padres || 'No especificado'}
+                      </div>
+                      <div>
+                        <div className="text-xs text-neutral-400 mb-2 font-medium">💃 Baile con Mamá</div>
+                        <div className="text-sm text-white drop-shadow-sm">
+                          {datos.protocolo?.baile_mama ? '✓ Sí' : '✗ No'}
                         </div>
-                      </>
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-xs text-neutral-400 mb-1 font-medium">⭐ Anuncio Homenajeado</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-neutral-400 mb-2 font-medium">🎤 Palabras / Brindis</div>
+                        <div className="text-sm text-white drop-shadow-sm mb-1">
+                          {datos.protocolo?.brindis ? '✓ Sí' : '✗ No'}
+                        </div>
+                        {datos.protocolo?.brindis && datos.protocolo?.brindis_a_cargo && (
+                          <div className="text-xs text-neutral-300">
+                            A cargo de: {datos.protocolo.brindis_a_cargo}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Columna Derecha: Cambio de Zapatilla y Otros Bailes */}
+                <div className="flex flex-col space-y-4">
+                  <div className="flex flex-col space-y-2">
+                    <div className="text-xs text-neutral-400 font-medium">👠 Cambio de Zapatilla</div>
                     {!estaBloqueado ? (
                       <>
-                        <input
-                          type="time"
-                          value={datos.protocolo?.hora_anuncio_homenajeado || ''}
-                          onChange={(e) => {
-                            actualizarProtocolo('hora_anuncio_homenajeado', e.target.value);
-                            setTimeout(() => handleSubmit(e), 500);
+                        <PremiumToggle
+                          label=""
+                          value={datos.protocolo?.cambio_zapatilla}
+                          onChange={(val) => {
+                            actualizarProtocolo('cambio_zapatilla', val);
+                            setTimeout(() => handleSubmit({ preventDefault: () => { } }), 500);
                           }}
-                          className="w-full px-3 py-2 mb-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                          disabled={estaBloqueado}
                         />
-                        <input
-                          type="text"
-                          value={datos.protocolo?.nombre_homenajeado || contrato?.homenajeado || ''}
-                          onChange={(e) => {
-                            actualizarProtocolo('nombre_homenajeado', e.target.value);
-                            setTimeout(() => handleSubmit(e), 500);
-                          }}
-                          placeholder="Nombre"
-                          className="w-full px-3 py-2 bg-neutral-800/50 border border-white/10 rounded-lg text-white placeholder:text-neutral-500 text-xs focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
-                        />
-                        {datos.protocolo?.acompanantes && (
-                          <div className="text-xs text-neutral-300 mt-1">
-                            ({datos.protocolo.acompanantes})
-                          </div>
+                        {datos.protocolo?.cambio_zapatilla === true && (
+                          <input
+                            type="text"
+                            value={datos.protocolo?.cambio_zapatilla_a_cargo || 'El papá'}
+                            onChange={(e) => {
+                              actualizarProtocolo('cambio_zapatilla_a_cargo', e.target.value);
+                              setTimeout(() => handleSubmit(e), 500);
+                            }}
+                            placeholder="A cargo de"
+                            className="w-full mt-2 px-3 py-2 bg-neutral-800/50 border border-white/5 rounded text-white placeholder:text-neutral-500 text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
+                          />
                         )}
                       </>
                     ) : (
-                      <>
-                        <div className="text-sm text-white drop-shadow-sm">
-                          {formatearHora(datos.protocolo?.hora_anuncio_homenajeado)}
+                      <div>
+                        <div className="text-sm text-white drop-shadow-sm mb-1">
+                          {datos.protocolo?.cambio_zapatilla ? '✓ Sí' : '✗ No'}
                         </div>
-                        <div className="text-xs text-neutral-300">
-                          {datos.protocolo?.nombre_homenajeado || contrato?.homenajeado || 'No especificado'}
-                          {datos.protocolo?.acompanantes && ` (${datos.protocolo.acompanantes})`}
-                        </div>
-                      </>
+                        {datos.protocolo?.cambio_zapatilla && datos.protocolo?.cambio_zapatilla_a_cargo && (
+                          <div className="text-xs text-neutral-300">
+                            A cargo de: {datos.protocolo.cambio_zapatilla_a_cargo}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Paso 3: Actividades Especiales - Large Card */}
-          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 md:col-span-2 row-span-1 transition-all duration-300 hover:shadow-lg">
-            <div className="absolute inset-0 w-full h-full z-0">
-              <img
-                src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?q=80&w=2000&auto=format&fit=crop"
-                alt="Actividades"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
-            </div>
-            <div className="relative z-10 h-full w-full p-8">
-              <div className="flex flex-col h-full justify-center">
-                <h3 className="text-sm text-neutral-400 mb-6 uppercase tracking-wider font-medium text-center">Paso 3: Actividades Especiales</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 items-start">
-                  {/* Columna Izquierda: Bailes y Brindis */}
-                  <div className="flex flex-col space-y-4">
+                  <div className="flex flex-col space-y-2 mt-4">
+                    <div className="text-xs text-neutral-400 font-medium">Otros Bailes</div>
                     {!estaBloqueado ? (
-                      <div className="space-y-4">
-                        <div className="flex flex-col space-y-2">
-                          <div className="text-xs text-neutral-400 font-medium">💃 Baile con Papá</div>
-                          <PremiumToggle
-                            label=""
-                            value={datos.protocolo?.baile_papa}
-                            onChange={(val) => {
-                              actualizarProtocolo('baile_papa', val);
-                              setTimeout(() => handleSubmit({ preventDefault: () => {} }), 500);
-                            }}
-                            disabled={estaBloqueado}
-                          />
-                        </div>
-                        <div className="flex flex-col space-y-2">
-                          <div className="text-xs text-neutral-400 font-medium">💃 Baile con Mamá</div>
-                          <PremiumToggle
-                            label=""
-                            value={datos.protocolo?.baile_mama}
-                            onChange={(val) => {
-                              actualizarProtocolo('baile_mama', val);
-                              setTimeout(() => handleSubmit({ preventDefault: () => {} }), 500);
-                            }}
-                            disabled={estaBloqueado}
-                          />
-                        </div>
-                        <div className="flex flex-col space-y-2">
-                          <div className="text-xs text-neutral-400 font-medium">🎤 Palabras / Brindis</div>
-                          <PremiumToggle
-                            label=""
-                            value={datos.protocolo?.brindis}
-                            onChange={(val) => {
-                              actualizarProtocolo('brindis', val);
-                              setTimeout(() => handleSubmit({ preventDefault: () => {} }), 500);
-                            }}
-                            disabled={estaBloqueado}
-                          />
-                          {datos.protocolo?.brindis === true && (
-                            <input
-                              type="text"
-                              value={datos.protocolo?.brindis_a_cargo || ''}
-                              onChange={(e) => {
-                                actualizarProtocolo('brindis_a_cargo', e.target.value);
-                                setTimeout(() => handleSubmit(e), 500);
-                              }}
-                              placeholder="A cargo de"
-                              className="w-full mt-2 px-3 py-2 bg-neutral-800/50 border border-white/5 rounded text-white placeholder:text-neutral-500 text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
-                            />
-                          )}
-                        </div>
-                      </div>
+                      <textarea
+                        value={datos.protocolo?.bailes_adicionales || ''}
+                        onChange={(e) => actualizarProtocolo('bailes_adicionales', e.target.value)}
+                        onBlur={handleSubmit}
+                        placeholder="Ej: Baile con hermano..."
+                        className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
+                        rows={3}
+                      />
                     ) : (
-                      <div className="space-y-4">
-                        <div>
-                          <div className="text-xs text-neutral-400 mb-2 font-medium">💃 Baile con Papá</div>
-                          <div className="text-sm text-white drop-shadow-sm">
-                            {datos.protocolo?.baile_papa ? '✓ Sí' : '✗ No'}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-neutral-400 mb-2 font-medium">💃 Baile con Mamá</div>
-                          <div className="text-sm text-white drop-shadow-sm">
-                            {datos.protocolo?.baile_mama ? '✓ Sí' : '✗ No'}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-neutral-400 mb-2 font-medium">🎤 Palabras / Brindis</div>
-                          <div className="text-sm text-white drop-shadow-sm mb-1">
-                            {datos.protocolo?.brindis ? '✓ Sí' : '✗ No'}
-                          </div>
-                          {datos.protocolo?.brindis && datos.protocolo?.brindis_a_cargo && (
-                            <div className="text-xs text-neutral-300">
-                              A cargo de: {datos.protocolo.brindis_a_cargo}
-                            </div>
-                          )}
-                        </div>
+                      <div className="text-xs text-neutral-300">
+                        {datos.protocolo?.bailes_adicionales || 'No especificado'}
                       </div>
                     )}
                   </div>
-                  {/* Columna Derecha: Cambio de Zapatilla y Otros Bailes */}
-                  <div className="flex flex-col space-y-4">
-                    <div className="flex flex-col space-y-2">
-                      <div className="text-xs text-neutral-400 font-medium">👠 Cambio de Zapatilla</div>
-                      {!estaBloqueado ? (
-                        <>
-                          <PremiumToggle
-                            label=""
-                            value={datos.protocolo?.cambio_zapatilla}
-                            onChange={(val) => {
-                              actualizarProtocolo('cambio_zapatilla', val);
-                              setTimeout(() => handleSubmit({ preventDefault: () => {} }), 500);
-                            }}
-                            disabled={estaBloqueado}
-                          />
-                          {datos.protocolo?.cambio_zapatilla === true && (
-                            <input
-                              type="text"
-                              value={datos.protocolo?.cambio_zapatilla_a_cargo || 'El papá'}
-                              onChange={(e) => {
-                                actualizarProtocolo('cambio_zapatilla_a_cargo', e.target.value);
-                                setTimeout(() => handleSubmit(e), 500);
-                              }}
-                              placeholder="A cargo de"
-                              className="w-full mt-2 px-3 py-2 bg-neutral-800/50 border border-white/5 rounded text-white placeholder:text-neutral-500 text-sm focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none"
-                            />
-                          )}
-                        </>
-                      ) : (
-                        <div>
-                          <div className="text-sm text-white drop-shadow-sm mb-1">
-                            {datos.protocolo?.cambio_zapatilla ? '✓ Sí' : '✗ No'}
-                          </div>
-                          {datos.protocolo?.cambio_zapatilla && datos.protocolo?.cambio_zapatilla_a_cargo && (
-                            <div className="text-xs text-neutral-300">
-                              A cargo de: {datos.protocolo.cambio_zapatilla_a_cargo}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col space-y-2 mt-4">
-                      <div className="text-xs text-neutral-400 font-medium">Otros Bailes</div>
-                      {!estaBloqueado ? (
-                        <textarea
-                          value={datos.protocolo?.bailes_adicionales || ''}
-                          onChange={(e) => actualizarProtocolo('bailes_adicionales', e.target.value)}
-                          onBlur={handleSubmit}
-                          placeholder="Ej: Baile con hermano..."
-                          className="w-full px-3 py-2 bg-neutral-800/80 border border-white/10 rounded text-white placeholder:text-neutral-500 text-sm focus:ring-2 focus:ring-white focus:border-transparent outline-none resize-none"
-                          rows={3}
-                        />
-                      ) : (
-                        <div className="text-xs text-neutral-300">
-                          {datos.protocolo?.bailes_adicionales || 'No especificado'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Paso 4: Horarios de Actividades */}
-          <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:shadow-lg">
-            <div className="absolute inset-0 w-full h-full z-0">
-              <img
-                src="https://images.unsplash.com/photo-1495364141860-b0d03eccd065?q=80&w=2000&auto=format&fit=crop"
-                alt="Horarios"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
-            </div>
-            <div className="relative z-10 h-full w-full p-6">
-              <div className="flex flex-col h-full">
-                <h3 className="text-sm text-neutral-400 mb-3 uppercase tracking-wider font-medium">Paso 4: Horarios</h3>
-                <div className="space-y-2 flex-1">
-                  {[
-                    { key: 'hora_fotos', label: '📸 Momento Social / Fotos' },
-                    { key: 'hora_cena', label: '🍽️ Cena / Video' },
-                    { key: 'hora_photobooth', label: '📷 Photobooth' },
-                    { key: 'hora_loca', label: '🎊 Hora Loca' },
-                    { key: 'hora_happy_birthday', label: '🎂 Happy Birthday' },
-                    { key: 'hora_fin', label: '🏁 Fin del Evento' },
-                  ].map((actividad, index, array) => (
-                    <div
-                      key={actividad.key}
-                      className={cn(
-                        "flex justify-between items-center text-xs",
-                        index < array.length - 1 && "border-b border-white/10 pb-1"
-                      )}
-                    >
-                      <span className="text-neutral-400">{actividad.label}</span>
-                      {!estaBloqueado ? (
-                        <input
-                          type="time"
-                          value={datos.protocolo?.[actividad.key] || ''}
-                          onChange={(e) => {
-                            actualizarProtocolo(actividad.key, e.target.value);
-                            setTimeout(() => handleSubmit(e), 500);
-                          }}
-                          className="px-3 py-1.5 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-xs font-mono focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none w-24"
-                        />
-                      ) : (
-                        <span className="font-mono text-neutral-500">
-                          {formatearHora(datos.protocolo?.[actividad.key])}
-                        </span>
-                      )}
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </motion.div>
+
+        {/* Paso 4: Horarios de Actividades */}
+        <div className="relative overflow-hidden rounded-xl bg-neutral-900 border border-white/10 group cursor-pointer col-span-1 row-span-1 transition-all duration-300 hover:shadow-lg">
+          <div className="absolute inset-0 w-full h-full z-0">
+            <img
+              src="https://images.unsplash.com/photo-1495364141860-b0d03eccd065?q=80&w=2000&auto=format&fit=crop"
+              alt="Horarios"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+          </div>
+          <div className="relative z-10 h-full w-full p-6">
+            <div className="flex flex-col h-full">
+              <h3 className="text-sm text-neutral-400 mb-3 uppercase tracking-wider font-medium">Paso 4: Horarios</h3>
+              <div className="space-y-2 flex-1">
+                {[
+                  { key: 'hora_fotos', label: '📸 Momento Social / Fotos' },
+                  { key: 'hora_cena', label: '🍽️ Cena / Video' },
+                  { key: 'hora_photobooth', label: '📷 Photobooth' },
+                  { key: 'hora_loca', label: '🎊 Hora Loca' },
+                  { key: 'hora_happy_birthday', label: '🎂 Happy Birthday' },
+                  { key: 'hora_fin', label: '🏁 Fin del Evento' },
+                ].map((actividad, index, array) => (
+                  <div
+                    key={actividad.key}
+                    className={cn(
+                      "flex justify-between items-center text-xs",
+                      index < array.length - 1 && "border-b border-white/10 pb-1"
+                    )}
+                  >
+                    <span className="text-neutral-400">{actividad.label}</span>
+                    {!estaBloqueado ? (
+                      <input
+                        type="time"
+                        value={datos.protocolo?.[actividad.key] || ''}
+                        onChange={(e) => {
+                          actualizarProtocolo(actividad.key, e.target.value);
+                          setTimeout(() => handleSubmit(e), 500);
+                        }}
+                        className="px-3 py-1.5 bg-neutral-800/50 border border-white/10 rounded-lg text-white text-xs font-mono focus:ring-1 focus:ring-white/50 focus:border-white/20 outline-none w-24"
+                      />
+                    ) : (
+                      <span className="font-mono text-neutral-500">
+                        {formatearHora(datos.protocolo?.[actividad.key])}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
