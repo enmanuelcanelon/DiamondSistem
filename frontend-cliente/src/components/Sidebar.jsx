@@ -101,10 +101,10 @@ const Sidebar = () => {
 
                 <div className="p-6">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-bold text-sm">
+                        <div className="w-10 h-10 bg-gradient-to-br from-white to-neutral-200 text-black rounded-xl flex items-center justify-center font-bold text-base shadow-lg shadow-white/10">
                             PV
                         </div>
-                        <span className="font-semibold text-white">Party Venue</span>
+                        <span className="font-bold text-white text-lg tracking-tight">Party Venue</span>
                     </div>
 
                     <nav className="space-y-1">

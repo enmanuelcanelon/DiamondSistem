@@ -52,7 +52,15 @@ const BentoCard = ({
                         src={imageSrc}
                         alt={title || "Background"}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 group-hover:opacity-30"
+                        onError={(e) => {
+                            // Fallback a un gradiente si la imagen falla
+                            e.target.style.display = 'none';
+                        }}
                     />
+                )}
+                {/* Fallback gradient si no hay imagen o falla */}
+                {(!imageSrc || imageSrc.includes('/large/')) && (
+                    <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 via-neutral-900 to-black" />
                 )}
                 {videoSrc && (
                     <video

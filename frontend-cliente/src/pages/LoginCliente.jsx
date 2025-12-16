@@ -45,17 +45,25 @@ function LoginCliente() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Background Gradient */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-neutral-900" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.05),transparent_50%)]" />
+      </div>
+      
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-white text-black rounded-xl flex items-center justify-center font-bold text-2xl mx-auto mb-4">
+          <div className="w-20 h-20 bg-gradient-to-br from-white to-neutral-200 text-black rounded-2xl flex items-center justify-center font-bold text-3xl mx-auto mb-6 shadow-2xl shadow-white/20">
             PV
           </div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Party Venue</h1>
-          <p className="text-neutral-400">Accede a tu portal de eventos</p>
+          <h1 className="text-4xl font-bold tracking-tight mb-2 bg-gradient-to-r from-white to-neutral-300 bg-clip-text text-transparent">
+            Party Venue
+          </h1>
+          <p className="text-neutral-400 text-lg">Accede a tu portal de eventos</p>
         </div>
 
-        <div className="bg-neutral-900 border border-white/10 rounded-xl p-8">
+        <div className="bg-neutral-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="codigo" className="block text-sm font-medium text-white mb-2">

@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import useAuthStore from '@shared/store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
+import { getImageUrl } from '@/lib/utils';
 
 const BentoGrid = () => {
     const { user } = useAuthStore();
@@ -45,6 +46,19 @@ const BentoGrid = () => {
     // Obtener número de mesas (si existe la funcionalidad)
     const mesas = contratoData?.mesas?.length || 0;
 
+    // URLs de imágenes del backend con fallback a Unsplash
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+    const baseUrl = apiUrl.replace('/api', '') || 'http://localhost:5001';
+    
+    // Imágenes de fondo para las tarjetas (usando imágenes de Unsplash como fallback)
+    // En producción, estas deberían ser reemplazadas por imágenes reales del backend
+    const countdownImage = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2000&auto=format&fit=crop';
+    const invitadosImage = 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=2000&auto=format&fit=crop';
+    const mesasImage = 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?q=80&w=2000&auto=format&fit=crop';
+    const playlistImage = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=2000&auto=format&fit=crop';
+    const detallesImage = 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=2000&auto=format&fit=crop';
+    const pagosImage = 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2000&auto=format&fit=crop';
+
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(180px,auto)]">
@@ -52,7 +66,7 @@ const BentoGrid = () => {
                 <BentoCard
                     large
                     className="bg-neutral-900 cursor-pointer"
-                    imageSrc="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2000&auto=format&fit=crop"
+                    imageSrc={countdownImage}
                 >
                     <div className="flex flex-col justify-between h-full">
                         <div>
@@ -86,7 +100,7 @@ const BentoGrid = () => {
                 {/* Invitados */}
                 <BentoCard
                     className="bg-neutral-900 cursor-pointer"
-                    imageSrc="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=2000&auto=format&fit=crop"
+                    imageSrc={invitadosImage}
                     onClick={() => navigate('/mesas/' + user?.contrato_id)}
                 >
                     <div className="flex flex-col justify-center h-full">
@@ -99,7 +113,7 @@ const BentoGrid = () => {
                 {/* Mesas */}
                 <BentoCard
                     className="bg-neutral-900 cursor-pointer"
-                    imageSrc="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?q=80&w=2000&auto=format&fit=crop"
+                    imageSrc={mesasImage}
                     onClick={() => navigate('/mesas/' + user?.contrato_id)}
                 >
                     <div className="flex flex-col justify-center h-full">
@@ -112,7 +126,7 @@ const BentoGrid = () => {
                 {/* Playlist */}
                 <BentoCard
                     className="bg-neutral-900 cursor-pointer"
-                    imageSrc="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=2000&auto=format&fit=crop"
+                    imageSrc={playlistImage}
                     onClick={() => navigate('/playlist/' + user?.contrato_id)}
                 >
                     <div className="flex flex-col justify-center h-full">
@@ -125,7 +139,7 @@ const BentoGrid = () => {
                 {/* Detalles */}
                 <BentoCard
                     className="bg-neutral-900"
-                    imageSrc="https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=2000&auto=format&fit=crop"
+                    imageSrc={detallesImage}
                 >
                     <div className="flex flex-col h-full">
                         <h3 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider drop-shadow-md">Detalles</h3>
@@ -160,7 +174,7 @@ const BentoGrid = () => {
                 <BentoCard
                     large
                     className="bg-neutral-900 cursor-pointer"
-                    imageSrc="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2000&auto=format&fit=crop"
+                    imageSrc={pagosImage}
                     onClick={() => navigate('/contratos')}
                 >
                     <div className="flex flex-col h-full">
