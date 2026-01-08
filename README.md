@@ -68,6 +68,12 @@ DiamondSistem/
 - ✅ Sistema de inventario automático
 - ✅ Chat en tiempo real
 - ✅ Generación automática de PDFs
+- ✅ **Sistema Omnichannel de Comunicaciones**
+  - 📧 Email completo con Gmail API (Recibidos/Enviados)
+  - 💬 WhatsApp Business API con UI de chat
+  - 📞 Llamadas vía Twilio (WebRTC)
+  - 📱 SMS vía Twilio
+  - 📊 Historial unificado de comunicaciones
 
 ## 🛠️ Tecnologías
 
@@ -77,6 +83,10 @@ DiamondSistem/
 - **Deployment**: Railway, Docker
 - **Autenticación**: JWT
 - **Comunicación**: WebSockets
+- **Omnichannel**: 
+  - WhatsApp Business API (Meta Cloud API)
+  - Twilio (Llamadas y SMS)
+  - Gmail API (Email)
 
 ## 📞 Soporte
 

@@ -47,6 +47,7 @@ model usuarios {
   movimientos_inventario  movimientos_inventario[]   @relation("movimientos_usuario")
   historial_cambios_precios historial_cambios_precios[]
   pagos                   pagos[]                    @relation("pagos_registrado_por")
+  comunicaciones          comunicaciones[]           @relation("comunicaciones_usuario")
 
   @@index([rol], map: "idx_usuarios_rol")
   @@index([codigo_usuario], map: "idx_usuarios_codigo")
@@ -108,6 +109,7 @@ model clientes {
   contratos           contratos[]
   solicitudes_cliente solicitudes_cliente[]
   leaks               leaks[]
+  comunicaciones      comunicaciones[]
 
   @@index([vendedor_id], map: "idx_clientes_vendedor")
   @@index([usuario_id], map: "idx_clientes_usuario")
@@ -152,6 +154,7 @@ model leaks {
   vendedores              vendedores? @relation(fields: [vendedor_id], references: [id])  // Deprecated
   usuarios                usuarios?   @relation("leaks_vendedor", fields: [usuario_id], references: [id])  // Nueva
   clientes                clientes?   @relation(fields: [cliente_id], references: [id])
+  comunicaciones          comunicaciones[]
   
   @@index([vendedor_id], map: "idx_leaks_vendedor")
   @@index([usuario_id], map: "idx_leaks_usuario")
@@ -412,6 +415,7 @@ model contratos {
   checklist_servicios_externos checklist_servicios_externos[]
   asignaciones_inventario      asignaciones_inventario[]
   movimientos_inventario       movimientos_inventario[]
+  comunicaciones               comunicaciones[]
 
   @@index([salon_id], map: "idx_contratos_salon")
   @@index([tipo_pago], map: "idx_contratos_tipo_pago")
@@ -896,3 +900,37 @@ model movimientos_inventario {
   @@index([fecha_movimiento], map: "idx_movimientos_fecha")
   @@index([contrato_id], map: "idx_movimientos_contrato")
 }
+
+// ============================================
+// MÓDULO OMNICHANNEL - COMUNICACIONES
+// ============================================
+
+model comunicaciones {
+  id              Int       @id @default(autoincrement())
+  lead_id         Int?
+  cliente_id      Int?
+  contrato_id     Int?
+  usuario_id      Int       
+  canal           String    @db.VarChar(20)  // "voz", "sms", "whatsapp", "email"
+  direccion       String    @db.VarChar(10)  // "entrante", "saliente"
+  destinatario    String    @db.VarChar(255)
+  contenido       String?   @db.Text
+  estado          String    @default("enviado") @db.VarChar(50)
+  sid_externo     String?   @db.VarChar(100) // Twilio/Meta Message SID
+  duracion_seg    Int?      // Para llamadas
+  fecha_creacion  DateTime  @default(now())
+  
+  // Relaciones
+  leaks           leaks?    @relation(fields: [lead_id], references: [id])
+  clientes        clientes? @relation(fields: [cliente_id], references: [id])
+  contratos       contratos? @relation(fields: [contrato_id], references: [id])
+  usuarios        usuarios  @relation("comunicaciones_usuario", fields: [usuario_id], references: [id])
+  
+  @@index([lead_id], map: "idx_comunicaciones_lead")
+  @@index([cliente_id], map: "idx_comunicaciones_cliente")
+  @@index([contrato_id], map: "idx_comunicaciones_contrato")
+  @@index([usuario_id], map: "idx_comunicaciones_usuario")
+  @@index([canal], map: "idx_comunicaciones_canal")
+  @@index([fecha_creacion], map: "idx_comunicaciones_fecha")
+}
+

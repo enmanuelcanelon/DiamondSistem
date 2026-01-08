@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquare,
-  Settings
+  Settings,
+  Headphones
 } from 'lucide-react';
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -71,6 +72,9 @@ function Layout() {
       { name: 'Clientes', href: '/clientes', icon: Users },
       { name: 'Ofertas', href: '/ofertas', icon: FileText },
       { name: 'Contratos', href: '/contratos', icon: FileCheck },
+    ],
+    comunicaciones: [
+      { name: 'Comunicaciones', href: '/comunicaciones', icon: Headphones },
     ],
     eventos: [
       { name: 'Calendario', href: '/calendario', icon: Calendar },
@@ -143,6 +147,35 @@ function Layout() {
                           {pendientesCount}
                         </Badge>
                       )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Sección Comunicaciones */}
+              <div className="space-y-1">
+                <div className="px-3 py-2">
+                  <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Comunicaciones
+                  </h2>
+                </div>
+                {navigation.comunicaciones.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => {
+                        navigate(item.href);
+                        setSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 touch-manipulation ${active
+                        ? 'bg-primary text-primary-foreground shadow-md translate-x-1'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1'
+                        }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.name}</span>
                     </button>
                   );
                 })}
@@ -321,6 +354,36 @@ function Layout() {
                         {pendientesCount}
                       </Badge>
                     )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sección Comunicaciones */}
+            <div className="space-y-1">
+              {!sidebarCollapsed && (
+                <div className="px-3 py-2">
+                  <h2 className="mb-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Comunicaciones
+                  </h2>
+                </div>
+              )}
+              {navigation.comunicaciones.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => navigate(item.href)}
+                    title={sidebarCollapsed ? item.name : ''}
+                    className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${sidebarCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
+                      } ${active
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    {!sidebarCollapsed && <span>{item.name}</span>}
                   </button>
                 );
               })}

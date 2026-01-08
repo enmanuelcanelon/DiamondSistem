@@ -65,6 +65,12 @@ backend/
 - ✅ **Sistema de Inventario** - Gestión de salones y recursos
 - ✅ **Sistema de Comisiones** - Cálculo automático
 - ✅ **Integración Google Calendar** - Sincronización de eventos
+- ✅ **Sistema Omnichannel de Comunicaciones**
+  - 📧 Email completo con Gmail API (Recibidos/Enviados)
+  - 💬 WhatsApp Business API con UI de chat
+  - 📞 Llamadas vía Twilio (WebRTC)
+  - 📱 SMS vía Twilio
+  - 📊 Historial unificado de comunicaciones
 
 ---
 
