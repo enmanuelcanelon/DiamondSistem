@@ -910,7 +910,7 @@ model comunicaciones {
   lead_id         Int?
   cliente_id      Int?
   contrato_id     Int?
-  usuario_id      Int       
+  usuario_id      Int?      // Opcional: null para mensajes de números desconocidos
   canal           String    @db.VarChar(20)  // "voz", "sms", "whatsapp", "email"
   direccion       String    @db.VarChar(10)  // "entrante", "saliente"
   destinatario    String    @db.VarChar(255)
@@ -924,7 +924,7 @@ model comunicaciones {
   leaks           leaks?    @relation(fields: [lead_id], references: [id])
   clientes        clientes? @relation(fields: [cliente_id], references: [id])
   contratos       contratos? @relation(fields: [contrato_id], references: [id])
-  usuarios        usuarios  @relation("comunicaciones_usuario", fields: [usuario_id], references: [id])
+  usuarios        usuarios? @relation("comunicaciones_usuario", fields: [usuario_id], references: [id])
   
   @@index([lead_id], map: "idx_comunicaciones_lead")
   @@index([cliente_id], map: "idx_comunicaciones_cliente")

@@ -104,10 +104,13 @@ router.post('/whatsapp/enviar', authenticate, requireVendedor, validarTelefono, 
  */
 router.get('/whatsapp/conversaciones', authenticate, requireVendedor, async (req, res, next) => {
   try {
-    // Obtener todas las comunicaciones de WhatsApp del vendedor, agrupadas por destinatario
+    // Obtener todas las comunicaciones de WhatsApp del vendedor Y las sin asignar
     const comunicaciones = await prisma.comunicaciones.findMany({
       where: {
-        usuario_id: req.user.id,
+        OR: [
+          { usuario_id: req.user.id },
+          { usuario_id: null } // Incluir mensajes de números desconocidos (sin asignar)
+        ],
         canal: 'whatsapp'
       },
       orderBy: { fecha_creacion: 'desc' },
@@ -140,7 +143,9 @@ router.get('/whatsapp/conversaciones', authenticate, requireVendedor, async (req
           ultimaFecha: com.fecha_creacion,
           direccion: com.direccion,
           totalMensajes: 1,
-          noLeidos: com.direccion === 'entrante' && com.estado !== 'leido' ? 1 : 0
+          noLeidos: com.direccion === 'entrante' && com.estado !== 'leido' ? 1 : 0,
+          sinAsignar: com.usuario_id === null, // Indicar si está sin asignar
+          usuarioId: com.usuario_id
         });
       } else {
         const conv = conversacionesMap.get(key);
@@ -151,6 +156,11 @@ router.get('/whatsapp/conversaciones', authenticate, requireVendedor, async (req
         // Actualizar nombre si no lo tenía
         if (!conv.nombre && (com.leaks?.nombre_completo || com.clientes?.nombre_completo)) {
           conv.nombre = com.leaks?.nombre_completo || com.clientes?.nombre_completo;
+        }
+        // Si algún mensaje está asignado al usuario actual, la conversación no está sin asignar
+        if (com.usuario_id === req.user.id) {
+          conv.sinAsignar = false;
+          conv.usuarioId = com.usuario_id;
         }
       }
     });
@@ -184,10 +194,13 @@ router.get('/whatsapp/conversacion/:telefono', authenticate, requireVendedor, as
     const telefonoNormalizado = telefono.replace(/\D/g, '');
     const telefonoBusqueda = telefonoNormalizado.slice(-10);
 
-    // Buscar mensajes que contengan este teléfono
+    // Buscar mensajes que contengan este teléfono (propios y sin asignar)
     const mensajes = await prisma.comunicaciones.findMany({
       where: {
-        usuario_id: req.user.id,
+        OR: [
+          { usuario_id: req.user.id },
+          { usuario_id: null } // Incluir mensajes sin asignar
+        ],
         canal: 'whatsapp',
         destinatario: {
           contains: telefonoBusqueda
@@ -205,12 +218,16 @@ router.get('/whatsapp/conversacion/:telefono', authenticate, requireVendedor, as
       }
     });
 
+    // Verificar si hay mensajes sin asignar (conversación nueva)
+    const sinAsignar = mensajes.some(m => m.usuario_id === null);
+
     // Obtener info del contacto
     const contacto = {
       telefono: telefono,
       nombre: mensajes[0]?.leaks?.nombre_completo || mensajes[0]?.clientes?.nombre_completo || null,
       leadId: mensajes[0]?.lead_id || null,
-      clienteId: mensajes[0]?.cliente_id || null
+      clienteId: mensajes[0]?.cliente_id || null,
+      sinAsignar: sinAsignar
     };
 
     res.json({
@@ -223,8 +240,119 @@ router.get('/whatsapp/conversacion/:telefono', authenticate, requireVendedor, as
         direccion: m.direccion,
         estado: m.estado,
         fecha: m.fecha_creacion,
-        sidExterno: m.sid_externo
+        sidExterno: m.sid_externo,
+        usuarioId: m.usuario_id
       }))
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   POST /api/comunicaciones/whatsapp/conversacion/:telefono/asignar
+ * @desc    Asignar/reclamar una conversación sin asignar al vendedor actual
+ * @access  Private (Vendedor)
+ */
+router.post('/whatsapp/conversacion/:telefono/asignar', authenticate, requireVendedor, async (req, res, next) => {
+  try {
+    const { telefono } = req.params;
+    const { crearLead = false, nombreContacto = null } = req.body;
+
+    // Normalizar el teléfono para buscar
+    const telefonoNormalizado = telefono.replace(/\D/g, '');
+    const telefonoBusqueda = telefonoNormalizado.slice(-10);
+
+    // Buscar mensajes sin asignar de este teléfono
+    const mensajesSinAsignar = await prisma.comunicaciones.findMany({
+      where: {
+        usuario_id: null,
+        canal: 'whatsapp',
+        destinatario: {
+          contains: telefonoBusqueda
+        }
+      }
+    });
+
+    if (mensajesSinAsignar.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No hay mensajes sin asignar para este número'
+      });
+    }
+
+    // Asignar todos los mensajes al vendedor actual
+    const resultado = await prisma.comunicaciones.updateMany({
+      where: {
+        usuario_id: null,
+        canal: 'whatsapp',
+        destinatario: {
+          contains: telefonoBusqueda
+        }
+      },
+      data: {
+        usuario_id: req.user.id
+      }
+    });
+
+    // Opcionalmente crear un lead con este contacto
+    let leadCreado = null;
+    if (crearLead) {
+      // Verificar si ya existe un lead con este teléfono
+      const leadExistente = await prisma.leaks.findFirst({
+        where: {
+          telefono: { contains: telefonoBusqueda }
+        }
+      });
+
+      if (!leadExistente) {
+        leadCreado = await prisma.leaks.create({
+          data: {
+            nombre_completo: nombreContacto || `Contacto WhatsApp ${telefono}`,
+            telefono: telefono,
+            email: null,
+            origen: 'whatsapp',
+            estado: 'nuevo',
+            usuario_id: req.user.id,
+            notas: 'Lead creado automáticamente desde conversación de WhatsApp'
+          }
+        });
+
+        // Actualizar los mensajes con el lead_id
+        await prisma.comunicaciones.updateMany({
+          where: {
+            usuario_id: req.user.id,
+            canal: 'whatsapp',
+            destinatario: {
+              contains: telefonoBusqueda
+            },
+            lead_id: null
+          },
+          data: {
+            lead_id: leadCreado.id
+          }
+        });
+      }
+    }
+
+    logger.info('Conversación WhatsApp asignada', {
+      telefono,
+      vendedorId: req.user.id,
+      mensajesAsignados: resultado.count,
+      leadCreado: leadCreado?.id
+    });
+
+    res.json({
+      success: true,
+      message: `Conversación asignada correctamente`,
+      data: {
+        mensajesAsignados: resultado.count,
+        leadCreado: leadCreado ? {
+          id: leadCreado.id,
+          nombre: leadCreado.nombre_completo
+        } : null
+      }
     });
 
   } catch (error) {
@@ -290,14 +418,14 @@ router.post('/webhook/whatsapp', async (req, res) => {
       ]);
 
       // Guardar mensaje entrante en la base de datos
-      // Usar el usuario asignado al lead/cliente, o un usuario por defecto
-      const usuarioId = lead?.usuario_id || cliente?.usuario_id || 1; // ID 1 como fallback
+      // Usar el usuario asignado al lead/cliente, o null para mensajes de números desconocidos
+      const usuarioId = lead?.usuario_id || cliente?.usuario_id || null;
 
       await prisma.comunicaciones.create({
         data: {
           lead_id: lead?.id || null,
           cliente_id: cliente?.id || null,
-          usuario_id: usuarioId,
+          usuario_id: usuarioId, // null si es número desconocido
           canal: 'whatsapp',
           direccion: 'entrante',
           destinatario: mensajeProcesado.from,
@@ -310,7 +438,9 @@ router.post('/webhook/whatsapp', async (req, res) => {
       logger.info('Mensaje WhatsApp entrante guardado', {
         from: mensajeProcesado.from,
         leadId: lead?.id,
-        clienteId: cliente?.id
+        clienteId: cliente?.id,
+        usuarioId: usuarioId,
+        esNuevoContacto: !usuarioId
       });
 
     } else if (mensajeProcesado.tipo === 'estado_mensaje') {

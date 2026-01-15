@@ -17,7 +17,9 @@ import {
   MessageSquare,
   RefreshCw,
   X,
-  Plus
+  Plus,
+  UserPlus,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -125,6 +127,26 @@ const WhatsAppPanel = ({
     }
   });
 
+  // Mutation para asignar/reclamar conversación
+  const asignarConversacionMutation = useMutation({
+    mutationFn: ({ telefono, crearLead, nombreContacto }) => 
+      comunicacionesService.asignarConversacionWhatsApp(telefono, { crearLead, nombreContacto }),
+    onSuccess: (response) => {
+      refrescarMensajes();
+      refrescarConversaciones();
+      const data = response.data?.data;
+      if (data?.leadCreado) {
+        toast.success(`Conversación asignada y lead "${data.leadCreado.nombre}" creado`);
+      } else {
+        toast.success(`Conversación asignada (${data?.mensajesAsignados || 0} mensajes)`);
+      }
+    },
+    onError: (error) => {
+      const errorMsg = error.response?.data?.message || 'Error al asignar conversación';
+      toast.error(errorMsg);
+    }
+  });
+
   // Handlers
   const handleEnviar = (e) => {
     e.preventDefault();
@@ -161,6 +183,16 @@ const WhatsAppPanel = ({
   const volverALista = () => {
     setVistaMovil('lista');
     setConversacionActiva(null);
+  };
+
+  const handleReclamarConversacion = (crearLead = false) => {
+    if (!conversacionActiva?.telefono) return;
+    
+    asignarConversacionMutation.mutate({
+      telefono: conversacionActiva.telefono,
+      crearLead,
+      nombreContacto: conversacionActiva.nombre || null
+    });
   };
 
   // Formatear fecha
@@ -333,9 +365,16 @@ const WhatsAppPanel = ({
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium truncate">
-                      {conv.nombre || conv.telefono}
-                    </span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium truncate">
+                        {conv.nombre || conv.telefono}
+                      </span>
+                      {conv.sinAsignar && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 border-orange-400 text-orange-600 flex-shrink-0">
+                          Nuevo
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-xs text-muted-foreground flex-shrink-0">
                       {formatearFecha(conv.ultimaFecha)}
                     </span>
@@ -391,22 +430,66 @@ const WhatsAppPanel = ({
               <ArrowLeft className="w-5 h-5" />
             </Button>
             
-            <div className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white font-semibold">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+              contactoInfo?.sinAsignar ? 'bg-orange-500' : 'bg-[#25D366]'
+            }`}>
               {obtenerInicial(contactoInfo?.nombre, contactoInfo?.telefono)}
             </div>
             
             <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate">
-                {contactoInfo?.nombre || contactoInfo?.telefono}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-semibold truncate">
+                  {contactoInfo?.nombre || contactoInfo?.telefono}
+                </p>
+                {contactoInfo?.sinAsignar && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 border-orange-400 text-orange-600">
+                    Sin asignar
+                  </Badge>
+                )}
+              </div>
               {contactoInfo?.nombre && (
                 <p className="text-xs text-muted-foreground">{contactoInfo?.telefono}</p>
               )}
             </div>
 
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refrescarMensajes()}>
-              <RefreshCw className={`w-4 h-4 ${cargandoMensajes ? 'animate-spin' : ''}`} />
-            </Button>
+            {/* Botones de acción */}
+            <div className="flex items-center gap-1">
+              {contactoInfo?.sinAsignar && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs border-orange-400 text-orange-600 hover:bg-orange-50"
+                    onClick={() => handleReclamarConversacion(false)}
+                    disabled={asignarConversacionMutation.isPending}
+                  >
+                    {asignarConversacionMutation.isPending ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <UserCheck className="w-3 h-3 mr-1" />
+                    )}
+                    Reclamar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs border-[#25D366] text-[#25D366] hover:bg-green-50"
+                    onClick={() => handleReclamarConversacion(true)}
+                    disabled={asignarConversacionMutation.isPending}
+                  >
+                    {asignarConversacionMutation.isPending ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <UserPlus className="w-3 h-3 mr-1" />
+                    )}
+                    + Lead
+                  </Button>
+                </>
+              )}
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refrescarMensajes()}>
+                <RefreshCw className={`w-4 h-4 ${cargandoMensajes ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
 
           {/* Mensajes */}

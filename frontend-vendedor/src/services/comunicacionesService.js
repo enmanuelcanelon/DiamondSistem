@@ -21,6 +21,12 @@ export const comunicacionesService = {
       params: { limit }
     }),
 
+  asignarConversacionWhatsApp: (telefono, options = {}) =>
+    api.post(`/comunicaciones/whatsapp/conversacion/${encodeURIComponent(telefono)}/asignar`, {
+      crearLead: options.crearLead || false,
+      nombreContacto: options.nombreContacto || null
+    }),
+
   // ================== VOZ / LLAMADAS ==================
   obtenerTokenVoz: () => 
     api.post('/comunicaciones/voz/token'),
