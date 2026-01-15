@@ -194,13 +194,9 @@ router.get('/whatsapp/conversacion/:telefono', authenticate, requireVendedor, as
     const telefonoNormalizado = telefono.replace(/\D/g, '');
     const telefonoBusqueda = telefonoNormalizado.slice(-10);
 
-    // Buscar mensajes que contengan este teléfono (propios y sin asignar)
+    // Buscar TODOS los mensajes de este teléfono (sin filtrar por usuario_id)
     const mensajes = await prisma.comunicaciones.findMany({
       where: {
-        OR: [
-          { usuario_id: req.user.id },
-          { usuario_id: null } // Incluir mensajes sin asignar
-        ],
         canal: 'whatsapp',
         destinatario: {
           contains: telefonoBusqueda
