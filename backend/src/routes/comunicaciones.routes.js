@@ -388,9 +388,20 @@ router.post('/webhook/whatsapp', async (req, res) => {
 
   // Procesar el webhook de forma asíncrona
   try {
+    // Log del webhook recibido para debugging
+    logger.info('Webhook WhatsApp recibido', {
+      object: req.body?.object,
+      entry: req.body?.entry?.[0] ? 'presente' : 'ausente',
+      changes: req.body?.entry?.[0]?.changes?.[0] ? 'presente' : 'ausente',
+      bodyKeys: Object.keys(req.body || {})
+    });
+
     const mensajeProcesado = whatsappService.procesarWebhook(req.body);
 
     if (!mensajeProcesado) {
+      logger.debug('Webhook no procesado - no es un mensaje procesable', {
+        body: JSON.stringify(req.body).substring(0, 200)
+      });
       return; // No es un mensaje procesable
     }
 
