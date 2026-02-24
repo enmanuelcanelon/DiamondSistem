@@ -8,21 +8,9 @@ La documentación completa del proyecto está organizada en la carpeta [`docs/`]
 
 ### 📖 Guías de Usuario
 - [Inicio Rápido](./docs/INICIO_RAPIDO.md)
-- [Guía de Uso Completa](./docs/GUIA_USO_COMPLETA.md)
-- [Guía de Formato de Fotos](./docs/GUIA_FORMATO_FOTOS.md)
-- [Guía de Fotos de Servicios](./docs/GUIA_FOTOS_SERVICIOS.md)
+
 - [Portal Cliente](./docs/PORTAL_CLIENTE_INSTRUCCIONES.md)
 
-### 🛠️ Desarrollo
-- [Arquitectura del Sistema](./docs/ARQUITECTURA_SISTEMA.md)
-- [Implementación Completa](./docs/IMPLEMENTACION_COMPLETA.md)
-- [Optimización de Rendimiento](./docs/OPTIMIZACION_RENDIMIENTO.md)
-- [Mejoras de Seguridad](./docs/MEJORAS_SEGURIDAD.md)
-
-### 🚀 Deployment
-- [Guía de Deployment](./docs/DEPLOYMENT_GUIDE.md)
-- [Deployment en Railway](./docs/RAILWAY_DEPLOYMENT.md)
-- [Docker Quickstart](./docs/DOCKER_QUICKSTART.md)
 
 ### ⚙️ Configuración
 - [Usuarios del Sistema](./docs/USUARIOS_SISTEMA.md)
@@ -55,8 +43,6 @@ DiamondSistem/
 ## 🚀 Inicio Rápido
 
 1. **Instalación**: Consulta [Inicio Rápido](./docs/INICIO_RAPIDO.md)
-2. **Configuración**: Sigue la [Guía de Uso Completa](./docs/GUIA_USO_COMPLETA.md)
-3. **Deployment**: Usa la [Guía de Deployment](./docs/DEPLOYMENT_GUIDE.md)
 
 ## 📋 Características Principales
 
